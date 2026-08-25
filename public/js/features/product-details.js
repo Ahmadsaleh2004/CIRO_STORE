@@ -95,19 +95,17 @@ document.addEventListener('DOMContentLoaded', () => {
         const addBtn = document.getElementById('addCartBtn');
         if (addBtn) addBtn.disabled = variant.stock <= 0;
 
-        const stockBadge = document.getElementById('stockBadge');
-        if (stockBadge) {
-            stockBadge.classList.remove('bg-danger', 'bg-warning', 'text-dark', 'bg-success');
-            if (variant.stock === 0) {
-                stockBadge.classList.add('bg-danger');
-                stockBadge.textContent = 'Out of Stock';
-            } else if (variant.stock <= 50) {
-                stockBadge.classList.add('bg-warning', 'text-dark');
-                stockBadge.textContent = `Limited (${variant.stock} left)`;
-            } else {
-                stockBadge.classList.add('bg-success');
-                stockBadge.textContent = `In Stock (${variant.stock})`;
-            }
+        // القاعدة في stockBadge() بـjs/core/utils.js، مرآةً لـgetStockBadge()
+        // في PHP. كانت مكتوبة هنا بـif/else — وهي النسخة الثالثة من نفس
+        // القاعدة في المشروع. صفحة التفاصيل وحدها تعرض البادج الأخضر،
+        // فالوسيط الثاني true (نفس ما يفعله الـview عند العرض من الخادم).
+        const stockBadgeEl = document.getElementById('stockBadge');
+        if (stockBadgeEl) {
+            const badge = stockBadge(variant.stock, true);
+            stockBadgeEl.classList.remove('bg-danger', 'bg-warning', 'text-dark', 'bg-success');
+            // badge.class قد يحمل صنفين ('bg-warning text-dark') فيُقسَّم
+            badge.class.split(' ').forEach(c => stockBadgeEl.classList.add(c));
+            stockBadgeEl.textContent = badge.label;
         }
 
         currentVariantId = variant.id;

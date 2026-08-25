@@ -14,6 +14,12 @@
  * ملاحظة على الحدود: العمودان products.stock_quantity و
  * product_variants.stock_quantity كلاهما int unsigned، فالقيمة السالبة
  * غير ممكنة ولا فرع لها هنا.
+ *
+ * ⚠️ **لهذه الدالة مرآة في JS**: stockBadge() في js/core/utils.js، تخدم
+ * البطاقات التي يبنيها المتصفح (المفضّلة وتفاصيل المنتج). العتبة 50
+ * والنصوص والأصناف مكرّرة بين اللغتين عمداً — لا سبيل لتفادي ذلك في
+ * مشروع بلا خطوة بناء تشارك الثوابت. **إن غيّرت شيئاً هنا فغيّره هناك
+ * أيضاً.**
  */
 function getStockBadge(int $stock, bool $showInStock = false): ?array
 {
