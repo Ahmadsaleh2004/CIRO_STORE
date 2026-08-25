@@ -476,15 +476,8 @@ class AdminProductsController extends AdminController
     )]
     public function delete(): void
     {
-        header('Content-Type: application/json; charset=utf-8');
         Middleware::requirePermission('can_manage_products');
-
-        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            $this->respond(false, 'Method not allowed.');
-        }
-        if (!verifyCsrfToken($_POST['csrf_token'] ?? '')) {
-            $this->respond(false, 'Invalid CSRF token, please refresh and try again.');
-        }
+        $this->beginJsonPost();
 
         $productId = (int)($_POST['product_id'] ?? 0);
         if (!$productId) {
@@ -549,15 +542,8 @@ class AdminProductsController extends AdminController
     )]
     public function toggleVisibility(): void
     {
-        header('Content-Type: application/json; charset=utf-8');
         Middleware::requirePermission('can_manage_products');
-
-        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            $this->respond(false, 'Method not allowed.');
-        }
-        if (!verifyCsrfToken($_POST['csrf_token'] ?? '')) {
-            $this->respond(false, 'Invalid CSRF token, please refresh and try again.');
-        }
+        $this->beginJsonPost();
 
         $productId = (int)($_POST['product_id'] ?? 0);
         if (!$productId) {

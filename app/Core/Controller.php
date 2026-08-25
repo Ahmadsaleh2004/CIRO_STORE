@@ -84,4 +84,35 @@ abstract class Controller
     {
         $this->respond(false, $message);
     }
+
+    /**
+     * مقدّمة أي نقطة JSON تستقبل POST: تضبط رأس الاستجابة، وترفض غير
+     * POST، وتتحقق من توكن CSRF — بالرسائل نفسها التي كانت مكتوبة يدوياً
+     * في عشرات المواضع.
+     *
+     * كانت هذه الأسطر الثلاثة تُكرَّر بنفس الصياغة حرفياً: 61 مرة لضبط
+     * الرأس، و40 مرة لفحص الطريقة، و24 مرة لفحص CSRF بنفس الرسالة.
+     *
+     * ترتيب الفحوص مقصود: الرأس أولاً كي تكون رسالة الرفض نفسها JSON،
+     * ثم الطريقة، ثم CSRF — لأن التحقق من التوكن بلا جلسة POST بلا معنى.
+     *
+     * ملاحظة: هذه للنقاط التي تُرجع JSON فقط. الصفحات التي تحوّل
+     * بـredirect عند الفشل (مثل AdminBrandingController::save) لها
+     * معالجتها الخاصة ولا تستعمل هذه.
+     *
+     * @param bool $requireCsrf مرّر false للنقاط العامة التي لا تملك
+     *                          توكناً بعد (مثل جلب التوكن نفسه).
+     */
+    protected function beginJsonPost(bool $requireCsrf = true): void
+    {
+        header('Content-Type: application/json; charset=utf-8');
+
+        if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'POST') {
+            $this->respond(false, 'Method not allowed.');
+        }
+
+        if ($requireCsrf && !verifyCsrfToken($_POST['csrf_token'] ?? '')) {
+            $this->respond(false, 'Invalid CSRF token, please refresh and try again.');
+        }
+    }
 }

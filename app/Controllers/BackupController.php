@@ -71,14 +71,7 @@ class BackupController extends AdminController
             http_response_code(403);
             die('Unauthorized — Root admin only (ID=1)');
         }
-        header('Content-Type: application/json; charset=utf-8');
-
-        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            $this->respond(false, 'Method not allowed.');
-        }
-        if (!verifyCsrfToken($_POST['csrf_token'] ?? '')) {
-            $this->respond(false, 'Invalid CSRF token, please refresh and try again.');
-        }
+        $this->beginJsonPost();
 
         $adminId = getCurrentAdminId();
         $result  = BackupModel::createBackup();
@@ -173,14 +166,7 @@ class BackupController extends AdminController
             http_response_code(403);
             die('Unauthorized — Root admin only (ID=1)');
         }
-        header('Content-Type: application/json; charset=utf-8');
-
-        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            $this->respond(false, 'Method not allowed.');
-        }
-        if (!verifyCsrfToken($_POST['csrf_token'] ?? '')) {
-            $this->respond(false, 'Invalid CSRF token, please refresh and try again.');
-        }
+        $this->beginJsonPost();
 
         $filename = $_POST['file'] ?? '';
         if (!BackupModel::deleteBackup($filename)) {

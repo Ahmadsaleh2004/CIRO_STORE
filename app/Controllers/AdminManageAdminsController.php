@@ -298,15 +298,8 @@ class AdminManageAdminsController extends AdminController
     )]
     public function delete(): void
     {
-        header('Content-Type: application/json; charset=utf-8');
         Middleware::requirePermission('can_manage_admins');
-
-        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            $this->respond(false, 'Method not allowed.');
-        }
-        if (!verifyCsrfToken($_POST['csrf_token'] ?? '')) {
-            $this->respond(false, 'Invalid CSRF token, please refresh and try again.');
-        }
+        $this->beginJsonPost();
 
         $adminId  = getCurrentAdminId();
         $targetId = (int)($_POST['target_id'] ?? 0);
