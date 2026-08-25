@@ -16,8 +16,97 @@ function updateCsrfToken(newToken) {
 window.updateCsrfToken = updateCsrfToken;
 
 /**
+ * headerValue(headers, name) — يقرأ ترويسة من options.headers أياً كان شكلها.
+ *
+ * fetch يقبل ثلاثة أشكال: كائن عادي، أو Headers، أو مصفوفة أزواج.
+ * أسماء الترويسات غير حسّاسة لحالة الأحرف، فالمقارنة بحروف صغيرة.
+ */
+function headerValue(headers, name) {
+    if (!headers) return '';
+    const wanted = name.toLowerCase();
+
+    if (typeof Headers !== 'undefined' && headers instanceof Headers) {
+        return headers.get(name) || '';
+    }
+    if (Array.isArray(headers)) {
+        const hit = headers.find(pair => String(pair[0]).toLowerCase() === wanted);
+        return hit ? String(hit[1]) : '';
+    }
+    const key = Object.keys(headers).find(k => k.toLowerCase() === wanted);
+    return key ? String(headers[key]) : '';
+}
+
+/**
+ * rebuildBodyWithToken(options, newToken) — يُنتج جسماً جديداً يحمل التوكن
+ * الجديد، محافظاً على شكل الجسم الأصلي.
+ *
+ * يُرجع { body, ok } — و ok=false تعني أننا لم نعرف كيف نعيد البناء،
+ * فإعادة المحاولة بلا معنى ويجب ألّا تُجرَّب.
+ *
+ * ⚠️ الشكل الثالث (JSON) أُضيف لاحقاً، والنسخة السابقة لم تكن **تتجاهله**
+ * بل **تفسده**: كل جسم نصّي كان يمرّ على URLSearchParams، فيتحوّل
+ * {"csrf_token":"…","items":[…]} إلى مفتاح واحد مُرمَّز
+ * %7B%22csrf_token%22… لا يستطيع json_decode قراءته. أي أن إعادة
+ * المحاولة كانت تفشل حتماً لكل نقطة ترسل JSON — وهي صفحة الدفع و
+ * admin/my-info و admin-notifications وغيرها.
+ */
+function rebuildBodyWithToken(options, newToken) {
+    const body = options.body;
+
+    // 1. FormData — الشكل الأكثر شيوعاً في فورمات المشروع
+    if (typeof FormData !== 'undefined' && body instanceof FormData) {
+        const out = new FormData();
+        let sawToken = false;
+        for (const [key, val] of body.entries()) {
+            if (key === 'csrf_token') { sawToken = true; out.append(key, newToken); }
+            else                      { out.append(key, val); }
+        }
+        // مهم: النسخة الأقدم كانت تستبدل مفتاحاً موجوداً فقط. الفورم الذي
+        // لا يحوي csrf_token إطلاقاً (كفورم forgot-password سابقاً) كانت
+        // تُعاد محاولته بنفس الطلب الناقص فيفشل مجدداً — شبكة أمان معطّلة
+        // صامتة. الإضافة عند الغياب تصحّح ذلك.
+        if (!sawToken) out.append('csrf_token', newToken);
+        return { body: out, ok: true };
+    }
+
+    if (typeof body === 'string') {
+        const contentType = headerValue(options.headers, 'content-type').toLowerCase();
+        const looksJson   = contentType.includes('json')
+                         || /^\s*[{[]/.test(body); // احتياط لو غابت الترويسة
+
+        // 2. JSON
+        if (looksJson) {
+            let parsed;
+            try {
+                parsed = JSON.parse(body);
+            } catch (e) {
+                console.error('CSRF Retry: جسم JSON غير قابل للتحليل — لن تُعاد المحاولة', e);
+                return { body, ok: false };
+            }
+            // التوكن حقل في كائن. مصفوفة أو قيمة مفردة لا مكان فيها له.
+            if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) {
+                console.error('CSRF Retry: جسم JSON ليس كائناً — لا موضع للتوكن');
+                return { body, ok: false };
+            }
+            parsed.csrf_token = newToken;
+            return { body: JSON.stringify(parsed), ok: true };
+        }
+
+        // 3. urlencoded
+        const params = new URLSearchParams(body);
+        params.set('csrf_token', newToken); // set يضيف إذا كان غائباً
+        return { body: params.toString(), ok: true };
+    }
+
+    // شكل لا نعرفه (Blob أو ArrayBuffer أو بلا جسم): لا نخمّن
+    return { body, ok: false };
+}
+
+/**
  * fetchWithCsrfRetry(url, options, _retried)
  * Wrapper لـ fetch() يُعيد المحاولة تلقائياً مرة واحدة إذا فشل CSRF
+ *
+ * يدعم ثلاثة أشكال أجسام: FormData · JSON · urlencoded.
  */
 async function fetchWithCsrfRetry(url, options = {}, _retried = false) {
     const response = await fetch(url, options);
@@ -42,31 +131,14 @@ async function fetchWithCsrfRetry(url, options = {}, _retried = false) {
 
             updateCsrfToken(newToken);
 
-            const newOptions = { ...options };
-            if (options.body instanceof FormData) {
-                const newBody = new FormData();
-                let sawToken = false;
-                for (const [key, val] of options.body.entries()) {
-                    if (key === 'csrf_token') {
-                        sawToken = true;
-                        newBody.append(key, newToken);
-                    } else {
-                        newBody.append(key, val);
-                    }
-                }
-                // مهم: النسخة السابقة كانت تستبدل مفتاحًا موجودًا فقط. إذا كان
-                // الفورم لا يحتوي حقل csrf_token إطلاقًا (كما كان في فورم
-                // forgot-password)، لم تكن الحلقة تضيفه، فتُعاد المحاولة بنفس
-                // الطلب الفارغ وتفشل مجددًا — أي أن شبكة الأمان كانت معطّلة
-                // صامتة تمامًا لأي فورم ينقصه الحقل.
-                if (!sawToken) newBody.append('csrf_token', newToken);
-                newOptions.body = newBody;
-            } else if (typeof options.body === 'string') {
-                const params = new URLSearchParams(options.body);
-                params.set('csrf_token', newToken); // set يضيف إذا كان غائبًا
-                newOptions.body = params.toString();
+            const rebuilt = rebuildBodyWithToken(options, newToken);
+            if (!rebuilt.ok) {
+                // لم نعرف كيف نعيد بناء الجسم. إعادة المحاولة بجسم لا يحمل
+                // التوكن الجديد ستفشل حتماً وتستهلك طلباً بلا فائدة.
+                return data;
             }
 
+            const newOptions = { ...options, body: rebuilt.body };
             return fetchWithCsrfRetry(url, newOptions, true);
         } catch (e) {
             console.error('CSRF Retry failed:', e);
