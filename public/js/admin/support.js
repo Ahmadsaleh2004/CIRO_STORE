@@ -12,8 +12,8 @@ document.addEventListener('DOMContentLoaded', function () {
         btn.addEventListener('click', function (e) {
             e.stopPropagation(); // منع تفعيل حدث الكارد
 
-            var userId   = btn.dataset.userId;
-            var userName = btn.dataset.userName;
+            const userId   = btn.dataset.userId;
+            const userName = btn.dataset.userName;
 
             Swal.fire({
                 title: 'Reply to Message',
@@ -34,10 +34,10 @@ document.addEventListener('DOMContentLoaded', function () {
             }).then(function (result) {
                 if (!result.isConfirmed) return;
 
-                var replyText = result.value.trim();
-                var csrfToken = document.getElementById('csrfTokenSupport').value;
+                const replyText = result.value.trim();
+                const csrfToken = document.getElementById('csrfTokenSupport').value;
 
-                var fd = new FormData();
+                const fd = new FormData();
                 fd.append('csrf_token', csrfToken);
                 fd.append('user_id',    userId);
                 fd.append('reply_text', replyText);
@@ -65,7 +65,7 @@ document.addEventListener('DOMContentLoaded', function () {
         btn.addEventListener('click', function (e) {
             e.stopPropagation(); // منع تفعيل حدث الكارد
 
-            var msgId = btn.dataset.msgId;
+            const msgId = btn.dataset.msgId;
 
             Swal.fire({
                 title: 'Delete Message?',
@@ -78,9 +78,9 @@ document.addEventListener('DOMContentLoaded', function () {
             }).then(function (result) {
                 if (!result.isConfirmed) return;
 
-                var csrfToken = document.getElementById('csrfTokenSupport').value;
+                const csrfToken = document.getElementById('csrfTokenSupport').value;
 
-                var fd = new FormData();
+                const fd = new FormData();
                 fd.append('csrf_token', csrfToken);
                 fd.append('message_id', msgId);
 
@@ -89,7 +89,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     body: fd
                 }).then(function (data) {
                     if (data.success) {
-                        var card = document.getElementById('msg-card-' + msgId);
+                        const card = document.getElementById('msg-card-' + msgId);
                         if (card) {
                             card.style.transition = 'opacity .35s ease, transform .35s ease';
                             card.style.opacity    = '0';
@@ -110,7 +110,7 @@ document.addEventListener('DOMContentLoaded', function () {
     // ── Card click → navigate to user details ─────────────────
     document.querySelectorAll('.support-msg-card').forEach(function (card) {
         card.addEventListener('click', function () {
-            var uid = card.dataset.userId;
+            const uid = card.dataset.userId;
             if (!uid || uid === '0') return; // Guest — لا ملف مستخدم
 
             // TODO: صفحة /admin/users/{id} لسا مو منشأة — راوت مستقبلي، تذكرة منفصلة

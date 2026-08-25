@@ -44,7 +44,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function applyVariantToUI(variant) {
         const imgEl = document.getElementById('productMainImg');
-        if (imgEl) imgEl.src = fixImagePath(variant.image);
+        if (imgEl) imgEl.src = imagePathOrEmpty(variant.image);
 
         const newPriceEl = document.querySelector('.new-price');
         if (newPriceEl) newPriceEl.textContent = '$' + variant.final_price.toFixed(2);

@@ -266,7 +266,7 @@ window.initImageFallbacks = initImageFallbacks;
  * filterStatus — فلترة الحالة في صفحات الأدمن
  */
 function filterStatus(value) {
-    var p = new URLSearchParams(window.location.search);
+    const p = new URLSearchParams(window.location.search);
     if (value) p.set('status', value);
     else       p.delete('status');
     p.delete('page');

@@ -4,22 +4,22 @@
 
 document.addEventListener('DOMContentLoaded', function () {
 
-    var form = document.getElementById('siteSettingsForm');
+    const form = document.getElementById('siteSettingsForm');
     if (!form) return; // نتأكد إننا فعلاً بصفحة settings
 
     form.addEventListener('submit', async function (e) {
         e.preventDefault();
 
-        var btn          = document.getElementById('saveSettingsBtn');
-        var originalText = btn.innerHTML;
+        const btn          = document.getElementById('saveSettingsBtn');
+        const originalText = btn.innerHTML;
         btn.disabled     = true;
         btn.innerHTML    = '⏳ Saving...';
 
-        var fd = new FormData(form);
+        const fd = new FormData(form);
 
         try {
             // fetchWithCsrfRetry من js/core/csrf.js — يعالج تجديد الـ CSRF تلقائياً
-            var data = await fetchWithCsrfRetry(window.URLROOT + '/admin/settings', {
+            const data = await fetchWithCsrfRetry(window.URLROOT + '/admin/settings', {
                 method: 'POST',
                 body: fd,
             });

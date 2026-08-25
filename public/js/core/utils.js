@@ -18,12 +18,29 @@ window.escHtml = escHtml;
 window.escapeHtml = escHtml; // للتوافق العكسي التام
 
 /**
- * fixImagePath — إرجاع مسار الصورة المعالج من PHP
+ * imagePathOrEmpty — حارس ضد null/undefined لمسار صورة، لا أكثر.
+ *
+ * ⚠️ **لا تُصلح هذه الدالة أي مسار.** كان اسمها fixImagePath، وهو اسم
+ * يَعِد بما يفعله مقابلها في PHP (app/helpers/functions.php): إضافة
+ * بادئة images/ لأي مسار بلا شرطة مائلة، وتمرير الروابط المطلقة كما
+ * هي، وإرجاع صورة بديلة عند الفراغ. هذه لا تفعل شيئاً من ذلك.
+ *
+ * الاسم القديم كان فخّاً: في محرّر السلايدر بنى أحدهم المسار بيده
+ * ظنّاً أن الإصلاح متوفّر في المتصفح، فخرج /airpods.jpg بدل
+ * /images/airpods.jpg — وكُسرت كل صور المنتجات هناك.
+ *
+ * **القاعدة:** إصلاح مسار الصورة مسؤولية الخادم دائماً. مرّر المسار
+ * عبر fixImagePath() في PHP قبل إرساله للمتصفح، ولا تبنِه في JS.
  */
-function fixImagePath(imgPath) {
+function imagePathOrEmpty(imgPath) {
     return imgPath || '';
 }
-window.fixImagePath = fixImagePath;
+window.imagePathOrEmpty = imagePathOrEmpty;
+
+// الاسم القديم يبقى موجّهاً للاسم الجديد كي لا ينكسر أي مستدعٍ خارجي،
+// ولأن حذفه دفعةً واحدة تغيير أوسع من التنظيف. المستدعون الثلاثة داخل
+// المشروع حُوّلوا كلهم.
+window.fixImagePath = imagePathOrEmpty;
 
 /**
  * formatRelativeTime — تحويل التاريخ لزمن نسبي (Just now, 5m ago, etc)

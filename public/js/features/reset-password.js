@@ -20,16 +20,16 @@
     }
 
     document.addEventListener('DOMContentLoaded', function () {
-        var form = document.getElementById('resetForm');
+        const form = document.getElementById('resetForm');
         if (!form) return; // الرابط منتهٍ أو غير صحيح — لا فورم في الصفحة
 
         form.addEventListener('submit', async function (e) {
             e.preventDefault();
 
-            var btn      = document.getElementById('resetBtn');
-            var msgEl    = document.getElementById('resetMsg');
-            var pass     = document.getElementById('newPassword').value;
-            var confirm  = document.getElementById('confirmPassword').value;
+            const btn      = document.getElementById('resetBtn');
+            const msgEl    = document.getElementById('resetMsg');
+            const pass     = document.getElementById('newPassword').value;
+            const confirm  = document.getElementById('confirmPassword').value;
 
             if (pass.length < 8) {
                 showResetMsg(msgEl, 'Password must be at least 8 characters.', 'danger');
@@ -48,10 +48,10 @@
                 // غير قابل للوصول عملياً — csrf.js يُحمَّل بـdefer، وسكربتات
                 // defer تُنفَّذ قبل DOMContentLoaded، فالدالة معرَّفة دائماً
                 // لحظة وصول المستخدم إلى هنا. تُرك كما كان.
-                var doFetch = (typeof window.fetchWithCsrfRetry === 'function')
+                const doFetch = (typeof window.fetchWithCsrfRetry === 'function')
                     ? window.fetchWithCsrfRetry
                     : fetch;
-                var data = await doFetch(window.BASE_URL + '/auth/reset', {
+                const data = await doFetch(window.BASE_URL + '/auth/reset', {
                     method: 'POST',
                     body: new FormData(form)
                 });
