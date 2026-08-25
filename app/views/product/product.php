@@ -108,7 +108,7 @@ function getTag(array $p): string {
                 <?php if (!empty($isAdminProd)): ?>
                 <form method="POST" class="admin-delete-form">
                     <input type="hidden" name="delete_product" value="1">
-                    <input type="hidden" name="product_id"    value="<?= $p['id'] ?>">
+                    <input type="hidden" name="product_id"    value="<?= (int)$p['id'] ?>">
                     <input type="hidden" name="csrf_token"    value="<?= htmlspecialchars($csrf) ?>">
                     <button type="submit" class="delete-product-btn"
                         onclick="return confirm('Delete «<?= htmlspecialchars(addslashes($p['name'])) ?>»?')"
@@ -116,7 +116,7 @@ function getTag(array $p): string {
                 </form>
                 <?php else: ?>
                 <button class="favorite-btn" aria-label="Add to wishlist"
-                    data-pid="<?= $p['id'] ?>"
+                    data-pid="<?= (int)$p['id'] ?>"
                     data-product='<?= htmlspecialchars(json_encode([
                         'id'         => (int)$p['id'],
                         'variant_id' => $variantId,
@@ -128,13 +128,13 @@ function getTag(array $p): string {
                     ])) ?>'>🤍</button>
                 <?php endif; ?>
 
-                <a href="<?= URLROOT ?>/product?id=<?= $p['id'] ?>" class="product-link">
+                <a href="<?= URLROOT ?>/product?id=<?= (int)$p['id'] ?>" class="product-link">
                     <?php $webpSrc = getWebpPath($display['image_path'] ?? $p['image_path'] ?? ''); ?>
                     <picture>
                         <?php if ($webpSrc): ?>
                         <source srcset="<?= htmlspecialchars($webpSrc) ?>" type="image/webp">
                         <?php endif; ?>
-                        <img src="<?= $imgSrc ?>"
+                        <img src="<?= htmlspecialchars($imgSrc) ?>"
                              class="card-img-top product-image"
                              alt="<?= htmlspecialchars($p['name']) ?>"
                              loading="lazy">
@@ -162,17 +162,17 @@ function getTag(array $p): string {
                     <div>
                         <div class="quantity-box mb-2 d-flex justify-content-center gap-2">
                             <button class="btn btn-outline-secondary btn-sm"
-                                    onclick="changeQtyDB('<?= $p['id'] ?>',-1)">−</button>
-                            <input type="number" value="1" id="qty-<?= $p['id'] ?>"
+                                    onclick="changeQtyDB('<?= (int)$p['id'] ?>',-1)">−</button>
+                            <input type="number" value="1" id="qty-<?= (int)$p['id'] ?>"
                                    class="form-control quantity-input qty-input-sm"
                                    min="1" max="<?= $stock ?>">
                             <button class="btn btn-outline-secondary btn-sm"
-                                    onclick="changeQtyDB('<?= $p['id'] ?>',1)">+</button>
+                                    onclick="changeQtyDB('<?= (int)$p['id'] ?>',1)">+</button>
                         </div>
                         <?php if ($stock > 0): ?>
                         <?php if (isUser() && empty($_SESSION['admin_in_store_mode'])): ?>
                         <button class="btn btn-success w-100"
-                                onclick="addToCartDB(<?= $p['id'] ?>, <?= (int)$variantId ?>, <?= $finalPrice ?>, <?= $stock ?>)">
+                                onclick="addToCartDB(<?= (int)$p['id'] ?>, <?= (int)$variantId ?>, <?= $finalPrice ?>, <?= $stock ?>)">
                             🛒 Add to Cart
                         </button>
                         <?php else: ?>
@@ -186,7 +186,7 @@ function getTag(array $p): string {
                         <?php else: ?>
                         <?php if (isUser() && empty($_SESSION['admin_in_store_mode'])): ?>
                         <?php $alreadyNotified = in_array((int)$p['id'], $notifiedProductIds, true); ?>
-                        <form class="js-notify-form" data-product-id="<?= $p['id'] ?>">
+                        <form class="js-notify-form" data-product-id="<?= (int)$p['id'] ?>">
                             <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf) ?>">
                             <button type="submit"
                                     class="btn w-100 js-notify-btn <?= $alreadyNotified ? 'btn-success' : 'btn-outline-warning' ?>"

@@ -127,7 +127,7 @@ use App\Models\AdminModel;
                                 onclick="openPermModal(
                                     <?= (int)$adm['id'] ?>,
                                     '<?= htmlspecialchars(addslashes($adm['full_name'])) ?>',
-                                    '<?= $adm['role'] ?>',
+                                    '<?= htmlspecialchars($adm['role']) ?>',
                                     <?= (int)($adm['can_manage_admins']            ?? 0) ?>,
                                     <?= (int)($adm['can_manage_products']          ?? 0) ?>,
                                     <?= (int)($adm['can_manage_users']             ?? 0) ?>,

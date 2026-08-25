@@ -39,7 +39,7 @@ usort($sortedByStock, fn($a, $b) => (int)$a['stock_quantity'] <=> (int)$b['stock
                     <?php if ($mainWebp): ?>
                     <source srcset="<?= htmlspecialchars($mainWebp) ?>" type="image/webp">
                     <?php endif; ?>
-                    <img src="<?= $imgSrc ?>" alt="<?= htmlspecialchars($p['name']) ?>" id="productMainImg" class="product-detail-main-img">
+                    <img src="<?= htmlspecialchars($imgSrc) ?>" alt="<?= htmlspecialchars($p['name']) ?>" id="productMainImg" class="product-detail-main-img">
                 </picture>
             </div>
         </div>
@@ -75,7 +75,7 @@ usort($sortedByStock, fn($a, $b) => (int)$a['stock_quantity'] <=> (int)$b['stock
                     <?php foreach ($variants as $v): ?>
                     <button type="button"
                         class="btn btn-outline-secondary btn-sm color-swatch-btn <?= $v['id'] == $selectedVariant['id'] ? 'active' : '' ?>"
-                        data-variant-id="<?= $v['id'] ?>"
+                        data-variant-id="<?= (int)$v['id'] ?>"
                         <?= $v['color_hex'] ? 'style="border-left:14px solid ' . htmlspecialchars($v['color_hex']) . ';"' : '' ?>
                         <?= (int)$v['stock_quantity'] <= 0 ? 'title="Out of stock"' : '' ?>>
                         <?= htmlspecialchars($v['color_name']) ?>
@@ -239,7 +239,7 @@ usort($sortedByStock, fn($a, $b) => (int)$a['stock_quantity'] <=> (int)$b['stock
                     </span>
                     <?php endfor; ?>
                 </div>
-                <input type="hidden" name="rating" id="ratingInput" value="<?= $myReview['rating'] ?? 0 ?>">
+                <input type="hidden" name="rating" id="ratingInput" value="<?= (int)($myReview['rating'] ?? 0) ?>">
             </div>
             <div class="float-group">
                 <textarea name="comment" rows="3" placeholder=" "><?= htmlspecialchars($myReview['comment'] ?? '') ?></textarea>
@@ -284,7 +284,7 @@ usort($sortedByStock, fn($a, $b) => (int)$a['stock_quantity'] <=> (int)$b['stock
             $rPrice = (float)($r['discount_percentage'] > 0 ? $r['price_after_discount'] : $r['price']);
         ?>
         <div class="col-lg-3 col-md-6 mb-4">
-            <a href="<?= URLROOT ?>/product?id=<?= $r['id'] ?>"
+            <a href="<?= URLROOT ?>/product?id=<?= (int)$r['id'] ?>"
                class="image-only-product reveal">
                 <?php $relWebp = getWebpPath($r['image_path'] ?? ''); ?>
                 <picture>
