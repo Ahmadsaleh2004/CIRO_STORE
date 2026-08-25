@@ -8,7 +8,8 @@
 //   window._currentCategoryIds   — (edit فقط) [1,2,...]
 //
 // ⚠️ يستخدم window.URLROOT — لا BASE_URL
-// ⚠️ fetch() مباشرة — لا fetchWithCsrfRetry
+// يستعمل fetchWithCsrfRetry لنقاط الكتابة. نقطة اقتراح التصنيفات
+// وحدها تبقى fetch عارياً — لا تتحقق من CSRF أصلاً (راجع تعليقها).
 // ══════════════════════════════════════════════════════════════
 
 let selectedCategoryIds    = new Set();
@@ -165,8 +166,7 @@ async function addNewCategory() {
     fd.append('csrf_token', window._csrfToken || '');
 
     try {
-        const res  = await fetch(window.URLROOT + '/admin/products/categories/add', { method: 'POST', body: fd });
-        const data = await res.json();
+        const data = await fetchWithCsrfRetry(window.URLROOT + '/admin/products/categories/add', { method: 'POST', body: fd });
 
         if (data.success) {
             allCategoriesData.push({ id: data.category.id, name: data.category.name, is_core: false, product_count: 0 });
@@ -194,8 +194,7 @@ async function fetchSuggestions(q) {
     fd.append('q', q);
 
     try {
-        const res  = await fetch(window.URLROOT + '/admin/products/categories/suggest', { method: 'POST', body: fd });
-        const data = await res.json();
+        const data = await fetchWithCsrfRetry(window.URLROOT + '/admin/products/categories/suggest', { method: 'POST', body: fd });
 
         if (data.success && data.suggestions?.length) {
             const top = data.suggestions[0];
@@ -231,6 +230,11 @@ function openDeleteConfirm(id, name) {
     new bootstrap.Modal(document.getElementById('categoryDeleteModal')).show();
 
     // أعد ترتيب الـ select بحيث الأقرب بالمعنى أولاً
+    //
+    // fetch عارٍ عن قصد — لا fetchWithCsrfRetry: هذه النقطة استعلام قراءة
+    // (اقتراح تصنيفات مشابهة) و AdminProductsController::suggestCategory
+    // **لا تتحقق من توكن CSRF** أصلاً، تفحص الصلاحية فقط. فلا يمكن أن
+    // تُرجع «Invalid CSRF token»، ولا شيء لشبكة الأمان لتفعله هنا.
     const fd = new FormData();
     fd.append('q', name);
     fetch(window.URLROOT + '/admin/products/categories/suggest', { method: 'POST', body: fd })
@@ -268,8 +272,7 @@ async function confirmCategoryDelete() {
     fd.append('csrf_token',     window._csrfToken || '');
 
     try {
-        const res  = await fetch(window.URLROOT + '/admin/products/categories/delete', { method: 'POST', body: fd });
-        const data = await res.json();
+        const data = await fetchWithCsrfRetry(window.URLROOT + '/admin/products/categories/delete', { method: 'POST', body: fd });
 
         if (data.success) {
             allCategoriesData = allCategoriesData.filter(c => c.id !== categoryDeleteTargetId);

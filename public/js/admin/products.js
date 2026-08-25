@@ -153,8 +153,7 @@ function initEditProductForm(form) {
 
         try {
             const fd  = new FormData(form);
-            const res = await fetch(form.action, { method: 'POST', body: fd });
-            const data = await res.json();
+            const data = await fetchWithCsrfRetry(form.action, { method: 'POST', body: fd });
 
             if (data.success) {
                 if (typeof showToast === 'function') showToast(data.message || 'Product updated successfully.', 'success');
@@ -249,8 +248,7 @@ function initAddProductForm(form) {
 
         try {
             const fd  = new FormData(form);
-            const res = await fetch(form.action, { method: 'POST', body: fd });
-            const data = await res.json();
+            const data = await fetchWithCsrfRetry(form.action, { method: 'POST', body: fd });
 
             if (data.success) {
                 if (typeof showToast === 'function') showToast(data.message || 'Product added successfully.', 'success');
@@ -286,10 +284,9 @@ function initProductsListInteractions() {
             fd.append('csrf_token', getCsrf());
 
             try {
-                const res  = await fetch(window.URLROOT + '/admin/products/toggle-visibility', {
+                const data = await fetchWithCsrfRetry(window.URLROOT + '/admin/products/toggle-visibility', {
                     method: 'POST', body: fd,
                 });
-                const data = await res.json();
 
                 if (!data.success) {
                     if (typeof showToast === 'function') showToast(data.message || 'Error', 'error');
@@ -344,10 +341,9 @@ function initProductsListInteractions() {
                 fd.append('csrf_token', getCsrf());
 
                 try {
-                    const res  = await fetch(window.URLROOT + '/admin/products/delete', {
+                    const data = await fetchWithCsrfRetry(window.URLROOT + '/admin/products/delete', {
                         method: 'POST', body: fd,
                     });
-                    const data = await res.json();
 
                     if (data.success) {
                         const row = document.getElementById('product-row-' + pid);

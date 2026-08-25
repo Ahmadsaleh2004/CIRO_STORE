@@ -1,8 +1,8 @@
 // ══════════════════════════════════════════════════════════════
 // public/js/admin/backup.js — صفحة Backup DB
 // مسؤول عن: زر إنشاء نسخة (مع spinner) + أزرار حذف النسخ.
-// ⚠️ استخدم fetch() مباشرة + window.URLROOT + window._csrfToken/backupCsrfToken
-//    — لا fetchWithCsrfRetry (يعتمد على BASE_URL غير موجود بصفحات الأدمن).
+// يستعمل fetchWithCsrfRetry لكل POST، والتوكن من backupCsrfToken أو
+// window._csrfToken.
 // ══════════════════════════════════════════════════════════════
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -31,8 +31,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const fd = new FormData();
                 fd.append('csrf_token', csrfValue());
 
-                const res  = await fetch(window.URLROOT + '/admin/backup/create', { method: 'POST', body: fd });
-                const data = await res.json();
+                const data = await fetchWithCsrfRetry(window.URLROOT + '/admin/backup/create', { method: 'POST', body: fd });
 
                 if (data.success) {
                     if (typeof showToast === 'function') showToast('Backup created. Refreshing list...', 'success');
@@ -73,8 +72,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 fd.append('file', filename);
                 fd.append('csrf_token', csrfValue());
 
-                const res  = await fetch(window.URLROOT + '/admin/backup/delete', { method: 'POST', body: fd });
-                const data = await res.json();
+                const data = await fetchWithCsrfRetry(window.URLROOT + '/admin/backup/delete', { method: 'POST', body: fd });
 
                 if (data.success) {
                     if (typeof showToast === 'function') showToast('Backup deleted.', 'success');
