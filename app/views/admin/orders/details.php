@@ -11,7 +11,7 @@
 // بادج الحالة يُبنى من shared/order-status-badge.php — تُلتقط مخرجاته
 // في متغيّر لأنه يُطبع داخل <h1> بعد سطور من هنا.
 $orderStatus = $order['status'];
-$badgeSize   = 'fs-6';
+$badgeExtraClass = 'fs-6';
 $badgeLabel  = match($order['status']) {
     'completed' => 'Completed',
     'cancelled' => 'Cancelled',

@@ -130,16 +130,12 @@
                     <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
                         <div>
                             <strong>Order #<?= htmlspecialchars((string)$order['order_id']) ?></strong>
-                            <span class="badge ms-2
-                                <?= match($order['status']) {
-                                    'not_taken'  => 'bg-warning text-dark',
-                                    'taken'      => 'bg-primary',
-                                    'completed'  => 'bg-success',
-                                    'cancelled'  => 'bg-secondary',
-                                    default      => 'bg-secondary'
-                                } ?>">
-                                <?= htmlspecialchars(ucfirst(str_replace('_', ' ', $order['status']))) ?>
-                            </span>
+                            <?php
+                            $orderStatus     = $order['status'];
+                            $badgeExtraClass = 'ms-2';
+                            $badgeLabel      = '';
+                            require APPROOT . '/views/shared/order-status-badge.php';
+                            ?>
                         </div>
                         <div class="text-end">
                             <strong>$<?= number_format((float)$order['total_amount'], 2) ?></strong><br>

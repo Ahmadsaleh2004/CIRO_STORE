@@ -64,9 +64,10 @@ document.addEventListener('DOMContentLoaded', () => {
             itemEl.querySelector('.field-product-id').value = data.product_id;
             const prev = itemEl.querySelector('.product-preview');
             prev.classList.remove('d-none');
-            prev.querySelector('.product-preview-img').src = data.product_image_path
-                ? window.URLROOT + '/' + data.product_image_path.replace(/^\/+/, '')
-                : '';
+            // product_image_url جاهز من الخادم (fixImagePath). لا نبنيه هنا:
+            // البناء اليدوي كان يعطي /airpods.jpg بدل /images/airpods.jpg
+            // لأن قاعدة البادئة تعرفها fixImagePath في PHP وحدها.
+            prev.querySelector('.product-preview-img').src = data.product_image_url || '';
             prev.querySelector('.product-preview-name').textContent = data.product_name || '';
         }
         itemEl.querySelector('.field-product-link').value = data.product_link_url || '';
@@ -78,8 +79,7 @@ document.addEventListener('DOMContentLoaded', () => {
             itemEl.querySelector('.field-existing-manual-image').value = data.manual_image_path;
             const prev = itemEl.querySelector('.manual-preview');
             prev.classList.remove('d-none');
-            prev.querySelector('.manual-preview-img').src =
-                window.URLROOT + '/' + data.manual_image_path.replace(/^\/+/, '');
+            prev.querySelector('.manual-preview-img').src = data.manual_image_url || '';
         }
         itemEl.querySelector('.field-manual-link').value = data.manual_link_url || '';
         itemEl.querySelector('.field-manual-description').value = data.manual_description || '';

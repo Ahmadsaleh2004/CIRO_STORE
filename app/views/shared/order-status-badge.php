@@ -3,21 +3,23 @@
  * app/views/shared/order-status-badge.php
  * بادج حالة الطلب — الألوان المعتمدة في لوحة التحكم.
  *
- * كانت خريطة الحالة→اللون مكتوبة في أربعة ملفات أدمن:
- * orders/index · orders/details · users/details · manage-admins/details.
+ * كانت خريطة الحالة→اللون مكتوبة في خمسة ملفات: أربعة في لوحة التحكم
+ * (orders/index · orders/details · users/details · manage-admins/details)
+ * وواحد في واجهة المتجر (account/my-info).
  *
  * المتغيرات:
  *   $orderStatus  string  قيمة العمود orders.status
- *   $badgeSize    string  ''|'fs-6'  — صفحة تفاصيل الطلب تستعمل الأكبر
+ *   $badgeExtraClass string  أصناف تُضاف إلى الوسم: 'fs-6' لصفحة
+ *                           تفاصيل الطلب، 'ms-2' لصفحة الزبون
  *   $badgeLabel   string  نص بديل للحالة (اتركه فارغاً للنص الافتراضي)
  *
- * ⚠️ صفحة المستخدم account/my-info.php **لا** تستعمل هذا الـpartial عمداً:
- * هي تعرض الطلب الملغى بـbg-secondary (رمادي) بينما كل صفحات الأدمن
- * تعرضه بـbg-danger (أحمر). التوحيد الأعمى كان سيغيّر ما يراه الزبون،
- * وهو قرار تصميم لا إعادة هيكلة. التفاصيل في تقرير المرحلة 5.
+ * ملاحظة تاريخية: كانت صفحة الزبون تعرض الطلب الملغى بـbg-secondary
+ * (رمادي) بينما صفحات الأدمن الأربع تعرضه بـbg-danger (أحمر). أُبقي
+ * الاختلاف في المرحلة 5 لأنه قرار تصميم لا إعادة هيكلة، ثم اختار صاحب
+ * المشروع التوحيد على الأحمر — فصار الملغى أحمر في كل مكان.
  */
 
-$badgeSize  = $badgeSize ?? '';
+$badgeExtraClass = $badgeExtraClass ?? '';
 $statusClass = match ($orderStatus) {
     'completed' => 'bg-success',
     'cancelled' => 'bg-danger',
@@ -31,4 +33,4 @@ $label = ($badgeLabel ?? '') !== ''
     ? $badgeLabel
     : ucfirst(str_replace('_', ' ', $orderStatus));
 ?>
-<span class="badge <?= $statusClass ?><?= $badgeSize !== '' ? ' ' . $badgeSize : '' ?>"><?= htmlspecialchars($label) ?></span>
+<span class="badge <?= $statusClass ?><?= $badgeExtraClass !== '' ? ' ' . $badgeExtraClass : '' ?>"><?= htmlspecialchars($label) ?></span>
