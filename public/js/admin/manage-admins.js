@@ -3,9 +3,7 @@
 // مسؤول عن: صفوف الجدول القابلة للنقر، فورم Add، Modal Edit
 //            (openPermModal + تفعيل Save)، حذف الأدمن (SweetAlert2).
 // notify + broadcast → admins.js (مشترك)
-// ⚠️ استخدم fetch() مباشرة + window.URLROOT — لا تستخدم
-//    fetchWithCsrfRetry() لأنها تعتمد على window.BASE_URL
-//    غير موجود بصفحات الأدمن.
+// يستعمل fetchWithCsrfRetry لكل POST.
 // ══════════════════════════════════════════════════════════════
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -66,8 +64,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const fd = new FormData(this);
 
         try {
-            const res  = await fetch(this.action, { method: 'POST', body: fd });
-            const data = await res.json();
+            const data = await fetchWithCsrfRetry(this.action, { method: 'POST', body: fd });
 
             if (data.success) {
                 showToast(data.message || 'Admin added successfully.', 'success');
@@ -104,8 +101,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const fd = new FormData(this);
 
         try {
-            const res  = await fetch(this.action, { method: 'POST', body: fd });
-            const data = await res.json();
+            const data = await fetchWithCsrfRetry(this.action, { method: 'POST', body: fd });
 
             if (data.success) {
                 showToast(data.message || 'Admin updated successfully.', 'success');
@@ -168,11 +164,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 fd.append('csrf_token',       window._csrfToken || '');
 
                 try {
-                    const res  = await fetch(window.URLROOT + '/admin/admins/delete', {
+                    const data = await fetchWithCsrfRetry(window.URLROOT + '/admin/admins/delete', {
                         method: 'POST',
                         body: fd,
                     });
-                    const data = await res.json();
 
                     if (data.success) {
                         if (typeof showToast === 'function') showToast(data.message, 'success');

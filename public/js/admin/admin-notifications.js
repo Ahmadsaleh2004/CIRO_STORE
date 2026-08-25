@@ -2,9 +2,8 @@
 // public/js/admin/admin-notifications.js — جرس إشعارات الأدمن
 // مسؤول فقط عن: #adminNotifBell / #adminNotifBadge / #adminNotifSidebar
 // (الـ sidebar HTML ثابت بـ footer.php — هذا الملف يربطه بالباك اند)
-// ⚠️ استخدم fetch() مباشرة + window.URLROOT — لا تستخدم
-//    fetchWithCsrfRetry() لأنها تعتمد على window.BASE_URL غير موجود
-//    بصفحات الأدمن.
+// يستعمل fetchWithCsrfRetry لكل POST. طلب /list يبقى fetch عارياً
+// لأنه GET — لا توكن فيه ولا شيء لتتعافى منه.
 // ══════════════════════════════════════════════════════════════
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -108,7 +107,10 @@ document.addEventListener('DOMContentLoaded', () => {
         setBadge(unread);
         renderList();
         try {
-            await fetch(baseUrl + '/mark-read', {
+            // النتيجة غير مستعملة عمداً (تعليم كمقروء عند الفتح)، لكن الغلاف
+            // يظل مفيداً: يعيد المحاولة بتوكن طازج عند فشل CSRF بدل أن
+            // تضيع العلامة صامتة.
+            await fetchWithCsrfRetry(baseUrl + '/mark-read', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                 body: 'notification_id=' + encodeURIComponent(id)
@@ -119,13 +121,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function markRead(id) {
         try {
-            const res  = await fetch(baseUrl + '/mark-read', {
+            const data = await fetchWithCsrfRetry(baseUrl + '/mark-read', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                 body: 'notification_id=' + encodeURIComponent(id)
                     + '&csrf_token=' + encodeURIComponent(window._csrfToken || ''),
             });
-            const data = await res.json();
             if (data.success) {
                 const n = allNotifs.find(x => x.id == id);
                 if (n) n.is_read = 1;
@@ -139,12 +140,11 @@ document.addEventListener('DOMContentLoaded', () => {
     if (markAllBtn) {
         markAllBtn.addEventListener('click', async () => {
             try {
-                const res  = await fetch(baseUrl + '/mark-all-read', {
+                const data = await fetchWithCsrfRetry(baseUrl + '/mark-all-read', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                     body: 'csrf_token=' + encodeURIComponent(window._csrfToken || ''),
                 });
-                const data = await res.json();
                 if (data.success) {
                     allNotifs.forEach(x => x.is_read = 1);
                     setBadge(0);
@@ -157,12 +157,11 @@ document.addEventListener('DOMContentLoaded', () => {
     if (deleteAllBtn) {
         deleteAllBtn.addEventListener('click', async () => {
             try {
-                const res  = await fetch(baseUrl + '/delete-all', {
+                const data = await fetchWithCsrfRetry(baseUrl + '/delete-all', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                     body: 'csrf_token=' + encodeURIComponent(window._csrfToken || ''),
                 });
-                const data = await res.json();
                 if (data.success) {
                     allNotifs = [];
                     setBadge(0);

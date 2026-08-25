@@ -2,9 +2,7 @@
 // public/js/admin/admins.js — notify + broadcast مشتركَين
 // مسؤول فقط عن: openNotifyModal (generic)، notifyModal، broadcastModal.
 // Add/Edit/Delete → manage-admins.js
-// ⚠️ استخدم fetch() مباشرة + window.URLROOT — لا تستخدم
-//    fetchWithCsrfRetry() لأنها تعتمد على window.BASE_URL
-//    غير موجود بصفحات الأدمن.
+// يستعمل fetchWithCsrfRetry لنقطتَي الإرسال (notify · broadcast).
 // ══════════════════════════════════════════════════════════════
 
 // State المشترك للـ Modal — يُعبّأ عبر openNotifyModal()
@@ -69,11 +67,10 @@ document.addEventListener('DOMContentLoaded', () => {
         fd.append('csrf_token',  window._csrfToken || '');
 
         try {
-            const res  = await fetch(window.URLROOT + '/admin/messaging/notify', {
+            const data = await fetchWithCsrfRetry(window.URLROOT + '/admin/messaging/notify', {
                 method: 'POST',
                 body: fd,
             });
-            const data = await res.json();
 
             if (data.success) {
                 bootstrap.Modal.getInstance(document.getElementById('notifyModal'))?.hide();
@@ -126,11 +123,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const fd = new FormData(this);
 
         try {
-            const res  = await fetch(window.URLROOT + '/admin/messaging/broadcast', {
+            const data = await fetchWithCsrfRetry(window.URLROOT + '/admin/messaging/broadcast', {
                 method: 'POST',
                 body: fd,
             });
-            const data = await res.json();
 
             if (data.success) {
                 bootstrap.Modal.getInstance(document.getElementById('broadcastModal'))?.hide();
