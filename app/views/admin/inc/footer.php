@@ -29,7 +29,9 @@
 <!-- Shared JS — زر إلغاء/حذف الطلب المشترك (admin order details + my-info) -->
 <script src="<?= URLROOT ?>/js/shared/order-cancel.js"></script>
 <script src="<?= URLROOT ?>/js/admin/admin-layout/admin-navbar.js"></script>
-<script src="<?= URLROOT ?>/js/admin/admin-layout/admin-footer.js"></script>
+<!-- حُذف admin-layout/admin-footer.js: كان يربط أزرار الإشعارات الثلاثة
+     التي يربطها admin-notifications.js فعلاً — زرّان منه كعبان فارغان لا
+     يفعلان إلا console.log، وزر الإغلاق نسخة ناقصة لا تُخفي الـbackdrop. -->
 <script src="<?= URLROOT ?>/js/main.js"></script>
 <?php if (isset($extraScripts)) echo $extraScripts; ?>
 

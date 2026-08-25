@@ -28,7 +28,10 @@ class WishlistController extends Controller
             'desc'          => 'Your saved products at Cairo Store.',
             'activePage'    => 'wishlist',
             'extraHead'     => '<link rel="stylesheet" href="' . URLROOT . '/css/store/pages/wishlist.css">',
-            'extraScripts'  => '<script src="' . URLROOT . '/js/features/wishlist.js" defer></script>',
+            // بلا extraScripts: فوتر المتجر يحمّل js/features/wishlist.js على كل
+            // صفحة أصلاً. تحميله هنا أيضاً كان يضع وسمين للملف نفسه، فيُنفَّذ
+            // مرتين (266 سطراً تُحلَّل مرتين، ومعالج DOMContentLoaded يعمل مرتين).
+            // لم يظهر عطل لأن العرض يستبدل innerHTML كاملاً، لكنه هدر خالص.
             'isRegularUser' => isUser(),
             'csrf'          => generateCsrfToken(),
             'userLoggedIn'  => isUserLoggedIn(),

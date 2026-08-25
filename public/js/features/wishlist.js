@@ -106,7 +106,7 @@ async function renderWishlist() {
     const csrf = window.__csrfTokenForWishlist || '';
 
     container.innerHTML = wishlist.map(p => {
-        const imgSrc = window.fixImagePath(p.image_path || p.image || '');
+        const imgSrc = window.imagePathOrEmpty(p.image_path || p.image || '');
         const name   = escHtml(p.name);
         const normalizedId = parseInt(p.id, 10);
         const live   = liveStockData[String(normalizedId)];

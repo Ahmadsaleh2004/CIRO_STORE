@@ -100,7 +100,7 @@ function renderHomeSections(allProducts) {
         if (!track) return;
 
         track.innerHTML = list.map(p => {
-            const imgSrc = fixImagePath(p.image || p.image_path || '');
+            const imgSrc = imagePathOrEmpty(p.image || p.image_path || '');
             const tag    = tagConfig[p.tag] || { label: '', cls: '' };
             return `
             <div class="carousel-item-wrap reveal">
