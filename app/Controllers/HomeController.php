@@ -6,9 +6,22 @@ use App\Core\Controller;
 use App\Models\ProductModel;
 use App\Models\CategoryModel;
 use App\Models\BrandingModel;
+use OpenApi\Attributes as OA;
 
 class HomeController extends Controller
 {
+    #[OA\Get(
+        path: "/",
+        summary: "الصفحة الرئيسية — السلايدر والأقسام والمنتجات المرئية",
+        description: "الراوت /home يشير إلى نفس الدالة.",
+        tags: ["Store - Pages"],
+        responses: [new OA\Response(response: 200, description: "صفحة HTML")]
+    )]    #[OA\Get(
+        path: '/home',
+        summary: 'مسار بديل للصفحة الرئيسية — نفس الدالة تماماً',
+        tags: ['Store - Pages'],
+        responses: [new OA\Response(response: 200, description: 'صفحة HTML')]
+    )]
     public function index(): void
     {
         // 1. جلب كل المنتجات المرئية من الموديل

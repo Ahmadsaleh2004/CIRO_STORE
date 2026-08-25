@@ -4,6 +4,7 @@ namespace App\Controllers;
 
 use App\Core\Controller;
 use App\Models\NotificationModel;
+use OpenApi\Attributes as OA;
 
 /**
  * NotificationController — إدارة إشعارات المستخدمين
@@ -15,6 +16,15 @@ class NotificationController extends Controller
     // ════════════════════════════════════════════════════════
     // GET /notifications/list
     // ════════════════════════════════════════════════════════
+    #[OA\Get(
+        path: '/notifications/list',
+        summary: 'إشعارات المستخدم الحالي',
+        tags: ['Store - Notifications'],
+        security: [['userSessionAuth' => []]],
+        responses: [
+            new OA\Response(response: 200, description: 'JSON — {success, message, notifications[], unread}'),
+        ]
+    )]
     public function list(): void
     {
         header('Content-Type: application/json; charset=utf-8');
@@ -33,6 +43,26 @@ class NotificationController extends Controller
     // ════════════════════════════════════════════════════════
     // POST /notifications/mark-read
     // ════════════════════════════════════════════════════════
+    #[OA\Post(
+        path: '/notifications/mark-read',
+        summary: 'تعليم إشعار واحد كمقروء',
+        tags: ['Store - Notifications'],
+        security: [['userSessionAuth' => []]],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\MediaType(
+                mediaType: 'application/x-www-form-urlencoded',
+                schema: new OA\Schema(
+                    required: ['id', 'csrf_token'],
+                    properties: [
+                        new OA\Property(property: 'id', type: 'integer'),
+                        new OA\Property(property: 'csrf_token', type: 'string'),
+                    ]
+                )
+            )
+        ),
+        responses: [new OA\Response(response: 200, description: 'JSON — {success, message}')]
+    )]
     public function markRead(): void
     {
         header('Content-Type: application/json; charset=utf-8');
@@ -55,6 +85,13 @@ class NotificationController extends Controller
     // ════════════════════════════════════════════════════════
     // POST /notifications/mark-all-read
     // ════════════════════════════════════════════════════════
+    #[OA\Post(
+        path: '/notifications/mark-all-read',
+        summary: 'تعليم كل إشعارات المستخدم كمقروءة',
+        tags: ['Store - Notifications'],
+        security: [['userSessionAuth' => []]],
+        responses: [new OA\Response(response: 200, description: 'JSON — {success, message}')]
+    )]
     public function markAllRead(): void
     {
         header('Content-Type: application/json; charset=utf-8');
@@ -69,6 +106,26 @@ class NotificationController extends Controller
     // ════════════════════════════════════════════════════════
     // POST /notifications/dismiss
     // ════════════════════════════════════════════════════════
+    #[OA\Post(
+        path: '/notifications/dismiss',
+        summary: 'حذف إشعار واحد',
+        tags: ['Store - Notifications'],
+        security: [['userSessionAuth' => []]],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\MediaType(
+                mediaType: 'application/x-www-form-urlencoded',
+                schema: new OA\Schema(
+                    required: ['id', 'csrf_token'],
+                    properties: [
+                        new OA\Property(property: 'id', type: 'integer'),
+                        new OA\Property(property: 'csrf_token', type: 'string'),
+                    ]
+                )
+            )
+        ),
+        responses: [new OA\Response(response: 200, description: 'JSON — {success, message}')]
+    )]
     public function dismiss(): void
     {
         header('Content-Type: application/json; charset=utf-8');
@@ -91,6 +148,13 @@ class NotificationController extends Controller
     // ════════════════════════════════════════════════════════
     // POST /notifications/delete-all
     // ════════════════════════════════════════════════════════
+    #[OA\Post(
+        path: '/notifications/delete-all',
+        summary: 'حذف كل إشعارات المستخدم',
+        tags: ['Store - Notifications'],
+        security: [['userSessionAuth' => []]],
+        responses: [new OA\Response(response: 200, description: 'JSON — {success, message}')]
+    )]
     public function deleteAll(): void
     {
         header('Content-Type: application/json; charset=utf-8');

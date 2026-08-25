@@ -15,30 +15,6 @@ use OpenApi\Attributes as OA;
  * AdminProductsController — قائمة/إضافة/تعديل/حذف المنتجات + إدارة الكاتوجريز الديناميكية.
  * يرث من AdminController الذي يتحقق من تسجيل دخول الأدمن تلقائياً.
  */
-#[OA\PathItem(path: '/admin/products/categories/suggest')]
-#[OA\PathItem(path: '/admin/products/categories/add')]
-#[OA\PathItem(path: '/admin/products/categories/delete')]
-#[OA\Post(
-    path: '/admin/products/categories/suggest',
-    summary: 'اقتراح أقرب الكاتوجريز (AJAX)',
-    tags: ['Admin - Manage Products'],
-    security: [['adminSessionAuth' => []]],
-    responses: [new OA\Response(response: 200, description: 'JSON: {success, suggestions}')]
-)]
-#[OA\Post(
-    path: '/admin/products/categories/add',
-    summary: 'إضافة كاتوجري جديدة',
-    tags: ['Admin - Manage Products'],
-    security: [['adminSessionAuth' => []]],
-    responses: [new OA\Response(response: 200, description: 'JSON: {success, message, category}')]
-)]
-#[OA\Post(
-    path: '/admin/products/categories/delete',
-    summary: 'حذف كاتوجري مع نقل منتجاتها',
-    tags: ['Admin - Manage Products'],
-    security: [['adminSessionAuth' => []]],
-    responses: [new OA\Response(response: 200, description: 'JSON: {success, message}')]
-)]
 class AdminProductsController extends AdminController
 {
     private const PER_PAGE = 12;
@@ -165,6 +141,7 @@ class AdminProductsController extends AdminController
                         new OA\Property(
                             property: 'variants',
                             type: 'array',
+                            items: new OA\Items(type: 'object', description: 'صف variant واحد: color_name و price و discount و stock و gender و image'),
                             description: 'ألوان/كميات/أسعار المنتج — بنفس بنية المشروع القديم'
                         ),
                         new OA\Property(property: 'csrf_token', type: 'string'),
@@ -322,7 +299,11 @@ class AdminProductsController extends AdminController
                         new OA\Property(property: 'description',  type: 'string'),
                         new OA\Property(property: 'manufacturer', type: 'string'),
                         new OA\Property(property: 'category_ids', type: 'array', items: new OA\Items(type: 'integer')),
-                        new OA\Property(property: 'variants',     type: 'array'),
+                        new OA\Property(
+                            property: 'variants',
+                            type: 'array',
+                            items: new OA\Items(type: 'object', description: 'صف variant واحد: color_name و price و discount و stock و gender و image'),
+                        ),
                         new OA\Property(property: 'csrf_token',   type: 'string'),
                     ]
                 )

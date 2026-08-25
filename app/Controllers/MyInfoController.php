@@ -6,6 +6,7 @@ use App\Core\Controller;
 use App\Core\Middleware;
 use App\Models\UserModel;
 use App\Models\OrderModel;
+use OpenApi\Attributes as OA;
 
 /**
  * MyInfoController — بيانات المستخدم + طلباته + عناوينه
@@ -17,6 +18,16 @@ class MyInfoController extends Controller
     // ════════════════════════════════════════════════════════
     // GET /user/info — عرض الصفحة
     // ════════════════════════════════════════════════════════
+    #[OA\Get(
+        path: '/user/info',
+        summary: 'صفحة حساب المستخدم — البيانات والطلبات والعناوين',
+        tags: ['Store - Account'],
+        security: [['userSessionAuth' => []]],
+        responses: [
+            new OA\Response(response: 200, description: 'صفحة HTML'),
+            new OA\Response(response: 302, description: 'تحويل للرئيسية مع فتح نافذة الدخول'),
+        ]
+    )]
     public function index(): void
     {
         Middleware::requireLogin();
@@ -53,6 +64,33 @@ class MyInfoController extends Controller
     // ════════════════════════════════════════════════════════
     // POST /user/info — تحديث بيانات الملف الشخصي
     // ════════════════════════════════════════════════════════
+    #[OA\Post(
+        path: '/user/info',
+        summary: 'تحديث بيانات الحساب',
+        description: 'كلمة المرور الحالية إلزامية لأي تعديل، حتى لو لم تكن كلمة المرور '
+                   . 'نفسها هي المُعدَّلة.',
+        tags: ['Store - Account'],
+        security: [['userSessionAuth' => []]],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\MediaType(
+                mediaType: 'application/x-www-form-urlencoded',
+                schema: new OA\Schema(
+                    required: ['current_password', 'csrf_token'],
+                    properties: [
+                        new OA\Property(property: 'full_name', type: 'string'),
+                        new OA\Property(property: 'phone', type: 'string'),
+                        new OA\Property(property: 'country', type: 'string'),
+                        new OA\Property(property: 'city', type: 'string'),
+                        new OA\Property(property: 'current_password', type: 'string', format: 'password'),
+                        new OA\Property(property: 'new_password', type: 'string', format: 'password'),
+                        new OA\Property(property: 'csrf_token', type: 'string'),
+                    ]
+                )
+            )
+        ),
+        responses: [new OA\Response(response: 200, description: 'JSON — {success, message}')]
+    )]
     public function updateProfile(): void
     {
         header('Content-Type: application/json; charset=utf-8');
@@ -132,6 +170,31 @@ class MyInfoController extends Controller
     // ════════════════════════════════════════════════════════
     // POST /user/addresses — إضافة عنوان
     // ════════════════════════════════════════════════════════
+    #[OA\Post(
+        path: '/user/addresses',
+        summary: 'إضافة عنوان شحن للحساب',
+        tags: ['Store - Account'],
+        security: [['userSessionAuth' => []]],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\MediaType(
+                mediaType: 'application/x-www-form-urlencoded',
+                schema: new OA\Schema(
+                    required: ['full_address', 'csrf_token'],
+                    properties: [
+                        new OA\Property(property: 'label', type: 'string', description: 'اسم العنوان مثل "المنزل"'),
+                        new OA\Property(property: 'full_address', type: 'string'),
+                        new OA\Property(property: 'city', type: 'string'),
+                        new OA\Property(property: 'country', type: 'string'),
+                        new OA\Property(property: 'phone', type: 'string'),
+                        new OA\Property(property: 'is_default', type: 'boolean'),
+                        new OA\Property(property: 'csrf_token', type: 'string'),
+                    ]
+                )
+            )
+        ),
+        responses: [new OA\Response(response: 200, description: 'JSON — {success, message}')]
+    )]
     public function addAddress(): void
     {
         header('Content-Type: application/json; charset=utf-8');
@@ -175,6 +238,26 @@ class MyInfoController extends Controller
     // ════════════════════════════════════════════════════════
     // POST /user/addresses/delete — حذف عنوان
     // ════════════════════════════════════════════════════════
+    #[OA\Post(
+        path: '/user/addresses/delete',
+        summary: 'حذف عنوان شحن',
+        tags: ['Store - Account'],
+        security: [['userSessionAuth' => []]],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\MediaType(
+                mediaType: 'application/x-www-form-urlencoded',
+                schema: new OA\Schema(
+                    required: ['address_id', 'csrf_token'],
+                    properties: [
+                        new OA\Property(property: 'address_id', type: 'integer'),
+                        new OA\Property(property: 'csrf_token', type: 'string'),
+                    ]
+                )
+            )
+        ),
+        responses: [new OA\Response(response: 200, description: 'JSON — {success, message}')]
+    )]
     public function deleteAddress(): void
     {
         header('Content-Type: application/json; charset=utf-8');

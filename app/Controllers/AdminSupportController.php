@@ -13,9 +13,10 @@ use OpenApi\Attributes as OA;
  * AdminSupportController — صفحة رسائل الدعم الفني للأدمن.
  * يرث من AdminController الذي يتحقق من تسجيل دخول الأدمن تلقائياً.
  */
-#[OA\PathItem(path: '/admin/support')]
-#[OA\PathItem(path: '/admin/support/reply')]
-#[OA\PathItem(path: '/admin/support/delete')]
+// ملاحظة: لا #[OA\PathItem] هنا. كانت ثلاثة منها تعلن المسارات مجرّدة
+// بلا عملية، فكان swagger-php يدمج أول #[OA\Post] في كل واحدة — فيخرج
+// المسارات الثلاثة بنفس الوصف ونفس operationId. سمات Get/Post أدناه
+// وعلى الميثودات تعلن المسارات بنفسها فلا حاجة لها.
 #[OA\Post(
     path: '/admin/support/reply',
     summary: 'إرسال رد على رسالة دعم كإشعار للمستخدم صاحب الرسالة',

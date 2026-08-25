@@ -242,6 +242,27 @@ class AdminAuthController extends Controller
     // ════════════════════════════════════════════════════════
     // POST /admin/login/2fa — التحقق من كود TOTP بعد نجاح كلمة المرور
     // ════════════════════════════════════════════════════════
+    #[OA\Post(
+        path: '/admin/login/2fa',
+        summary: 'الخطوة الثانية من دخول الأدمن — التحقق من رمز TOTP',
+        description: 'تُستدعى بعد أن يُرجع /admin/login الحقل requires_2fa. '
+                   . 'الرمز من تطبيق مصادقة (Google Authenticator أو ما يماثله).',
+        tags: ['Admin Auth'],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\MediaType(
+                mediaType: 'application/x-www-form-urlencoded',
+                schema: new OA\Schema(
+                    required: ['code', 'csrf_token'],
+                    properties: [
+                        new OA\Property(property: 'code', type: 'string', description: 'رمز TOTP من ستة أرقام'),
+                        new OA\Property(property: 'csrf_token', type: 'string'),
+                    ]
+                )
+            )
+        ),
+        responses: [new OA\Response(response: 200, description: 'JSON — {success, message, redirect?}')]
+    )]
     public function verify2FALogin(): void
     {
         startAdminSession();
@@ -349,6 +370,27 @@ class AdminAuthController extends Controller
     // ════════════════════════════════════════════════════════
     // POST /admin/forgot — طلب رابط إعادة تعيين كلمة مرور الأدمن
     // ════════════════════════════════════════════════════════
+    #[OA\Post(
+        path: '/admin/forgot',
+        summary: 'طلب رابط إعادة تعيين كلمة مرور الأدمن',
+        description: 'الرسالة المُرجَعة واحدة سواء وُجد البريد أم لا — كي لا تكشف النقطة '
+                   . 'أي البُرد مسجَّلة كأدمن.',
+        tags: ['Admin Auth'],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\MediaType(
+                mediaType: 'application/x-www-form-urlencoded',
+                schema: new OA\Schema(
+                    required: ['email', 'csrf_token'],
+                    properties: [
+                        new OA\Property(property: 'email', type: 'string', format: 'email'),
+                        new OA\Property(property: 'csrf_token', type: 'string'),
+                    ]
+                )
+            )
+        ),
+        responses: [new OA\Response(response: 200, description: 'JSON — {success, message}')]
+    )]
     public function forgotPassword(): void
     {
         startAdminSession();
