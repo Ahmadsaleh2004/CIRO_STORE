@@ -10,20 +10,14 @@
 </div>
 
 <?php if (!empty($flashMsg) || !empty($flashErr)): ?>
-<script>
-document.addEventListener('DOMContentLoaded', function () {
-    <?php if (!empty($flashMsg)): ?>
-    if (typeof showToast === 'function') {
-        showToast(<?= json_encode($flashMsg) ?>, 'success');
-    }
-    <?php endif; ?>
-    <?php if (!empty($flashErr)): ?>
-    if (typeof showToast === 'function') {
-        showToast(<?= json_encode($flashErr) ?>, 'error');
-    }
-    <?php endif; ?>
-});
-</script>
+<?php
+$toastMessage = $flashMsg ?? '';
+$toastType    = 'success';
+require APPROOT . '/views/shared/flash-toast.php';
+$toastMessage = $flashErr ?? '';
+$toastType    = 'error';
+require APPROOT . '/views/shared/flash-toast.php';
+?>
 <?php endif; ?>
 
 <form id="brandingForm"

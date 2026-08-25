@@ -12,6 +12,7 @@
 <script src="<?= URLROOT ?>/js/core/utils.js"></script>
 <script src="<?= URLROOT ?>/js/core/csrf.js"></script>
 <script src="<?= URLROOT ?>/js/core/ui.js"></script>
+<script src="<?= URLROOT ?>/js/core/flash-toast.js"></script>
 <script src="<?= URLROOT ?>/js/core/theme.js"></script>
 <script src="<?= URLROOT ?>/js/features/auth.js"></script>
 <script src="<?= URLROOT ?>/js/admin/products.js"></script>
@@ -27,6 +28,7 @@
 <script src="<?= URLROOT ?>/js/admin/site-settings.js"></script>
 <!-- Shared JS — زر إلغاء/حذف الطلب المشترك (admin order details + my-info) -->
 <script src="<?= URLROOT ?>/js/shared/order-cancel.js"></script>
+<script src="<?= URLROOT ?>/js/admin/admin-layout/admin-navbar.js"></script>
 <script src="<?= URLROOT ?>/js/admin/admin-layout/admin-footer.js"></script>
 <script src="<?= URLROOT ?>/js/main.js"></script>
 <?php if (isset($extraScripts)) echo $extraScripts; ?>

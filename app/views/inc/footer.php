@@ -68,6 +68,7 @@ $csrfToken = generateCsrfToken();
     <script src="<?= URLROOT ?>/js/core/utils.js" defer></script>
     <script src="<?= URLROOT ?>/js/core/csrf.js" defer></script>
     <script src="<?= URLROOT ?>/js/core/ui.js" defer></script>
+    <script src="<?= URLROOT ?>/js/core/flash-toast.js" defer></script>
     <script src="<?= URLROOT ?>/js/core/theme.js" defer></script>
     <!-- فرض ألوان حقول النوافذ المنبثقة — كان كتلة مضمّنة هنا -->
     <script src="<?= URLROOT ?>/js/core/modal-input-colors.js" defer></script>

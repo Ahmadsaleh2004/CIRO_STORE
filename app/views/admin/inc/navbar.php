@@ -125,17 +125,9 @@
     </div>
 </nav>
 
+<!-- تمرير بيانات فقط — logoutAdmin() في js/admin/admin-layout/admin-navbar.js -->
 <script>
 window._csrfToken = <?= json_encode($csrf) ?>;
-
-// دالة تسجيل خروج الأدمن — منفصلة عن logoutUser() الخاص بالمتجر
-function logoutAdmin() {
-    fetch(window.URLROOT + '/admin/logout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: 'csrf_token=' + encodeURIComponent(window._csrfToken)
-    }).then(() => { window.location.href = window.URLROOT + '/admin/login'; });
-}
 </script>
 
 <main id="main-content" class="container-fluid py-4 px-4">
