@@ -14,6 +14,13 @@ abstract class Controller
      */
     protected function view(string $view, array $data = []): void
     {
+        // نبضة نشاط المستخدم — مخنوقة إلى مرة كل 15 دقيقة (راجع
+        // touchUserActivity في auth_helper.php). موضعها هنا مقصود:
+        // view() تخصّ المتجر وحده، وبلوغها يعني أن الجلسة الصحيحة
+        // بدأت بالفعل. لا تنقلها إلى الـbootstrap — هناك تبدأ جلسة
+        // PHPSESSID قبل أن تضبط startAdminSession اسم جلسة الأدمن.
+        touchUserActivity();
+
         // 1. استخراج المتغيرات من مصفوفة $data لتصبح جاهزة للطباعة
         extract($data);
 

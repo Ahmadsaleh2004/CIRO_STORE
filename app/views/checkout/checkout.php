@@ -49,11 +49,11 @@
             <div class="row g-2 mb-3">
                 <?php foreach ($addresses as $i => $addr): ?>
                 <div class="col-md-6">
-                    <input type="radio" name="addr_choice" id="addr_<?= $addr['id'] ?>"
+                    <input type="radio" name="addr_choice" id="addr_<?= (int)$addr['id'] ?>"
                            class="addr-radio visually-hidden"
-                           value="<?= $addr['id'] ?>"
+                           value="<?= (int)$addr['id'] ?>"
                            <?= ($addr['is_default'] || $i === 0) ? 'checked' : '' ?>>
-                    <label class="addr-label w-100" for="addr_<?= $addr['id'] ?>">
+                    <label class="addr-label w-100" for="addr_<?= (int)$addr['id'] ?>">
                         <strong><?= htmlspecialchars($addr['label'] ?? 'Home') ?></strong><br>
                         <small><?= htmlspecialchars($addr['city'] ?? '') ?><?= ($addr['city'] && $addr['country']) ? ', ' : '' ?><?= htmlspecialchars($addr['country'] ?? '') ?></small><br>
                         <small><?= htmlspecialchars($addr['full_address']) ?></small>

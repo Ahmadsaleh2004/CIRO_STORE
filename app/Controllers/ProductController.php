@@ -122,15 +122,6 @@ class ProductController extends Controller
             ? pickDisplayVariant($variants, $visitorGender) 
             : ($variants[0] ?? []);
 
-        // ملاحظة (كود ميت مُزال): كان هنا استدعاء updateUserActivity()
-        // محروساً بـfunction_exists — والدالة غير معرَّفة في المشروع أصلاً،
-        // فالكتلة لم تنفَّذ ولا مرة. الدالة الحقيقية هي
-        // UserModel::updateActivity() وتُستدعى عند تسجيل الدخول فقط
-        // (AuthController.php:72)، فعمود users.last_activity لا يتحدّث
-        // بالتصفّح. أثر ذلك: عدّاد "المستخدمون النشطون خلال 90 يوماً" في
-        // لوحة التحكم يقلّ عن الحقيقة. الإصلاح قرار أداء مستقل لأنه
-        // يعني كتابة في قاعدة البيانات مع كل عرض صفحة.
-
         // معالجة التقييمات
         $reviews   = ProductModel::getReviews($pid);
         $avgRating = count($reviews) ? round(array_sum(array_column($reviews, 'rating')) / count($reviews), 1) : 0;

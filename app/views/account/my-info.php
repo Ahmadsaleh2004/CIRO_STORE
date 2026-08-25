@@ -151,7 +151,7 @@
                 <div class="card p-3">
                     <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
                         <div>
-                            <strong>Order #<?= $order['order_id'] ?></strong>
+                            <strong>Order #<?= htmlspecialchars((string)$order['order_id']) ?></strong>
                             <span class="badge ms-2
                                 <?= match($order['status']) {
                                     'not_taken'  => 'bg-warning text-dark',
@@ -160,7 +160,7 @@
                                     'cancelled'  => 'bg-secondary',
                                     default      => 'bg-secondary'
                                 } ?>">
-                                <?= ucfirst(str_replace('_', ' ', $order['status'])) ?>
+                                <?= htmlspecialchars(ucfirst(str_replace('_', ' ', $order['status']))) ?>
                             </span>
                         </div>
                         <div class="text-end">
@@ -220,7 +220,7 @@
                         <p class="mb-2 small text-muted">📞 <?= htmlspecialchars($addr['phone_number']) ?></p>
                         <?php endif; ?>
                         <button class="btn btn-sm btn-outline-danger delete-addr-btn"
-                                data-address-id="<?= $addr['id'] ?>"
+                                data-address-id="<?= (int)$addr['id'] ?>"
                                 data-csrf="<?= htmlspecialchars($csrf) ?>">
                             🗑️ Delete
                         </button>
