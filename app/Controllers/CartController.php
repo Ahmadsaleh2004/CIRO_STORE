@@ -4,6 +4,7 @@ namespace App\Controllers;
 
 use App\Core\Controller;
 use App\Models\ProductModel;
+use OpenApi\Attributes as OA;
 
 /**
  * CartController — التحقق من توفر المخزون
@@ -17,6 +18,37 @@ class CartController extends Controller
     // يستقبل: variant_ids[] (مصفوفة معرّفات الـ Variants)
     // يُرجع: بيانات المخزون والسعر الحالي لكل Variant
     // ════════════════════════════════════════════════════════
+    #[OA\Post(
+        path: '/cart/check-stock',
+        summary: 'التحقق من توفّر وأسعار الـvariants الموجودة في السلة',
+        description: 'السلة تُدار كاملة في المتصفح (localStorage)؛ هذه النقطة تتحقق من '
+                   . 'المخزون والسعر الحاليين قبل إتمام الطلب. المنتجات المخفية لا تُرجَع.',
+        tags: ['Store - Cart'],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\MediaType(
+                mediaType: 'application/x-www-form-urlencoded',
+                schema: new OA\Schema(
+                    required: ['variant_ids'],
+                    properties: [
+                        new OA\Property(
+                            property: 'variant_ids',
+                            type: 'array',
+                            items: new OA\Items(type: 'integer'),
+                            description: 'معرّفات الـvariants المطلوب فحصها'
+                        ),
+                    ]
+                )
+            )
+        ),
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'JSON — {success, message, items[]}. كل عنصر يحمل variant_id '
+                           . 'و product_name و price و stock_quantity وغيرها.'
+            ),
+        ]
+    )]
     public function checkStock(): void
     {
         header('Content-Type: application/json; charset=utf-8');

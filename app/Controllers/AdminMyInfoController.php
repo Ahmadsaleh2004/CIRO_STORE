@@ -147,6 +147,27 @@ class AdminMyInfoController extends AdminController
     /**
      * توليد secret جديد وتخزينه مؤقتًا بالجلسة (لم يُفعَّل بعد) + إرجاع رابط QR.
      */
+    #[OA\Post(
+        path: '/admin/my-info/2fa/generate',
+        summary: 'توليد سرّ TOTP جديد ورمز QR لتفعيل التحقق بخطوتين',
+        description: 'لا يُفعّل التحقق بعد — التفعيل يتم في /admin/my-info/2fa/confirm '
+                   . 'بعد إثبات أن التطبيق يولّد الرمز الصحيح.',
+        tags: ['Admin - My Info'],
+        security: [['adminSessionAuth' => []]],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\MediaType(
+                mediaType: 'application/x-www-form-urlencoded',
+                schema: new OA\Schema(
+                    required: ['csrf_token'],
+                    properties: [new OA\Property(property: 'csrf_token', type: 'string')]
+                )
+            )
+        ),
+        responses: [
+            new OA\Response(response: 200, description: 'JSON — {success, message, secret, qr}'),
+        ]
+    )]
     public function generate2FASecret(): void
     {
         header('Content-Type: application/json; charset=utf-8');
@@ -178,6 +199,26 @@ class AdminMyInfoController extends AdminController
     /**
      * تأكيد تفعيل 2FA — يتحقق من أول كود TRUE قبل الحفظ (طريقة آمنة).
      */
+    #[OA\Post(
+        path: '/admin/my-info/2fa/confirm',
+        summary: 'تأكيد وتفعيل التحقق بخطوتين برمز من التطبيق',
+        tags: ['Admin - My Info'],
+        security: [['adminSessionAuth' => []]],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\MediaType(
+                mediaType: 'application/x-www-form-urlencoded',
+                schema: new OA\Schema(
+                    required: ['code', 'csrf_token'],
+                    properties: [
+                        new OA\Property(property: 'code', type: 'string', description: 'رمز TOTP من ستة أرقام'),
+                        new OA\Property(property: 'csrf_token', type: 'string'),
+                    ]
+                )
+            )
+        ),
+        responses: [new OA\Response(response: 200, description: 'JSON — {success, message}')]
+    )]
     public function confirm2FA(): void
     {
         header('Content-Type: application/json; charset=utf-8');
@@ -223,6 +264,27 @@ class AdminMyInfoController extends AdminController
     /**
      * تعطيل 2FA — يطلب كلمة المرور الحالية كتأكيد قبل التنفيذ.
      */
+    #[OA\Post(
+        path: '/admin/my-info/2fa/disable',
+        summary: 'تعطيل التحقق بخطوتين',
+        description: 'يتطلّب كلمة المرور الحالية — لا يكفي كون الجلسة مفتوحة.',
+        tags: ['Admin - My Info'],
+        security: [['adminSessionAuth' => []]],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\MediaType(
+                mediaType: 'application/x-www-form-urlencoded',
+                schema: new OA\Schema(
+                    required: ['password', 'csrf_token'],
+                    properties: [
+                        new OA\Property(property: 'password', type: 'string', format: 'password'),
+                        new OA\Property(property: 'csrf_token', type: 'string'),
+                    ]
+                )
+            )
+        ),
+        responses: [new OA\Response(response: 200, description: 'JSON — {success, message}')]
+    )]
     public function disable2FA(): void
     {
         header('Content-Type: application/json; charset=utf-8');

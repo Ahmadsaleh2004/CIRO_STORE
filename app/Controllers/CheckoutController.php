@@ -6,6 +6,7 @@ use App\Core\Controller;
 use App\Core\Middleware;
 use App\Models\OrderModel;
 use App\Models\NotificationModel;
+use OpenApi\Attributes as OA;
 
 /**
  * CheckoutController — عرض صفحة الدفع + إنشاء الطلب + إلغاؤه
@@ -16,6 +17,16 @@ class CheckoutController extends Controller
     // ════════════════════════════════════════════════════════
     // GET /checkout — عرض صفحة الدفع
     // ════════════════════════════════════════════════════════
+    #[OA\Get(
+        path: '/checkout',
+        summary: 'صفحة إتمام الطلب (ثلاث خطوات)',
+        tags: ['Store - Checkout'],
+        security: [['userSessionAuth' => []]],
+        responses: [
+            new OA\Response(response: 200, description: 'صفحة HTML'),
+            new OA\Response(response: 302, description: 'تحويل للرئيسية مع فتح نافذة الدخول إن لم يكن مسجّلاً'),
+        ]
+    )]
     public function index(): void
     {
         Middleware::requireLogin();
@@ -43,6 +54,29 @@ class CheckoutController extends Controller
     // ════════════════════════════════════════════════════════
     // POST /checkout — إنشاء الطلب
     // ════════════════════════════════════════════════════════
+    #[OA\Post(
+        path: '/checkout',
+        summary: 'إنشاء الطلب من محتويات السلة',
+        description: 'السلة تُرسَل من المتصفح، ويُعاد التحقق من المخزون والسعر على الخادم '
+                   . 'قبل الحفظ — لا يُوثق بالسعر القادم من العميل.',
+        tags: ['Store - Checkout'],
+        security: [['userSessionAuth' => []]],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\MediaType(
+                mediaType: 'application/x-www-form-urlencoded',
+                schema: new OA\Schema(
+                    required: ['cart', 'csrf_token'],
+                    properties: [
+                        new OA\Property(property: 'cart', type: 'string', description: 'JSON لمحتويات السلة'),
+                        new OA\Property(property: 'address_id', type: 'integer'),
+                        new OA\Property(property: 'csrf_token', type: 'string'),
+                    ]
+                )
+            )
+        ),
+        responses: [new OA\Response(response: 200, description: 'JSON — {success, message, order_id?, redirect?}')]
+    )]
     public function placeOrder(): void
     {
         header('Content-Type: application/json; charset=utf-8');
@@ -139,6 +173,28 @@ class CheckoutController extends Controller
     // ════════════════════════════════════════════════════════
     // POST /checkout/cancel-order
     // ════════════════════════════════════════════════════════
+    #[OA\Post(
+        path: '/checkout/cancel-order',
+        summary: 'إلغاء طلب من طرف المستخدم',
+        description: 'يُسمح بالإلغاء فقط قبل أن يتولّى الطلب أدمن. نفس الزر المشترك في '
+                   . 'views/shared/order-cancel-button.php يخدم واجهة الأدمن بنقطة أخرى.',
+        tags: ['Store - Checkout'],
+        security: [['userSessionAuth' => []]],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\MediaType(
+                mediaType: 'application/x-www-form-urlencoded',
+                schema: new OA\Schema(
+                    required: ['order_id', 'csrf_token'],
+                    properties: [
+                        new OA\Property(property: 'order_id', type: 'integer'),
+                        new OA\Property(property: 'csrf_token', type: 'string'),
+                    ]
+                )
+            )
+        ),
+        responses: [new OA\Response(response: 200, description: 'JSON — {success, message}')]
+    )]
     public function cancelOrder(): void
     {
         header('Content-Type: application/json; charset=utf-8');
@@ -184,6 +240,16 @@ class CheckoutController extends Controller
     // ════════════════════════════════════════════════════════
     // GET /checkout/confirmation
     // ════════════════════════════════════════════════════════
+    #[OA\Get(
+        path: '/checkout/confirmation',
+        summary: 'صفحة تأكيد الطلب بعد إتمامه',
+        tags: ['Store - Checkout'],
+        security: [['userSessionAuth' => []]],
+        parameters: [
+            new OA\Parameter(name: 'id', in: 'query', schema: new OA\Schema(type: 'integer')),
+        ],
+        responses: [new OA\Response(response: 200, description: 'صفحة HTML')]
+    )]
     public function confirmation(): void
     {
         Middleware::requireLogin();

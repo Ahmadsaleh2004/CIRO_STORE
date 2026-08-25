@@ -6,9 +6,21 @@ use App\Core\Controller;
 use App\Models\ProductModel;
 use App\Models\CategoryModel;
 use App\Models\StockNotificationModel;
+use OpenApi\Attributes as OA;
 
 class ProductController extends Controller
 {
+    #[OA\Get(
+        path: '/products',
+        summary: 'قائمة المنتجات المرئية مع Pagination',
+        description: 'البحث والفرز والفلترة بالسعر تتم كلها في المتصفح '
+                   . '(js/features/products-catalog.js)، فلا بارامترات فلترة هنا.',
+        tags: ['Store - Products'],
+        parameters: [
+            new OA\Parameter(name: 'page', in: 'query', schema: new OA\Schema(type: 'integer', default: 1)),
+        ],
+        responses: [new OA\Response(response: 200, description: 'صفحة HTML')]
+    )]
     public function index(): void
     {
         $perPage     = 9;
@@ -67,6 +79,43 @@ class ProductController extends Controller
         ]);
     }
 
+    #[OA\Get(
+        path: '/product',
+        summary: 'صفحة تفاصيل منتج',
+        description: 'تُعيد التوجيه للرئيسية إن كان المعرّف مفقوداً أو المنتج غير موجود. '
+                   . 'الـvariant المعروض يُختار حسب جنس الزائر (pickDisplayVariant).',
+        tags: ['Store - Products'],
+        parameters: [
+            new OA\Parameter(name: 'id', in: 'query', required: true, schema: new OA\Schema(type: 'integer')),
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'صفحة HTML'),
+            new OA\Response(response: 302, description: 'تحويل للرئيسية — معرّف مفقود أو منتج غير موجود'),
+        ]
+    )]
+    #[OA\Post(
+        path: '/product',
+        summary: 'حفظ تقييم المستخدم للمنتج ثم عرض الصفحة',
+        description: 'نفس الدالة تخدم GET وPOST. يتطلّب تسجيل دخول مستخدم وتوكن CSRF. '
+                   . 'الأدمن في وضع تصفّح المتجر لا يستطيع التقييم.',
+        tags: ['Store - Products'],
+        security: [['userSessionAuth' => []]],
+        requestBody: new OA\RequestBody(
+            content: new OA\MediaType(
+                mediaType: 'application/x-www-form-urlencoded',
+                schema: new OA\Schema(
+                    required: ['submit_review', 'rating', 'csrf_token'],
+                    properties: [
+                        new OA\Property(property: 'submit_review', type: 'string'),
+                        new OA\Property(property: 'rating', type: 'integer', maximum: 5, minimum: 1),
+                        new OA\Property(property: 'comment', type: 'string'),
+                        new OA\Property(property: 'csrf_token', type: 'string'),
+                    ]
+                )
+            )
+        ),
+        responses: [new OA\Response(response: 200, description: 'صفحة HTML مع رسالة نجاح أو خطأ')]
+    )]
     public function show(): void
     {
         $pid = (int)($_GET['id'] ?? 0);

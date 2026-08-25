@@ -5,6 +5,7 @@ namespace App\Controllers;
 use App\Core\Controller;
 use App\Models\ContactModel;
 use App\Models\UserModel;
+use OpenApi\Attributes as OA;
 
 /**
  * ContactController — يعالج صفحة /contact (GET + POST)
@@ -12,6 +13,12 @@ use App\Models\UserModel;
  */
 class ContactController extends Controller
 {
+    #[OA\Get(
+        path: '/contact',
+        summary: 'صفحة "اتصل بنا"',
+        tags: ['Store - Pages'],
+        responses: [new OA\Response(response: 200, description: 'صفحة HTML')]
+    )]
     public function contact(): void
     {
         // بيانات التواصل الثابتة
@@ -76,6 +83,27 @@ class ContactController extends Controller
         ]);
     }
 
+    #[OA\Post(
+        path: '/contact/send',
+        summary: 'إرسال رسالة من نموذج "اتصل بنا"',
+        tags: ['Store - Pages'],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\MediaType(
+                mediaType: 'application/x-www-form-urlencoded',
+                schema: new OA\Schema(
+                    required: ['name', 'email', 'message', 'csrf_token'],
+                    properties: [
+                        new OA\Property(property: 'name', type: 'string'),
+                        new OA\Property(property: 'email', type: 'string', format: 'email'),
+                        new OA\Property(property: 'message', type: 'string'),
+                        new OA\Property(property: 'csrf_token', type: 'string'),
+                    ]
+                )
+            )
+        ),
+        responses: [new OA\Response(response: 200, description: 'JSON — {success, message}')]
+    )]
     public function send(): void
     {
         header('Content-Type: application/json; charset=utf-8');

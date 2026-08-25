@@ -1,0 +1,2747 @@
+openapi: 3.0.0
+info:
+  title: 'Cairo Store API'
+  description: "كل نقاط المتجر ولوحة التحكم.\r\n\r\nملاحظة عامة على الأخطاء: نقاط JSON في هذا المشروع تُرجع 200 حتى عند\r\nفشل التحقق، والنتيجة تُقرأ من الحقل success في الجسم لا من كود HTTP.\r\nالاستثناءات الوحيدة هي 302 (تحويل لتسجيل الدخول) و403 (صلاحية ناقصة)\r\nو404 (راوت غير موجود). هذا سلوك قائم يعتمد عليه الـfrontend، ووُثّق\r\nهنا كما هو لا كما ينبغي أن يكون."
+  version: 1.1.0
+servers:
+  -
+    url: 'http://localhost/STORE/public'
+    description: 'Local / Development Server'
+paths:
+  /admin/settings:
+    get:
+      tags:
+        - 'Admin Site Settings'
+      summary: 'عرض صفحة إعدادات الموقع الحالية'
+      operationId: 634d1801e5ae45f856fbfc627b8bcd25
+      responses:
+        '200':
+          description: 'صفحة HTML — يتطلب صلاحية can_edit_site_content'
+        '302':
+          description: 'إعادة توجيه لـ /admin/login'
+        '403':
+          description: 'ممنوع — لا يملك can_edit_site_content'
+      security:
+        -
+          adminSessionAuth: []
+    post:
+      tags:
+        - 'Admin Site Settings'
+      summary: 'حفظ إعدادات الموقع (AJAX) — الحقول المالية/العملة تُقبل فقط لصاحب can_manage_checkout_settings'
+      description: "AdminSiteSettingsController — صفحة إعدادات الموقع للأدمن.\r\nيرث من AdminController الذي يتحقق من تسجيل دخول الأدمن تلقائياً."
+      operationId: 3e053842fbd06f520e821e6726b6fe5f
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              required:
+                - csrf_token
+              properties:
+                csrf_token:
+                  type: string
+                footer_text:
+                  type: string
+                facebook_url:
+                  type: string
+                instagram_url:
+                  type: string
+                snapchat_url:
+                  type: string
+                whatsapp_number:
+                  type: string
+                tiktok_url:
+                  type: string
+                twitter_x_url:
+                  type: string
+                google_maps_url:
+                  type: string
+                copyright_text:
+                  type: string
+                phone_number:
+                  type: string
+                working_hours:
+                  type: string
+                employees_count:
+                  type: integer
+                site_url:
+                  type: string
+                return_policy:
+                  type: string
+                privacy_policy:
+                  type: string
+                terms_and_conditions:
+                  type: string
+                default_currency:
+                  description: 'فقط لصاحب can_manage_checkout_settings'
+                  type: string
+                default_language:
+                  description: 'فقط لصاحب can_manage_checkout_settings'
+                  type: string
+              type: object
+      responses:
+        '200':
+          description: 'نجاح أو فشل الحفظ'
+          content:
+            application/json:
+              schema:
+                properties:
+                  success: { type: boolean }
+                  message: { type: string }
+                type: object
+      security:
+        -
+          adminSessionAuth: []
+  /about:
+    get:
+      tags:
+        - 'Store - Pages'
+      summary: 'صفحة "من نحن" — بيانات المتجر الثابتة مع عدد المنتجات المرئية'
+      operationId: 6da6392c8a0f7198065416a7e1062f26
+      responses:
+        '200':
+          description: 'صفحة HTML'
+  /admin/login:
+    get:
+      tags:
+        - 'Admin Auth'
+      summary: 'عرض صفحة تسجيل دخول الأدمن'
+      operationId: d3b445322ac83354e1501b04eeea68b7
+      responses:
+        '200':
+          description: 'صفحة HTML لتسجيل الدخول'
+    post:
+      tags:
+        - 'Admin Auth'
+      summary: 'تسجيل دخول الأدمن'
+      operationId: f605c43a8e23a8d3a236178d7f5cf925
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              required:
+                - email
+                - password
+                - csrf_token
+              properties:
+                email:
+                  description: 'البريد الإلكتروني للأدمن'
+                  type: string
+                  format: email
+                password:
+                  description: 'كلمة المرور'
+                  type: string
+                  format: password
+                csrf_token:
+                  description: 'CSRF token — مطلوب دائماً'
+                  type: string
+                h-captcha-response:
+                  description: 'hCaptcha response — مطلوب بعد أول محاولة فاشلة'
+                  type: string
+              type: object
+      responses:
+        '200':
+          description: 'نجاح أو فشل تسجيل الدخول'
+          content:
+            application/json:
+              schema:
+                properties:
+                  success: { type: boolean }
+                  message: { type: string }
+                  redirect: { description: 'موجود عند النجاح فقط', type: string }
+                  show_captcha: { description: 'موجود عند الفشل — يعني يجب إظهار hCaptcha', type: boolean }
+                  failed_attempts: { description: 'عدد المحاولات الفاشلة', type: integer }
+                type: object
+  /admin/login/2fa:
+    post:
+      tags:
+        - 'Admin Auth'
+      summary: 'الخطوة الثانية من دخول الأدمن — التحقق من رمز TOTP'
+      description: 'تُستدعى بعد أن يُرجع /admin/login الحقل requires_2fa. الرمز من تطبيق مصادقة (Google Authenticator أو ما يماثله).'
+      operationId: e7030ff592552764ee24f00281a3823c
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              required:
+                - code
+                - csrf_token
+              properties:
+                code:
+                  description: 'رمز TOTP من ستة أرقام'
+                  type: string
+                csrf_token:
+                  type: string
+              type: object
+      responses:
+        '200':
+          description: 'JSON — {success, message, redirect?}'
+  /admin/logout:
+    post:
+      tags:
+        - 'Admin Auth'
+      summary: 'تسجيل خروج الأدمن'
+      operationId: 5bc6c0aaaefe4ef3e155d33f1085c096
+      responses:
+        '302':
+          description: 'إعادة توجيه لـ /admin/login بعد تدمير الجلسة'
+  /admin/forgot:
+    post:
+      tags:
+        - 'Admin Auth'
+      summary: 'طلب رابط إعادة تعيين كلمة مرور الأدمن'
+      description: 'الرسالة المُرجَعة واحدة سواء وُجد البريد أم لا — كي لا تكشف النقطة أي البُرد مسجَّلة كأدمن.'
+      operationId: 130cea99c5909844a7e4be7451bce9a8
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              required:
+                - email
+                - csrf_token
+              properties:
+                email:
+                  type: string
+                  format: email
+                csrf_token:
+                  type: string
+              type: object
+      responses:
+        '200':
+          description: 'JSON — {success, message}'
+  /admin/store-mode/enter:
+    post:
+      tags:
+        - 'Admin Auth'
+      summary: 'دخول الأدمن لوضع تصفح المتجر كزائر (Store Mode)'
+      operationId: 6f56f79b4b92334c5dbcae224315b3f5
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              required:
+                - csrf_token
+              properties:
+                csrf_token:
+                  description: 'CSRF token — مطلوب دائماً'
+                  type: string
+              type: object
+      responses:
+        '302':
+          description: 'إعادة توجيه للمتجر / بعد تعيين وضع المتجر'
+        '401':
+          description: 'غير مسجّل دخول (AJAX/POST)'
+  /admin/store-mode/reauth:
+    get:
+      tags:
+        - 'Admin Auth'
+      summary: 'عرض صفحة إعادة التحقق بكلمة السر قبل الرجوع للوحة'
+      operationId: 1e62213c6d5d92b4fdce0e924902f5aa
+      responses:
+        '200':
+          description: 'صفحة HTML مستقلة لإعادة التحقق'
+        '302':
+          description: 'إعادة توجيه لـ /admin/home إن لم يكن الأدمن في وضع المتجر'
+    post:
+      tags:
+        - 'Admin Auth'
+      summary: 'إعادة تحقق الأدمن بكلمة السر قبل الرجوع للوحة (JSON)'
+      operationId: 64d4315e901132618b9471c6aeb5ec11
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              required:
+                - password
+                - csrf_token
+              properties:
+                password:
+                  description: 'كلمة مرور الأدمن'
+                  type: string
+                  format: password
+                csrf_token:
+                  description: 'CSRF token — مطلوب دائماً'
+                  type: string
+                return:
+                  description: 'وجهة العودة (اختياري) — تُحمى ضد Open Redirect'
+                  type: string
+              type: object
+      responses:
+        '200':
+          description: 'نجاح أو فشل التحقق'
+          content:
+            application/json:
+              schema:
+                properties:
+                  success: { type: boolean }
+                  message: { type: string }
+                  redirect: { description: 'موجود عند النجاح فقط', type: string }
+                type: object
+  /admin/csrf:
+    get:
+      tags:
+        - 'Admin Auth'
+      summary: 'توليد CSRF token جديد لفورم الأدمن'
+      operationId: 023c6f87e86c774e5c00533c18b0b90a
+      responses:
+        '200':
+          description: 'توكن CSRF جديد'
+          content:
+            application/json:
+              schema:
+                properties:
+                  success: { type: boolean, example: true }
+                  token: { description: 'CSRF token hex string', type: string }
+                type: object
+  /admin/branding:
+    get:
+      tags:
+        - 'Admin - Branding'
+      summary: 'عرض صفحة إدارة السلايدر'
+      operationId: 04da49ab824daf342dfe454feda55cdb
+      responses:
+        '200':
+          description: 'صفحة HTML'
+      security:
+        -
+          adminSessionAuth: []
+  /admin/branding/products/search:
+    get:
+      tags:
+        - 'Admin - Branding'
+      summary: 'بحث حي عن منتج لاختياره بالسلايدر (AJAX)'
+      operationId: 185ea70d9c6ff55d56d576baa2b5d789
+      parameters:
+        -
+          name: q
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 'JSON: {success, products}'
+      security:
+        -
+          adminSessionAuth: []
+  /admin/branding/save:
+    post:
+      tags:
+        - 'Admin - Branding'
+      summary: 'حفظ كامل السلايدر (Full Replace) — شرائح + عناصر + رفع صور'
+      operationId: 373a97f2a24a1dc606e7649ae9fca3a2
+      requestBody:
+        required: true
+        content:
+          multipart/form-data: {  }
+      responses:
+        '302':
+          description: 'إعادة توجيه مع flash message'
+      security:
+        -
+          adminSessionAuth: []
+  /admin/dashboard:
+    get:
+      tags:
+        - 'Admin Dashboard'
+      summary: 'صفحة إحصائيات لوحة تحكم الأدمن (مبيعات، طلبات، مستخدمون، أفضل المنتجات مبيعًا)'
+      operationId: 5a10c70d52102afac94342c298f09cad
+      parameters:
+        -
+          name: q
+          in: query
+          description: 'بحث اختياري بالاسم ضمن قائمة أفضل المنتجات مبيعًا'
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 'صفحة HTML للداشبورد — يتطلب جلسة admin_session صالحة وصلاحية can_view_dashboard'
+        '302':
+          description: 'إعادة توجيه لـ /admin/login إذا لم تكن الجلسة صالحة'
+        '403':
+          description: 'ممنوع — الأدمن ليس لديه صلاحية can_view_dashboard'
+      security:
+        -
+          adminSessionAuth: []
+  /admin/home:
+    get:
+      tags:
+        - 'Admin Home'
+      summary: 'صفحة لوحة التحكم الرئيسية'
+      operationId: 5f2b0324a493fd085fc513c017fc963f
+      responses:
+        '200':
+          description: 'صفحة HTML للوحة التحكم — يتطلب جلسة admin_session صالحة'
+        '302':
+          description: 'إعادة توجيه لـ /admin/login إذا لم تكن الجلسة صالحة'
+      security:
+        -
+          adminSessionAuth: []
+  /admin/admins:
+    get:
+      tags:
+        - 'Admin - Manage Admins'
+      summary: 'قائمة كل الأدمنية مع صلاحياتهم'
+      operationId: 9159b1b855dae051e4af33f4dc0eff6d
+      responses:
+        '200':
+          description: 'صفحة HTML بالجدول — يتطلب صلاحية can_manage_admins'
+        '403':
+          description: 'ممنوع — لا يملك can_manage_admins'
+      security:
+        -
+          adminSessionAuth: []
+  /admin/admins/add:
+    get:
+      tags:
+        - 'Admin - Manage Admins'
+      summary: 'عرض فورم إضافة أدمن جديد'
+      operationId: 9eb0ffcb6b3931118276117fa7237887
+      responses:
+        '200':
+          description: 'صفحة HTML للفورم'
+      security:
+        -
+          adminSessionAuth: []
+    post:
+      tags:
+        - 'Admin - Manage Admins'
+      summary: 'إضافة أدمن جديد (يتطلب سبب + كلمة مرور الأدمن الحالي)'
+      operationId: b2d4e525109310fa73bd53ed9159b66d
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              required:
+                - new_name
+                - new_email
+                - new_password
+                - new_role
+                - add_reason
+                - confirm_current_pass
+                - csrf_token
+              properties:
+                new_name:
+                  type: string
+                new_email:
+                  description: 'يجب أن ينتهي بـ @gmail.com'
+                  type: string
+                  format: email
+                new_phone:
+                  type: string
+                new_password:
+                  type: string
+                  format: password
+                new_role:
+                  description: 'A|B|C|D — يجب أن تكون أقل صراحة من رتبتك'
+                  type: string
+                perm_admins:
+                  type: boolean
+                perm_products:
+                  type: boolean
+                perm_users:
+                  type: boolean
+                perm_dashboard:
+                  type: boolean
+                perm_support:
+                  type: boolean
+                perm_content:
+                  type: boolean
+                perm_branding:
+                  type: boolean
+                perm_checkout:
+                  type: boolean
+                perm_orders:
+                  type: boolean
+                add_reason:
+                  type: string
+                confirm_current_pass:
+                  type: string
+                  format: password
+                csrf_token:
+                  type: string
+              type: object
+      responses:
+        '302':
+          description: 'إعادة توجيه لصفحة القائمة مع رسالة flash'
+      security:
+        -
+          adminSessionAuth: []
+  /admin/admins/edit:
+    post:
+      tags:
+        - 'Admin - Manage Admins'
+      summary: 'حفظ تعديل رتبة/صلاحيات أدمن (يتطلب سبب + كلمة مرور الأدمن الحالي)'
+      operationId: 23326486824d40055b9d9ed454b088d1
+      responses:
+        '302':
+          description: 'إعادة توجيه مع رسالة flash'
+      security:
+        -
+          adminSessionAuth: []
+  /admin/admins/delete:
+    post:
+      tags:
+        - 'Admin - Manage Admins'
+      summary: 'حذف أدمن (AJAX — يرجع JSON، يتطلب سبب + كلمة مرور)'
+      operationId: d63d8a22bfb1db8f2c0bfc8f806f9c80
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              required:
+                - target_id
+                - delete_reason
+                - confirm_del_pass
+                - csrf_token
+              properties:
+                target_id:
+                  type: integer
+                delete_reason:
+                  type: string
+                confirm_del_pass:
+                  type: string
+                  format: password
+                csrf_token:
+                  type: string
+              type: object
+      responses:
+        '200':
+          description: 'نجاح أو فشل'
+          content:
+            application/json:
+              schema:
+                properties:
+                  success: { type: boolean }
+                  message: { type: string }
+                type: object
+      security:
+        -
+          adminSessionAuth: []
+  /admin/admins/details:
+    get:
+      tags:
+        - 'Admin - Manage Admins'
+      summary: 'تفاصيل أدمن معيّن: بياناته + نشاط طلباته + سجل أفعاله'
+      operationId: 8b119ec8062bda0941bc4b18ad7dc779
+      parameters:
+        -
+          name: id
+          in: query
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 'صفحة HTML'
+      security:
+        -
+          adminSessionAuth: []
+  /admin/admins/export-csv:
+    get:
+      tags:
+        - 'Admin - Manage Admins'
+      summary: 'تصدير قائمة الأدمنية كملف CSV — رتبة A فقط'
+      operationId: 407baf53eac765c467db8fcdff2e886a
+      responses:
+        '200':
+          description: 'ملف CSV للتحميل'
+      security:
+        -
+          adminSessionAuth: []
+  /admin/messaging/notify:
+    post:
+      tags:
+        - 'Admin - Messaging'
+      summary: 'إرسال رسالة فردية لأدمن أو يوزر (AJAX)'
+      operationId: 73cc265efb790ccc50f0f6a1a6d839fb
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              required:
+                - target_type
+                - target_id
+                - title
+                - message
+                - csrf_token
+              properties:
+                target_type:
+                  description: "'admin' أو 'user'"
+                  type: string
+                target_id:
+                  type: integer
+                title:
+                  type: string
+                message:
+                  type: string
+                csrf_token:
+                  type: string
+              type: object
+      responses:
+        '200':
+          description: JSON
+          content:
+            application/json:
+              schema:
+                properties:
+                  success: { type: boolean }
+                  message: { type: string }
+                type: object
+      security:
+        -
+          adminSessionAuth: []
+  /admin/messaging/broadcast:
+    post:
+      tags:
+        - 'Admin - Messaging'
+      summary: 'إرسال إشعار جماعي (AJAX) — أدمنية حسب الصلاحية + الرتبة، أو يوزرز حسب الحالة'
+      operationId: 724f415bb841000f324c16023b863562
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              required:
+                - title
+                - body
+                - csrf_token
+              properties:
+                target_type:
+                  description: "'admin' (صلاحيات + رتب) أو 'user' (حالات)"
+                  type: string
+                  enum: [admin, user]
+                title:
+                  type: string
+                body:
+                  type: string
+                perms:
+                  description: 'للأدمنية فقط'
+                  type: array
+                  items: { type: string }
+                ranks:
+                  description: 'للأدمنية فقط'
+                  type: array
+                  items: { type: string }
+                statuses:
+                  description: 'لليوزرز فقط'
+                  type: array
+                  items: { type: string, enum: [active, not_active, blocked] }
+                csrf_token:
+                  type: string
+              type: object
+      responses:
+        '200':
+          description: JSON
+          content:
+            application/json:
+              schema:
+                properties:
+                  success: { type: boolean }
+                  message: { type: string }
+                type: object
+      security:
+        -
+          adminSessionAuth: []
+  /admin/my-info:
+    get:
+      tags:
+        - 'Admin My Info'
+      summary: 'عرض صفحة معلوماتي الخاصة بالأدمن'
+      operationId: 15738aa88d77264ebe6bd5f675809a65
+      responses:
+        '200':
+          description: 'صفحة HTML لمعلومات الأدمن — يتطلب جلسة admin_session صالحة'
+        '302':
+          description: 'إعادة توجيه لـ /admin/login إذا لم تكن الجلسة صالحة'
+      security:
+        -
+          adminSessionAuth: []
+    post:
+      tags:
+        - 'Admin My Info'
+      summary: 'تحديث بيانات حساب الأدمن (الاسم / الهاتف / كلمة المرور)'
+      operationId: 2700a423dbe09207ba93b4bc4af11330
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              required:
+                - csrf_token
+                - full_name
+                - current_password
+              properties:
+                csrf_token:
+                  type: string
+                full_name:
+                  type: string
+                phone_number:
+                  type: string
+                new_password:
+                  description: 'اختياري — اتركه فارغًا للإبقاء على كلمة المرور الحالية'
+                  type: string
+                  format: password
+                current_password:
+                  description: 'إلزامي دائمًا للتأكيد قبل الحفظ'
+                  type: string
+                  format: password
+              type: object
+      responses:
+        '200':
+          description: 'نجاح أو فشل التحديث'
+          content:
+            application/json:
+              schema:
+                properties:
+                  success: { type: boolean }
+                  message: { type: string }
+                type: object
+      security:
+        -
+          adminSessionAuth: []
+  /admin/my-info/2fa/generate:
+    post:
+      tags:
+        - 'Admin - My Info'
+      summary: 'توليد سرّ TOTP جديد ورمز QR لتفعيل التحقق بخطوتين'
+      description: 'لا يُفعّل التحقق بعد — التفعيل يتم في /admin/my-info/2fa/confirm بعد إثبات أن التطبيق يولّد الرمز الصحيح.'
+      operationId: 79533270d49ee00862b4addb0218fbb2
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              required:
+                - csrf_token
+              properties:
+                csrf_token:
+                  type: string
+              type: object
+      responses:
+        '200':
+          description: 'JSON — {success, message, secret, qr}'
+      security:
+        -
+          adminSessionAuth: []
+  /admin/my-info/2fa/confirm:
+    post:
+      tags:
+        - 'Admin - My Info'
+      summary: 'تأكيد وتفعيل التحقق بخطوتين برمز من التطبيق'
+      description: 'تأكيد تفعيل 2FA — يتحقق من أول كود TRUE قبل الحفظ (طريقة آمنة).'
+      operationId: d0cb964874c9888281346775acddcea0
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              required:
+                - code
+                - csrf_token
+              properties:
+                code:
+                  description: 'رمز TOTP من ستة أرقام'
+                  type: string
+                csrf_token:
+                  type: string
+              type: object
+      responses:
+        '200':
+          description: 'JSON — {success, message}'
+      security:
+        -
+          adminSessionAuth: []
+  /admin/my-info/2fa/disable:
+    post:
+      tags:
+        - 'Admin - My Info'
+      summary: 'تعطيل التحقق بخطوتين'
+      description: 'يتطلّب كلمة المرور الحالية — لا يكفي كون الجلسة مفتوحة.'
+      operationId: fea030f1df1b77403b3e10f844048121
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              required:
+                - password
+                - csrf_token
+              properties:
+                password:
+                  type: string
+                  format: password
+                csrf_token:
+                  type: string
+              type: object
+      responses:
+        '200':
+          description: 'JSON — {success, message}'
+      security:
+        -
+          adminSessionAuth: []
+  /admin/notifications/list:
+    get:
+      tags:
+        - 'Admin - Notifications'
+      summary: 'قائمة إشعارات الأدمن الحالي + عدد غير المقروء (AJAX — JSON)'
+      operationId: d66040aef82763dd64c8c2a4d38e92df
+      responses:
+        '200':
+          description: JSON
+          content:
+            application/json:
+              schema:
+                properties:
+                  success: { type: boolean }
+                  message: { type: string }
+                  notifications: { type: array, items: { properties: { id: { type: integer }, title: { type: string }, message: { type: string }, type: { type: string }, is_read: { type: integer }, created_at: { type: string } }, type: object } }
+                  unread_count: { type: integer }
+                type: object
+      security:
+        -
+          adminSessionAuth: []
+  /admin/notifications/mark-read:
+    post:
+      tags:
+        - 'Admin - Notifications'
+      summary: 'تحديد إشعار واحد كمقروء (AJAX — JSON)'
+      operationId: 05c21f2628a3191d9815c2dd0b23b69a
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              required:
+                - notification_id
+                - csrf_token
+              properties:
+                notification_id:
+                  type: integer
+                csrf_token:
+                  type: string
+              type: object
+      responses:
+        '200':
+          description: JSON
+          content:
+            application/json:
+              schema:
+                properties:
+                  success: { type: boolean }
+                  message: { type: string }
+                  unread_count: { type: integer }
+                type: object
+      security:
+        -
+          adminSessionAuth: []
+  /admin/notifications/mark-all-read:
+    post:
+      tags:
+        - 'Admin - Notifications'
+      summary: 'تحديد كل إشعارات الأدمن كمقروءة (AJAX — JSON)'
+      operationId: cdb5fee5e5f1af94ea966dd380e2a16f
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              required:
+                - csrf_token
+              properties:
+                csrf_token:
+                  type: string
+              type: object
+      responses:
+        '200':
+          description: JSON
+          content:
+            application/json:
+              schema:
+                properties:
+                  success: { type: boolean }
+                  message: { type: string }
+                type: object
+      security:
+        -
+          adminSessionAuth: []
+  /admin/notifications/delete-all:
+    post:
+      tags:
+        - 'Admin - Notifications'
+      summary: 'حذف كل إشعارات الأدمن (AJAX — JSON)'
+      operationId: dbd791a5230b53e7c9c8596df8bcb340
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              required:
+                - csrf_token
+              properties:
+                csrf_token:
+                  type: string
+              type: object
+      responses:
+        '200':
+          description: JSON
+          content:
+            application/json:
+              schema:
+                properties:
+                  success: { type: boolean }
+                  message: { type: string }
+                type: object
+      security:
+        -
+          adminSessionAuth: []
+  /admin/notifications/dismiss:
+    post:
+      tags:
+        - 'Admin - Notifications'
+      summary: 'حذف إشعار واحد للأدمن الحالي (AJAX — JSON)'
+      operationId: d1a95195e4ca9a66b0e87b55d12cb856
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              required:
+                - notification_id
+                - csrf_token
+              properties:
+                notification_id:
+                  type: integer
+                csrf_token:
+                  type: string
+              type: object
+      responses:
+        '200':
+          description: JSON
+          content:
+            application/json:
+              schema:
+                properties:
+                  success: { type: boolean }
+                  message: { type: string }
+                  unread_count: { type: integer }
+                type: object
+      security:
+        -
+          adminSessionAuth: []
+  /admin/orders:
+    get:
+      tags:
+        - 'Admin - Manage Orders'
+      summary: 'قائمة الطلبات مع فلترة بالحالة وبحث وترقيم صفحات'
+      operationId: 90364368f050228cfd842a0034df5909
+      parameters:
+        -
+          name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - not_taken
+              - taken
+              - completed
+              - cancelled
+        -
+          name: q
+          in: query
+          required: false
+          schema:
+            type: string
+        -
+          name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 'صفحة HTML بالجدول — يتطلب صلاحية can_manage_orders'
+        '403':
+          description: 'ممنوع — لا يملك can_manage_orders'
+      security:
+        -
+          adminSessionAuth: []
+  /admin/orders/details:
+    get:
+      tags:
+        - 'Admin - Manage Orders'
+      summary: 'تفاصيل طلب معيّن: بيانات العميل + العناصر + عداد المهلة المتبقية'
+      operationId: edebcf7658158b7615642c22a344a6e3
+      parameters:
+        -
+          name: id
+          in: query
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 'صفحة HTML بتفاصيل الطلب — يتطلب صلاحية can_manage_orders'
+        '403':
+          description: 'ممنوع — لا يملك can_manage_orders'
+      security:
+        -
+          adminSessionAuth: []
+  /admin/orders/take:
+    post:
+      tags:
+        - 'Admin - Manage Orders'
+      summary: 'أخذ طلب من قائمة not_taken (AJAX — يرجع JSON)'
+      operationId: 8cce2e57de9a204478dec2af61f6fcb5
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              required:
+                - order_id
+                - csrf_token
+              properties:
+                order_id:
+                  type: integer
+                csrf_token:
+                  type: string
+              type: object
+      responses:
+        '200':
+          description: 'نجاح أو فشل'
+          content:
+            application/json:
+              schema:
+                properties:
+                  success: { type: boolean }
+                  message: { type: string }
+                type: object
+      security:
+        -
+          adminSessionAuth: []
+  /admin/orders/mark-delivered:
+    post:
+      tags:
+        - 'Admin - Manage Orders'
+      summary: 'إنهاء تسليم طلب — completed (AJAX — يرجع JSON)'
+      operationId: a3fa71b36ce82a84b707904ff83ad9c1
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              required:
+                - order_id
+                - csrf_token
+              properties:
+                order_id:
+                  type: integer
+                notif_msg:
+                  type: string
+                csrf_token:
+                  type: string
+              type: object
+      responses:
+        '200':
+          description: 'نجاح أو فشل'
+          content:
+            application/json:
+              schema:
+                properties:
+                  success: { type: boolean }
+                  message: { type: string }
+                type: object
+      security:
+        -
+          adminSessionAuth: []
+  /admin/orders/cancel-delivery:
+    post:
+      tags:
+        - 'Admin - Manage Orders'
+      summary: 'إلغاء تسليم طلب — cancelled مع إرجاع المخزون (AJAX — يرجع JSON)'
+      operationId: 817644f088f9b06b6f684c1466cdc35f
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              required:
+                - order_id
+                - reason
+                - csrf_token
+              properties:
+                order_id:
+                  type: integer
+                reason:
+                  type: string
+                notif_msg:
+                  type: string
+                csrf_token:
+                  type: string
+              type: object
+      responses:
+        '200':
+          description: 'نجاح أو فشل'
+          content:
+            application/json:
+              schema:
+                properties:
+                  success: { type: boolean }
+                  message: { type: string }
+                type: object
+      security:
+        -
+          adminSessionAuth: []
+  /admin/orders/release:
+    post:
+      tags:
+        - 'Admin - Manage Orders'
+      summary: 'Voluntarily release a taken order back to not_taken (only the current holder can do this) — AJAX, returns JSON'
+      operationId: d085af01ab35ea8fa057d8a7a9e5520e
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              required:
+                - order_id
+                - reason
+                - csrf_token
+              properties:
+                order_id:
+                  type: integer
+                reason:
+                  type: string
+                csrf_token:
+                  type: string
+              type: object
+      responses:
+        '200':
+          description: 'Success or failure'
+          content:
+            application/json:
+              schema:
+                properties:
+                  success: { type: boolean }
+                  message: { type: string }
+                type: object
+      security:
+        -
+          adminSessionAuth: []
+  /admin/orders/report-issue:
+    post:
+      tags:
+        - 'Admin - Manage Orders'
+      summary: 'إبلاغ مشكلة على طلب + إشعار اليوزر (لا يغيّر حالة الطلب — AJAX يرجع JSON)'
+      operationId: 5035bb015ad28a0af879f44321af5963
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              required:
+                - order_id
+                - reason
+                - csrf_token
+              properties:
+                order_id:
+                  type: integer
+                reason:
+                  type: string
+                csrf_token:
+                  type: string
+              type: object
+      responses:
+        '200':
+          description: 'نجاح أو فشل'
+          content:
+            application/json:
+              schema:
+                properties:
+                  success: { type: boolean }
+                  message: { type: string }
+                type: object
+      security:
+        -
+          adminSessionAuth: []
+  /admin/orders/delete:
+    post:
+      tags:
+        - 'Admin - Manage Orders'
+      summary: 'Hard Delete an order with status completed or cancelled (AJAX — returns JSON)'
+      operationId: 7a69d55cd1b5a0523f7106f9afe5726b
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              required:
+                - order_id
+                - reason
+                - csrf_token
+              properties:
+                order_id:
+                  type: integer
+                reason:
+                  type: string
+                csrf_token:
+                  type: string
+              type: object
+      responses:
+        '200':
+          description: 'Success or failure'
+          content:
+            application/json:
+              schema:
+                properties:
+                  success: { type: boolean }
+                  message: { type: string }
+                type: object
+      security:
+        -
+          adminSessionAuth: []
+  /admin/orders/export-csv:
+    get:
+      tags:
+        - 'Admin - Manage Orders'
+      summary: 'تصدير قائمة الطلبات (بنفس الفلاتر) كملف CSV'
+      operationId: 59251c697f49fb55cac650129d45a7fa
+      parameters:
+        -
+          name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - not_taken
+              - taken
+              - completed
+              - cancelled
+        -
+          name: q
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 'ملف CSV للتحميل'
+      security:
+        -
+          adminSessionAuth: []
+  /admin/products:
+    get:
+      tags:
+        - 'Admin - Manage Products'
+      summary: 'قائمة المنتجات مع بحث/فلترة بكاتوجري/ترتيب (6 خيارات ثابتة) + Pagination'
+      operationId: 3da16339bf1b85ec7ea2343494eed92f
+      parameters:
+        -
+          name: q
+          in: query
+          schema:
+            type: string
+        -
+          name: cat
+          in: query
+          schema:
+            type: integer
+        -
+          name: sort
+          in: query
+          schema:
+            type: string
+            enum:
+              - date_desc
+              - date_asc
+              - price_desc
+              - price_asc
+              - stock_desc
+              - stock_asc
+        -
+          name: page
+          in: query
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 'صفحة HTML — يتطلب صلاحية can_manage_products'
+        '403':
+          description: 'ممنوع — لا يملك can_manage_products'
+      security:
+        -
+          adminSessionAuth: []
+  /admin/products/add:
+    get:
+      tags:
+        - 'Admin - Manage Products'
+      summary: 'عرض فورم إضافة منتج جديد'
+      operationId: 92eace0359de6f629ea1e199625bbe25
+      responses:
+        '200':
+          description: 'صفحة HTML للفورم'
+      security:
+        -
+          adminSessionAuth: []
+    post:
+      tags:
+        - 'Admin - Manage Products'
+      summary: 'حفظ منتج جديد (يتطلب كاتوجري واحدة على الأقل + صورة إجبارية)'
+      operationId: cfcef97fac9a6d26545c4f069a5d25e1
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              required:
+                - name
+                - category_ids
+                - variants
+                - csrf_token
+              properties:
+                name:
+                  type: string
+                description:
+                  type: string
+                manufacturer:
+                  type: string
+                category_ids:
+                  description: 'عنصر واحد على الأقل'
+                  type: array
+                  items: { type: integer }
+                variants:
+                  description: 'ألوان/كميات/أسعار المنتج — بنفس بنية المشروع القديم'
+                  type: array
+                  items: { description: 'صف variant واحد: color_name و price و discount و stock و gender و image', type: object }
+                csrf_token:
+                  type: string
+              type: object
+      responses:
+        '200':
+          description: 'JSON — {success, message, product_id?, redirect?}. Always 200, even on validation errors (success:false + a message).'
+          content:
+            application/json:
+              schema:
+                properties:
+                  success: { type: boolean }
+                  message: { type: string }
+                  product_id: { type: integer, nullable: true }
+                  redirect: { description: 'URL to navigate to on success', type: string, nullable: true }
+                type: object
+      security:
+        -
+          adminSessionAuth: []
+  /admin/products/edit:
+    get:
+      tags:
+        - 'Admin - Manage Products'
+      summary: 'عرض فورم تعديل منتج موجود'
+      operationId: f02b6f12db3c35e3524307d488c463f4
+      parameters:
+        -
+          name: id
+          in: query
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 'صفحة HTML للفورم'
+        '302':
+          description: 'إعادة توجيه لـ /admin/products إذا المنتج غير موجود'
+      security:
+        -
+          adminSessionAuth: []
+    post:
+      tags:
+        - 'Admin - Manage Products'
+      summary: 'حفظ تعديل منتج موجود'
+      operationId: 26c405fe96d7d65f5dc1c0435b3a357c
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              required:
+                - product_id
+                - category_ids
+                - variants
+                - csrf_token
+              properties:
+                product_id:
+                  type: integer
+                name:
+                  type: string
+                description:
+                  type: string
+                manufacturer:
+                  type: string
+                category_ids:
+                  type: array
+                  items: { type: integer }
+                variants:
+                  type: array
+                  items: { description: 'صف variant واحد: color_name و price و discount و stock و gender و image', type: object }
+                csrf_token:
+                  type: string
+              type: object
+      responses:
+        '200':
+          description: 'JSON — {success, message}. Always 200, even on validation errors (success:false + a message). No redirect field — the admin stays on the edit page after a successful update.'
+          content:
+            application/json:
+              schema:
+                properties:
+                  success: { type: boolean }
+                  message: { type: string }
+                type: object
+      security:
+        -
+          adminSessionAuth: []
+  /admin/products/delete:
+    post:
+      tags:
+        - 'Admin - Manage Products'
+      summary: 'حذف منتج (AJAX — JSON)'
+      operationId: 170eba095bdc9855df47c0618a68c122
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              required:
+                - product_id
+                - csrf_token
+              properties:
+                product_id:
+                  type: integer
+                csrf_token:
+                  type: string
+              type: object
+      responses:
+        '200':
+          description: 'JSON success/message'
+          content:
+            application/json:
+              schema:
+                properties:
+                  success: { type: boolean }
+                  message: { type: string }
+                type: object
+      security:
+        -
+          adminSessionAuth: []
+  /admin/products/toggle-visibility:
+    post:
+      tags:
+        - 'Admin - Manage Products'
+      summary: 'إخفاء/إظهار منتج في المتجر (AJAX — JSON)'
+      operationId: 4e854461050b42589c328367951f6495
+      responses:
+        '200':
+          description: 'JSON: {success, is_visible}'
+          content:
+            application/json:
+              schema:
+                properties:
+                  success: { type: boolean }
+                  message: { type: string }
+                  is_visible: { description: '0 أو 1', type: integer }
+                type: object
+      security:
+        -
+          adminSessionAuth: []
+  /admin/products/categories/suggest:
+    post:
+      tags:
+        - 'Admin - Manage Products'
+      summary: 'اقتراح أقرب الكاتوجريز بالمعنى أثناء كتابة الأدمن (منع التكرار)'
+      operationId: 205ae814273f6848e0fd7553c61f2d0d
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              properties:
+                q:
+                  type: string
+              type: object
+      responses:
+        '200':
+          description: 'JSON: {success, suggestions:[{id,name,similarity}]}'
+      security:
+        -
+          adminSessionAuth: []
+  /admin/products/categories/add:
+    post:
+      tags:
+        - 'Admin - Manage Products'
+      summary: 'إضافة كاتوجري جديدة (يتطلب اسم غير مكرر)'
+      operationId: 1a0834eeec9bdc1c951521e834eee9ed
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              required:
+                - name
+                - csrf_token
+              properties:
+                name:
+                  type: string
+                csrf_token:
+                  type: string
+              type: object
+      responses:
+        '200':
+          description: 'JSON: {success, message, category:{id,name}}'
+      security:
+        -
+          adminSessionAuth: []
+  /admin/products/categories/delete:
+    post:
+      tags:
+        - 'Admin - Manage Products'
+      summary: 'حذف كاتوجري (غير أساسية) مع نقل منتجاتها لكاتوجري وجهة يختارها الأدمن يدوياً'
+      operationId: 25acbec758d8b2ded54e1de6f75a1480
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              required:
+                - category_id
+                - destination_id
+                - csrf_token
+              properties:
+                category_id:
+                  type: integer
+                destination_id:
+                  description: 'الكاتوجري التي تُنقل إليها المنتجات — إلزامي'
+                  type: integer
+                csrf_token:
+                  type: string
+              type: object
+      responses:
+        '200':
+          description: 'JSON: {success, message}'
+      security:
+        -
+          adminSessionAuth: []
+  /admin/products/export-csv:
+    get:
+      tags:
+        - 'Admin - Manage Products'
+      summary: 'تصدير قائمة المنتجات كملف CSV (مع تطبيق فلاتر البحث/الكاتوجري الحالية)'
+      operationId: 3939be5fd54ce25d14376e3ea2cd7655
+      parameters:
+        -
+          name: q
+          in: query
+          schema:
+            type: string
+        -
+          name: cat
+          in: query
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 'ملف CSV للتحميل'
+      security:
+        -
+          adminSessionAuth: []
+  /admin/support/reply:
+    post:
+      tags:
+        - 'Admin Support'
+      summary: 'إرسال رد على رسالة دعم كإشعار للمستخدم صاحب الرسالة'
+      description: "AdminSupportController — صفحة رسائل الدعم الفني للأدمن.\r\nيرث من AdminController الذي يتحقق من تسجيل دخول الأدمن تلقائياً."
+      operationId: 1352770916a2a4c08bb0492de4740ed7
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              required:
+                - csrf_token
+                - user_id
+                - reply_text
+              properties:
+                csrf_token:
+                  type: string
+                user_id:
+                  type: integer
+                reply_text:
+                  type: string
+              type: object
+      responses:
+        '200':
+          description: 'نجاح أو فشل الإرسال'
+          content:
+            application/json:
+              schema:
+                properties:
+                  success: { type: boolean }
+                  message: { type: string }
+                type: object
+      security:
+        -
+          adminSessionAuth: []
+  /admin/support/delete:
+    post:
+      tags:
+        - 'Admin Support'
+      summary: 'حذف رسالة دعم فني نهائياً'
+      operationId: ff32f904c4a196d8bea9075d40a781bf
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              required:
+                - csrf_token
+                - message_id
+              properties:
+                csrf_token:
+                  type: string
+                message_id:
+                  type: integer
+              type: object
+      responses:
+        '200':
+          description: 'نجاح أو فشل الحذف'
+          content:
+            application/json:
+              schema:
+                properties:
+                  success: { type: boolean }
+                  message: { type: string }
+                type: object
+      security:
+        -
+          adminSessionAuth: []
+  /admin/support:
+    get:
+      tags:
+        - 'Admin Support'
+      summary: 'قائمة رسائل الدعم الفني (بحث + Pagination)، تُحدّد كل الرسائل كمقروءة تلقائياً عند الفتح'
+      operationId: 505ebd03f2ff82b6f81567650b77e89c
+      parameters:
+        -
+          name: q
+          in: query
+          description: 'بحث بالاسم / الإيميل / نص الرسالة'
+          required: false
+          schema:
+            type: string
+        -
+          name: page
+          in: query
+          description: 'رقم الصفحة (Pagination)'
+          required: false
+          schema:
+            type: integer
+            default: 1
+      responses:
+        '200':
+          description: 'صفحة HTML — يتطلب صلاحية can_manage_support'
+        '302':
+          description: 'إعادة توجيه لـ /admin/login'
+        '403':
+          description: 'ممنوع — لا يملك can_manage_support'
+      security:
+        -
+          adminSessionAuth: []
+  /admin/users:
+    get:
+      tags:
+        - 'Admin - Manage Users'
+      summary: 'قائمة اليوزرز مع بحث/فلترة/صفحات'
+      operationId: 4f04f3df234645178522c804b5cb710f
+      parameters:
+        -
+          name: q
+          in: query
+          description: 'بحث بالاسم أو الإيميل'
+          required: false
+          schema:
+            type: string
+        -
+          name: status
+          in: query
+          description: 'فلترة الحالة'
+          required: false
+          schema:
+            type: string
+            enum:
+              - all
+              - active
+              - not_active
+              - blocked
+        -
+          name: page
+          in: query
+          description: 'رقم الصفحة'
+          required: false
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 'صفحة HTML بالجدول — يتطلب صلاحية can_manage_users'
+        '403':
+          description: 'ممنوع — لا يملك can_manage_users'
+      security:
+        -
+          adminSessionAuth: []
+  /admin/users/details:
+    get:
+      tags:
+        - 'Admin - Manage Users'
+      summary: 'تفاصيل يوزر معيّن: بياناته + إنذاراته + طلباته + سجل أفعال الأدمنية عليه'
+      operationId: 36a29cc9c7cab7fc1e5d3d380728501d
+      parameters:
+        -
+          name: id
+          in: query
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 'صفحة HTML'
+      security:
+        -
+          adminSessionAuth: []
+  /admin/users/delete:
+    post:
+      tags:
+        - 'Admin - Manage Users'
+      summary: 'حذف يوزر (AJAX — يرجع JSON، يتطلب سبب)'
+      operationId: cc96f2e3ca2c7d6197ffbf44b9d76c69
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              required:
+                - user_id
+                - reason
+                - csrf_token
+              properties:
+                user_id:
+                  type: integer
+                reason:
+                  type: string
+                csrf_token:
+                  type: string
+              type: object
+      responses:
+        '200':
+          description: 'نجاح أو فشل'
+          content:
+            application/json:
+              schema:
+                properties:
+                  success: { type: boolean }
+                  message: { type: string }
+                type: object
+      security:
+        -
+          adminSessionAuth: []
+  /admin/users/strikes/add:
+    post:
+      tags:
+        - 'Admin - Manage Users'
+      summary: 'إضافة إنذار (Strike) ليوزر (AJAX — يرجع JSON)'
+      operationId: 9aac759633ad67b1442c14fe915f9559
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              required:
+                - user_id
+                - reason
+                - csrf_token
+              properties:
+                user_id:
+                  type: integer
+                reason:
+                  type: string
+                csrf_token:
+                  type: string
+              type: object
+      responses:
+        '200':
+          description: 'نجاح أو فشل'
+          content:
+            application/json:
+              schema:
+                properties:
+                  success: { type: boolean }
+                  message: { type: string }
+                  strikes_count: { type: integer }
+                type: object
+      security:
+        -
+          adminSessionAuth: []
+  /admin/users/strikes/remove:
+    post:
+      tags:
+        - 'Admin - Manage Users'
+      summary: 'إزالة إنذار (Strike) من يوزر (AJAX — يرجع JSON)'
+      operationId: 75e0fc9062a1ac4f2b93d3d082422d43
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              required:
+                - strike_id
+                - user_id
+                - csrf_token
+              properties:
+                strike_id:
+                  type: integer
+                user_id:
+                  type: integer
+                csrf_token:
+                  type: string
+              type: object
+      responses:
+        '200':
+          description: 'نجاح أو فشل'
+          content:
+            application/json:
+              schema:
+                properties:
+                  success: { type: boolean }
+                  message: { type: string }
+                type: object
+      security:
+        -
+          adminSessionAuth: []
+  /admin/users/export-csv:
+    get:
+      tags:
+        - 'Admin - Manage Users'
+      summary: 'تصدير قائمة اليوزرز كملف CSV'
+      operationId: 9bfb41fd828517aa7dc9aeb9a39ef7fb
+      responses:
+        '200':
+          description: 'ملف CSV للتحميل'
+      security:
+        -
+          adminSessionAuth: []
+  /auth/login:
+    post:
+      tags:
+        - 'Store - Auth'
+      summary: 'تسجيل دخول مستخدم'
+      description: 'محمي بحدّ محاولات (Rate limiting): بعد 5 محاولات فاشلة يُقفل الدخول 15 دقيقة ويُرسَل تنبيه أمني بالبريد. يشترط تفعيل البريد، ويرفض الحساب الموقوف بثلاث مخالفات.'
+      operationId: 363e422b5a8c763fa1ea6fd03a77481d
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              required:
+                - email
+                - password
+                - csrf_token
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  format: password
+                csrf_token:
+                  type: string
+              type: object
+      responses:
+        '200':
+          description: 'JSON — {success, message, redirect?, type?, needs_verification?}'
+  /auth/register:
+    post:
+      tags:
+        - 'Store - Auth'
+      summary: 'إنشاء حساب مستخدم جديد'
+      description: 'قيود التحقق: البريد يجب أن ينتهي بـ@gmail.com، وكلمة المرور 8 محارف على الأقل بحرف كبير وصغير ورقم ورمز، والعمر 13 سنة فأكثر، والبريد والهاتف غير مسجَّلين مسبقاً، والموافقة على سياسة الخصوصية إلزامية.'
+      operationId: 10c02a951e844462c465d0e576b8c942
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              required:
+                - full_name
+                - email
+                - password
+                - confirm_password
+                - phone
+                - gender
+                - birth_date
+                - privacy_policy_accepted
+                - csrf_token
+              properties:
+                full_name:
+                  type: string
+                  minLength: 2
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  format: password
+                  minLength: 8
+                confirm_password:
+                  type: string
+                  format: password
+                phone:
+                  type: string
+                country:
+                  type: string
+                city:
+                  type: string
+                gender:
+                  type: string
+                  enum: [male, female]
+                birth_date:
+                  type: string
+                  format: date
+                privacy_policy_accepted:
+                  type: boolean
+                csrf_token:
+                  type: string
+              type: object
+      responses:
+        '200':
+          description: 'JSON — {success, message}'
+  /auth/logout:
+    post:
+      tags:
+        - 'Store - Auth'
+      summary: 'تسجيل خروج المستخدم وإنهاء الجلسة'
+      operationId: e39ef4c513f6d25e947a67cab73e4b5b
+      responses:
+        '200':
+          description: 'JSON — {success, message, redirect?}'
+      security:
+        -
+          userSessionAuth: []
+  /auth/forgot:
+    post:
+      tags:
+        - 'Store - Auth'
+      summary: 'طلب رابط إعادة تعيين كلمة المرور'
+      description: 'الرسالة المُرجَعة واحدة سواء وُجد البريد أم لا — كي لا تكشف النقطة أي البُرد مسجَّلة.'
+      operationId: 3696ca182b435d66d9798771fdfa6145
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              required:
+                - email
+                - csrf_token
+              properties:
+                email:
+                  type: string
+                  format: email
+                csrf_token:
+                  type: string
+              type: object
+      responses:
+        '200':
+          description: 'JSON — {success, message}'
+  /auth/reset:
+    get:
+      tags:
+        - 'Store - Auth'
+      summary: 'صفحة إعادة تعيين كلمة المرور'
+      description: 'صفحة مستقلة لا تحمّل layout المتجر. تخدم المستخدم والأدمن معاً حسب نوع التوكن.'
+      operationId: b0475d0b82a92bb91acb4f5d64ff8bce
+      parameters:
+        -
+          name: token
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 'صفحة HTML'
+    post:
+      tags:
+        - 'Store - Auth'
+      summary: 'حفظ كلمة المرور الجديدة بعد التحقق من التوكن'
+      operationId: a77c8abd652cccfebb114b7b317c0c78
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              required:
+                - token
+                - password
+                - confirm_password
+                - csrf_token
+              properties:
+                token:
+                  type: string
+                password:
+                  type: string
+                  format: password
+                confirm_password:
+                  type: string
+                  format: password
+                csrf_token:
+                  type: string
+              type: object
+      responses:
+        '200':
+          description: 'JSON — {success, message}'
+  /auth/verify:
+    get:
+      tags:
+        - 'Store - Auth'
+      summary: 'تفعيل البريد عبر الرابط المُرسَل بعد التسجيل'
+      operationId: e2f8a0a752017e09bdc6e9b9a04f5891
+      parameters:
+        -
+          name: token
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '302':
+          description: 'تحويل للرئيسية مع رسالة نجاح أو خطأ'
+  /auth/csrf:
+    get:
+      tags:
+        - 'Store - Auth'
+      summary: 'جلب توكن CSRF جديد لنماذج المتجر'
+      description: 'النقطة الوحيدة التي لا تتطلّب توكناً — منها يُجلب.'
+      operationId: dfb82574a38b02fc29d2a04de30bc763
+      responses:
+        '200':
+          description: 'JSON — {success, message, token}'
+  /auth/google:
+    get:
+      tags:
+        - 'Store - Auth'
+      summary: 'بدء تسجيل الدخول عبر Google OAuth'
+      operationId: 9b78b91f9bc61b0dc692bcae4cb7cee1
+      responses:
+        '302':
+          description: 'تحويل إلى شاشة موافقة Google'
+  /auth/google/callback:
+    get:
+      tags:
+        - 'Store - Auth'
+      summary: 'استقبال رد Google وإنشاء الجلسة'
+      description: 'ينشئ حساباً جديداً إن لم يكن البريد مسجَّلاً، وإلا يربط الحساب القائم.'
+      operationId: 91798fd9a12796cdf6a69fe162223581
+      parameters:
+        -
+          name: code
+          in: query
+          schema:
+            type: string
+        -
+          name: state
+          in: query
+          schema:
+            type: string
+      responses:
+        '302':
+          description: 'تحويل للرئيسية بعد نجاح الدخول أو فشله'
+  /admin/backup:
+    get:
+      tags:
+        - 'Admin - Backup'
+      summary: 'صفحة إدارة النسخ الاحتياطي (Root admin ID=1 فقط)'
+      operationId: 0b8a457d21fd62e658d0a5b9b8f8a396
+      responses:
+        '200':
+          description: 'صفحة HTML بالقائمة وزر إنشاء نسخة'
+      security:
+        -
+          adminSessionAuth: []
+  /admin/backup/create:
+    post:
+      tags:
+        - 'Admin - Backup'
+      summary: 'إنشاء نسخة احتياطية جديدة (AJAX — JSON، Root admin ID=1 فقط)'
+      operationId: c704af6e8e32a1573116afb9888ffa09
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              required:
+                - csrf_token
+              properties:
+                csrf_token:
+                  type: string
+              type: object
+      responses:
+        '200':
+          description: JSON
+          content:
+            application/json:
+              schema:
+                properties:
+                  success: { type: boolean }
+                  message: { type: string }
+                  filename: { type: string }
+                type: object
+      security:
+        -
+          adminSessionAuth: []
+  /admin/backup/download:
+    get:
+      tags:
+        - 'Admin - Backup'
+      summary: 'تحميل نسخة احتياطية (Root admin ID=1 فقط — منع Path Traversal)'
+      operationId: 9234c937552ec75d4908e14cc621cb2d
+      parameters:
+        -
+          name: file
+          in: query
+          description: 'اسم الملف فقط — يُرفض أي مسار خارج مجلد النسخ'
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 'ملف SQL للتحميل'
+      security:
+        -
+          adminSessionAuth: []
+  /admin/backup/delete:
+    post:
+      tags:
+        - 'Admin - Backup'
+      summary: 'حذف نسخة احتياطية (AJAX — JSON، Root admin ID=1 فقط)'
+      operationId: 20c40db3396b35777d92d320a7dfdac0
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              required:
+                - file
+                - csrf_token
+              properties:
+                file:
+                  type: string
+                csrf_token:
+                  type: string
+              type: object
+      responses:
+        '200':
+          description: JSON
+          content:
+            application/json:
+              schema:
+                properties:
+                  success: { type: boolean }
+                  message: { type: string }
+                type: object
+      security:
+        -
+          adminSessionAuth: []
+  /cart/check-stock:
+    post:
+      tags:
+        - 'Store - Cart'
+      summary: 'التحقق من توفّر وأسعار الـvariants الموجودة في السلة'
+      description: 'السلة تُدار كاملة في المتصفح (localStorage)؛ هذه النقطة تتحقق من المخزون والسعر الحاليين قبل إتمام الطلب. المنتجات المخفية لا تُرجَع.'
+      operationId: 11742ec09980c02399157d72f056b111
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              required:
+                - variant_ids
+              properties:
+                variant_ids:
+                  description: 'معرّفات الـvariants المطلوب فحصها'
+                  type: array
+                  items: { type: integer }
+              type: object
+      responses:
+        '200':
+          description: 'JSON — {success, message, items[]}. كل عنصر يحمل variant_id و product_name و price و stock_quantity وغيرها.'
+  /checkout:
+    get:
+      tags:
+        - 'Store - Checkout'
+      summary: 'صفحة إتمام الطلب (ثلاث خطوات)'
+      operationId: 3c9e7f1f4ad315498f6c07de22b0082f
+      responses:
+        '200':
+          description: 'صفحة HTML'
+        '302':
+          description: 'تحويل للرئيسية مع فتح نافذة الدخول إن لم يكن مسجّلاً'
+      security:
+        -
+          userSessionAuth: []
+    post:
+      tags:
+        - 'Store - Checkout'
+      summary: 'إنشاء الطلب من محتويات السلة'
+      description: 'السلة تُرسَل من المتصفح، ويُعاد التحقق من المخزون والسعر على الخادم قبل الحفظ — لا يُوثق بالسعر القادم من العميل.'
+      operationId: b9a528bfe771ba04bed8dc5cf05bef51
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              required:
+                - cart
+                - csrf_token
+              properties:
+                cart:
+                  description: 'JSON لمحتويات السلة'
+                  type: string
+                address_id:
+                  type: integer
+                csrf_token:
+                  type: string
+              type: object
+      responses:
+        '200':
+          description: 'JSON — {success, message, order_id?, redirect?}'
+      security:
+        -
+          userSessionAuth: []
+  /checkout/cancel-order:
+    post:
+      tags:
+        - 'Store - Checkout'
+      summary: 'إلغاء طلب من طرف المستخدم'
+      description: 'يُسمح بالإلغاء فقط قبل أن يتولّى الطلب أدمن. نفس الزر المشترك في views/shared/order-cancel-button.php يخدم واجهة الأدمن بنقطة أخرى.'
+      operationId: 97b7adab83828a0e8f3ee5568419e90a
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              required:
+                - order_id
+                - csrf_token
+              properties:
+                order_id:
+                  type: integer
+                csrf_token:
+                  type: string
+              type: object
+      responses:
+        '200':
+          description: 'JSON — {success, message}'
+      security:
+        -
+          userSessionAuth: []
+  /checkout/confirmation:
+    get:
+      tags:
+        - 'Store - Checkout'
+      summary: 'صفحة تأكيد الطلب بعد إتمامه'
+      operationId: 700822d16d5b6157d2dde3a3b9f3b073
+      parameters:
+        -
+          name: id
+          in: query
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 'صفحة HTML'
+      security:
+        -
+          userSessionAuth: []
+  /contact:
+    get:
+      tags:
+        - 'Store - Pages'
+      summary: 'صفحة "اتصل بنا"'
+      operationId: 2d03ed858c3066693769a44051ce6a34
+      responses:
+        '200':
+          description: 'صفحة HTML'
+  /contact/send:
+    post:
+      tags:
+        - 'Store - Pages'
+      summary: 'إرسال رسالة من نموذج "اتصل بنا"'
+      operationId: da9e99ecb7f2081457a4e5acaaf9d2f2
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              required:
+                - name
+                - email
+                - message
+                - csrf_token
+              properties:
+                name:
+                  type: string
+                email:
+                  type: string
+                  format: email
+                message:
+                  type: string
+                csrf_token:
+                  type: string
+              type: object
+      responses:
+        '200':
+          description: 'JSON — {success, message}'
+  /:
+    get:
+      tags:
+        - 'Store - Pages'
+      summary: 'الصفحة الرئيسية — السلايدر والأقسام والمنتجات المرئية'
+      description: 'الراوت /home يشير إلى نفس الدالة.'
+      operationId: 5aeb21eb14626d47415174baf0626d95
+      responses:
+        '200':
+          description: 'صفحة HTML'
+  /home:
+    get:
+      tags:
+        - 'Store - Pages'
+      summary: 'مسار بديل للصفحة الرئيسية — نفس الدالة تماماً'
+      operationId: d5422bafc41cad3a4f7437fdc549bbd3
+      responses:
+        '200':
+          description: 'صفحة HTML'
+  /user/info:
+    get:
+      tags:
+        - 'Store - Account'
+      summary: 'صفحة حساب المستخدم — البيانات والطلبات والعناوين'
+      operationId: d93ba194372c293cc0f8f85203c98baf
+      responses:
+        '200':
+          description: 'صفحة HTML'
+        '302':
+          description: 'تحويل للرئيسية مع فتح نافذة الدخول'
+      security:
+        -
+          userSessionAuth: []
+    post:
+      tags:
+        - 'Store - Account'
+      summary: 'تحديث بيانات الحساب'
+      description: 'كلمة المرور الحالية إلزامية لأي تعديل، حتى لو لم تكن كلمة المرور نفسها هي المُعدَّلة.'
+      operationId: 592a6fc7ff9e9773a5172f11b68e437c
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              required:
+                - current_password
+                - csrf_token
+              properties:
+                full_name:
+                  type: string
+                phone:
+                  type: string
+                country:
+                  type: string
+                city:
+                  type: string
+                current_password:
+                  type: string
+                  format: password
+                new_password:
+                  type: string
+                  format: password
+                csrf_token:
+                  type: string
+              type: object
+      responses:
+        '200':
+          description: 'JSON — {success, message}'
+      security:
+        -
+          userSessionAuth: []
+  /user/addresses:
+    post:
+      tags:
+        - 'Store - Account'
+      summary: 'إضافة عنوان شحن للحساب'
+      operationId: f11e44b48711fb563ca9e120a0c9254d
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              required:
+                - full_address
+                - csrf_token
+              properties:
+                label:
+                  description: 'اسم العنوان مثل "المنزل"'
+                  type: string
+                full_address:
+                  type: string
+                city:
+                  type: string
+                country:
+                  type: string
+                phone:
+                  type: string
+                is_default:
+                  type: boolean
+                csrf_token:
+                  type: string
+              type: object
+      responses:
+        '200':
+          description: 'JSON — {success, message}'
+      security:
+        -
+          userSessionAuth: []
+  /user/addresses/delete:
+    post:
+      tags:
+        - 'Store - Account'
+      summary: 'حذف عنوان شحن'
+      operationId: bb4efa69e36bcf9a32dfcc5608a6997f
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              required:
+                - address_id
+                - csrf_token
+              properties:
+                address_id:
+                  type: integer
+                csrf_token:
+                  type: string
+              type: object
+      responses:
+        '200':
+          description: 'JSON — {success, message}'
+      security:
+        -
+          userSessionAuth: []
+  /notifications/list:
+    get:
+      tags:
+        - 'Store - Notifications'
+      summary: 'إشعارات المستخدم الحالي'
+      operationId: d321c32ce96e2ef4958565db94181aa5
+      responses:
+        '200':
+          description: 'JSON — {success, message, notifications[], unread}'
+      security:
+        -
+          userSessionAuth: []
+  /notifications/mark-read:
+    post:
+      tags:
+        - 'Store - Notifications'
+      summary: 'تعليم إشعار واحد كمقروء'
+      operationId: efa71487ff28bb11a97db5798008e833
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              required:
+                - id
+                - csrf_token
+              properties:
+                id:
+                  type: integer
+                csrf_token:
+                  type: string
+              type: object
+      responses:
+        '200':
+          description: 'JSON — {success, message}'
+      security:
+        -
+          userSessionAuth: []
+  /notifications/mark-all-read:
+    post:
+      tags:
+        - 'Store - Notifications'
+      summary: 'تعليم كل إشعارات المستخدم كمقروءة'
+      operationId: 9bb6f79b33bd8a231f6ad74c5642cb76
+      responses:
+        '200':
+          description: 'JSON — {success, message}'
+      security:
+        -
+          userSessionAuth: []
+  /notifications/dismiss:
+    post:
+      tags:
+        - 'Store - Notifications'
+      summary: 'حذف إشعار واحد'
+      operationId: 229870d29318194334a9ca8cff8c1d09
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              required:
+                - id
+                - csrf_token
+              properties:
+                id:
+                  type: integer
+                csrf_token:
+                  type: string
+              type: object
+      responses:
+        '200':
+          description: 'JSON — {success, message}'
+      security:
+        -
+          userSessionAuth: []
+  /notifications/delete-all:
+    post:
+      tags:
+        - 'Store - Notifications'
+      summary: 'حذف كل إشعارات المستخدم'
+      operationId: 568ead104f2687ae3aacf0cd675f60f2
+      responses:
+        '200':
+          description: 'JSON — {success, message}'
+      security:
+        -
+          userSessionAuth: []
+  /products:
+    get:
+      tags:
+        - 'Store - Products'
+      summary: 'قائمة المنتجات المرئية مع Pagination'
+      description: 'البحث والفرز والفلترة بالسعر تتم كلها في المتصفح (js/features/products-catalog.js)، فلا بارامترات فلترة هنا.'
+      operationId: 3766bdcbe4e6257669b4818e48e63431
+      parameters:
+        -
+          name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+      responses:
+        '200':
+          description: 'صفحة HTML'
+  /product:
+    get:
+      tags:
+        - 'Store - Products'
+      summary: 'صفحة تفاصيل منتج'
+      description: 'تُعيد التوجيه للرئيسية إن كان المعرّف مفقوداً أو المنتج غير موجود. الـvariant المعروض يُختار حسب جنس الزائر (pickDisplayVariant).'
+      operationId: 71949b3453b48a350070f790deaba7d1
+      parameters:
+        -
+          name: id
+          in: query
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 'صفحة HTML'
+        '302':
+          description: 'تحويل للرئيسية — معرّف مفقود أو منتج غير موجود'
+    post:
+      tags:
+        - 'Store - Products'
+      summary: 'حفظ تقييم المستخدم للمنتج ثم عرض الصفحة'
+      description: 'نفس الدالة تخدم GET وPOST. يتطلّب تسجيل دخول مستخدم وتوكن CSRF. الأدمن في وضع تصفّح المتجر لا يستطيع التقييم.'
+      operationId: 26deaeebf822fcad11cd8cdfce47d5e8
+      requestBody:
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              required:
+                - submit_review
+                - rating
+                - csrf_token
+              properties:
+                submit_review:
+                  type: string
+                rating:
+                  type: integer
+                  maximum: 5
+                  minimum: 1
+                comment:
+                  type: string
+                csrf_token:
+                  type: string
+              type: object
+      responses:
+        '200':
+          description: 'صفحة HTML مع رسالة نجاح أو خطأ'
+      security:
+        -
+          userSessionAuth: []
+  /wishlist:
+    get:
+      tags:
+        - 'Store - Wishlist'
+      summary: 'صفحة قائمة الأمنيات'
+      description: 'المحتوى يُبنى كاملاً في المتصفح من localStorage (js/features/wishlist.js)؛ الخادم يُرجع الهيكل فقط.'
+      operationId: b8e542e88f9a484f66f3c6e4a2f21a1d
+      responses:
+        '200':
+          description: 'صفحة HTML'
+  /handlers/product_stock_handler.php:
+    get:
+      tags:
+        - 'Store - Wishlist'
+      summary: 'مخزون وأسعار مجموعة منتجات (لتحديث بطاقات قائمة الأمنيات)'
+      description: 'نقطة عامة لا تتطلّب تسجيل دخول. الزائر غير المسجّل يحصل على already_notified=false للجميع بدل تسريب حالة مستخدم آخر. الحد الأقصى 200 معرّف في الطلب الواحد.'
+      operationId: 9253a97c5fb60428efd374b57886f3b0
+      parameters:
+        -
+          name: ids
+          in: query
+          description: 'ids[]=1&ids[]=2 — حتى 200 معرّف'
+          required: true
+          schema:
+            type: array
+            items:
+              type: integer
+      responses:
+        '200':
+          description: 'JSON — {success, message, products{}} مفهرسة بمعرّف المنتج، وكل عنصر يحمل stock_quantity و price و is_visible و already_notified.'
+  /handlers/notify_handler.php:
+    post:
+      tags:
+        - 'Store - Wishlist'
+      summary: 'تسجيل طلب "نبّهني عند التوفّر" لمنتج'
+      description: 'يتطلّب تسجيل دخول مستخدم. الطلب المكرّر لا ينشئ صفاً جديداً ولا يُشعِر الأدمنية مرة ثانية.'
+      operationId: 36f17baedbf0949141c244f281dc2717
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              required:
+                - product_id
+                - csrf_token
+              properties:
+                product_id:
+                  type: integer
+                csrf_token:
+                  type: string
+              type: object
+      responses:
+        '200':
+          description: 'JSON — {success, message}'
+      security:
+        -
+          userSessionAuth: []
+components:
+  securitySchemes:
+    adminSessionAuth:
+      type: apiKey
+      description: 'PHP session cookie — يُنشأ تلقائياً عند تسجيل الدخول ويُرسل مع كل طلب محمي'
+      name: admin_session
+      in: cookie
+    userSessionAuth:
+      type: apiKey
+      description: "جلسة المستخدم العادي — منفصلة تماماً عن admin_session بالاسم\r\nوالمحتوى، فلا يمكن الوصول لبيانات الأدمن من جلسة مستخدم ولا العكس\r\n(راجع isUser/isAdmin في auth_helper.php)."
+      name: PHPSESSID
+      in: cookie
+tags:
+  -
+    name: 'Store - Pages'
+    description: 'Store - Pages'
+  -
+    name: 'Admin Auth'
+    description: 'Admin Auth'
+  -
+    name: 'Admin - Branding'
+    description: 'Admin - Branding'
+  -
+    name: 'Admin Dashboard'
+    description: 'Admin Dashboard'
+  -
+    name: 'Admin Home'
+    description: 'Admin Home'
+  -
+    name: 'Admin - Manage Admins'
+    description: 'Admin - Manage Admins'
+  -
+    name: 'Admin - Messaging'
+    description: 'Admin - Messaging'
+  -
+    name: 'Admin My Info'
+    description: 'Admin My Info'
+  -
+    name: 'Admin - My Info'
+    description: 'Admin - My Info'
+  -
+    name: 'Admin - Notifications'
+    description: 'Admin - Notifications'
+  -
+    name: 'Admin - Manage Orders'
+    description: 'Admin - Manage Orders'
+  -
+    name: 'Admin - Manage Products'
+    description: 'Admin - Manage Products'
+  -
+    name: 'Admin Site Settings'
+    description: 'Admin Site Settings'
+  -
+    name: 'Admin Support'
+    description: 'Admin Support'
+  -
+    name: 'Admin - Manage Users'
+    description: 'Admin - Manage Users'
+  -
+    name: 'Store - Auth'
+    description: 'Store - Auth'
+  -
+    name: 'Admin - Backup'
+    description: 'Admin - Backup'
+  -
+    name: 'Store - Cart'
+    description: 'Store - Cart'
+  -
+    name: 'Store - Checkout'
+    description: 'Store - Checkout'
+  -
+    name: 'Store - Account'
+    description: 'Store - Account'
+  -
+    name: 'Store - Notifications'
+    description: 'Store - Notifications'
+  -
+    name: 'Store - Products'
+    description: 'Store - Products'
+  -
+    name: 'Store - Wishlist'
+    description: 'Store - Wishlist'

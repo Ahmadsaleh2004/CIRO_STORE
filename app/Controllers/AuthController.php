@@ -4,6 +4,7 @@ namespace App\Controllers;
 
 use App\Core\Controller;
 use App\Models\UserModel;
+use OpenApi\Attributes as OA;
 
 /**
  * AuthController — تسجيل الدخول / التسجيل / الخروج / نسيت كلمة المرور / Google OAuth
@@ -15,6 +16,34 @@ class AuthController extends Controller
     // ════════════════════════════════════════════════════════
     // POST /auth/login
     // ════════════════════════════════════════════════════════
+    #[OA\Post(
+        path: '/auth/login',
+        summary: 'تسجيل دخول مستخدم',
+        description: 'محمي بحدّ محاولات (Rate limiting): بعد 5 محاولات فاشلة يُقفل الدخول '
+                   . '15 دقيقة ويُرسَل تنبيه أمني بالبريد. يشترط تفعيل البريد، ويرفض الحساب '
+                   . 'الموقوف بثلاث مخالفات.',
+        tags: ['Store - Auth'],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\MediaType(
+                mediaType: 'application/x-www-form-urlencoded',
+                schema: new OA\Schema(
+                    required: ['email', 'password', 'csrf_token'],
+                    properties: [
+                        new OA\Property(property: 'email', type: 'string', format: 'email'),
+                        new OA\Property(property: 'password', type: 'string', format: 'password'),
+                        new OA\Property(property: 'csrf_token', type: 'string'),
+                    ]
+                )
+            )
+        ),
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'JSON — {success, message, redirect?, type?, needs_verification?}'
+            ),
+        ]
+    )]
     public function login(): void
     {
         // تأكد من وجود جلسة PHPSESSID قبل أي عملية CSRF أو session read/write
@@ -107,6 +136,38 @@ class AuthController extends Controller
     // ════════════════════════════════════════════════════════
     // POST /auth/register
     // ════════════════════════════════════════════════════════
+    #[OA\Post(
+        path: '/auth/register',
+        summary: 'إنشاء حساب مستخدم جديد',
+        description: 'قيود التحقق: البريد يجب أن ينتهي بـ@gmail.com، وكلمة المرور 8 محارف '
+                   . 'على الأقل بحرف كبير وصغير ورقم ورمز، والعمر 13 سنة فأكثر، والبريد '
+                   . 'والهاتف غير مسجَّلين مسبقاً، والموافقة على سياسة الخصوصية إلزامية.',
+        tags: ['Store - Auth'],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\MediaType(
+                mediaType: 'application/x-www-form-urlencoded',
+                schema: new OA\Schema(
+                    required: ['full_name', 'email', 'password', 'confirm_password', 'phone',
+                               'gender', 'birth_date', 'privacy_policy_accepted', 'csrf_token'],
+                    properties: [
+                        new OA\Property(property: 'full_name', type: 'string', minLength: 2),
+                        new OA\Property(property: 'email', type: 'string', format: 'email'),
+                        new OA\Property(property: 'password', type: 'string', format: 'password', minLength: 8),
+                        new OA\Property(property: 'confirm_password', type: 'string', format: 'password'),
+                        new OA\Property(property: 'phone', type: 'string'),
+                        new OA\Property(property: 'country', type: 'string'),
+                        new OA\Property(property: 'city', type: 'string'),
+                        new OA\Property(property: 'gender', type: 'string', enum: ['male', 'female']),
+                        new OA\Property(property: 'birth_date', type: 'string', format: 'date'),
+                        new OA\Property(property: 'privacy_policy_accepted', type: 'boolean'),
+                        new OA\Property(property: 'csrf_token', type: 'string'),
+                    ]
+                )
+            )
+        ),
+        responses: [new OA\Response(response: 200, description: 'JSON — {success, message}')]
+    )]
     public function register(): void
     {
         if (session_status() === PHP_SESSION_NONE) {
@@ -222,6 +283,13 @@ class AuthController extends Controller
     // ════════════════════════════════════════════════════════
     // POST /auth/logout
     // ════════════════════════════════════════════════════════
+    #[OA\Post(
+        path: '/auth/logout',
+        summary: 'تسجيل خروج المستخدم وإنهاء الجلسة',
+        tags: ['Store - Auth'],
+        security: [['userSessionAuth' => []]],
+        responses: [new OA\Response(response: 200, description: 'JSON — {success, message, redirect?}')]
+    )]
     public function logout(): void
     {
         if (session_status() === PHP_SESSION_NONE) {
@@ -246,6 +314,27 @@ class AuthController extends Controller
     // ════════════════════════════════════════════════════════
     // POST /auth/forgot
     // ════════════════════════════════════════════════════════
+    #[OA\Post(
+        path: '/auth/forgot',
+        summary: 'طلب رابط إعادة تعيين كلمة المرور',
+        description: 'الرسالة المُرجَعة واحدة سواء وُجد البريد أم لا — كي لا تكشف النقطة '
+                   . 'أي البُرد مسجَّلة.',
+        tags: ['Store - Auth'],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\MediaType(
+                mediaType: 'application/x-www-form-urlencoded',
+                schema: new OA\Schema(
+                    required: ['email', 'csrf_token'],
+                    properties: [
+                        new OA\Property(property: 'email', type: 'string', format: 'email'),
+                        new OA\Property(property: 'csrf_token', type: 'string'),
+                    ]
+                )
+            )
+        ),
+        responses: [new OA\Response(response: 200, description: 'JSON — {success, message}')]
+    )]
     public function forgot(): void
     {
         if (session_status() === PHP_SESSION_NONE) session_start();
@@ -286,6 +375,17 @@ class AuthController extends Controller
     }
 
     // GET /auth/reset — عرض فورم تغيير كلمة المرور (صفحة، مو JSON)
+    #[OA\Get(
+        path: '/auth/reset',
+        summary: 'صفحة إعادة تعيين كلمة المرور',
+        description: 'صفحة مستقلة لا تحمّل layout المتجر. تخدم المستخدم والأدمن معاً '
+                   . 'حسب نوع التوكن.',
+        tags: ['Store - Auth'],
+        parameters: [
+            new OA\Parameter(name: 'token', in: 'query', required: true, schema: new OA\Schema(type: 'string')),
+        ],
+        responses: [new OA\Response(response: 200, description: 'صفحة HTML')]
+    )]
     public function resetForm(): void
     {
         $token = $_GET['token'] ?? '';
@@ -300,6 +400,27 @@ class AuthController extends Controller
     }
 
     // POST /auth/reset — تنفيذ تغيير كلمة المرور
+    #[OA\Post(
+        path: '/auth/reset',
+        summary: 'حفظ كلمة المرور الجديدة بعد التحقق من التوكن',
+        tags: ['Store - Auth'],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\MediaType(
+                mediaType: 'application/x-www-form-urlencoded',
+                schema: new OA\Schema(
+                    required: ['token', 'password', 'confirm_password', 'csrf_token'],
+                    properties: [
+                        new OA\Property(property: 'token', type: 'string'),
+                        new OA\Property(property: 'password', type: 'string', format: 'password'),
+                        new OA\Property(property: 'confirm_password', type: 'string', format: 'password'),
+                        new OA\Property(property: 'csrf_token', type: 'string'),
+                    ]
+                )
+            )
+        ),
+        responses: [new OA\Response(response: 200, description: 'JSON — {success, message}')]
+    )]
     public function resetSubmit(): void
     {
         if (session_status() === PHP_SESSION_NONE) session_start();
@@ -345,6 +466,17 @@ class AuthController extends Controller
 
     // ════════════════════════════════════════════════════════
     // GET /auth/verify — تفعيل الإيميل عبر الرابط
+    #[OA\Get(
+        path: '/auth/verify',
+        summary: 'تفعيل البريد عبر الرابط المُرسَل بعد التسجيل',
+        tags: ['Store - Auth'],
+        parameters: [
+            new OA\Parameter(name: 'token', in: 'query', required: true, schema: new OA\Schema(type: 'string')),
+        ],
+        responses: [
+            new OA\Response(response: 302, description: 'تحويل للرئيسية مع رسالة نجاح أو خطأ'),
+        ]
+    )]
     public function verifyEmail(): void
     {
         $token = $_GET['token'] ?? '';
@@ -359,6 +491,13 @@ class AuthController extends Controller
 
     // GET /auth/csrf — توليد CSRF Token جديد (للـ retry التلقائي)
     // ════════════════════════════════════════════════════════
+    #[OA\Get(
+        path: '/auth/csrf',
+        summary: 'جلب توكن CSRF جديد لنماذج المتجر',
+        description: 'النقطة الوحيدة التي لا تتطلّب توكناً — منها يُجلب.',
+        tags: ['Store - Auth'],
+        responses: [new OA\Response(response: 200, description: 'JSON — {success, message, token}')]
+    )]
     public function getCsrf(): void
     {
         if (session_status() === PHP_SESSION_NONE) {
@@ -372,6 +511,14 @@ class AuthController extends Controller
     // ════════════════════════════════════════════════════════
     // GET /auth/google — توجيه لصفحة موافقة جوجل
     // ════════════════════════════════════════════════════════
+    #[OA\Get(
+        path: '/auth/google',
+        summary: 'بدء تسجيل الدخول عبر Google OAuth',
+        tags: ['Store - Auth'],
+        responses: [
+            new OA\Response(response: 302, description: 'تحويل إلى شاشة موافقة Google'),
+        ]
+    )]
     public function googleLogin(): void
     {
         if (session_status() === PHP_SESSION_NONE) {
@@ -405,6 +552,19 @@ class AuthController extends Controller
 
     // GET /auth/google/callback — استقبال كود جوجل
     // ════════════════════════════════════════════════════════
+    #[OA\Get(
+        path: '/auth/google/callback',
+        summary: 'استقبال رد Google وإنشاء الجلسة',
+        description: 'ينشئ حساباً جديداً إن لم يكن البريد مسجَّلاً، وإلا يربط الحساب القائم.',
+        tags: ['Store - Auth'],
+        parameters: [
+            new OA\Parameter(name: 'code', in: 'query', schema: new OA\Schema(type: 'string')),
+            new OA\Parameter(name: 'state', in: 'query', schema: new OA\Schema(type: 'string')),
+        ],
+        responses: [
+            new OA\Response(response: 302, description: 'تحويل للرئيسية بعد نجاح الدخول أو فشله'),
+        ]
+    )]
     public function googleCallback(): void
     {
         if (session_status() === PHP_SESSION_NONE) {

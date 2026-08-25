@@ -6,12 +6,21 @@ use App\Core\Controller;
 use App\Models\ProductModel;
 use App\Models\StockNotificationModel;
 use App\Services\StockNotifier;
+use OpenApi\Attributes as OA;
 
 class WishlistController extends Controller
 {
     /**
      * عرض صفحة الويش ليست (المحتوى نفسه بيتبني بالكامل من js/wishlist.js عن طريق localStorage)
      */
+    #[OA\Get(
+        path: '/wishlist',
+        summary: 'صفحة قائمة الأمنيات',
+        description: 'المحتوى يُبنى كاملاً في المتصفح من localStorage (js/features/wishlist.js)؛ '
+                   . 'الخادم يُرجع الهيكل فقط.',
+        tags: ['Store - Wishlist'],
+        responses: [new OA\Response(response: 200, description: 'صفحة HTML')]
+    )]
     public function index(): void
     {
         $this->view('page/wishlist', [
@@ -32,6 +41,30 @@ class WishlistController extends Controller
      * يرجّع بيانات المخزون/السعر الحيّة بصيغة JSON.
      * سايب نفس المسار القديم بالظبط عشان js/wishlist.js يشتغل من غير أي تعديل عليه.
      */
+    #[OA\Get(
+        path: '/handlers/product_stock_handler.php',
+        summary: 'مخزون وأسعار مجموعة منتجات (لتحديث بطاقات قائمة الأمنيات)',
+        description: 'نقطة عامة لا تتطلّب تسجيل دخول. الزائر غير المسجّل يحصل على '
+                   . 'already_notified=false للجميع بدل تسريب حالة مستخدم آخر. '
+                   . 'الحد الأقصى 200 معرّف في الطلب الواحد.',
+        tags: ['Store - Wishlist'],
+        parameters: [
+            new OA\Parameter(
+                name: 'ids',
+                in: 'query',
+                required: true,
+                description: 'ids[]=1&ids[]=2 — حتى 200 معرّف',
+                schema: new OA\Schema(type: 'array', items: new OA\Items(type: 'integer'))
+            ),
+        ],
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'JSON — {success, message, products{}} مفهرسة بمعرّف المنتج، '
+                           . 'وكل عنصر يحمل stock_quantity و price و is_visible و already_notified.'
+            ),
+        ]
+    )]
     public function stock(): void
     {
         header('Content-Type: application/json; charset=utf-8');
@@ -82,6 +115,28 @@ class WishlistController extends Controller
      * "نبّهني لما يتوفر" — بيخزّن الطلب في جدول stock_notifications
      * يرجع JSON للأجاكس
      */
+    #[OA\Post(
+        path: '/handlers/notify_handler.php',
+        summary: 'تسجيل طلب "نبّهني عند التوفّر" لمنتج',
+        description: 'يتطلّب تسجيل دخول مستخدم. الطلب المكرّر لا ينشئ صفاً جديداً ولا '
+                   . 'يُشعِر الأدمنية مرة ثانية.',
+        tags: ['Store - Wishlist'],
+        security: [['userSessionAuth' => []]],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\MediaType(
+                mediaType: 'application/x-www-form-urlencoded',
+                schema: new OA\Schema(
+                    required: ['product_id', 'csrf_token'],
+                    properties: [
+                        new OA\Property(property: 'product_id', type: 'integer'),
+                        new OA\Property(property: 'csrf_token', type: 'string'),
+                    ]
+                )
+            )
+        ),
+        responses: [new OA\Response(response: 200, description: 'JSON — {success, message}')]
+    )]
     public function notify(): void
     {
         header('Content-Type: application/json; charset=utf-8');

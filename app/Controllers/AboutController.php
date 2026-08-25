@@ -5,6 +5,7 @@ namespace App\Controllers;
 use App\Core\Controller;
 use App\Models\AboutModel;
 use App\Models\ProductModel;
+use OpenApi\Attributes as OA;
 
 /**
  * AboutController — يعالج صفحة /about
@@ -12,7 +13,12 @@ use App\Models\ProductModel;
  */
 class AboutController extends Controller
 {
-    public function about(): void
+    #[OA\Get(
+        path: "/about",
+        summary: "صفحة \"من نحن\" — بيانات المتجر الثابتة مع عدد المنتجات المرئية",
+        tags: ["Store - Pages"],
+        responses: [new OA\Response(response: 200, description: "صفحة HTML")]
+    )]    public function about(): void
     {
         $model = new AboutModel();
 
