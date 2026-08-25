@@ -5,27 +5,7 @@
  * البيانات تأتي جاهزة من CheckoutController::index()
  */
 ?>
-<style>
-    .step-bar { display:flex; justify-content:center; gap:0; margin-bottom:2rem; }
-    .step-item { display:flex; flex-direction:column; align-items:center; gap:5px; flex:1; max-width:150px; position:relative; }
-    .step-circle { width:38px; height:38px; border-radius:50%; display:flex; align-items:center; justify-content:center;
-        font-weight:700; border:2px solid var(--section-border); background:var(--card-bg); color:var(--text-color); transition:.3s; }
-    .step-item.active .step-circle  { background:var(--accent); border-color:var(--accent); color:#fff; }
-    .step-item.done   .step-circle  { background:#16a34a; border-color:#16a34a; color:#fff; }
-    .step-label { font-size:.72rem; color:var(--muted-text); }
-    .step-item.active .step-label { color:var(--accent); font-weight:600; }
-    .step-item:not(:last-child)::after { content:''; position:absolute; top:19px; left:calc(50% + 19px);
-        width:calc(100% - 38px); height:2px; background:var(--section-border); }
-    .step-item.done:not(:last-child)::after { background:#16a34a; }
-    .checkout-step  { display:none; }
-    .checkout-step.active { display:block; }
-    .trust-badges { display:flex; flex-wrap:wrap; gap:12px; justify-content:center; margin-top:14px; }
-    .trust-badge  { display:flex; align-items:center; gap:5px; font-size:.78rem; color:var(--muted-text); }
-    .addr-radio:checked + .addr-label { border-color:var(--accent)!important; }
-    .addr-label { border:2px solid var(--section-border)!important; border-radius:10px; padding:12px 14px;
-        cursor:pointer; display:block; transition:.2s; }
-    .addr-label:hover { border-color:var(--accent)!important; }
-</style>
+<!-- كتلة <style> المضمّنة نُقلت إلى css/store/pages/checkout.css -->
 
 <main id="main-content" class="container py-5">
     <h1 class="text-center fw-bold mb-4">🛒 Checkout</h1>
