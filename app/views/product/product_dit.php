@@ -146,20 +146,10 @@ usort($sortedByStock, fn($a, $b) => (int)$a['stock_quantity'] <=> (int)$b['stock
                 </div>
             </div>
 
-            <!-- Stock badge -->
-            <?php
-                if ($stock === 0) {
-                    $sbClass = 'bg-danger';
-                    $sbLabel = 'Out of Stock';
-                } elseif ($stock <= 50) {
-                    $sbClass = 'bg-warning text-dark';
-                    $sbLabel = "Limited ({$stock} left)";
-                } else {
-                    $sbClass = 'bg-success';
-                    $sbLabel = "In Stock ({$stock})";
-                }
-            ?>
-            <div class="mb-3"><span class="badge <?= $sbClass ?> fs-6" id="stockBadge"><?= htmlspecialchars($sbLabel) ?></span></div>
+            <!-- Stock badge — نفس getStockBadge() التي تستعملها قائمة المنتجات،
+                 مع الفرع الأخضر الذي تخصّ به صفحة التفاصيل وحدها -->
+            <?php $sb = getStockBadge($stock, true); ?>
+            <div class="mb-3"><span class="badge <?= $sb['class'] ?> fs-6" id="stockBadge"><?= htmlspecialchars($sb['label']) ?></span></div>
 
             <!-- ── Qty + Cart block ── -->
             <div id="qtyCartBlock" style="<?= $stock > 0 ? '' : 'display:none;' ?>">

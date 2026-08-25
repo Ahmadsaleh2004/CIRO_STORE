@@ -27,9 +27,8 @@
     <div class="d-flex justify-content-center flex-wrap gap-3">
         <?php
         // الأزرار ديناميكية من CategoryModel::getAllOrdered() — الأساسية أولاً
-        $catEmoji = ['phone' => '📱', 'computer' => '💻', 'accessories' => '🎧', 'gaming' => '🎮'];
         foreach ($categories as $cat):
-            $emoji = $catEmoji[$cat['name']] ?? '🏷️';
+            $emoji = categoryEmoji($cat['name']);
         ?>
         <a href="<?= URLROOT ?>/products?cat=<?= urlencode($cat['name']) ?>"
            class="btn btn-outline-dark px-4 py-2">

@@ -94,3 +94,22 @@ function getAdminUnreadCounters(): array
     }
     return ['orders' => $newOrders, 'messages' => $newMessages];
 }
+/**
+ * رمز تعبيري لكل تصنيف منتجات، وشعار احتياطي لأي تصنيف جديد.
+ *
+ * كانت الخريطة مكتوبة حرفياً في views/home.php و views/product/product.php.
+ * الخريطة وحدها هي المكرَّر — الماركب حولها مختلف تماماً بين الصفحتين
+ * (روابط <a class="btn"> في الرئيسية مقابل <option> داخل <select> في
+ * صفحة المنتجات)، ولهذا هي دالة لا partial: partial مشترك كان سيجبر
+ * ماركبين لا يشبه أحدهما الآخر على قالب واحد.
+ */
+function categoryEmoji(string $category): string
+{
+    return match ($category) {
+        'phone'       => '📱',
+        'computer'    => '💻',
+        'accessories' => '🎧',
+        'gaming'      => '🎮',
+        default       => '🏷️',
+    };
+}
