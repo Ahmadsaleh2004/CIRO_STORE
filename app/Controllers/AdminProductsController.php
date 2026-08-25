@@ -7,9 +7,8 @@ use App\Core\Middleware;
 use App\Models\AdminProductModel;
 use App\Models\CategoryModel;
 use App\Models\AdminModel;
-use App\Models\StockNotificationModel;
-use App\Models\NotificationModel;
 use App\Services\ProductVariantUploader;
+use App\Services\StockNotifier;
 use OpenApi\Attributes as OA;
 
 /**
@@ -257,7 +256,7 @@ class AdminProductsController extends AdminController
         );
 
         $this->notifyProductChange($adminId, 'added', $productId, $postData['name']);
-        $this->checkAndNotifyOutOfStock($productId, $postData['name']);
+        StockNotifier::productOutOfStock($productId, $postData['name']);
 
         $this->respond(true, 'Product added successfully.', [
             'product_id' => $productId,
@@ -411,7 +410,7 @@ class AdminProductsController extends AdminController
 
         // إذا كان نافذًا وعاد للتوفر، أخبر المستخدمين
         if ($wasOutOfStock && AdminProductModel::getTotalStock($productId) > 0) {
-            $this->notifyUsersProductBackInStock($productId, $postData['name']);
+            StockNotifier::productBackInStock($productId, $postData['name'], getCurrentAdminId());
         }
 
         // احذف الصور القديمة التي لم تعد مستخدمة
@@ -434,36 +433,11 @@ class AdminProductsController extends AdminController
         );
 
         $this->notifyProductChange($adminId, 'edited', $productId, $postData['name']);
-        $this->checkAndNotifyOutOfStock($productId, $postData['name']);
+        StockNotifier::productOutOfStock($productId, $postData['name']);
 
         $this->respond(true, 'Product updated successfully.');
     }
 
-    /**
-     * يُرسل إشعارًا لكل مستخدم كان طلب "Notify Me" لهذا المنتج، ثم يُفرِّغ الطلبات المُرسَلة.
-     */
-    private function notifyUsersProductBackInStock(int $productId, string $productName): void
-    {
-        $userIds = StockNotificationModel::waitingUserIds($productId);
-
-        if (empty($userIds)) {
-            return;
-        }
-
-        foreach ($userIds as $userId) {
-            NotificationModel::insert(
-                $userId,
-                'Product Back in Stock! 🎉',
-                "\"{$productName}\" you wanted is now back in stock!",
-                getCurrentAdminId(),
-                'product',
-                $productId
-            );
-        }
-
-        // إزالة الطلبات بعد إرسال الإشعار كي لا تتكرر بالمرة القادمة
-        StockNotificationModel::clearForProduct($productId);
-    }
 
     // ═══════════════════════════════════════════════════════════
     // 4) حذف منتج (AJAX)
@@ -875,30 +849,6 @@ class AdminProductsController extends AdminController
         }
     }
 
-    /**
-     * يتحقق إن كان إجمالي مخزون المنتج = 0 بعد إضافة/تعديل، وإن كان كذلك يرسل
-     * إشعار "نفاذ المخزون" لكل أدمن يملك can_manage_products — بكل الرتب (A/B/C/D)
-     * بلا استثناء، بعكس notifyProductChange().
-     */
-    private function checkAndNotifyOutOfStock(int $productId, string $productName): void
-    {
-        if (AdminProductModel::getTotalStock($productId) > 0) {
-            return;
-        }
-
-        $targets = AdminModel::findByPermsAndRanks(['can_manage_products'], ['A', 'B', 'C', 'D']);
-        foreach ($targets as $targetId) {
-            AdminModel::sendNotification(
-                (int)$targetId,
-                'Product Out of Stock ⚠️',
-                "The product \"{$productName}\" (#{$productId}) is now out of stock (0 units across all colors).",
-                'product_out_of_stock',
-                'product',
-                $productId,
-                null
-            );
-        }
-    }
 
 
 
