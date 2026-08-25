@@ -58,8 +58,8 @@ class Middleware
     {
         self::requireAdmin();
 
-        require_once __DIR__ . '/../helpers/auth_helper.php';
-
+        // كان هنا require_once لـauth_helper.php — زائد: الهيلبرز تُحمَّل
+        // كلها من composer autoload.files قبل أن يبدأ أي راوت.
         if (!hasPermission($perm)) {
             self::denyAccess();
         }
