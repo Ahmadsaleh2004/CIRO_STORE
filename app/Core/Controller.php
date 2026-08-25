@@ -4,51 +4,112 @@ namespace App\Core;
 
 abstract class Controller
 {
+    /** الـlayouts المدعومة — أي قيمة أخرى خطأ برمجي لا خيار وقت تشغيل. */
+    private const LAYOUTS = ['store', 'admin', 'bare'];
+
     /**
-     * Render view template and assemble layouts (Head, Navbar, Footer).
+     * يعرض view داخل أحد ثلاثة layouts.
      *
-     * @param string $view (The main content view file, e.g., 'home')
-     * @param array $data (Data passed to all views)
-     * @return void
+     * ┌─────────┬──────────────────────────────────────────────────┐
+     * │ store   │ inc/head + inc/navbar + view + inc/footer        │
+     * │ admin   │ admin/inc/head + admin/inc/navbar + view + …     │
+     * │ bare    │ الـview وحده — صفحة مستقلة تبني وسومها بنفسها     │
+     * └─────────┴──────────────────────────────────────────────────┘
      *
+     * صفحات `bare` (تسجيل دخول الأدمن، إعادة المصادقة، إعادة تعيين كلمة
+     * المرور) تستعمل `inc/head-bare.php` و`inc/footer-bare.php` بدل أن
+     * تكتب `<!DOCTYPE html>` بيدها.
+     *
+     * @param string $view   مسار الـview تحت app/views بلا امتداد،
+     *                       مثل 'home' أو 'admin/orders/index'
+     * @param array  $data   متغيرات تُستخرج للـview ولملفات الـlayout
+     * @param string $layout 'store' | 'admin' | 'bare'
      */
-    protected function view(string $view, array $data = []): void
+    protected function view(string $view, array $data = [], string $layout = 'store'): void
     {
-        // نبضة نشاط المستخدم — مخنوقة إلى مرة كل 15 دقيقة (راجع
-        // touchUserActivity في auth_helper.php). موضعها هنا مقصود:
-        // view() تخصّ المتجر وحده، وبلوغها يعني أن الجلسة الصحيحة
-        // بدأت بالفعل. لا تنقلها إلى الـbootstrap — هناك تبدأ جلسة
-        // PHPSESSID قبل أن تضبط startAdminSession اسم جلسة الأدمن.
-        touchUserActivity();
-
-        // 1. استخراج المتغيرات من مصفوفة $data لتصبح جاهزة للطباعة
-        extract($data);
-
-        // 2. تجميع ملفات الفرونت إند النظيفة بالترتيب الصحيح
-
-        // الجزء الأول: الـ Technical Head والـ <head> tags
-        // تأكد من وجود ملف head.php داخل مجلد app/views/inc/
-        require_once APPROOT . '/views/inc/head.php';
-
-        // الجزء الثاني: القائمة العلوية المرئية (Navbar)
-        // تأكد من وجود ملف navbar.php داخل مجلد app/views/inc/
-        require_once APPROOT . '/views/inc/navbar.php';
-
-        // الجزء الثالث: محتوى الصفحة الرئيسي (الذي يمرره الـ Controller)
-        // قم بتعديل مسار الملف ليتوافق مع نظام تسمية الثوابت لديك (مثلاً APPROOT)
-        $viewFile = APPROOT . '/views/' . $view . '.php';
-
-        if (file_exists($viewFile)) {
-            // تحميل المحتوى الرئيسي
-            require_once $viewFile;
-        } else {
-            // للأمان والتجربة، سنقوم بعرض رسالة خطأ بسيطة، لكن الأفضل هو توجيه المستخدم لصفحة 404
-            die("View file [{$viewFile}] not found!");
+        if (!in_array($layout, self::LAYOUTS, true)) {
+            throw new \InvalidArgumentException(
+                "Unknown layout [{$layout}]. Expected: " . implode(' | ', self::LAYOUTS)
+            );
         }
 
-        // الجزء الرابع: الـ <offcanvas> modals والـ <footer> وروابط الـ JS
-        // تأكد من وجود ملف footer.php داخل مجلد app/views/inc/
-        require_once APPROOT . '/views/inc/footer.php';
+        // المتغيرات المحلية مسبوقة بـ__ لأن extract($data) أدناه يكتب في
+        // نفس النطاق — مفتاح اسمه view أو layout كان سيدهسها.
+        $__layout   = $layout;
+        $__viewFile = APPROOT . '/views/' . $view . '.php';
+
+        // الفحص قبل أي إخراج. النسخة القديمة كانت تُخرج head و navbar ثم
+        // تكتشف غياب الـview، فيستحيل عندها إرسال كود 404 (الترويسات
+        // أُرسلت أصلاً) وتخرج نصف صفحة مكسورة.
+        if (!is_file($__viewFile)) {
+            $this->renderViewNotFound($view);
+        }
+
+        // نبضة نشاط المستخدم — مخنوقة إلى مرة كل 15 دقيقة (راجع
+        // touchUserActivity في auth_helper.php). محصورة في layout المتجر
+        // عمداً: جلسة الأدمن منفصلة الاسم والمحتوى ونشاطها متتبَّع في
+        // AdminModel. ولا تنقلها إلى الـbootstrap — هناك تبدأ جلسة
+        // PHPSESSID قبل أن تضبط startAdminSession اسم جلسة الأدمن.
+        if ($__layout === 'store') {
+            touchUserActivity();
+        }
+
+        // استخراج المتغيرات من مصفوفة $data لتصبح جاهزة للطباعة
+        extract($data);
+
+        // require لا require_once: الأخيرة تمنع عرض نفس الملف مرتين في
+        // الطلب الواحد، وهو عطل كامن يظهر لحظة أن يعرض view نفس الـpartial
+        // مرتين. layout الأدمن يستعمل require منذ البداية بلا مشاكل.
+        switch ($__layout) {
+            case 'store':
+                require APPROOT . '/views/inc/head.php';
+                require APPROOT . '/views/inc/navbar.php';
+                require $__viewFile;
+                require APPROOT . '/views/inc/footer.php';
+                break;
+
+            case 'admin':
+                require APPROOT . '/views/admin/inc/head.php';
+                require APPROOT . '/views/admin/inc/navbar.php';
+                require $__viewFile;
+                require APPROOT . '/views/admin/inc/footer.php';
+                break;
+
+            case 'bare':
+                require $__viewFile;
+                break;
+        }
+    }
+
+    /**
+     * صفحة 404 حقيقية بدل die("View file [...] not found!").
+     *
+     * القديمة كانت تطبع المسار المطلق على قرص الخادم في المتصفح — كشف
+     * لبنية المجلدات بلا فائدة للمستخدم. المسار الآن يذهب إلى سجل أخطاء
+     * PHP وحده، والمستخدم يرى رسالة عامة مع كود 404 صحيح.
+     */
+    protected function renderViewNotFound(string $view): never
+    {
+        error_log('[Cairo Store] View not found: ' . APPROOT . '/views/' . $view . '.php');
+
+        if (!headers_sent()) {
+            http_response_code(404);
+            header('Content-Type: text/html; charset=utf-8');
+        }
+
+        // احتياط: لو غاب ملف الـ404 نفسه نطبع صفحة صغيرة بدل استدعاء
+        // view() مجدداً — استدعاؤها هنا يعني تكراراً لا نهائياً.
+        $errorPage = APPROOT . '/views/errors/404.php';
+        if (is_file($errorPage)) {
+            require $errorPage;
+        } else {
+            echo '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">'
+               . '<title>404 — Page Not Found</title></head><body>'
+               . '<h1>404</h1><p>The page you requested could not be found.</p>'
+               . '</body></html>';
+        }
+
+        exit;
     }
 
     // ═══════════════════════════════════════════════════════════
