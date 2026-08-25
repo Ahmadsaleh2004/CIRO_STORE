@@ -58,36 +58,6 @@ $csrfToken = generateCsrfToken();
         <?php require __DIR__ . '/modals/notifications.php'; ?>
     <?php endif; ?>
 
-    <!-- ══ إصلاح لون الـ inputs في dark mode ══════════════════ -->
-    <script>
-    (function fixInputFocus() {
-        function applyInputColors() {
-            const isDark = document.body.classList.contains('dark-mode');
-            const bg     = isDark ? '#21262d' : '#ffffff';
-            const fg     = isDark ? '#e6edf3' : '#1a1a2e';
-            document.querySelectorAll(
-                '#loginModal input:not([type="checkbox"]), #forgotModal input, #registerModal input:not([type="checkbox"]),'
-                + ' #registerModal select, #registerModal textarea'
-            ).forEach(el => {
-                el.style.setProperty('background-color', bg, 'important');
-                el.style.setProperty('color', fg, 'important');
-            });
-        }
-        document.addEventListener('shown.bs.modal', applyInputColors);
-        const themeToggle = document.getElementById('theme-toggle');
-        if (themeToggle) themeToggle.addEventListener('click', () => setTimeout(applyInputColors, 50));
-        document.addEventListener('focusin', function(e) {
-            if (e.target.type === 'checkbox') return;
-            const modal = e.target.closest('#loginModal, #forgotModal, #registerModal');
-            if (!modal) return;
-            const isDark = document.body.classList.contains('dark-mode');
-            const bg     = isDark ? '#21262d' : '#ffffff';
-            const fg     = isDark ? '#e6edf3' : '#1a1a2e';
-            e.target.style.setProperty('background-color', bg, 'important');
-            e.target.style.setProperty('color', fg, 'important');
-        });
-    })();
-    </script>
 
     <!-- ══ Scripts ═════════════════════════════════════════════ -->
     <script src="https://code.jquery.com/jquery-3.7.1.min.js" defer></script>
@@ -99,6 +69,8 @@ $csrfToken = generateCsrfToken();
     <script src="<?= URLROOT ?>/js/core/csrf.js" defer></script>
     <script src="<?= URLROOT ?>/js/core/ui.js" defer></script>
     <script src="<?= URLROOT ?>/js/core/theme.js" defer></script>
+    <!-- فرض ألوان حقول النوافذ المنبثقة — كان كتلة مضمّنة هنا -->
+    <script src="<?= URLROOT ?>/js/core/modal-input-colors.js" defer></script>
 
     <!-- Features JS — محمّلة دائماً -->
     <script src="<?= URLROOT ?>/js/features/cart.js" defer></script>

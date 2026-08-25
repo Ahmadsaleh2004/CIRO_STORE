@@ -243,11 +243,5 @@ window.dbProducts = <?= json_encode(array_values(array_map(function($p) {
         'categories' => $p['categories'] ?? '',
     ];
 }, $products)), JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES) ?>;
-
-document.querySelectorAll('.favorite-btn[data-product]').forEach(btn => {
-    const p = JSON.parse(btn.dataset.product);
-    const wl = JSON.parse(localStorage.getItem('wishlist') || '[]');
-    if (wl.some(i => i.id == p.id)) btn.innerHTML = '❤️';
-    btn.addEventListener('click', () => window.toggleWishlist(p.id, btn, p));
-});
+// ربط أزرار المفضّلة في js/features/products-catalog.js
 </script>
