@@ -36,10 +36,11 @@
             </thead>
             <tbody id="backupsTableBody">
             <?php if (empty($backups)): ?>
-                <tr>
-                    <td colspan="5" class="text-center py-4"
-                        style="color:var(--muted-text);">No backups yet. Click "Create Backup Now" to start.</td>
-                </tr>
+                <?php
+                $emptyColspan = 5;
+                $emptyMessage = 'No backups yet. Click "Create Backup Now" to start.';
+                require APPROOT . '/views/shared/table-empty-row.php';
+                ?>
             <?php else: ?>
                 <?php foreach ($backups as $i => $b): ?>
                 <tr>

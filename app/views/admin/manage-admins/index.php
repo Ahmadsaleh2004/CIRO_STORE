@@ -45,10 +45,11 @@ use App\Models\AdminModel;
             </thead>
             <tbody>
             <?php if (empty($admins)): ?>
-                <tr>
-                    <td colspan="9" class="text-center py-4"
-                        style="color:var(--muted-text);">No admins found.</td>
-                </tr>
+                <?php
+                $emptyColspan = 9;
+                $emptyMessage = 'No admins found.';
+                require APPROOT . '/views/shared/table-empty-row.php';
+                ?>
             <?php else: ?>
                 <?php foreach ($admins as $adm): ?>
                 <tr class="clickable-row"

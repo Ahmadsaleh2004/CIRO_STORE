@@ -190,36 +190,11 @@ $strikesLabel    = $strikesCount >= 3 ? 'Blocked' : ($strikesCount > 0 ? 'Warnin
             </div>
         </div>
     </div>
-    <div class="table-responsive">
-        <table class="table admin-table mb-0">
-            <thead>
-                <tr>
-                    <th>Order #</th>
-                    <th>Status</th>
-                    <th>Total</th>
-                    <th>Date</th>
-                </tr>
-            </thead>
-            <tbody>
-                <?php foreach ($orders as $o): ?>
-                <tr>
-                    <td class="fw-semibold">
-                        <a href="<?= URLROOT ?>/admin/orders/details?id=<?= (int)$o['order_id'] ?>"
-                           class="fw-semibold">#<?= (int)$o['order_id'] ?></a>
-                    </td>
-                    <td><?php
-                        $orderStatus = $o['status'];
-                        $badgeSize   = '';
-                        $badgeLabel  = '';
-                        require APPROOT . '/views/shared/order-status-badge.php';
-                    ?></td>
-                    <td>$<?= number_format($o['total_amount'], 2) ?></td>
-                    <td style="font-size:.8rem;color:var(--muted-text);white-space:nowrap;"><?= htmlspecialchars(date('M j, Y H:i', strtotime($o['created_at']))) ?></td>
-                </tr>
-                <?php endforeach; ?>
-            </tbody>
-        </table>
-    </div>
+    <?php
+    $tableOrders      = $orders;
+    $showAutoReleased = false;
+    require APPROOT . '/views/shared/admin-orders-table.php';
+    ?>
     <?php endif; ?>
 </div>
 

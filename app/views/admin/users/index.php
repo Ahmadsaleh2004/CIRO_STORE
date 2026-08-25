@@ -61,7 +61,11 @@ $startNum   = (($page - 1) * $perPage) + 1;
             </thead>
             <tbody>
             <?php if (empty($users)): ?>
-                <tr><td colspan="8" class="text-center py-4 text-muted">No users found.</td></tr>
+                <?php
+                $emptyColspan = 8;
+                $emptyMessage = 'No users found.';
+                require APPROOT . '/views/shared/table-empty-row.php';
+                ?>
             <?php else: ?>
                 <?php foreach ($users as $i => $u):
                     $sc          = (int)($u['strikes_count'] ?? 0);

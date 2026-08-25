@@ -73,10 +73,11 @@
             </thead>
             <tbody>
             <?php if (empty($orders)): ?>
-                <tr>
-                    <td colspan="8" class="text-center py-4"
-                        style="color:var(--muted-text);">No orders found.</td>
-                </tr>
+                <?php
+                $emptyColspan = 8;
+                $emptyMessage = 'No orders found.';
+                require APPROOT . '/views/shared/table-empty-row.php';
+                ?>
             <?php else: ?>
                 <?php foreach ($orders as $o): ?>
                 <tr onclick="goToOrderDetails(<?= (int)$o['order_id'] ?>)" style="cursor:pointer;">
