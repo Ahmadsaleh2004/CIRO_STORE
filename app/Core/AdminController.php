@@ -25,8 +25,11 @@ abstract class AdminController extends Controller
     /**
      * عرض view خاص بالأدمن مع الـ layout المشترك.
      *
-     * يحقن تلقائياً: $adminName, $adminRole, $adminId, $csrf
-     * بالإضافة لأي متغيرات مخصصة ممرَّرة عبر $data.
+     * تجميع الـlayout نفسه صار في Controller::view() — هنا يبقى ما يخصّ
+     * لوحة التحكم وحدها: حقن متغيرات الأدمن، وبادئة المسار admin/.
+     *
+     * يحقن تلقائياً: $adminName, $adminRole, $adminId, $csrf,
+     * $newOrders, $newMessages — بالإضافة لأي متغيرات ممرَّرة عبر $data.
      *
      * @param string $view  اسم الـ view بدون المسار أو الامتداد
      *                      (يُبحث عنه بـ app/views/admin/<view>.php)
@@ -34,23 +37,21 @@ abstract class AdminController extends Controller
      */
     protected function adminView(string $view, array $data = []): void
     {
-        extract($data);
-
-        $adminName = $_SESSION['admin_name'] ?? 'Admin';
-        $adminRole = getAdminRole();
-        $adminId   = getCurrentAdminId();
-        $csrf      = generateCsrfToken();
-
         // عدّادات غير المقروء (طلبات/رسائل دعم) — تُحقن تلقائيًا بكل صفحات الأدمن
         // حتى يظهر البادج في الـ navbar بدون استدعاء يدوي من كل Controller
-        $counters    = getAdminUnreadCounters();
-        $newOrders   = $counters['orders'];
-        $newMessages = $counters['messages'];
+        $counters = getAdminUnreadCounters();
 
-        require __DIR__ . '/../views/admin/inc/head.php';
-        require __DIR__ . '/../views/admin/inc/navbar.php';
-        require __DIR__ . '/../views/admin/' . $view . '.php';
-        require __DIR__ . '/../views/admin/inc/footer.php';
+        // الكتابة فوق $data لا بعد extract: هذا هو السلوك القديم بالحرف —
+        // كان extract($data) يسبق هذه الإسنادات، فتغلب هي على أي مفتاح
+        // بنفس الاسم قادم من الكنترولر.
+        $data['adminName']   = $_SESSION['admin_name'] ?? 'Admin';
+        $data['adminRole']   = getAdminRole();
+        $data['adminId']     = getCurrentAdminId();
+        $data['csrf']        = generateCsrfToken();
+        $data['newOrders']   = $counters['orders'];
+        $data['newMessages'] = $counters['messages'];
+
+        $this->view('admin/' . $view, $data, 'admin');
     }
 
     /**
