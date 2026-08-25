@@ -28,11 +28,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     await renderWishlist();
 });
 
-function getStockBadgeJs(stock) {
-    if (stock === 0) return { label: 'Out of Stock', cls: 'bg-danger' };
-    if (stock > 0 && stock <= 50) return { label: `Limited (${stock} left)`, cls: 'bg-warning text-dark' };
-    return null;
-}
+// getStockBadgeJs حُذفت — القاعدة الآن في stockBadge() بـjs/core/utils.js،
+// مرآةً لـgetStockBadge() في PHP. هذه الصفحة لا تعرض بادج «متوفّر»
+// الأخضر (بادج على كل بطاقة ضجيج بصري)، فالوسيط الثاني يبقى false.
 
 // [FIX] المسار مُحدَّث من /handlers/product_stock_handler.php إلى Route الجديد
 async function fetchLiveStock(ids) {
@@ -114,7 +112,7 @@ async function renderWishlist() {
         const isVisible = live ? live.is_visible : 1;
         const currentPrice = live ? (live.discount_percentage > 0 ? live.price_after_discount : live.price) : Number(p.price || 0);
 
-        const badge = getStockBadgeJs(stock);
+        const badge = stockBadge(stock);
         const inStock = stock > 0;
         // حالة "نبّهني" تأتي من السيرفر (WishlistController::stock) — تُبقي هذه
         // الصفحة متطابقة مع product.php و product_dit.php لنفس المستخدم والمنتج.
@@ -129,7 +127,7 @@ async function renderWishlist() {
                 </a>
                 <div class="card-body d-flex flex-column justify-content-between">
                     <div class="mb-3">
-                        ${badge ? `<span class="badge ${badge.cls}">${badge.label}</span>` : ''}
+                        ${badge ? `<span class="badge ${badge.class}">${badge.label}</span>` : ''}
                         <h5 class="fw-bold mt-1">${name}</h5>
                         <div class="price-box">
                             <span class="new-price fs-5 fw-bold">$${currentPrice.toFixed(2)}</span>
