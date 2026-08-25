@@ -27,9 +27,8 @@
     <div class="d-flex justify-content-center flex-wrap gap-3">
         <?php
         // الأزرار ديناميكية من CategoryModel::getAllOrdered() — الأساسية أولاً
-        $catEmoji = ['phone' => '📱', 'computer' => '💻', 'accessories' => '🎧', 'gaming' => '🎮'];
         foreach ($categories as $cat):
-            $emoji = $catEmoji[$cat['name']] ?? '🏷️';
+            $emoji = categoryEmoji($cat['name']);
         ?>
         <a href="<?= URLROOT ?>/products?cat=<?= urlencode($cat['name']) ?>"
            class="btn btn-outline-dark px-4 py-2">
@@ -84,16 +83,5 @@
 // استقبال بيانات المنتجات التي تم تجهيزها داخل HomeController وتمريرها لـ JS
 window.dbProducts = <?= json_encode($data['productsJS'] ?? [], JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES) ?>;
 window.dbHomeSliders = <?= json_encode($data['homeSliders'] ?? [], JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES) ?>;
-
-document.addEventListener('DOMContentLoaded', () => {
-    renderSlider(window.dbHomeSliders); // بدل الاعتماد فقط على منتجات ثابتة
-
-    if (window.dbProducts && window.dbProducts.length > 0) {
-        const prods = window.dbProducts.map(p => ({
-            ...p,
-            image: p.image_path || p.image || '',
-        }));
-        renderHomeSections(prods); // renderHomeSections لم تعد تستدعي renderSlider داخلياً
-    }
-});
+// العرض يتولّاه js/features/products-catalog.js
 </script>

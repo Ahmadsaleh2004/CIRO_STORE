@@ -112,10 +112,27 @@ function splitLines(string $src): array
     return preg_split('/\r\n|\n|\r/', $src) ?: [];
 }
 
+/**
+ * يُفرِّغ تعليقات HTML مع الحفاظ على عدد الأسطر.
+ *
+ * وسم مذكور داخل <!-- ... --> ليس أصلاً مضمّناً: المتصفح لا ينفّذه،
+ * وكتلة CSS معلَّقة ليست كتلة CSS عاملة. بلا هذا التفريغ يفتح ذكرٌ
+ * عابرٌ للوسم داخل تعليق عدَّ باقي الملف كله — قفز عدّاد <style> من 55
+ * إلى 337 بسبب تعليق واحد يشرح أين انتقلت الكتلة.
+ */
+function blankHtmlComments(string $src): string
+{
+    return preg_replace_callback(
+        '/<!--.*?-->/s',
+        static fn (array $m): string => str_repeat("\n", substr_count($m[0], "\n")),
+        $src
+    ) ?? $src;
+}
+
 /** أسطر داخل <script>...</script> أو <style>...</style> في ملف view. */
 function inlineAssetLines(string $file): array
 {
-    $src   = blankPhpComments((string)file_get_contents($file));
+    $src   = blankHtmlComments(blankPhpComments((string)file_get_contents($file)));
     $lines = splitLines($src);
     $inJs  = false;
     $inCss = false;

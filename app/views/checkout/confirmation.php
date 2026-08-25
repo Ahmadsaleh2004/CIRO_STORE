@@ -4,13 +4,6 @@
  * صفحة تأكيد الطلب بعد النجاح
  */
 ?>
-<style>
-    /* This page loads no dedicated stylesheet, so the fix lives inline. */
-    @media (max-width: 375px) {
-        #main-content .card { padding: 1.5rem !important; }
-        #main-content .d-flex.gap-3.justify-content-center { flex-direction: column; }
-    }
-</style>
 
 <main id="main-content" class="container py-5 text-center">
     <div class="card p-5 mx-auto" style="max-width:500px;">

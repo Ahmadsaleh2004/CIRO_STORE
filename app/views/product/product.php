@@ -4,14 +4,7 @@
 $pageTitle = 'Products';
 $pageDescription = 'Browse all products at Cairo Store.';
 
-function getTag(array $p): string {
-    if (($p['sales_count'] ?? 0) >= 5) return 'best-seller';
-    $days = (time() - strtotime($p['date_added'] ?? 'now')) / 86400;
-    if ($days <= 60) return 'new';
-    $displayStock = (int)($p['_display']['stock_quantity'] ?? $p['stock_quantity'] ?? 0);
-    if ($displayStock > 0 && $displayStock <= 50) return 'limited';
-    return 'regular';
-}
+// productTag() انتقلت إلى app/helpers/product_tag_helper.php
 ?>
 
 <main id="main-content" role="main">
@@ -50,9 +43,8 @@ function getTag(array $p): string {
                 </optgroup>
                 <optgroup label="By Category">
                     <?php
-                    $catEmoji = ['phone' => '📱', 'computer' => '💻', 'accessories' => '🎧', 'gaming' => '🎮'];
                     foreach ($categories as $cat):
-                        $emoji = $catEmoji[$cat['name']] ?? '🏷️';
+                        $emoji = categoryEmoji($cat['name']);
                     ?>
                     <option value="cat-<?= htmlspecialchars($cat['name']) ?>">
                         <?= $emoji ?> <?= htmlspecialchars(ucfirst($cat['name'])) ?>
@@ -91,7 +83,7 @@ function getTag(array $p): string {
             $imgSrc    = htmlspecialchars(fixImagePath($display['image_path'] ?? $p['image_path'] ?? ''));
             $variantId = $display['id'] ?? null;
             $colorName = $display['color_name'] ?? null;
-            $tag       = getTag($p);
+            $tag       = productTag($p);
             $cats      = strtolower($p['categories'] ?? '');
         ?>
         <div class="col-lg-4 col-md-6 mb-4 product-item reveal"
@@ -247,15 +239,9 @@ window.dbProducts = <?= json_encode(array_values(array_map(function($p) {
         'price'      => (float)(($d['discount_percentage'] ?? 0) > 0 ? $d['price_after_discount'] : $d['price']),
         'image'      => fixImagePath($d['image_path'] ?? $p['image_path']),
         'image_path' => fixImagePath($d['image_path'] ?? $p['image_path']),
-        'tag'        => getTag($p),
+        'tag'        => productTag($p),
         'categories' => $p['categories'] ?? '',
     ];
 }, $products)), JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES) ?>;
-
-document.querySelectorAll('.favorite-btn[data-product]').forEach(btn => {
-    const p = JSON.parse(btn.dataset.product);
-    const wl = JSON.parse(localStorage.getItem('wishlist') || '[]');
-    if (wl.some(i => i.id == p.id)) btn.innerHTML = '❤️';
-    btn.addEventListener('click', () => window.toggleWishlist(p.id, btn, p));
-});
+// ربط أزرار المفضّلة في js/features/products-catalog.js
 </script>

@@ -162,45 +162,11 @@ function renderAuditRowsTable(array $rows): void
         Total completed profit: <strong>$<?= number_format($profitTotal, 2) ?></strong>
         (<?= count($orderRows) ?> orders handled)
     </p>
-    <div class="table-responsive">
-        <table class="table admin-table mb-0">
-            <thead>
-                <tr>
-                    <th>Order #</th>
-                    <th>Status</th>
-                    <th>Total</th>
-                    <th>Date</th>
-                </tr>
-            </thead>
-            <tbody>
-                <?php foreach ($orderRows as $o):
-                    $wasAutoReleased = !empty($o['was_auto_released']);
-                    $sc = match($o['status']) {
-                        'completed' => 'bg-success',
-                        'cancelled' => 'bg-danger',
-                        'taken'     => 'bg-primary',
-                        default     => 'bg-warning text-dark',
-                    };
-                ?>
-                <tr>
-                    <td class="fw-semibold">
-                        <a href="<?= URLROOT ?>/admin/orders/details?id=<?= (int)$o['order_id'] ?>"
-                           class="fw-semibold">#<?= (int)$o['order_id'] ?></a>
-                    </td>
-                    <td>
-                        <?php if ($wasAutoReleased): ?>
-                        <span class="badge bg-secondary" title="This order timed out while held by this admin and was returned to Not Taken.">⏱ Auto-Released</span>
-                        <?php else: ?>
-                        <span class="badge <?= $sc ?>"><?= htmlspecialchars(ucfirst(str_replace('_', ' ', $o['status']))) ?></span>
-                        <?php endif; ?>
-                    </td>
-                    <td>$<?= number_format($o['total_amount'], 2) ?></td>
-                    <td style="font-size:.8rem;color:var(--muted-text);white-space:nowrap;"><?= htmlspecialchars(date('M j, Y H:i', strtotime($o['created_at']))) ?></td>
-                </tr>
-                <?php endforeach; ?>
-            </tbody>
-        </table>
-    </div>
+    <?php
+    $tableOrders      = $orderRows;
+    $showAutoReleased = true;
+    require APPROOT . '/views/shared/admin-orders-table.php';
+    ?>
     <?php else: ?>
     <p class="text-center py-3" style="color:var(--muted-text);">
         No orders handled by this admin yet.

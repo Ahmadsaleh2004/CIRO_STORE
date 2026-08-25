@@ -13,6 +13,7 @@
             "app/helpers/assets_helper.php",
             "app/helpers/auth_helper.php",
             "app/helpers/csrf_helper.php",
+            "app/helpers/product_tag_helper.php",
             "app/helpers/product_variant_helper.php",
             "app/helpers/stock_badge_helper.php"
         ],

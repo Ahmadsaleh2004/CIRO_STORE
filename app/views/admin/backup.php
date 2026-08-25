@@ -17,18 +17,7 @@
 </div>
 
 <!-- ── Flash Messages ─────────────────────────────────────── -->
-<?php if (!empty($flashMsg)): ?>
-<div class="alert alert-success alert-dismissible fade show" role="alert">
-    <?= htmlspecialchars($flashMsg) ?>
-    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-</div>
-<?php endif; ?>
-<?php if (!empty($flashErr)): ?>
-<div class="alert alert-danger alert-dismissible fade show" role="alert">
-    <?= htmlspecialchars($flashErr) ?>
-    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-</div>
-<?php endif; ?>
+<?php require APPROOT . '/views/shared/flash-messages.php'; ?>
 
 <input type="hidden" name="csrf_token" id="backupCsrfToken" value="<?= htmlspecialchars($csrf) ?>">
 
@@ -47,10 +36,11 @@
             </thead>
             <tbody id="backupsTableBody">
             <?php if (empty($backups)): ?>
-                <tr>
-                    <td colspan="5" class="text-center py-4"
-                        style="color:var(--muted-text);">No backups yet. Click "Create Backup Now" to start.</td>
-                </tr>
+                <?php
+                $emptyColspan = 5;
+                $emptyMessage = 'No backups yet. Click "Create Backup Now" to start.';
+                require APPROOT . '/views/shared/table-empty-row.php';
+                ?>
             <?php else: ?>
                 <?php foreach ($backups as $i => $b): ?>
                 <tr>

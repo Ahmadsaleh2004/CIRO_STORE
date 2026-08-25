@@ -42,9 +42,13 @@ class CheckoutController extends Controller
             'activePage'  => '',
             'robots'      => 'noindex, nofollow',
             'extraHead'   => '<link rel="stylesheet" href="' . URLROOT . '/css/store/pages/checkout.css">',
-            'extraScripts'=> '<script>window.CHECKOUT_IDEMPOTENCY_KEY = "' . $idempotencyKey . '";</script>',
+            // منطق الصفحة صار في ملف خارجي. كان هنا سطر <script> يحقن
+            // window.CHECKOUT_IDEMPOTENCY_KEY — لم يعد له داع: المفتاح
+            // يصل الـview كمتغيّر ويُطبع في data-checkout-idempotency.
+            'extraScripts'=> '<script src="' . URLROOT . '/js/features/checkout.js" defer></script>',
             'addresses'   => $addresses,
             'csrf'        => $csrf,
+            'idempotencyKey' => $idempotencyKey,
             'returnPolicy'=> '14-day return policy on all products in original condition.',
             'userLoggedIn'=> true,
             'userName'    => $_SESSION['user_name'] ?? '',
@@ -265,6 +269,7 @@ class CheckoutController extends Controller
             'desc'        => 'Your order has been placed successfully.',
             'activePage'  => '',
             'robots'      => 'noindex, nofollow',
+            'extraHead'   => '<link rel="stylesheet" href="' . URLROOT . '/css/store/pages/confirmation.css">',
             'orderId'     => $orderId,
             'userLoggedIn'=> true,
             'userName'    => $_SESSION['user_name'] ?? '',

@@ -8,8 +8,6 @@ use App\Models\AdminModel;
  *   $admins, $flashMsg, $flashErr, $csrf, $adminRole, $adminId
  */
 ?>
-<style>.clickable-row { cursor: pointer; }</style>
-
 <!-- ── Page Header ────────────────────────────────────────── -->
 <div class="admin-page-header">
     <h1>👑 Manage Admins <span class="badge bg-secondary fw-normal" style="font-size:.9rem;vertical-align:middle;"><?= (int)$totalAdmins ?></span></h1>
@@ -26,18 +24,7 @@ use App\Models\AdminModel;
 </div>
 
 <!-- ── Flash Messages ─────────────────────────────────────── -->
-<?php if (!empty($flashMsg)): ?>
-<div class="alert alert-success alert-dismissible fade show" role="alert">
-    <?= htmlspecialchars($flashMsg) ?>
-    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-</div>
-<?php endif; ?>
-<?php if (!empty($flashErr)): ?>
-<div class="alert alert-danger alert-dismissible fade show" role="alert">
-    <?= htmlspecialchars($flashErr) ?>
-    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-</div>
-<?php endif; ?>
+<?php require APPROOT . '/views/shared/flash-messages.php'; ?>
 
 <!-- ── Admins Table ───────────────────────────────────────── -->
 <div class="card p-0">
@@ -58,10 +45,11 @@ use App\Models\AdminModel;
             </thead>
             <tbody>
             <?php if (empty($admins)): ?>
-                <tr>
-                    <td colspan="9" class="text-center py-4"
-                        style="color:var(--muted-text);">No admins found.</td>
-                </tr>
+                <?php
+                $emptyColspan = 9;
+                $emptyMessage = 'No admins found.';
+                require APPROOT . '/views/shared/table-empty-row.php';
+                ?>
             <?php else: ?>
                 <?php foreach ($admins as $adm): ?>
                 <tr class="clickable-row"

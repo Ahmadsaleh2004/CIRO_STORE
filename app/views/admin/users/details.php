@@ -190,38 +190,11 @@ $strikesLabel    = $strikesCount >= 3 ? 'Blocked' : ($strikesCount > 0 ? 'Warnin
             </div>
         </div>
     </div>
-    <div class="table-responsive">
-        <table class="table admin-table mb-0">
-            <thead>
-                <tr>
-                    <th>Order #</th>
-                    <th>Status</th>
-                    <th>Total</th>
-                    <th>Date</th>
-                </tr>
-            </thead>
-            <tbody>
-                <?php foreach ($orders as $o):
-                    $sc = match($o['status']) {
-                        'completed' => 'bg-success',
-                        'cancelled' => 'bg-danger',
-                        'taken'     => 'bg-primary',
-                        default     => 'bg-warning text-dark',
-                    };
-                ?>
-                <tr>
-                    <td class="fw-semibold">
-                        <a href="<?= URLROOT ?>/admin/orders/details?id=<?= (int)$o['order_id'] ?>"
-                           class="fw-semibold">#<?= (int)$o['order_id'] ?></a>
-                    </td>
-                    <td><span class="badge <?= $sc ?>"><?= htmlspecialchars(ucfirst(str_replace('_', ' ', $o['status']))) ?></span></td>
-                    <td>$<?= number_format($o['total_amount'], 2) ?></td>
-                    <td style="font-size:.8rem;color:var(--muted-text);white-space:nowrap;"><?= htmlspecialchars(date('M j, Y H:i', strtotime($o['created_at']))) ?></td>
-                </tr>
-                <?php endforeach; ?>
-            </tbody>
-        </table>
-    </div>
+    <?php
+    $tableOrders      = $orders;
+    $showAutoReleased = false;
+    require APPROOT . '/views/shared/admin-orders-table.php';
+    ?>
     <?php endif; ?>
 </div>
 

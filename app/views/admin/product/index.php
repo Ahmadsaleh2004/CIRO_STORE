@@ -29,18 +29,7 @@
 </div>
 
 <!-- ── Flash Messages ─────────────────────────────────────── -->
-<?php if (!empty($flashMsg)): ?>
-<div class="alert alert-success alert-dismissible fade show" role="alert">
-    <?= htmlspecialchars($flashMsg) ?>
-    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-</div>
-<?php endif; ?>
-<?php if (!empty($flashErr)): ?>
-<div class="alert alert-danger alert-dismissible fade show" role="alert">
-    <?= htmlspecialchars($flashErr) ?>
-    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-</div>
-<?php endif; ?>
+<?php require APPROOT . '/views/shared/flash-messages.php'; ?>
 
 <!-- ── Sort & Filter Dropdown ──────────────────────────────── -->
 <?php
@@ -200,12 +189,14 @@ $activeCount = (int)(bool)$priceSort + (int)(bool)$stockSort + (int)(bool)$dateS
             </thead>
             <tbody>
             <?php if (empty($products)): ?>
-                <tr>
-                    <td colspan="7" class="text-center py-5"
-                        style="color:var(--muted-text);">
-                        No products found<?= $search !== '' ? ' for "' . htmlspecialchars($search) . '"' : '' ?>.
-                    </td>
-                </tr>
+                <?php
+                $emptyColspan = 7;
+                $emptyPadding = 'py-5';   // هذا الجدول وحده يستعمل التباعد الأكبر
+                // مصطلح البحث مُهرَّب هنا لأن الـpartial يطبع النص كما هو
+                $emptyMessage = 'No products found'
+                    . ($search !== '' ? ' for "' . htmlspecialchars($search) . '"' : '') . '.';
+                require APPROOT . '/views/shared/table-empty-row.php';
+                ?>
             <?php else: ?>
                 <?php foreach ($products as $p): ?>
                 <tr id="product-row-<?= (int)$p['id'] ?>"

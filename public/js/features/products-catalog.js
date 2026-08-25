@@ -181,6 +181,45 @@ window.addToCartDB = (id, variantId, price, stock) => {
     if (cb) { cb.classList.add('cart-bounce'); setTimeout(() => cb.classList.remove('cart-bounce'), 500); }
 };
 
+// ── الصفحة الرئيسية: السلايدر وأقسام المنتجات ─────────────────
+// نُقل من كتلة <script> مضمّنة في views/home.php. البيانات نفسها
+// (window.dbHomeSliders و window.dbProducts) ما زالت تصل من سطرَي
+// json_encode هناك — تمرير بيانات لا منطق.
+document.addEventListener('DOMContentLoaded', () => {
+    // dbHomeSliders تعلنها الرئيسية وحدها؛ صفحة المنتجات تعلن dbProducts
+    // فقط. الفحص عليها تحديداً كي لا يعمل هذا على صفحة لا تخصّه.
+    if (!Array.isArray(window.dbHomeSliders)) return;
+
+    renderSlider(window.dbHomeSliders);
+
+    if (window.dbProducts && window.dbProducts.length > 0) {
+        // renderHomeSections لا تستدعي renderSlider داخلياً، فيُستدعى أعلاه
+        const prods = window.dbProducts.map(p => ({
+            ...p,
+            image: p.image_path || p.image || '',
+        }));
+        renderHomeSections(prods);
+    }
+});
+
+// ── صفحة المنتجات: أزرار المفضّلة ─────────────────────────────
+// نُقل من كتلة <script> مضمّنة في views/product/product.php. كل زر
+// يحمل بيانات منتجه في data-product أصلاً، فلا حاجة لأي حقن PHP هنا.
+document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.favorite-btn[data-product]').forEach(btn => {
+        let p;
+        try {
+            p = JSON.parse(btn.dataset.product);
+        } catch (e) {
+            console.error('favorite-btn: data-product غير صالح', e);
+            return;
+        }
+        const wl = JSON.parse(localStorage.getItem('wishlist') || '[]');
+        if (wl.some(i => i.id == p.id)) btn.innerHTML = '❤️';
+        btn.addEventListener('click', () => window.toggleWishlist(p.id, btn, p));
+    });
+});
+
 // ── Filters & Autocomplete (pages/products.php) ──────────────
 document.addEventListener('DOMContentLoaded', () => {
     const searchEl = document.getElementById('search');

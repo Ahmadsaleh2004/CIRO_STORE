@@ -9,8 +9,6 @@
 $totalPages = max(1, (int)ceil($total / $perPage));
 $startNum   = (($page - 1) * $perPage) + 1;
 ?>
-<style>.user-row { cursor: pointer; }</style>
-
 <!-- ── Page Header ────────────────────────────────────────── -->
 <div class="admin-page-header">
     <h1>👥 Manage Users <span class="badge bg-secondary fw-normal" style="font-size:.9rem;vertical-align:middle;"><?= (int)$totalUsers ?></span></h1>
@@ -27,18 +25,7 @@ $startNum   = (($page - 1) * $perPage) + 1;
 </div>
 
 <!-- ── Flash Messages ─────────────────────────────────────── -->
-<?php if (!empty($flashMsg)): ?>
-<div class="alert alert-success alert-dismissible fade show" role="alert">
-    <?= htmlspecialchars($flashMsg) ?>
-    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-</div>
-<?php endif; ?>
-<?php if (!empty($flashErr)): ?>
-<div class="alert alert-danger alert-dismissible fade show" role="alert">
-    <?= htmlspecialchars($flashErr) ?>
-    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-</div>
-<?php endif; ?>
+<?php require APPROOT . '/views/shared/flash-messages.php'; ?>
 
 <!-- ── Search + Status Filter ─────────────────────────────── -->
 <form method="GET" class="d-flex gap-2 flex-wrap mb-3" action="<?= URLROOT ?>/admin/users">
@@ -74,7 +61,11 @@ $startNum   = (($page - 1) * $perPage) + 1;
             </thead>
             <tbody>
             <?php if (empty($users)): ?>
-                <tr><td colspan="8" class="text-center py-4 text-muted">No users found.</td></tr>
+                <?php
+                $emptyColspan = 8;
+                $emptyMessage = 'No users found.';
+                require APPROOT . '/views/shared/table-empty-row.php';
+                ?>
             <?php else: ?>
                 <?php foreach ($users as $i => $u):
                     $sc          = (int)($u['strikes_count'] ?? 0);

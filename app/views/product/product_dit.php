@@ -146,20 +146,10 @@ usort($sortedByStock, fn($a, $b) => (int)$a['stock_quantity'] <=> (int)$b['stock
                 </div>
             </div>
 
-            <!-- Stock badge -->
-            <?php
-                if ($stock === 0) {
-                    $sbClass = 'bg-danger';
-                    $sbLabel = 'Out of Stock';
-                } elseif ($stock <= 50) {
-                    $sbClass = 'bg-warning text-dark';
-                    $sbLabel = "Limited ({$stock} left)";
-                } else {
-                    $sbClass = 'bg-success';
-                    $sbLabel = "In Stock ({$stock})";
-                }
-            ?>
-            <div class="mb-3"><span class="badge <?= $sbClass ?> fs-6" id="stockBadge"><?= htmlspecialchars($sbLabel) ?></span></div>
+            <!-- Stock badge — نفس getStockBadge() التي تستعملها قائمة المنتجات،
+                 مع الفرع الأخضر الذي تخصّ به صفحة التفاصيل وحدها -->
+            <?php $sb = getStockBadge($stock, true); ?>
+            <div class="mb-3"><span class="badge <?= $sb['class'] ?> fs-6" id="stockBadge"><?= htmlspecialchars($sb['label']) ?></span></div>
 
             <!-- ── Qty + Cart block ── -->
             <div id="qtyCartBlock" style="<?= $stock > 0 ? '' : 'display:none;' ?>">
@@ -220,12 +210,14 @@ usort($sortedByStock, fn($a, $b) => (int)$a['stock_quantity'] <=> (int)$b['stock
     <?php if ($userLoggedIn && empty($_SESSION['admin_in_store_mode'] ?? false)): ?>
     <div class="card p-4 mb-4">
         <h5 class="mb-3"><?= $myReview ? '✏️ Edit Your Review' : '+ Add Your Review' ?></h5>
-        <?php if (!empty($reviewMsg)): ?>
-        <script>document.addEventListener('DOMContentLoaded', () => { if (typeof showToast === 'function') showToast(<?= json_encode($reviewMsg) ?>, 'success'); });</script>
-        <?php endif; ?>
-        <?php if (!empty($reviewErr)): ?>
-        <script>document.addEventListener('DOMContentLoaded', () => { if (typeof showToast === 'function') showToast(<?= json_encode($reviewErr) ?>, 'error'); });</script>
-        <?php endif; ?>
+        <?php
+        $toastMessage = $reviewMsg ?? '';
+        $toastType    = 'success';
+        require APPROOT . '/views/shared/flash-toast.php';
+        $toastMessage = $reviewErr ?? '';
+        $toastType    = 'error';
+        require APPROOT . '/views/shared/flash-toast.php';
+        ?>
         <form method="POST" action="<?= URLROOT ?>/product?id=<?= (int)$p['id'] ?>">
             <input type="hidden" name="submit_review" value="1">
             <input type="hidden" name="csrf_token"    value="<?= htmlspecialchars($csrf) ?>">
