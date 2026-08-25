@@ -18,37 +18,8 @@ $isAdmin   = ($type ?? '') === 'admin';
 
 $bareTitle     = 'Reset Password — ' . SITENAME;
 $bareThemeBoot = true;
-$bareCss       = ['css/store.css'];
+$bareCss       = ['css/store.css', 'css/store/pages/reset-password.css'];
 
-// ⚠️ هذه الكتلة مرشّحة للمرحلة 5 (إخراج الأنماط المضمّنة من الـviews).
-// نُقلت كما هي حرفياً كي تبقى المرحلة 4 بصفر تغيير بصري.
-$bareHead = <<<'HTML'
-<style>
-        body {
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: var(--bg, #f5f6fa);
-            padding: 1rem;
-        }
-        .reset-card { width: 100%; max-width: 440px; border-radius: 14px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,.12); }
-        .reset-header {
-            background: linear-gradient(135deg, #7c2d12, #9a3412);
-            padding: 28px 28px 20px;
-            color: #fff; text-align: center;
-        }
-        .reset-header .reset-icon { font-size: 2.5rem; display: block; margin-bottom: 6px; }
-        .reset-header h1 { font-size: 1.3rem; font-weight: 700; color: #fff; margin-bottom: 4px; }
-        .reset-header p { margin: 0; font-size: .8rem; color: rgba(255,255,255,.7); }
-        .reset-body { padding: 28px; background: #fff; }
-        body.dark-mode .reset-body { background: #1a1d24; }
-        .reset-msg { margin-bottom: 1rem; }
-        .reset-footer { text-align: center; padding: 16px 28px 24px; background: #fff; border-top: 1px solid rgba(0,0,0,.05); }
-        body.dark-mode .reset-footer { background: #1a1d24; border-top-color: rgba(255,255,255,.08); }
-        .reset-footer a { font-weight: 600; text-decoration: none; }
-    </style>
-HTML;
 
 require APPROOT . '/views/inc/head-bare.php';
 ?>
@@ -107,63 +78,11 @@ require APPROOT . '/views/inc/head-bare.php';
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" defer></script>
 <script src="<?= URLROOT ?>/js/core/csrf.js" defer></script>
+<!-- تمرير بيانات فقط — المنطق في js/features/reset-password.js -->
 <script>
 window.BASE_URL = <?= json_encode(URLROOT) ?>;
 window.URLROOT  = <?= json_encode(URLROOT) ?>;
-
-document.addEventListener('DOMContentLoaded', function () {
-    var form = document.getElementById('resetForm');
-    if (!form) return;
-
-    form.addEventListener('submit', async function (e) {
-        e.preventDefault();
-
-        var btn      = document.getElementById('resetBtn');
-        var msgEl    = document.getElementById('resetMsg');
-        var pass     = document.getElementById('newPassword').value;
-        var confirm  = document.getElementById('confirmPassword').value;
-
-        if (pass.length < 8) {
-            showResetMsg(msgEl, 'Password must be at least 8 characters.', 'danger');
-            return;
-        }
-        if (pass !== confirm) {
-            showResetMsg(msgEl, 'Passwords do not match.', 'danger');
-            return;
-        }
-
-        if (btn) btn.disabled = true;
-
-        try {
-            var doFetch = (typeof window.fetchWithCsrfRetry === 'function')
-                ? window.fetchWithCsrfRetry
-                : fetch;
-            var data = await doFetch(window.BASE_URL + '/auth/reset', {
-                method: 'POST',
-                body: new FormData(form)
-            });
-
-            showResetMsg(msgEl, data.message, data.success ? 'success' : 'danger');
-
-            if (data.success) {
-                setTimeout(function () {
-                    window.location.href = window.BASE_URL;
-                }, 1200);
-            }
-        } catch (err) {
-            showResetMsg(msgEl, 'Something went wrong. Please try again.', 'danger');
-        } finally {
-            if (btn) btn.disabled = false;
-        }
-    });
-});
-
-function showResetMsg(el, text, type) {
-    if (!el) return;
-    el.textContent  = text;
-    el.className    = 'alert py-2 small mb-3 alert-' + type;
-    el.style.display = 'block';
-}
 </script>
+<script src="<?= URLROOT ?>/js/features/reset-password.js" defer></script>
 
 <?php require APPROOT . '/views/inc/footer-bare.php'; ?>

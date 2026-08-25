@@ -458,12 +458,23 @@ class AuthController extends Controller
 
         $hash = password_hash($newPassword, PASSWORD_BCRYPT, ['cost' => 12]);
 
+        // الحساب قد يكون حُذف بين طلب الرابط واستعماله — الرمز يبقى صالحاً
+        // في password_resets بعد حذف صاحبه. بلا هذا الفحص كان
+        // (int)$user['id'] يقرأ من null فيطبع PHP تحذيراً **قبل** جسم
+        // الاستجابة، فتصل الواجهة صفحة خطأ لا JSON وتسقط عند json()
+        // برسالة عامة «Something went wrong» لا تصف شيئاً.
         if ($isAdmin) {
             $admin = \App\Models\AdminModel::findByEmail($email);
+            if (!$admin) {
+                $this->respond(false, 'This link is invalid or expired. Please request a new one.');
+            }
             \App\Models\AdminModel::updatePassword((int)$admin['id'], $hash);
             \App\Models\AdminModel::consumePasswordResetToken($email, $token, 'admin');
         } else {
             $user = UserModel::findByEmail($email);
+            if (!$user) {
+                $this->respond(false, 'This link is invalid or expired. Please request a new one.');
+            }
             UserModel::updatePassword((int)$user['id'], $hash);
             UserModel::consumePasswordResetToken($email, $token, 'user');
         }
