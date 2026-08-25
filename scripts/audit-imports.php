@@ -47,6 +47,7 @@ function analyse(string $file): array
     $imported = [];
     $declared = [];
     $used = [];
+    $mentioned = [];
 
     $count = count($tokens);
     for ($i = 0; $i < $count; $i++) {
@@ -92,7 +93,8 @@ function analyse(string $file): array
             continue;
         }
 
-        // Foo::  |  new Foo(
+        // أي ذكر لاسم يبدأ بحرف كبير: Foo:: | new Foo( | extends Foo |
+        // implements Foo | Foo $x | : Foo | #[Foo(...)] | @var Foo
         if ($t[0] === T_STRING && preg_match('/^[A-Z]/', $t[1])) {
             $prev = $tokens[$i - 1] ?? null;
             $next = $tokens[$i + 1] ?? null;
@@ -100,7 +102,9 @@ function analyse(string $file): array
             // مؤهَّل بالفعل (\App\Core\X أو App\Core\X)
             $qualified = is_array($prev)
                 && in_array($prev[0], [T_NS_SEPARATOR, T_NAME_QUALIFIED, T_NAME_FULLY_QUALIFIED], true);
-            if ($qualified) continue;
+            if ($qualified) { $mentioned[$t[1]] = true; continue; }
+
+            $mentioned[$t[1]] = true;
 
             $isStatic = is_array($next) && $next[0] === T_DOUBLE_COLON;
             $isNew    = is_array($prev) && $prev[0] === T_WHITESPACE
@@ -110,9 +114,20 @@ function analyse(string $file): array
                 $used[$t[1]] = $used[$t[1]] ?? $t[2];
             }
         }
+
+        // الأسماء داخل التعليقات لا تُعدّ استعمالاً، لكن @var/@param فيها
+        // قد تكون السبب الوحيد لوجود use — نعدّها ذِكراً كي لا نقترح حذفها.
+        if (in_array($t[0], [T_DOC_COMMENT, T_COMMENT], true)) {
+            if (preg_match_all('/\b([A-Z]\w+)\b/', $t[1], $cm)) {
+                foreach ($cm[1] as $name) $mentioned[$name] = true;
+            }
+        }
     }
 
-    return ['ns' => $ns, 'imported' => $imported, 'declared' => $declared, 'used' => $used];
+    return [
+        'ns' => $ns, 'imported' => $imported, 'declared' => $declared,
+        'used' => $used, 'mentioned' => $mentioned,
+    ];
 }
 
 $files = [];
@@ -124,10 +139,13 @@ foreach ($dirs as $d) {
 }
 sort($files);
 
-$problems = [];
+$problems = [];   // كلاس مستعمل بلا استيراد — خطأ Fatal كامن
+$unused   = [];   // استيراد لا يشير إليه شيء — فوضى فقط، لا عطل
+
 foreach ($files as $file) {
     $a = analyse($file);
     if ($a['ns'] === '') continue;
+    $rel = str_replace($root . DIRECTORY_SEPARATOR, '', $file);
 
     foreach ($a['used'] as $cls => $line) {
         if (isset($a['imported'][$cls]) || isset($a['declared'][$cls])) continue;
@@ -137,22 +155,31 @@ foreach ($files as $file) {
         $sameNsPath = $root . '/' . str_replace('\\', '/', $a['ns']) . '/' . $cls . '.php';
         if (is_file($sameNsPath)) continue;
 
-        $problems[] = [
-            'file'  => str_replace($root . DIRECTORY_SEPARATOR, '', $file),
-            'line'  => $line,
-            'class' => $cls,
-            'ns'    => $a['ns'],
-        ];
+        $problems[] = ['file' => $rel, 'line' => $line, 'class' => $cls, 'ns' => $a['ns']];
+    }
+
+    foreach (array_keys($a['imported']) as $cls) {
+        if (!isset($a['mentioned'][$cls])) {
+            $unused[] = ['file' => $rel, 'class' => $cls];
+        }
     }
 }
 
-if (!$problems) {
-    echo "\n  ✓ كل الكلاسات المستعملة مستوردة أو مؤهَّلة أو في نفس النيسبيس\n\n";
-    exit(0);
+if ($problems) {
+    echo "\n  كلاسات غير مستوردة — تُحلّ إلى النيسبيس الحالي فتُسبّب Fatal عند التنفيذ:\n\n";
+    foreach ($problems as $p) {
+        printf("  ✗ %s:%d\n      %s  →  يبحث عنه PHP في %s\\%s\n\n", $p['file'], $p['line'], $p['class'], $p['ns'], $p['class']);
+    }
+} else {
+    echo "\n  ✓ كل الكلاسات المستعملة مستوردة أو مؤهَّلة أو في نفس النيسبيس\n";
 }
 
-echo "\n  كلاسات غير مستوردة — تُحلّ إلى النيسبيس الحالي فتُسبّب Fatal عند التنفيذ:\n\n";
-foreach ($problems as $p) {
-    printf("  ✗ %s:%d\n      %s  →  يبحث عنه PHP في %s\\%s\n\n", $p['file'], $p['line'], $p['class'], $p['ns'], $p['class']);
+if ($unused) {
+    echo "\n  استيرادات غير مستعملة (فوضى لا عطل):\n";
+    foreach ($unused as $u) {
+        printf("  · %-46s use ...\\%s;\n", $u['file'], $u['class']);
+    }
 }
-exit(1);
+
+echo "\n";
+exit($problems ? 1 : 0);

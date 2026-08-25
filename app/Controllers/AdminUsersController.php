@@ -127,15 +127,8 @@ class AdminUsersController extends AdminController
     )]
     public function delete(): void
     {
-        header('Content-Type: application/json; charset=utf-8');
         Middleware::requirePermission('can_manage_users');
-
-        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            $this->respond(false, 'Method not allowed.');
-        }
-        if (!verifyCsrfToken($_POST['csrf_token'] ?? '')) {
-            $this->respond(false, 'Invalid CSRF token, please refresh and try again.');
-        }
+        $this->beginJsonPost();
 
         $adminId  = getCurrentAdminId();
         $targetId = (int)($_POST['user_id'] ?? 0);
@@ -216,15 +209,8 @@ class AdminUsersController extends AdminController
     )]
     public function addStrike(): void
     {
-        header('Content-Type: application/json; charset=utf-8');
         Middleware::requirePermission('can_manage_users');
-
-        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            $this->respond(false, 'Method not allowed.');
-        }
-        if (!verifyCsrfToken($_POST['csrf_token'] ?? '')) {
-            $this->respond(false, 'Invalid CSRF token, please refresh and try again.');
-        }
+        $this->beginJsonPost();
 
         $adminId  = getCurrentAdminId();
         $targetId = (int)($_POST['user_id'] ?? 0);
@@ -298,15 +284,8 @@ class AdminUsersController extends AdminController
     )]
     public function removeStrike(): void
     {
-        header('Content-Type: application/json; charset=utf-8');
         Middleware::requirePermission('can_manage_users');
-
-        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            $this->respond(false, 'Method not allowed.');
-        }
-        if (!verifyCsrfToken($_POST['csrf_token'] ?? '')) {
-            $this->respond(false, 'Invalid CSRF token, please refresh and try again.');
-        }
+        $this->beginJsonPost();
 
         $adminId  = getCurrentAdminId();
         $targetId = (int)($_POST['user_id'] ?? 0);
@@ -411,15 +390,5 @@ class AdminUsersController extends AdminController
                 null
             );
         }
-    }
-
-    /** نفس نمط respond() المستخدم بـ AdminManageAdminsController بالحرف. */
-    private function respond(bool $success, string $message, array $extra = []): never
-    {
-        echo json_encode(
-            array_merge(['success' => $success, 'message' => $message], $extra),
-            JSON_UNESCAPED_UNICODE
-        );
-        exit;
     }
 }

@@ -84,25 +84,43 @@ function inlineAssetLines(string $file): array
     return ['js' => $js, 'css' => $css];
 }
 
-/** أطول الدوال في ملف (تقدير بعدّ الأسطر بين تعريف ودالة التالية). */
+/**
+ * أطول الدوال في ملف — بعدّ الأقواس من سطر التعريف حتى قوس الإغلاق
+ * المقابل، لا بالمسافة بين تعريف والذي يليه.
+ *
+ * القياس بالمسافة يعطي أرقاماً كاذبة: حذف دالة قصيرة تلي دالة طويلة
+ * يجعل الطويلة تبدو أطول، لأن القياس يبتلع كل ما بينهما.
+ */
 function longestFunctions(array $files, int $limit = 10): array
 {
     $found = [];
 
     foreach ($files as $file) {
         $lines = file($file, FILE_IGNORE_NEW_LINES) ?: [];
-        $open  = null;
+        $count = count($lines);
 
         foreach ($lines as $i => $line) {
-            if (preg_match('/^\s*(?:public|private|protected|static|\s)*function\s+(\w+)/', $line, $m)) {
-                if ($open !== null) {
-                    $found[] = ['file' => $file, 'name' => $open['name'], 'lines' => $i - $open['at']];
-                }
-                $open = ['name' => $m[1], 'at' => $i];
+            if (!preg_match('/^\s*(?:(?:public|private|protected|static|final|abstract)\s+)*function\s+(\w+)/', $line, $m)) {
+                continue;
             }
-        }
-        if ($open !== null) {
-            $found[] = ['file' => $file, 'name' => $open['name'], 'lines' => count($lines) - $open['at']];
+
+            $depth = 0;
+            $seen  = false;
+            $end   = null;
+
+            for ($j = $i; $j < $count; $j++) {
+                // تجاهل الأقواس داخل النصوص البسيطة على السطر
+                $code   = preg_replace('/([\'"]).*?\1/', '', $lines[$j]);
+                $depth += substr_count($code, '{');
+                if ($depth > 0) $seen = true;
+                $depth -= substr_count($code, '}');
+                if ($seen && $depth <= 0) { $end = $j; break; }
+            }
+
+            // دالة مجرّدة أو تعريف واجهة (بلا جسم)
+            if ($end === null) continue;
+
+            $found[] = ['file' => $file, 'name' => $m[1], 'lines' => $end - $i + 1];
         }
     }
 

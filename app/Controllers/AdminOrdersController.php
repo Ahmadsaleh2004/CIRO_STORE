@@ -145,15 +145,8 @@ class AdminOrdersController extends AdminController
     )]
     public function take(): void
     {
-        header('Content-Type: application/json; charset=utf-8');
         Middleware::requirePermission('can_manage_orders');
-
-        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            $this->respond(false, 'Method not allowed.');
-        }
-        if (!verifyCsrfToken($_POST['csrf_token'] ?? '')) {
-            $this->respond(false, 'Invalid CSRF token, please refresh and try again.');
-        }
+        $this->beginJsonPost();
 
         $adminId = getCurrentAdminId();
         $orderId = (int)($_POST['order_id'] ?? 0);
@@ -222,15 +215,8 @@ class AdminOrdersController extends AdminController
     )]
     public function markDelivered(): void
     {
-        header('Content-Type: application/json; charset=utf-8');
         Middleware::requirePermission('can_manage_orders');
-
-        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            $this->respond(false, 'Method not allowed.');
-        }
-        if (!verifyCsrfToken($_POST['csrf_token'] ?? '')) {
-            $this->respond(false, 'Invalid CSRF token, please refresh and try again.');
-        }
+        $this->beginJsonPost();
 
         $adminId = getCurrentAdminId();
         $orderId = (int)($_POST['order_id'] ?? 0);
@@ -295,15 +281,8 @@ class AdminOrdersController extends AdminController
     )]
     public function cancelDelivery(): void
     {
-        header('Content-Type: application/json; charset=utf-8');
         Middleware::requirePermission('can_manage_orders');
-
-        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            $this->respond(false, 'Method not allowed.');
-        }
-        if (!verifyCsrfToken($_POST['csrf_token'] ?? '')) {
-            $this->respond(false, 'Invalid CSRF token, please refresh and try again.');
-        }
+        $this->beginJsonPost();
 
         $adminId = getCurrentAdminId();
         $orderId = (int)($_POST['order_id'] ?? 0);
@@ -372,15 +351,8 @@ class AdminOrdersController extends AdminController
     )]
     public function release(): void
     {
-        header('Content-Type: application/json; charset=utf-8');
         Middleware::requirePermission('can_manage_orders');
-
-        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            $this->respond(false, 'Method not allowed.');
-        }
-        if (!verifyCsrfToken($_POST['csrf_token'] ?? '')) {
-            $this->respond(false, 'Invalid CSRF token, please refresh and try again.');
-        }
+        $this->beginJsonPost();
 
         $adminId = getCurrentAdminId();
         $orderId = (int)($_POST['order_id'] ?? 0);
@@ -456,15 +428,8 @@ class AdminOrdersController extends AdminController
     )]
     public function reportIssue(): void
     {
-        header('Content-Type: application/json; charset=utf-8');
         Middleware::requirePermission('can_manage_orders');
-
-        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            $this->respond(false, 'Method not allowed.');
-        }
-        if (!verifyCsrfToken($_POST['csrf_token'] ?? '')) {
-            $this->respond(false, 'Invalid CSRF token, please refresh and try again.');
-        }
+        $this->beginJsonPost();
 
         $adminId = getCurrentAdminId();
         $orderId = (int)($_POST['order_id'] ?? 0);
@@ -527,15 +492,8 @@ class AdminOrdersController extends AdminController
     )]
     public function delete(): void
     {
-        header('Content-Type: application/json; charset=utf-8');
         Middleware::requirePermission('can_manage_orders');
-
-        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            $this->respond(false, 'Method not allowed.');
-        }
-        if (!verifyCsrfToken($_POST['csrf_token'] ?? '')) {
-            $this->respond(false, 'Invalid CSRF token, please refresh and try again.');
-        }
+        $this->beginJsonPost();
 
         $adminId = getCurrentAdminId();
         $orderId = (int)($_POST['order_id'] ?? 0);
@@ -665,15 +623,5 @@ class AdminOrdersController extends AdminController
                 relatedId:     $orderId
             );
         }
-    }
-
-    /** نفس نمط respond() المستخدم بـ AdminManageAdminsController بالحرف. */
-    private function respond(bool $success, string $message, array $extra = []): never
-    {
-        echo json_encode(
-            array_merge(['success' => $success, 'message' => $message], $extra),
-            JSON_UNESCAPED_UNICODE
-        );
-        exit;
     }
 }

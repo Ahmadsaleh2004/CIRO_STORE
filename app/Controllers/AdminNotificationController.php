@@ -91,14 +91,7 @@ class AdminNotificationController extends AdminController
     )]
     public function markRead(): void
     {
-        header('Content-Type: application/json; charset=utf-8');
-
-        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            $this->respond(false, 'Method not allowed.');
-        }
-        if (!verifyCsrfToken($_POST['csrf_token'] ?? '')) {
-            $this->respond(false, 'Invalid CSRF token, please refresh and try again.');
-        }
+        $this->beginJsonPost();
 
         $notifId = (int)($_POST['notification_id'] ?? 0);
         $adminId = (int)$_SESSION['admin_id'];
@@ -145,14 +138,7 @@ class AdminNotificationController extends AdminController
     )]
     public function markAllRead(): void
     {
-        header('Content-Type: application/json; charset=utf-8');
-
-        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            $this->respond(false, 'Method not allowed.');
-        }
-        if (!verifyCsrfToken($_POST['csrf_token'] ?? '')) {
-            $this->respond(false, 'Invalid CSRF token, please refresh and try again.');
-        }
+        $this->beginJsonPost();
 
         $adminId = (int)$_SESSION['admin_id'];
         AdminNotificationModel::markAllRead($adminId);
@@ -191,14 +177,7 @@ class AdminNotificationController extends AdminController
     )]
     public function deleteAll(): void
     {
-        header('Content-Type: application/json; charset=utf-8');
-
-        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            $this->respond(false, 'Method not allowed.');
-        }
-        if (!verifyCsrfToken($_POST['csrf_token'] ?? '')) {
-            $this->respond(false, 'Invalid CSRF token, please refresh and try again.');
-        }
+        $this->beginJsonPost();
 
         $adminId = (int)$_SESSION['admin_id'];
         AdminNotificationModel::deleteAll($adminId);
@@ -239,14 +218,7 @@ class AdminNotificationController extends AdminController
     )]
     public function dismiss(): void
     {
-        header('Content-Type: application/json; charset=utf-8');
-
-        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            $this->respond(false, 'Method not allowed.');
-        }
-        if (!verifyCsrfToken($_POST['csrf_token'] ?? '')) {
-            $this->respond(false, 'Invalid CSRF token, please refresh and try again.');
-        }
+        $this->beginJsonPost();
 
         $notifId = (int)($_POST['notification_id'] ?? 0);
         $adminId = (int)$_SESSION['admin_id'];
@@ -259,15 +231,5 @@ class AdminNotificationController extends AdminController
         $this->respond($ok, $ok ? 'Dismissed.' : 'Something went wrong.', [
             'unread_count' => AdminNotificationModel::countUnread($adminId),
         ]);
-    }
-
-    /** نفس نمط respond() المستخدم بـ AdminMessagingController بالحرف. */
-    private function respond(bool $success, string $message, array $extra = []): never
-    {
-        echo json_encode(
-            array_merge(['success' => $success, 'message' => $message], $extra),
-            JSON_UNESCAPED_UNICODE
-        );
-        exit;
     }
 }

@@ -4,9 +4,8 @@ namespace App\Controllers;
 
 use App\Core\Controller;
 use App\Models\ProductModel;
-use App\Models\AdminModel;
-use App\Models\UserModel;
 use App\Models\StockNotificationModel;
+use App\Services\StockNotifier;
 
 class WishlistController extends Controller
 {
@@ -116,36 +115,11 @@ class WishlistController extends Controller
         // add() تُرجع true فقط عند إضافة صفّ جديد فعلاً، فلا يُشعَر
         // الأدمنية مرتين لو ضغط المستخدم الزر مجدداً.
         if (StockNotificationModel::add($pid, $uid)) {
-            $this->notifyAdminsAboutStockRequest($pid, $uid);
+            StockNotifier::customerRequestedNotification($pid, $uid);
         }
 
         echo json_encode(['success' => true, 'message' => 'ok']);
         exit;
     }
 
-    /**
-     * يُرسل إشعارًا لكل أدمن لديه صلاحية can_manage_products، ما عدا الأدمن الأساسي (Role A).
-     */
-    private function notifyAdminsAboutStockRequest(int $productId, int $requestingUserId): void
-    {
-        $prodName     = ProductModel::getNameById($productId) ?? "Product #{$productId}";
-        $userName     = UserModel::getFullNameById($requestingUserId) ?? 'A customer';
-        $requestCount = StockNotificationModel::countForProduct($productId);
-
-        $message = "{$userName} requested to be notified when this product is back in stock ({$requestCount})";
-
-        // كل الأدمنية (B/C/D) الذين لديهم صلاحية can_manage_products — Role A مستثنى
-        $adminIds = AdminModel::findByPermsAndRanks(['can_manage_products'], ['B', 'C', 'D']);
-
-        foreach ($adminIds as $adminId) {
-            AdminModel::sendNotification(
-                (int)$adminId,
-                $prodName,
-                $message,
-                'stock_notify_request',
-                'product',
-                $productId
-            );
-        }
-    }
 }

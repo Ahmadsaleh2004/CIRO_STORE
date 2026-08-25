@@ -698,17 +698,6 @@ class AdminAuthController extends Controller
         return URLROOT . '/admin/home';
     }
 
-    /**
-     * إرجاع JSON وإيقاف التنفيذ
-     */
-    private function respond(bool $success, string $message, array $extra = []): never
-    {
-        echo json_encode(
-            array_merge(['success' => $success, 'message' => $message], $extra),
-            JSON_UNESCAPED_UNICODE
-        );
-        exit;
-    }
 
     /**
      * عرض View بدون layout عام — مباشر (خاص بصفحات الأدمن المستقلة).
