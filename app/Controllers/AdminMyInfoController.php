@@ -36,9 +36,12 @@ class AdminMyInfoController extends AdminController
         }
 
         $this->adminView('my-info', [
-            'pageTitle' => 'My Info',
-            'extraHead' => '<link rel="stylesheet" href="' . URLROOT . '/css/store/pages/my-info.css">',
-            'profile'   => $admin,
+            'pageTitle'    => 'My Info',
+            'extraHead'    => '<link rel="stylesheet" href="' . URLROOT . '/css/store/pages/my-info.css">',
+            // ملف الصفحة وحدها — فوتر الأدمن يحمّل ثلاثة عشر ملفاً على كل
+            // صفحة، ولا داعي لإضافة رابع عشر يخصّ هذه وحدها.
+            'extraScripts' => '<script src="' . URLROOT . '/js/admin/my-info.js"></script>',
+            'profile'      => $admin,
         ]);
     }
 
@@ -175,6 +178,13 @@ class AdminMyInfoController extends AdminController
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             $this->respond(false, 'Method not allowed.');
         }
+
+        // كان هذا السطر مفقوداً وحده من بين الدوال الأربع في هذا الملف،
+        // فكان $post متغيّراً غير معرَّف و$token فارغاً دائماً — أي أن زر
+        // «تفعيل 2FA» كان يُرفض بـ«Invalid CSRF token» في كل مرة منذ كُتب.
+        // الطلب يصل بجسم JSON من js/admin/my-info.js فلا يملأ $_POST.
+        $body = json_decode(file_get_contents('php://input'), true) ?? [];
+        $post = array_merge($_POST, $body);
 
         $token = $post['csrf_token'] ?? '';
         if (!verifyCsrfToken($token)) {

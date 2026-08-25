@@ -135,7 +135,12 @@
 
         <div id="twofaSetupStep" style="display:none;">
             <div class="text-center my-3">
-                <img id="twofaQr" src="" alt="QR Code" width="220" height="220"
+                <!-- بلا سمة src: src="" يجعل المتصفح يطلب عنوان الصفحة
+                     نفسها في كل تحميل ثم يفشل. المصدر يضبطه
+                     js/admin/my-info.js عند بدء الإعداد. العنصر داخل
+                     حاوية مخفية حتى تلك اللحظة، وwidth/height يحجزان
+                     مساحته فلا يقفز التخطيط. -->
+                <img id="twofaQr" alt="QR Code" width="220" height="220"
                      class="twofa-qr">
             </div>
             <div class="text-center small mb-3">
@@ -160,148 +165,5 @@
     <?php endif; ?>
 </div>
 
-<script>
-document.getElementById('adminProfileForm')?.addEventListener('submit', async e => {
-    e.preventDefault();
-    const form  = e.target;
-    const msgEl = document.getElementById('profileMsg');
-    const data  = Object.fromEntries(new FormData(form));
-    msgEl.style.display = 'none';
+<!-- منطق الصفحة في js/admin/my-info.js — يُحمَّل عبر extraScripts -->
 
-    try {
-        const res = await fetch(window.URLROOT + '/admin/my-info', {
-            method:  'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body:    JSON.stringify(data),
-        }).then(r => r.json());
-
-        msgEl.className   = res.success
-            ? 'alert alert-success py-2 small'
-            : 'alert alert-danger py-2 small';
-        msgEl.textContent = res.message;
-        msgEl.style.display = 'block';
-
-        if (res.success) {
-            form.querySelector('[name="current_password"]').value = '';
-        }
-    } catch (err) {
-        msgEl.className   = 'alert alert-danger py-2 small';
-        msgEl.textContent = 'Network error.';
-        msgEl.style.display = 'block';
-    }
-});
-</script>
-
-<script>
-// ── 2FA (TOTP) — تفعيل / تعطيل عبر AJAX ───────────────────────────────
-(function () {
-    const msgEl = document.getElementById('twofaMsg');
-
-    function showMsg(success, text) {
-        msgEl.className   = success
-            ? 'alert alert-success py-2 small'
-            : 'alert alert-danger py-2 small';
-        msgEl.textContent = text;
-        msgEl.style.display = 'block';
-    }
-
-    async function postJson(url, data) {
-        const res = await fetch(window.URLROOT + url, {
-            method:  'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body:    JSON.stringify(data),
-        });
-        return res.json();
-    }
-
-    const csrf = () => document.querySelector('#adminProfileForm [name="csrf_token"]')?.value || '';
-
-    // تفعيل — الخطوة 1: توليد secret وإظهار QR
-    const enableBtn = document.getElementById('twofaEnableBtn');
-    if (enableBtn) {
-        enableBtn.addEventListener('click', async () => {
-            enableBtn.disabled = true;
-            msgEl.style.display = 'none';
-            try {
-                const d = await postJson('/admin/my-info/2fa/generate', { csrf_token: csrf() });
-                if (!d.success) {
-                    showMsg(false, d.message || 'Could not start 2FA setup.');
-                    enableBtn.disabled = false;
-                    return;
-                }
-                document.getElementById('twofaSetup').style.display = 'none';
-                document.getElementById('twofaSetupStep').style.display = 'block';
-                document.getElementById('twofaQr').src  = d.qrcode_url;
-                document.getElementById('twofaSecret').textContent = d.secret;
-                document.getElementById('twofaCode').focus();
-            } catch {
-                showMsg(false, 'Network error.');
-                enableBtn.disabled = false;
-            }
-        });
-
-        // إلغاء الإعداد
-        document.getElementById('twofaCancelBtn').addEventListener('click', () => {
-            document.getElementById('twofaSetupStep').style.display = 'none';
-            document.getElementById('twofaSetup').style.display = 'block';
-            enableBtn.disabled = false;
-        });
-
-        // تفعيل — الخطوة 2: تأكيد الكود الأول
-        document.getElementById('twofaConfirmBtn').addEventListener('click', async () => {
-            const code = document.getElementById('twofaCode').value.trim();
-            if (!/^\d{6}$/.test(code)) {
-                showMsg(false, 'Please enter the 6-digit code from your authenticator app.');
-                return;
-            }
-            const btn = document.getElementById('twofaConfirmBtn');
-            btn.disabled = true;
-            msgEl.style.display = 'none';
-            try {
-                const d = await postJson('/admin/my-info/2fa/confirm', {
-                    csrf_token: csrf(),
-                    code:       code,
-                });
-                if (d.success) {
-                    showMsg(true, d.message);
-                    setTimeout(() => window.location.reload(), 900);
-                } else {
-                    showMsg(false, d.message || 'Invalid code.');
-                    btn.disabled = false;
-                    document.getElementById('twofaCode').focus();
-                }
-            } catch {
-                showMsg(false, 'Network error.');
-                btn.disabled = false;
-            }
-        });
-    }
-
-    // تعطيل — يتطلب كلمة المرور الحالية
-    const disableForm = document.getElementById('twofaDisableForm');
-    if (disableForm) {
-        disableForm.addEventListener('submit', async e => {
-            e.preventDefault();
-            const passEl = document.getElementById('twofaDisablePassword');
-            if (!passEl.value) {
-                showMsg(false, 'Please enter your current password.');
-                return;
-            }
-            const data = Object.fromEntries(new FormData(disableForm));
-            msgEl.style.display = 'none';
-            try {
-                const d = await postJson('/admin/my-info/2fa/disable', data);
-                if (d.success) {
-                    showMsg(true, d.message);
-                    setTimeout(() => window.location.reload(), 900);
-                } else {
-                    showMsg(false, d.message || 'Could not disable 2FA.');
-                    passEl.value = '';
-                }
-            } catch {
-                showMsg(false, 'Network error.');
-            }
-        });
-    }
-})();
-</script>
