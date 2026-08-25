@@ -64,12 +64,61 @@ function openApiLines(string $file): int
     return $count;
 }
 
+/**
+ * يُفرِّغ محتوى تعليقات PHP من المصدر مع الحفاظ على عدد الأسطر وترقيمها.
+ *
+ * لماذا؟ عدّاد الأصول المضمّنة أدناه مسحٌ نصي، فكان يعدّ وسم <style> أو
+ * <script> المذكور **داخل تعليق توثيقي** وسماً حقيقياً: يفتح العدّ ولا
+ * يغلقه (لا وسم إغلاق في نفس التعليق)، فيُحسب باقي الملف كله أصلاً
+ * مضمّناً. حدث ذلك فعلاً في المرحلة 4 — قفز عدّاد <style> من 55 إلى 96
+ * بسبب ثلاثة تعليقات لا أكثر.
+ *
+ * التفريغ يقتصر على T_COMMENT و T_DOC_COMMENT. محتوى الـheredoc يبقى
+ * محسوباً عن قصد: كتلة <style> داخل heredoc تُطبع فعلاً في الصفحة،
+ * فهي أصل مضمّن حقيقي (راجع views/auth/reset-password.php).
+ */
+function blankPhpComments(string $src): string
+{
+    // الـviews مزيج HTML وPHP؛ token_get_all يتعامل معها كما يتعامل معها
+    // المفسّر نفسه، فأجزاء الـHTML تصل كـT_INLINE_HTML بلا تغيير.
+    $tokens = @token_get_all($src);
+    if ($tokens === false || $tokens === []) {
+        return $src; // ملف غير قابل للتحليل — أرجعه كما هو بدل إسقاطه
+    }
+
+    $out = '';
+    foreach ($tokens as $token) {
+        if (is_array($token) && ($token[0] === T_COMMENT || $token[0] === T_DOC_COMMENT)) {
+            // استبدل النص بأسطر فارغة بنفس العدد كي لا تنزاح الأرقام
+            $out .= str_repeat("\n", substr_count($token[1], "\n"));
+            continue;
+        }
+        $out .= is_array($token) ? $token[1] : $token;
+    }
+
+    return $out;
+}
+
+/**
+ * تقسيم إلى أسطر.
+ *
+ * ⚠️ لا تستعمل preg_split('/\R/') هنا. المشروع عربي، و`\R` بلا معدِّل /u
+ * يعمل على البايتات ويطابق `\x85` — وهو **بايت استمرار شرعي داخل الحروف
+ * العربية** بترميز UTF-8. النتيجة: النص العربي يُقطع في منتصف الحرف
+ * وتُختلق أسطر غير موجودة. أعطى ذلك فرقاً قدره 5 أسطر في home.php وحده.
+ */
+function splitLines(string $src): array
+{
+    return preg_split('/\r\n|\n|\r/', $src) ?: [];
+}
+
 /** أسطر داخل <script>...</script> أو <style>...</style> في ملف view. */
 function inlineAssetLines(string $file): array
 {
-    $lines  = file($file, FILE_IGNORE_NEW_LINES) ?: [];
-    $inJs   = false;
-    $inCss  = false;
+    $src   = blankPhpComments((string)file_get_contents($file));
+    $lines = splitLines($src);
+    $inJs  = false;
+    $inCss = false;
     $js = $css = 0;
 
     foreach ($lines as $line) {
