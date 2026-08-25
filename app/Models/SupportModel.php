@@ -127,4 +127,22 @@ class SupportModel
             return false;
         }
     }
+    /**
+     * نصّ رسالة دعم بمعرّفها، أو null إن لم توجد.
+     *
+     * نُقل من AdminSupportController حيث كان استعلاماً مكتوباً مباشرة
+     * لقراءة الرسالة قبل حذفها (كي يُسجَّل نصّها في سجل الأدمن).
+     */
+    public static function getMessageText(int $messageId): ?string
+    {
+        try {
+            $stmt = Database::connect()->prepare("SELECT message FROM contact_messages WHERE id = ?");
+            $stmt->execute([$messageId]);
+            $text = $stmt->fetchColumn();
+            return $text !== false ? (string)$text : null;
+        } catch (Exception $e) {
+            error_log("SupportModel::getMessageText Error: " . $e->getMessage());
+            return null;
+        }
+    }
 }

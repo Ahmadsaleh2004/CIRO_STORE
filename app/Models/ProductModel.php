@@ -245,4 +245,67 @@ class ProductModel
             return ['ok' => false, 'message' => 'Something went wrong, please try again.'];
         }
     }
+
+    /**
+     * اسم منتج بمعرّفه، أو null إن لم يوجد.
+     *
+     * كان هذا الاستعلام مكتوباً مرتين: هنا (عبر WishlistController) وفي
+     * AdminProductModel. اسم المنتج ليس مفهوماً خاصاً بلوحة التحكم،
+     * فمكانه الطبيعي موديل المتجر، و AdminProductModel::getNameById
+     * صارت تفوّض إليه.
+     */
+    public static function getNameById(int $productId): ?string
+    {
+        try {
+            $stmt = Database::connect()->prepare("SELECT name FROM products WHERE id = ? LIMIT 1");
+            $stmt->execute([$productId]);
+            $name = $stmt->fetchColumn();
+            return $name !== false ? (string)$name : null;
+        } catch (Exception $e) {
+            error_log("ProductModel::getNameById Error: " . $e->getMessage());
+            return null;
+        }
+    }
+    /**
+     * بيانات المخزون والسعر الحالية لمجموعة variants — لفحص السلة قبل
+     * إتمام الطلب. تُرجع الظاهرة فقط (is_visible = 1) كي لا تُباع نسخة
+     * من منتج أُخفي بعد إضافته للسلة.
+     *
+     * نُقل من CartController::checkStock حيث كان استعلاماً مكتوباً مباشرة.
+     *
+     * @param  int[] $variantIds
+     * @return array<int,array<string,mixed>>
+     */
+    public static function findVariantsStock(array $variantIds): array
+    {
+        $variantIds = array_values(array_filter(array_map('intval', $variantIds)));
+        if (!$variantIds) {
+            return [];
+        }
+
+        try {
+            $placeholders = implode(',', array_fill(0, count($variantIds), '?'));
+            $stmt = Database::connect()->prepare("
+                SELECT
+                    pv.id            AS variant_id,
+                    p.id             AS product_id,
+                    p.name           AS product_name,
+                    pv.color_name,
+                    pv.price,
+                    pv.discount_percentage,
+                    pv.price_after_discount,
+                    pv.stock_quantity,
+                    pv.image_path
+                FROM product_variants pv
+                JOIN products p ON p.id = pv.product_id
+                WHERE pv.id IN ({$placeholders})
+                  AND p.is_visible = 1
+            ");
+            $stmt->execute($variantIds);
+            return $stmt->fetchAll();
+        } catch (Exception $e) {
+            error_log("ProductModel::findVariantsStock Error: " . $e->getMessage());
+            return [];
+        }
+    }
 }

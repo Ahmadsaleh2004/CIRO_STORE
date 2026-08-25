@@ -405,17 +405,16 @@ class AdminProductModel
      * اسم منتج بمعرّفه فقط — يُستخدم قبل الحذف النهائي (Hard Delete) لأن السطر
      * سيختفي من الجدول ولن يمكن معرفة اسمه بعدها لأغراض الإشعار/السجل.
      */
+    /**
+     * اسم منتج بمعرّفه.
+     *
+     * تفويض إلى ProductModel: الاستعلام كان مكتوباً هنا وفي موديل المتجر
+     * بنفس النص. اسم المنتج ليس مفهوماً خاصاً بلوحة التحكم، فمصدر الحقيقة
+     * صار ProductModel. أُبقيت هذه الدالة لأن كنترولرز الأدمن تستدعيها.
+     */
     public static function getNameById(int $productId): ?string
     {
-        try {
-            $stmt = Database::connect()->prepare("SELECT name FROM products WHERE id = ? LIMIT 1");
-            $stmt->execute([$productId]);
-            $name = $stmt->fetchColumn();
-            return $name !== false ? (string)$name : null;
-        } catch (Exception $e) {
-            error_log("AdminProductModel::getNameById Error: " . $e->getMessage());
-            return null;
-        }
+        return ProductModel::getNameById($productId);
     }
 
     /**
