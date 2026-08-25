@@ -118,3 +118,6 @@ $csrfToken = generateCsrfToken();
     <!-- Extra Scripts من الـ Controller (مثلاً صفحة Checkout / My Info) -->
     <?php if (isset($extraScripts)) echo $extraScripts; elseif (isset($data['extraScripts'])) echo $data['extraScripts']; ?>
 </footer>
+
+</body>
+</html>
