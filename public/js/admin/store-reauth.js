@@ -27,21 +27,22 @@
 
             try {
                 const fd = new FormData(form);
-                const res = await fetch(window.URLROOT + '/admin/store-mode/reauth', {
+
+                // fetchWithCsrfRetry تعمل هنا: الـview يضبط window.URLROOT
+                // فتختار /admin/csrf. الفائدة ملموسة — بلا الغلاف، فشل
+                // التوكن يُلزم الأدمن بكتابة كلمة سرّه من جديد، ومعه
+                // يتعافى الطلب صامتاً.
+                //
+                // ملاحظة: الغلاف يستدعي response.json() بلا حارس، فاستجابة
+                // غير JSON تصل الآن إلى catch الخارجي وتُعرض بـ«Connection
+                // error» بدل «Unexpected server response». كلتاهما رسالة خطأ
+                // للحالة نفسها.
+                const data = await fetchWithCsrfRetry(window.URLROOT + '/admin/store-mode/reauth', {
                     method: 'POST',
                     body: fd,
                     credentials: 'same-origin',
                     headers: { 'X-Requested-With': 'XMLHttpRequest' },
                 });
-
-                let data;
-                try {
-                    data = await res.json();
-                } catch {
-                    alertEl.className = 'alert-msg error visible';
-                    alertEl.textContent = 'Unexpected server response. Please try again.';
-                    return;
-                }
 
                 if (data.success) {
                     alertEl.className = 'alert-msg success visible';

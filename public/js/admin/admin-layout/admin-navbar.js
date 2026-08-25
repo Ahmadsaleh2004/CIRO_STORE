@@ -12,6 +12,9 @@
 // منفصلة عن logoutUser() الخاصة بالمتجر: الجلستان مختلفتان اسماً
 // ومحتوى (admin_session مقابل PHPSESSID) ونقطتا الخروج مختلفتان.
 
+// fetch عارٍ عن قصد — لا fetchWithCsrfRetry: AdminAuthController::logout
+// **لا تتحقق من توكن CSRF** (تُدمّر الجلسة وتحوّل بـ302، ولا تُرجع
+// JSON أصلاً). والغلاف يستدعي response.json() فكان سيرمي على تحويل.
 function logoutAdmin() {
     fetch(window.URLROOT + '/admin/logout', {
         method: 'POST',

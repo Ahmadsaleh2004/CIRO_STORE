@@ -305,6 +305,8 @@ window.logoutUser = async function () {
     const fd = new FormData();
     fd.append('action', 'logout');
     try {
+        // fetch عارٍ عن قصد — AuthController::logout لا تتحقق من CSRF
+        // (تُدمّر الجلسة مباشرة). لا شيء لشبكة الأمان لتتعافى منه.
         const res  = await fetch(window.BASE_URL + '/auth/logout', { method: 'POST', body: fd });
         const data = await res.json();
         window.location.href = data.redirect || window.BASE_URL;
