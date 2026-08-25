@@ -122,5 +122,15 @@ $adminInStoreMode = !empty($_SESSION['admin_in_store_mode']);
     </div>
 </nav>
 
-<!-- Skip anchor to be placed at the beginning of main content -->
-<div id="main-content"></div>
+<?php
+/**
+ * كان هنا <div id="main-content"></div> فارغ يعمل مرساةً لرابط
+ * «تخطَّ إلى المحتوى». حُذف لأنه كان يكرّر معرّفاً موجوداً أصلاً:
+ * كل views المتجر التسعة تعلن <main id="main-content"> بنفسها،
+ * فكانت كل صفحة متجر تحمل عنصرين بنفس الـid — HTML غير صالح، و
+ * getElementById يُرجع الـdiv الفارغ لا المحتوى.
+ *
+ * رابط التخطّي في head.php ما زال يشير إلى #main-content، وصار يصل
+ * إلى <main> الحقيقي — وهو المقصود منه أصلاً.
+ */
+?>
