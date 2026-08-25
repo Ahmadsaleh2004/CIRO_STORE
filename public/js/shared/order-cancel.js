@@ -4,7 +4,8 @@
 // السياق يُحدَّد عبر data-context على الزر (user | admin).
 // CSRF: window._csrfToken (سياق الأدمن من navbar.php) أو
 //       window.CSRF_INFO (سياق المستخدم من my-info.php).
-// fetch() مباشر + FormData — لا safeFetch (غير موجود بسياق الأدمن).
+// fetchWithCsrfRetry تعمل في السياقين: تختار /admin/csrf عند وجود
+// window.URLROOT (الأدمن) و/auth/csrf عند وجود BASE_URL (المتجر).
 // ══════════════════════════════════════════════════════════════
 
 document.querySelectorAll('.order-cancel-btn').forEach(btn => {
@@ -32,8 +33,7 @@ document.querySelectorAll('.order-cancel-btn').forEach(btn => {
         fd.append('order_id',   orderId);
 
         try {
-            const res  = await fetch(endpoint, { method: 'POST', body: fd });
-            const data = await res.json();
+            const data = await fetchWithCsrfRetry(endpoint, { method: 'POST', body: fd });
 
             if (data.success) {
                 Swal.fire({ icon: 'success', text: data.message, timer: 1800, showConfirmButton: false })

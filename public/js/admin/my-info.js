@@ -25,11 +25,11 @@
         msgEl.style.display = 'none';
 
         try {
-            const res = await fetch(window.URLROOT + '/admin/my-info', {
+            const res = await fetchWithCsrfRetry(window.URLROOT + '/admin/my-info', {
                 method:  'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body:    JSON.stringify(data),
-            }).then(r => r.json());
+            });
 
             msgEl.className   = res.success
                 ? 'alert alert-success py-2 small'
@@ -59,13 +59,15 @@
         msgEl.style.display = 'block';
     }
 
+    // fetchWithCsrfRetry تدعم أجسام JSON منذ المرحلة 6ب-1: تعيد بناء
+    // الجسم بالتوكن الجديد وتحافظ على بقية الحقول. قبل ذلك كانت تفسده،
+    // ولهذا كان هذا الملف يستعمل fetch عارياً.
     async function postJson(url, data) {
-        const res = await fetch(window.URLROOT + url, {
+        return fetchWithCsrfRetry(window.URLROOT + url, {
             method:  'POST',
             headers: { 'Content-Type': 'application/json' },
             body:    JSON.stringify(data),
         });
-        return res.json();
     }
 
     const csrf = () => document.querySelector('#adminProfileForm [name="csrf_token"]')?.value || '';

@@ -19,12 +19,11 @@ document.addEventListener('submit', async (e) => {
         fd.append('product_id', productId);
         fd.append('csrf_token', csrf);
 
-        const res = await fetch(window.BASE_URL + '/handlers/notify_handler.php', {
+        const data = await fetchWithCsrfRetry(window.BASE_URL + '/handlers/notify_handler.php', {
             method: 'POST',
             headers: { 'X-Requested-With': 'XMLHttpRequest' },
             body: fd
         });
-        const data = await res.json();
 
         if (data.success) {
             btn.textContent = "✅ We'll notify you!";

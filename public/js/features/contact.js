@@ -30,12 +30,11 @@
 
             try {
                 const fd = new FormData(contactForm);
-                const res = await fetch(window.BASE_URL + '/contact/send', {
+                const data = await fetchWithCsrfRetry(window.BASE_URL + '/contact/send', {
                     method: 'POST',
                     headers: { 'X-Requested-With': 'XMLHttpRequest' },
                     body: fd
                 });
-                const data = await res.json();
 
                 if (typeof showToast === 'function') {
                     showToast(data.message, data.success ? 'success' : 'error');
