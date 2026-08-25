@@ -8,7 +8,7 @@ use PDO;
 
 /**
  * AdminProductModel — استعلامات لوحة تحكم الأدمن الخاصة بالمنتجات فقط
- * (منفصل عن Product_dit المستخدم بواجهة المتجر العامة).
+ * (منفصل عن ProductModel المستخدم بواجهة المتجر العامة).
  */
 class AdminProductModel
 {

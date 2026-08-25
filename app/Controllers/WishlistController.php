@@ -4,7 +4,7 @@ namespace App\Controllers;
 
 use App\Core\Controller;
 use App\Core\Database;
-use App\Models\Product_dit;
+use App\Models\ProductModel;
 use App\Models\AdminModel;
 
 class WishlistController extends Controller
@@ -56,7 +56,7 @@ class WishlistController extends Controller
             exit;
         }
 
-        $products = Product_dit::findStockByIds($ids);
+        $products = ProductModel::findStockByIds($ids);
 
         // حالة "نبّهني لما يتوفر" لكل منتج — تُحسب هنا وليس في findStockByIds
         // لأنها تعتمد على المستخدم الحالي بينما الموديل عام ومستخدَم في أماكن أخرى.

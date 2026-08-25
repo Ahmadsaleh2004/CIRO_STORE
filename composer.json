@@ -9,10 +9,15 @@
         },
         "files": [
             "app/config/openapi_info.php"
+        ],
+        "exclude-from-classmap": [
+            "app/config/",
+            "app/helpers/",
+            "app/views/"
         ]
     },
     "scripts": {
-        "docs:generate": "vendor/bin/openapi app/controllers app/config -o public/docs/openapi.yaml"
+        "docs:generate": "vendor/bin/openapi app/Controllers app/config -o public/docs/openapi.yaml"
     },
     "require": {
         "phpmailer/phpmailer": "^7.1"

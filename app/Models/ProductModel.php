@@ -6,7 +6,7 @@ use App\Core\Database;
 use PDO;
 use Exception;
 
-class Product_dit
+class ProductModel
 {
     /**
      * جلب كافة المنتجات المتاحة للعرض من قاعدة البيانات
@@ -18,7 +18,7 @@ class Product_dit
             $stmt = $db->query("SELECT * FROM products WHERE is_visible = 1 OR is_visible IS NULL ORDER BY id DESC");
             return $stmt->fetchAll();
         } catch (Exception $e) {
-            error_log("Product_dit::findVisible Error: " . $e->getMessage());
+            error_log("ProductModel::findVisible Error: " . $e->getMessage());
             return [];
         }
     }
@@ -33,7 +33,7 @@ class Product_dit
             $stmt = $db->query("SELECT COUNT(*) FROM products WHERE is_visible = 1 OR is_visible IS NULL");
             return (int)$stmt->fetchColumn();
         } catch (Exception $e) {
-            error_log("Product_dit::countVisible Error: " . $e->getMessage());
+            error_log("ProductModel::countVisible Error: " . $e->getMessage());
             return 0;
         }
     }
@@ -60,7 +60,7 @@ class Product_dit
             $stmt->execute();
             return $stmt->fetchAll();
         } catch (Exception $e) {
-            error_log("Product_dit::findVisiblePaginated Error: " . $e->getMessage());
+            error_log("ProductModel::findVisiblePaginated Error: " . $e->getMessage());
             return [];
         }
     }
@@ -77,7 +77,7 @@ class Product_dit
             $result = $stmt->fetch();
             return $result ?: null;
         } catch (Exception $e) {
-            error_log("Product_dit::findById Error: " . $e->getMessage());
+            error_log("ProductModel::findById Error: " . $e->getMessage());
             return null;
         }
     }
@@ -93,7 +93,7 @@ class Product_dit
             $stmt->execute([$productId]);
             return $stmt->fetchAll();
         } catch (Exception $e) {
-            error_log("Product_dit::getVariants Error: " . $e->getMessage());
+            error_log("ProductModel::getVariants Error: " . $e->getMessage());
             return [];
         }
     }
@@ -115,7 +115,7 @@ class Product_dit
             $stmt->execute([$productId]);
             return $stmt->fetchAll();
         } catch (Exception $e) {
-            error_log("Product_dit::getReviews Error: " . $e->getMessage());
+            error_log("ProductModel::getReviews Error: " . $e->getMessage());
             return [];
         }
     }
@@ -132,7 +132,7 @@ class Product_dit
             $result = $stmt->fetch();
             return $result ?: null;
         } catch (Exception $e) {
-            error_log("Product_dit::getUserReview Error: " . $e->getMessage());
+            error_log("ProductModel::getUserReview Error: " . $e->getMessage());
             return null;
         }
     }
@@ -167,7 +167,7 @@ class Product_dit
 
             return $related;
         } catch (Exception $e) {
-            error_log("Product_dit::getRelated Error: " . $e->getMessage());
+            error_log("ProductModel::getRelated Error: " . $e->getMessage());
             return [];
         }
     }
@@ -207,7 +207,7 @@ class Product_dit
             }
             return $result;
         } catch (Exception $e) {
-            error_log("Product_dit::findStockByIds Error: " . $e->getMessage());
+            error_log("ProductModel::findStockByIds Error: " . $e->getMessage());
             return [];
         }
     }
@@ -241,7 +241,7 @@ class Product_dit
                ->execute([$productId, $userId, $rating ?: null, $comment ?: null]);
             return ['ok' => true, 'message' => '✅ Thank you! Your review has been added.'];
         } catch (Exception $e) {
-            error_log('Product_dit::saveReview Error: ' . $e->getMessage());
+            error_log('ProductModel::saveReview Error: ' . $e->getMessage());
             return ['ok' => false, 'message' => 'Something went wrong, please try again.'];
         }
     }

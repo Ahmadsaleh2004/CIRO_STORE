@@ -4,7 +4,7 @@ namespace App\Controllers;
 
 use App\Core\Controller;
 use App\Core\Database;
-use App\Models\Product_dit;
+use App\Models\ProductModel;
 use App\Models\CategoryModel;
 
 class ProductController extends Controller
@@ -13,12 +13,12 @@ class ProductController extends Controller
     {
         $perPage     = 9;
         $currentPage = max(1, (int)($_GET['page'] ?? 1));
-        $totalCount  = Product_dit::countVisible();
+        $totalCount  = ProductModel::countVisible();
         $totalPages  = max(1, (int)ceil($totalCount / $perPage));
         $currentPage = min($currentPage, $totalPages);
         $offset      = ($currentPage - 1) * $perPage;
 
-        $rows = Product_dit::findVisiblePaginated($perPage, $offset);
+        $rows = ProductModel::findVisiblePaginated($perPage, $offset);
 
         $db = Database::connect();
         $visitorGender = getVisitorGender($db);
@@ -34,7 +34,7 @@ class ProductController extends Controller
         }
 
         $products = array_map(function (array $p) use ($visitorGender) {
-            $variants = Product_dit::getVariants((int)$p['id']);
+            $variants = ProductModel::getVariants((int)$p['id']);
             $display  = !empty($variants)
                 ? pickDisplayVariant($variants, $visitorGender)
                 : null;
@@ -82,7 +82,7 @@ class ProductController extends Controller
             exit;
         }
 
-        $p = Product_dit::findById($pid);
+        $p = ProductModel::findById($pid);
 
         // توجيه للرئيسية في حال عدم وجود المنتج لتجنب خطأ تحميل ملف 404 المفقود
         if (!$p) {
@@ -103,7 +103,7 @@ class ProductController extends Controller
             } else {
                 $rating  = (int)($_POST['rating'] ?? 0);
                 $comment = trim($_POST['comment'] ?? '');
-                $result  = Product_dit::saveReview($pid, getCurrentUserId(), $rating, $comment);
+                $result  = ProductModel::saveReview($pid, getCurrentUserId(), $rating, $comment);
                 if ($result['ok']) {
                     $reviewMsg = $result['message'];
                 } else {
@@ -113,7 +113,7 @@ class ProductController extends Controller
         }
 
         // جلب الـ Variants إن وجدت
-        $variants = Product_dit::getVariants($pid);
+        $variants = ProductModel::getVariants($pid);
         
         // تجهيز الـ Variant المعروض (إن وجد، وإلا نستخدم بيانات المنتج الأساسية)
         $db = Database::connect();
@@ -132,16 +132,16 @@ class ProductController extends Controller
         // يعني كتابة في قاعدة البيانات مع كل عرض صفحة.
 
         // معالجة التقييمات
-        $reviews   = Product_dit::getReviews($pid);
+        $reviews   = ProductModel::getReviews($pid);
         $avgRating = count($reviews) ? round(array_sum(array_column($reviews, 'rating')) / count($reviews), 1) : 0;
 
         $myReview = null;
         if (isUser()) {
-            $myReview = Product_dit::getUserReview($pid, getCurrentUserId());
+            $myReview = ProductModel::getUserReview($pid, getCurrentUserId());
         }
 
         // المنتجات المشابهة
-        $related = Product_dit::getRelated($pid, $p['manufacturer'] ?? null);
+        $related = ProductModel::getRelated($pid, $p['manufacturer'] ?? null);
 
         // الأسعار والمخزون مع المرونة (في حال عدم وجود الـ Variant يتم القراءة من المنتج الرئيسي مباشرة)
         $price      = (float)($selectedVariant['price'] ?? $p['price'] ?? 0);
