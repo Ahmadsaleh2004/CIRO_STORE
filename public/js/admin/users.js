@@ -1,7 +1,7 @@
 // ══════════════════════════════════════════════════════════════
 // public/js/admin/users.js — قائمة اليوزرز + تفاصيل يوزر
 // notify → admins.js (openNotifyModal مشتركة)
-// ⚠️ استخدم fetch() مباشرة + window.URLROOT — لا fetchWithCsrfRetry.
+// يستعمل fetchWithCsrfRetry لكل POST — شبكة أمان CSRF المشتركة.
 // ══════════════════════════════════════════════════════════════
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -44,8 +44,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 fd.append('csrf_token', window._csrfToken || '');
 
                 try {
-                    const res = await fetch(window.URLROOT + '/admin/users/delete', { method: 'POST', body: fd });
-                    const data = await res.json();
+                    const data = await fetchWithCsrfRetry(window.URLROOT + '/admin/users/delete', { method: 'POST', body: fd });
                     if (data.success) {
                         if (typeof showToast === 'function') showToast(data.message, 'success');
                         const row = document.querySelector('.user-row[data-uid="' + uid + '"]');
@@ -86,8 +85,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 fd.append('user_id', userId);
                 fd.append('csrf_token', window._csrfToken || '');
                 try {
-                    const res  = await fetch(window.URLROOT + '/admin/users/strikes/remove', { method: 'POST', body: fd });
-                    const data = await res.json();
+                    const data = await fetchWithCsrfRetry(window.URLROOT + '/admin/users/strikes/remove', { method: 'POST', body: fd });
                     if (data.success) { setTimeout(() => window.location.reload(), 500); }
                     else if (typeof showToast === 'function') showToast(data.message || 'Error', 'error');
                 } catch (err) {
@@ -112,8 +110,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 fd.append('reason', (result.value || '').trim());
                 fd.append('csrf_token', window._csrfToken || '');
                 try {
-                    const res  = await fetch(window.URLROOT + '/admin/users/strikes/add', { method: 'POST', body: fd });
-                    const data = await res.json();
+                    const data = await fetchWithCsrfRetry(window.URLROOT + '/admin/users/strikes/add', { method: 'POST', body: fd });
                     if (data.success) { setTimeout(() => window.location.reload(), 500); }
                     else if (typeof showToast === 'function') showToast(data.message || 'Error', 'error');
                 } catch (err) {
