@@ -42,6 +42,21 @@ class BrandingModel
 
             $itemsBySlider = [];
             foreach ($items as $it) {
+                // روابط صور جاهزة للاستعمال — نفس اصطلاح searchProducts()
+                // في هذا الموديل: الحقل 'image' فيها ناتج fixImagePath.
+                //
+                // كان محرّر السلايدر يبني المسار في JS بـ
+                // URLROOT + '/' + product_image_path، و product_image_path
+                // اسم ملف عارٍ مثل "airpods.jpg" — فيخرج /airpods.jpg بدل
+                // /images/airpods.jpg وتُكسر **كل** صور المنتجات في المحرّر.
+                // fixImagePath هي التي تعرف قاعدة البادئة، وهي في PHP.
+                $it['product_image_url'] = $it['product_image_path']
+                    ? fixImagePath($it['product_image_path'])
+                    : null;
+                $it['manual_image_url'] = $it['manual_image_path']
+                    ? fixImagePath($it['manual_image_path'])
+                    : null;
+
                 $itemsBySlider[(int)$it['slider_id']][] = $it;
             }
 

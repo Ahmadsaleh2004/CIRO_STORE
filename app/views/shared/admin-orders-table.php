@@ -41,7 +41,7 @@ $showAutoReleased = $showAutoReleased ?? false;
                     <?php else: ?>
                     <?php
                     $orderStatus = $o['status'];
-                    $badgeSize   = '';
+                    $badgeExtraClass = '';
                     $badgeLabel  = '';
                     require APPROOT . '/views/shared/order-status-badge.php';
                     ?>

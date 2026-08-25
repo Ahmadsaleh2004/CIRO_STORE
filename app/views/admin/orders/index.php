@@ -90,7 +90,7 @@
                     <td><?= htmlspecialchars($o['payment_method']) ?></td>
                     <td><?php
                         $orderStatus = $o['status'];
-                        $badgeSize   = '';
+                        $badgeExtraClass = '';
                         // هذه الصفحة وحدها تكتب "Not Taken" بتاء كبيرة
                         $badgeLabel  = match($o['status']) {
                             'not_taken' => 'Not Taken',
