@@ -44,13 +44,22 @@ function pickDisplayVariant(array $variants, ?string $visitorGender): ?array
     return $variants[0];
 }
 
-function getVisitorGender(PDO $pdo): ?string
+/**
+ * جنس الزائر الحالي من ملفه الشخصي، أو null للزائر غير المسجّل.
+ *
+ * $pdo اختياري: تُمرَّر عند وجود اتصال جاهز في السياق، وإلا تفتح الدالة
+ * اتصالها بنفسها. جُعل اختيارياً كي لا تضطر الكنترولرز لاستيراد
+ * Database لمجرّد تمريره.
+ */
+function getVisitorGender(?PDO $pdo = null): ?string
 {
     // الحارس مقصود ويبقى: هذه الدالة قد تُستدعى من سكربتات CLI في
     // scripts/ التي تحمّل الهيلبرز بترتيبها الخاص، فلا نفترض أن
     // auth_helper.php محمَّل. باقي حُرّاس function_exists في المشروع
     // كانت تحرس دوالّ محمَّلة دائماً وأُزيلت.
     if (!function_exists('isUser') || !isUser()) return null;
+
+    $pdo ??= \App\Core\Database::connect();
     $stmt = $pdo->prepare("SELECT gender FROM users WHERE id = ? LIMIT 1");
     $stmt->execute([getCurrentUserId()]);
     $gender = $stmt->fetchColumn();

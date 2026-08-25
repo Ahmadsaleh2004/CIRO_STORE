@@ -211,11 +211,7 @@ class AdminSupportController extends AdminController
         }
 
         // ── جلب محتوى الرسالة قبل الحذف للتفاصيل ──────────────────────
-        $db = Database::connect();
-        $stmt = $db->prepare("SELECT message FROM contact_messages WHERE id = ?");
-        $stmt->execute([$msgId]);
-        $msg = $stmt->fetch();
-        $msgText = $msg['message'] ?? 'N/A';
+        $msgText = SupportModel::getMessageText($msgId) ?? 'N/A';
 
         if (!SupportModel::delete($msgId)) {
             $this->respond(false, 'Could not delete message.');

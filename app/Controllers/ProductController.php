@@ -3,9 +3,9 @@
 namespace App\Controllers;
 
 use App\Core\Controller;
-use App\Core\Database;
 use App\Models\ProductModel;
 use App\Models\CategoryModel;
+use App\Models\StockNotificationModel;
 
 class ProductController extends Controller
 {
@@ -19,19 +19,12 @@ class ProductController extends Controller
         $offset      = ($currentPage - 1) * $perPage;
 
         $rows = ProductModel::findVisiblePaginated($perPage, $offset);
-
-        $db = Database::connect();
-        $visitorGender = getVisitorGender($db);
+        $visitorGender = getVisitorGender();
 
         // Fetch notified product IDs for current user (if logged in)
-        $notifiedProductIds = [];
-        if (isUser()) {
-            $stmt = Database::connect()->prepare(
-                "SELECT product_id FROM stock_notifications WHERE user_id = ?"
-            );
-            $stmt->execute([getCurrentUserId()]);
-            $notifiedProductIds = array_map('intval', $stmt->fetchAll(\PDO::FETCH_COLUMN));
-        }
+        $notifiedProductIds = isUser()
+            ? StockNotificationModel::productIdsForUser(getCurrentUserId())
+            : [];
 
         $products = array_map(function (array $p) use ($visitorGender) {
             $variants = ProductModel::getVariants((int)$p['id']);
@@ -116,9 +109,8 @@ class ProductController extends Controller
         $variants = ProductModel::getVariants($pid);
         
         // تجهيز الـ Variant المعروض (إن وجد، وإلا نستخدم بيانات المنتج الأساسية)
-        $db = Database::connect();
-        $visitorGender   = getVisitorGender($db);
-        $selectedVariant = !empty($variants) 
+        $visitorGender   = getVisitorGender();
+        $selectedVariant = !empty($variants)
             ? pickDisplayVariant($variants, $visitorGender) 
             : ($variants[0] ?? []);
 
@@ -144,14 +136,8 @@ class ProductController extends Controller
         $csrf       = generateCsrfToken();
 
         // Check if current user already requested notification for this product
-        $alreadyRequested = false;
-        if (isUser()) {
-            $stmt = Database::connect()->prepare(
-                "SELECT id FROM stock_notifications WHERE product_id = ? AND user_id = ? LIMIT 1"
-            );
-            $stmt->execute([$pid, getCurrentUserId()]);
-            $alreadyRequested = (bool)$stmt->fetch();
-        }
+        $alreadyRequested = isUser()
+            && StockNotificationModel::exists($pid, getCurrentUserId());
 
         $pageTitle       = $p['name'] ?? 'Product Details';
         $pageDescription = substr($p['description'] ?? '', 0, 155);

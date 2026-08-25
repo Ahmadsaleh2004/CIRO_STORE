@@ -3,11 +3,12 @@
 namespace App\Controllers;
 
 use App\Core\AdminController;
-use App\Core\Database;
 use App\Core\Middleware;
 use App\Models\AdminProductModel;
 use App\Models\CategoryModel;
 use App\Models\AdminModel;
+use App\Models\StockNotificationModel;
+use App\Models\NotificationModel;
 use OpenApi\Attributes as OA;
 
 /**
@@ -377,11 +378,7 @@ class AdminProductsController extends AdminController
         $oldImagePaths = AdminProductModel::getVariantImagePaths($productId);
 
         // هل كان المنتج بالكامل نافذ الكمية قبل هذا التعديل؟
-        $stmt = Database::connect()->prepare(
-            "SELECT COALESCE(SUM(stock_quantity), 0) FROM product_variants WHERE product_id = ?"
-        );
-        $stmt->execute([$productId]);
-        $wasOutOfStock = ((int)$stmt->fetchColumn() === 0);
+        $wasOutOfStock = (AdminProductModel::getTotalStock($productId) === 0);
 
         $parsedVariants = $this->parseAndUploadVariants($variants, $variantFiles, $uploadDir);
 
@@ -417,16 +414,8 @@ class AdminProductsController extends AdminController
         }
 
         // إذا كان نافذًا وعاد للتوفر، أخبر المستخدمين
-        if ($wasOutOfStock) {
-            $newTotalStmt = Database::connect()->prepare(
-                "SELECT COALESCE(SUM(stock_quantity), 0) FROM product_variants WHERE product_id = ?"
-            );
-            $newTotalStmt->execute([$productId]);
-            $isBackInStock = ((int)$newTotalStmt->fetchColumn() > 0);
-
-            if ($isBackInStock) {
-                $this->notifyUsersProductBackInStock($productId, $postData['name']);
-            }
+        if ($wasOutOfStock && AdminProductModel::getTotalStock($productId) > 0) {
+            $this->notifyUsersProductBackInStock($productId, $postData['name']);
         }
 
         // احذف الصور القديمة التي لم تعد مستخدمة
@@ -459,19 +448,15 @@ class AdminProductsController extends AdminController
      */
     private function notifyUsersProductBackInStock(int $productId, string $productName): void
     {
-        $db = Database::connect();
-
-        $waiting = $db->prepare("SELECT DISTINCT user_id FROM stock_notifications WHERE product_id = ?");
-        $waiting->execute([$productId]);
-        $userIds = $waiting->fetchAll(\PDO::FETCH_COLUMN);
+        $userIds = StockNotificationModel::waitingUserIds($productId);
 
         if (empty($userIds)) {
             return;
         }
 
         foreach ($userIds as $userId) {
-            \App\Models\NotificationModel::insert(
-                (int)$userId,
+            NotificationModel::insert(
+                $userId,
                 'Product Back in Stock! 🎉',
                 "\"{$productName}\" you wanted is now back in stock!",
                 getCurrentAdminId(),
@@ -481,7 +466,7 @@ class AdminProductsController extends AdminController
         }
 
         // إزالة الطلبات بعد إرسال الإشعار كي لا تتكرر بالمرة القادمة
-        $db->prepare("DELETE FROM stock_notifications WHERE product_id = ?")->execute([$productId]);
+        StockNotificationModel::clearForProduct($productId);
     }
 
     // ═══════════════════════════════════════════════════════════

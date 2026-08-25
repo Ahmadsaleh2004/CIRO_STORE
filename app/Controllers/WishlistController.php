@@ -3,9 +3,10 @@
 namespace App\Controllers;
 
 use App\Core\Controller;
-use App\Core\Database;
 use App\Models\ProductModel;
 use App\Models\AdminModel;
+use App\Models\UserModel;
+use App\Models\StockNotificationModel;
 
 class WishlistController extends Controller
 {
@@ -63,21 +64,11 @@ class WishlistController extends Controller
         // نفس منطق $notifiedProductIds في ProductController::index().
         // ملاحظة: هذا الـ endpoint عام (GET بلا تسجيل دخول) — لذلك الزائر غير
         // المسجّل يحصل على false للجميع بدل تسريب حالة مستخدم آخر.
-        $notifiedIds = [];
-        if (isUser() && ($uid = getCurrentUserId())) {
-            try {
-                $placeholders = implode(',', array_fill(0, count($ids), '?'));
-                $stmt = Database::connect()->prepare(
-                    "SELECT product_id FROM stock_notifications
-                     WHERE user_id = ? AND product_id IN ({$placeholders})"
-                );
-                $stmt->execute(array_merge([$uid], $ids));
-                $notifiedIds = array_map('intval', $stmt->fetchAll(\PDO::FETCH_COLUMN));
-            } catch (\Throwable $e) {
-                // الفشل هنا لا يجب أن يُسقط بيانات المخزون — نكمل بحالة "غير مُطلَب"
-                error_log('WishlistController::stock notify-state Error: ' . $e->getMessage());
-            }
-        }
+        // الموديل يبتلع أي فشل ويُرجع مصفوفة فارغة، فبيانات المخزون
+        // تصل للعميل حتى لو تعذّر جلب حالة "نبّهني".
+        $notifiedIds = (isUser() && ($uid = getCurrentUserId()))
+            ? StockNotificationModel::productIdsForUserWithin($uid, $ids)
+            : [];
 
         foreach ($products as $pid => $row) {
             $products[$pid]['already_notified'] = in_array((int)$pid, $notifiedIds, true);
@@ -122,15 +113,9 @@ class WishlistController extends Controller
             exit;
         }
 
-        $db = Database::connect();
-        $exists = $db->prepare("SELECT id FROM stock_notifications WHERE product_id = ? AND user_id = ? LIMIT 1");
-        $exists->execute([$pid, $uid]);
-
-        if (!$exists->fetch()) {
-            $db->prepare("INSERT INTO stock_notifications (product_id, user_id) VALUES (?, ?)")
-               ->execute([$pid, $uid]);
-
-            // إشعار الأدمنية المخوّلين
+        // add() تُرجع true فقط عند إضافة صفّ جديد فعلاً، فلا يُشعَر
+        // الأدمنية مرتين لو ضغط المستخدم الزر مجدداً.
+        if (StockNotificationModel::add($pid, $uid)) {
             $this->notifyAdminsAboutStockRequest($pid, $uid);
         }
 
@@ -143,19 +128,9 @@ class WishlistController extends Controller
      */
     private function notifyAdminsAboutStockRequest(int $productId, int $requestingUserId): void
     {
-        $db = Database::connect();
-
-        $prodStmt = $db->prepare("SELECT name FROM products WHERE id = ? LIMIT 1");
-        $prodStmt->execute([$productId]);
-        $prodName = $prodStmt->fetchColumn() ?: "Product #{$productId}";
-
-        $userStmt = $db->prepare("SELECT full_name FROM users WHERE id = ? LIMIT 1");
-        $userStmt->execute([$requestingUserId]);
-        $userName = $userStmt->fetchColumn() ?: 'A customer';
-
-        $countStmt = $db->prepare("SELECT COUNT(*) FROM stock_notifications WHERE product_id = ?");
-        $countStmt->execute([$productId]);
-        $requestCount = (int)$countStmt->fetchColumn();
+        $prodName     = ProductModel::getNameById($productId) ?? "Product #{$productId}";
+        $userName     = UserModel::getFullNameById($requestingUserId) ?? 'A customer';
+        $requestCount = StockNotificationModel::countForProduct($productId);
 
         $message = "{$userName} requested to be notified when this product is back in stock ({$requestCount})";
 

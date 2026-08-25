@@ -691,4 +691,23 @@ class UserModel
         $user = self::findById($userId);
         return $user && !empty($user['email_verified_at']);
     }
+
+    /**
+     * الاسم الكامل لمستخدم بمعرّفه، أو null إن لم يوجد.
+     *
+     * نُقل من WishlistController حيث كان استعلاماً مكتوباً مباشرة داخل
+     * دالة إشعار الأدمنية بطلب "نبّهني عند التوفّر".
+     */
+    public static function getFullNameById(int $userId): ?string
+    {
+        try {
+            $stmt = Database::connect()->prepare("SELECT full_name FROM users WHERE id = ? LIMIT 1");
+            $stmt->execute([$userId]);
+            $name = $stmt->fetchColumn();
+            return $name !== false ? (string)$name : null;
+        } catch (Exception $e) {
+            error_log("UserModel::getFullNameById Error: " . $e->getMessage());
+            return null;
+        }
+    }
 }
