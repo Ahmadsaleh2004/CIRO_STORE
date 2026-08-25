@@ -8,12 +8,19 @@
  */
 
 // بادج الحالة + سطر المناول
-$statusBadge = match($order['status']) {
-    'completed' => '<span class="badge bg-success fs-6">Completed</span>',
-    'cancelled' => '<span class="badge bg-danger fs-6">Cancelled</span>',
-    'taken'     => '<span class="badge bg-primary fs-6">Taken</span>',
-    default     => '<span class="badge bg-warning text-dark fs-6">Not Taken</span>',
+// بادج الحالة يُبنى من shared/order-status-badge.php — تُلتقط مخرجاته
+// في متغيّر لأنه يُطبع داخل <h1> بعد سطور من هنا.
+$orderStatus = $order['status'];
+$badgeSize   = 'fs-6';
+$badgeLabel  = match($order['status']) {
+    'completed' => 'Completed',
+    'cancelled' => 'Cancelled',
+    'taken'     => 'Taken',
+    default     => 'Not Taken',
 };
+ob_start();
+require APPROOT . '/views/shared/order-status-badge.php';
+$statusBadge = trim(ob_get_clean());
 
 $handlerLine = '';
 if ($order['status'] === 'completed' && !empty($order['handler_admin_name'])) {

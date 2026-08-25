@@ -175,12 +175,6 @@ function renderAuditRowsTable(array $rows): void
             <tbody>
                 <?php foreach ($orderRows as $o):
                     $wasAutoReleased = !empty($o['was_auto_released']);
-                    $sc = match($o['status']) {
-                        'completed' => 'bg-success',
-                        'cancelled' => 'bg-danger',
-                        'taken'     => 'bg-primary',
-                        default     => 'bg-warning text-dark',
-                    };
                 ?>
                 <tr>
                     <td class="fw-semibold">
@@ -191,7 +185,12 @@ function renderAuditRowsTable(array $rows): void
                         <?php if ($wasAutoReleased): ?>
                         <span class="badge bg-secondary" title="This order timed out while held by this admin and was returned to Not Taken.">⏱ Auto-Released</span>
                         <?php else: ?>
-                        <span class="badge <?= $sc ?>"><?= htmlspecialchars(ucfirst(str_replace('_', ' ', $o['status']))) ?></span>
+                        <?php
+                        $orderStatus = $o['status'];
+                        $badgeSize   = '';
+                        $badgeLabel  = '';
+                        require APPROOT . '/views/shared/order-status-badge.php';
+                        ?>
                         <?php endif; ?>
                     </td>
                     <td>$<?= number_format($o['total_amount'], 2) ?></td>

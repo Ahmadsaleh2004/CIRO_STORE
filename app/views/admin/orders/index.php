@@ -78,15 +78,7 @@
                         style="color:var(--muted-text);">No orders found.</td>
                 </tr>
             <?php else: ?>
-                <?php foreach ($orders as $o):
-                    [$statusLabel, $badgeColor] = match($o['status']) {
-                        'not_taken' => ['Not Taken', 'warning text-dark'],
-                        'taken'     => ['Taken',     'primary'],
-                        'cancelled' => ['Cancelled', 'danger'],
-                        'completed' => ['Completed', 'success'],
-                        default     => [ucfirst($o['status']), 'secondary'],
-                    };
-                ?>
+                <?php foreach ($orders as $o): ?>
                 <tr onclick="goToOrderDetails(<?= (int)$o['order_id'] ?>)" style="cursor:pointer;">
                     <td class="fw-semibold">#<?= (int)$o['order_id'] ?></td>
                     <td>
@@ -95,7 +87,19 @@
                     </td>
                     <td>$<?= number_format($o['total_amount'], 2) ?></td>
                     <td><?= htmlspecialchars($o['payment_method']) ?></td>
-                    <td><span class="badge bg-<?= $badgeColor ?>"><?= htmlspecialchars($statusLabel) ?></span></td>
+                    <td><?php
+                        $orderStatus = $o['status'];
+                        $badgeSize   = '';
+                        // هذه الصفحة وحدها تكتب "Not Taken" بتاء كبيرة
+                        $badgeLabel  = match($o['status']) {
+                            'not_taken' => 'Not Taken',
+                            'taken'     => 'Taken',
+                            'cancelled' => 'Cancelled',
+                            'completed' => 'Completed',
+                            default     => ucfirst($o['status']),
+                        };
+                        require APPROOT . '/views/shared/order-status-badge.php';
+                    ?></td>
                     <td>
                         <?= !empty($o['handled_by_name'])
                             ? htmlspecialchars($o['handled_by_name'])

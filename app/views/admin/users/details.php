@@ -201,20 +201,18 @@ $strikesLabel    = $strikesCount >= 3 ? 'Blocked' : ($strikesCount > 0 ? 'Warnin
                 </tr>
             </thead>
             <tbody>
-                <?php foreach ($orders as $o):
-                    $sc = match($o['status']) {
-                        'completed' => 'bg-success',
-                        'cancelled' => 'bg-danger',
-                        'taken'     => 'bg-primary',
-                        default     => 'bg-warning text-dark',
-                    };
-                ?>
+                <?php foreach ($orders as $o): ?>
                 <tr>
                     <td class="fw-semibold">
                         <a href="<?= URLROOT ?>/admin/orders/details?id=<?= (int)$o['order_id'] ?>"
                            class="fw-semibold">#<?= (int)$o['order_id'] ?></a>
                     </td>
-                    <td><span class="badge <?= $sc ?>"><?= htmlspecialchars(ucfirst(str_replace('_', ' ', $o['status']))) ?></span></td>
+                    <td><?php
+                        $orderStatus = $o['status'];
+                        $badgeSize   = '';
+                        $badgeLabel  = '';
+                        require APPROOT . '/views/shared/order-status-badge.php';
+                    ?></td>
                     <td>$<?= number_format($o['total_amount'], 2) ?></td>
                     <td style="font-size:.8rem;color:var(--muted-text);white-space:nowrap;"><?= htmlspecialchars(date('M j, Y H:i', strtotime($o['created_at']))) ?></td>
                 </tr>
