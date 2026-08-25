@@ -148,3 +148,45 @@ function requireAdminPermission(string $perm): void
         exit;
     }
 }
+
+/**
+ * كل كم ثانية يُسمح بكتابة users.last_activity لنفس المستخدم.
+ * 15 دقيقة: دقّة أكثر من كافية لمؤشر "نشط خلال 90 يوماً" في لوحة
+ * التحكم، وبكلفة كتابة واحدة كل ربع ساعة بدل واحدة لكل عرض صفحة.
+ */
+const USER_ACTIVITY_THROTTLE_SECONDS = 900;
+
+/**
+ * يُحدّث users.last_activity للمستخدم الحالي، بمعدّل أقصاه مرة كل
+ * USER_ACTIVITY_THROTTLE_SECONDS.
+ *
+ * لماذا هذه الدالة موجودة؟
+ * كان العمود يُحدَّث عند تسجيل الدخول فقط (AuthController::login)، فمستخدم
+ * يتصفّح المتجر يومياً بلا إعادة دخول كان يُعدّ "غير نشط" بعد 90 يوماً في
+ * AdminDashboardModel::getUsersBreakdown. كان في ProductController استدعاء
+ * updateUserActivity() لدالة غير معرَّفة أصلاً، محروس بـfunction_exists فلم
+ * ينفَّذ ولا مرة.
+ *
+ * أين تُستدعى؟ من Controller::view() فقط — أي مع كل عرض صفحة متجر.
+ * لا تُستدعى من الـbootstrap لأن ذلك يعني بدء جلسة PHPSESSID قبل أن
+ * تتمكّن startAdminSession() من ضبط session_name('admin_session')،
+ * وهو ما يكسر مصادقة الأدمن. ولا تُستدعى من AdminController::adminView()
+ * لأن نشاط الأدمن يُتتبَّع منفصلاً في AdminModel.
+ *
+ * الخنق يُخزَّن في الجلسة لا في قاعدة البيانات، فلا يكلّف استعلام قراءة.
+ */
+function touchUserActivity(): void
+{
+    if (!isUser()) return;
+
+    $now  = time();
+    $last = (int)($_SESSION['last_activity_write'] ?? 0);
+
+    if ($now - $last < USER_ACTIVITY_THROTTLE_SECONDS) return;
+
+    $userId = getCurrentUserId();
+    if ($userId === null) return;
+
+    \App\Models\UserModel::updateActivity($userId);
+    $_SESSION['last_activity_write'] = $now;
+}
