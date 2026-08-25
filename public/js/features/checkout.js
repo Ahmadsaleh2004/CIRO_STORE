@@ -11,7 +11,7 @@
 // تحت هذا السطر منطق خالص لا يعرف شيئاً عن PHP.
 //
 // كل شيء داخل IIFE عن قصد: النسخة المضمّنة كانت تعرّف
-// URLROOT و CSRF_TOKEN و fetchWithCsrf و goTo و buildReview
+// URLROOT و CSRF_TOKEN و postJson و goTo و buildReview
 // **في النطاق العام**. مقبول في كتلة تخصّ صفحة واحدة، لكنه في ملف
 // خارجي يُحمَّل مع بقية ملفات المتجر يعني تصادم أسماء محتملاً — و
 // `const URLROOT` في نطاق عام يرمي SyntaxError لو أعلنه ملف آخر.
@@ -50,18 +50,30 @@
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
-    // ── دالة fetch مع CSRF ───────────────────────────────────────
-    // ملاحظة: هذه **ليست** fetchWithCsrfRetry من js/core/csrf.js.
-    // تلك تعيد بناء الجسم عند فشل التوكن وتدعم FormData و
-    // urlencoded فقط؛ وهذه الصفحة ترسل JSON، وإعادة بناء جسم JSON
-    // ليست ضمن ما تعرفه تلك الدالة. تُركت مستقلة كما كانت.
-    async function fetchWithCsrf(url, method, data) {
-        const res = await fetch(url, {
-            method,
+    // ── إرسال JSON عبر شبكة أمان CSRF المركزية ───────────────────
+    // كان هنا غلاف محلي اسمه fetchWithCsrf يرسل الطلب بلا إعادة محاولة،
+    // ويبرّر نفسه بأن fetchWithCsrfRetry «تدعم FormData وurlencoded فقط
+    // وهذه الصفحة ترسل JSON». **كان صحيحاً حين كُتب، وسقط في المرحلة
+    // 6ب-1** التي علّمت تلك الدالة إعادة بناء أجسام JSON بالضبط.
+    //
+    // ولماذا يهمّ هنا تحديداً: التوكن في هذا المشروع واحد لكل جلسة،
+    // فيكفي أن يفشل فورم في تبويب آخر ليُدوَّر التوكن ويصير توكن هذه
+    // الصفحة باطلاً — فيضيع الطلب. وضياع طلب هنا يعني **ضياع عملية
+    // شراء مكتملة** بعد أن ملأ المستخدم ثلاث خطوات.
+    //
+    // وإعادة المحاولة آمنة على /checkout: الكنترولر يتحقق من التوكن
+    // **قبل** فحص idempotency وقبل إنشاء أي طلب، فالرفض يعني أن شيئاً
+    // لم يُنشأ بعد. ومفتاح idempotency يبقى في الجسم المُعاد بناؤه
+    // فيحمي من ازدواج الطلب على أي حال.
+    //
+    // csrf.js محمَّل في فوتر المتجر قبل هذا الملف (كلاهما defer، والتنفيذ
+    // بترتيب المستند)، فالدالة معرَّفة يقيناً حين يعمل ما تحت.
+    function postJson(url, payload) {
+        return fetchWithCsrfRetry(url, {
+            method:  'POST',
             headers: { 'Content-Type': 'application/json' },
-            body:    JSON.stringify(data),
+            body:    JSON.stringify(payload),
         });
-        return res.json();
     }
 
     // ── الحصول على العنوان المختار ───────────────────────────────
@@ -130,7 +142,7 @@
             return;
         }
 
-        const res = await fetchWithCsrf(URLROOT + '/user/addresses', 'POST', {
+        const res = await postJson(URLROOT + '/user/addresses', {
             csrf_token: CSRF_TOKEN,
             label, phone_number: phone, country, city, full_address: full, is_default: isDefault,
         });
@@ -162,7 +174,7 @@
         document.getElementById('placeOrderBtn').textContent = '⏳ Placing Order…';
 
         try {
-            const res = await fetchWithCsrf(URLROOT + '/checkout', 'POST', {
+            const res = await postJson(URLROOT + '/checkout', {
                 csrf_token:       CSRF_TOKEN,
                 address_id:       addrId,
                 payment_method:   paymentMethod,
