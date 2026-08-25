@@ -42,7 +42,7 @@ abstract class Controller
         // تكتشف غياب الـview، فيستحيل عندها إرسال كود 404 (الترويسات
         // أُرسلت أصلاً) وتخرج نصف صفحة مكسورة.
         if (!is_file($__viewFile)) {
-            $this->renderViewNotFound($view);
+            ErrorPage::notFound('view مفقود: ' . $__viewFile);
         }
 
         // نبضة نشاط المستخدم — مخنوقة إلى مرة كل 15 دقيقة (راجع
@@ -81,36 +81,9 @@ abstract class Controller
         }
     }
 
-    /**
-     * صفحة 404 حقيقية بدل die("View file [...] not found!").
-     *
-     * القديمة كانت تطبع المسار المطلق على قرص الخادم في المتصفح — كشف
-     * لبنية المجلدات بلا فائدة للمستخدم. المسار الآن يذهب إلى سجل أخطاء
-     * PHP وحده، والمستخدم يرى رسالة عامة مع كود 404 صحيح.
-     */
-    protected function renderViewNotFound(string $view): never
-    {
-        error_log('[Cairo Store] View not found: ' . APPROOT . '/views/' . $view . '.php');
-
-        if (!headers_sent()) {
-            http_response_code(404);
-            header('Content-Type: text/html; charset=utf-8');
-        }
-
-        // احتياط: لو غاب ملف الـ404 نفسه نطبع صفحة صغيرة بدل استدعاء
-        // view() مجدداً — استدعاؤها هنا يعني تكراراً لا نهائياً.
-        $errorPage = APPROOT . '/views/errors/404.php';
-        if (is_file($errorPage)) {
-            require $errorPage;
-        } else {
-            echo '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">'
-               . '<title>404 — Page Not Found</title></head><body>'
-               . '<h1>404</h1><p>The page you requested could not be found.</p>'
-               . '</body></html>';
-        }
-
-        exit;
-    }
+    // ملاحظة: صفحة الـ404 نفسها في App\Core\ErrorPage — لا هنا. كانت
+    // نسخة محلية في هذا الكلاس، لكن Router يحتاجها أيضاً وهو لا يرث
+    // Controller (ولا يجب أن يرثه)، فكانت ستُنسخ مرتين.
 
     // ═══════════════════════════════════════════════════════════
     // استجابات JSON — مشتركة بين كل الكنترولرز

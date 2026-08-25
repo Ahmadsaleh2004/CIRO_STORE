@@ -90,8 +90,10 @@ class Router
             }
         }
 
-        http_response_code(404);
-        echo "404 - Page Not Found";
+        // راوت غير مسجَّل — حالة مختلفة عن «الراوت مسجَّل لكن ملف الـview
+        // غائب» التي تعالجها Controller::view()، لكن ما يراه الزائر واحد.
+        // كان هنا echo لنص عارٍ بلا <html> ولا لغة ولا رابط عودة.
+        ErrorPage::notFound($requestMethod . ' ' . $path);
     }
 
     /**
