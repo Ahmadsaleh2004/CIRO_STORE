@@ -396,7 +396,14 @@ class AuthController extends Controller
             ? \App\Models\AdminModel::validatePasswordResetToken($email, $token, 'admin')
             : UserModel::validatePasswordResetToken($email, $token, 'user');
 
-        require APPROOT . '/views/auth/reset-password.php';
+        // 'bare': صفحة مستقلة بلا navbar ولا footer المتجر — لا تُحمَّل
+        // هنا أصول المتجر كاملة لأن الوصول إليها بلا جلسة وبتوكن فقط.
+        $this->view('auth/reset-password', [
+            'valid' => $valid,
+            'token' => $token,
+            'email' => $email,
+            'type'  => $type,
+        ], 'bare');
     }
 
     // POST /auth/reset — تنفيذ تغيير كلمة المرور

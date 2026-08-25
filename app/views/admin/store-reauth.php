@@ -1,28 +1,20 @@
-<!DOCTYPE html>
-<html lang="en" dir="ltr">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<?php
+/**
+ * app/views/admin/store-reauth.php — إعادة التحقق بكلمة السر قبل الرجوع
+ * من وضع المتجر إلى لوحة التحكم.
+ *
+ * layout: 'bare' — كانت هذه الصفحة تكتب <!DOCTYPE html> و<head> كاملين
+ * بيدها؛ صارا في inc/head-bare.php. تشارك login.php نفس ملف الـCSS
+ * المستقل (لا store.css ولا admin.css).
+ *
+ * المتغيرات: $return — الرابط الذي يعود إليه الأدمن بعد نجاح التحقق.
+ */
 
-    <!-- منع الفهرسة — صفحة داخلية خاصة بالأدمن -->
-    <meta name="robots" content="noindex, nofollow">
+$bareTitle = 'Admin Re-authentication — ' . SITENAME;
+$bareCss   = ['css/admin/pages/login.css'];
 
-    <title>Admin Re-authentication — Cairo Store</title>
-
-    <!-- Bootstrap CSS — يُحمَّل فعلياً (لا يُعتمد على مسارات نسبية قابلة للكسر) -->
-    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
-    <link
-        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
-        rel="stylesheet"
-        integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH"
-        crossorigin="anonymous"
-    >
-
-    <!-- صفحة مستقلة: ملف واحد يحمل ألوانه ومتغيراته بنفسه.
-         لا store.css ولا admin.css هنا. -->
-    <link rel="stylesheet" href="<?= URLROOT ?>/css/admin/pages/login.css">
-</head>
-<body>
+require APPROOT . '/views/inc/head-bare.php';
+?>
 
 <!-- URLROOT يُعرَّف هنا لأن هذه الصفحة مستقلة عن layout الأدمن (لا head.php) -->
 <script>window.URLROOT = "<?= URLROOT ?>";</script>
@@ -157,5 +149,4 @@
 })();
 </script>
 
-</body>
-</html>
+<?php require APPROOT . '/views/inc/footer-bare.php'; ?>

@@ -15,13 +15,17 @@
 /**
  * قائمة ملفات الدخول لكل حزمة، بالترتيب.
  * admin يُحمِّل store أولاً لأن لوحة التحكم تعيد استخدام كل طبقة المتجر.
+ *
+ * حُذفت حزمة 'admin-auth' هنا: لم تكن مستدعاة من أي مكان، وكانت تناقض
+ * ما تعلنه public/css/admin/pages/login.css صراحةً في رأسها — أنه ملف
+ * مستقل لا يعتمد على tokens.css. صفحتا الأدمن المستقلتان تعلنان ملف
+ * الـCSS في $bareCss مباشرة.
  */
 function cssBundleFiles(string $bundle): array
 {
     return match ($bundle) {
-        'admin'      => ['css/store.css', 'css/admin.css'],
-        'admin-auth' => ['css/base/tokens.css', 'css/admin/pages/login.css'],
-        default      => ['css/store.css'],
+        'admin' => ['css/store.css', 'css/admin.css'],
+        default => ['css/store.css'],
     };
 }
 

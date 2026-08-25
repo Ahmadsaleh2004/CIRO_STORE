@@ -1,6 +1,19 @@
 <?php
 
-// تحميل Autoloader الخاص بـ Composer (PHPMailer وغيره من الحزم الخارجية)
+// تحميل Autoloader الخاص بـ Composer.
+//
+// هذا السطر يحمّل ثلاثة أشياء دفعةً واحدة:
+//   1. الحزم الخارجية (PHPMailer وغيرها)
+//   2. كلاسات المشروع عبر PSR-4 على "App\\" => app/
+//   3. ملفات الهيلبرز الستة عبر autoload.files في composer.json
+//
+// الهيلبرز كانت تُحمَّل هنا بـglob على مجلد helpers. نُقلت إلى composer
+// كي تصير قائمة التحميل معلنة في مكان واحد يراه dump-autoload -o، وكي
+// لا يعتمد ترتيب التحميل على ترتيب نظام الملفات.
+//
+// كلها تعريفات دوال فقط ولا تنفّذ شيئاً عند التحميل، فتحميلها قبل
+// config.php آمن — الثوابت (URLROOT وأخواتها) تُقرأ داخل أجسام الدوال
+// وقت الاستدعاء لا وقت التعريف.
 require_once __DIR__ . '/../vendor/autoload.php';
 
 // تحميل ملف .env بأمان (قارئ سطر بسطر، بدون تفسير PHP لأي أقواس أو كلمات محجوزة)
@@ -8,18 +21,6 @@ require_once __DIR__ . '/../app/config/env_loader.php';
 loadEnv(__DIR__ . '/../.env');
 
 require_once __DIR__ . '/../app/config/config.php';
-require_once __DIR__ . '/../app/helpers/functions.php';
-
-// تحميل بقية ملفات الـ helpers تلقائياً
-foreach (glob(__DIR__ . '/../app/helpers/*.php') as $helperFile) {
-    if (basename($helperFile) !== 'functions.php') {
-        require_once $helperFile;
-    }
-}
-
-// ملاحظة: لا حاجة لـautoloader يدوي هنا — composer.json يعرّف
-// PSR-4 على "App\\" => app/ (راجع vendor/composer/autoload_psr4.php)
-// وvendor/autoload.php المُحمَّل أعلاه يتكفّل بكل كلاسات App.
 
 use App\Core\App;
 use App\Controllers\HomeController;
