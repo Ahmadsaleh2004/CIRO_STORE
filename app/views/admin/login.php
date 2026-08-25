@@ -1,29 +1,22 @@
-<!DOCTYPE html>
-<html lang="en" dir="ltr">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<?php
+/**
+ * app/views/admin/login.php — صفحة تسجيل دخول الأدمن.
+ *
+ * layout: 'bare' — لا navbar المتجر ولا navbar الأدمن. كانت هذه الصفحة
+ * تكتب <!DOCTYPE html> و<head> كاملين بيدها؛ صارا في inc/head-bare.php.
+ *
+ * صفحة مستقلة عن أنظمة الأصول: ملف CSS واحد يحمل ألوانه ومتغيراته
+ * بنفسه — لا store.css ولا admin.css هنا.
+ */
 
-    <!-- منع الفهرسة — طبقة حماية إضافية حتى لو تجاهل المحرك robots.txt -->
-    <meta name="robots" content="noindex, nofollow">
-    <meta name="urlroot" content="<?= URLROOT ?>">
+$bareTitle = 'Admin Login — ' . SITENAME;
+$bareCss   = ['css/admin/pages/login.css'];
 
-    <title>Admin Login — Cairo Store</title>
+// js/admin/admin-auth.js يقرأ جذر التطبيق من هذا الوسم تحديداً
+$bareHead  = '<meta name="urlroot" content="' . URLROOT . '">';
 
-    <!-- Bootstrap CSS فقط — لا يُحمَّل أي CSS خاص بالمتجر العام -->
-    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
-    <link
-        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
-        rel="stylesheet"
-        integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH"
-        crossorigin="anonymous"
-    >
-
-    <!-- صفحة مستقلة: ملف واحد يحمل ألوانه ومتغيراته بنفسه.
-         لا store.css ولا admin.css هنا. -->
-    <link rel="stylesheet" href="<?= URLROOT ?>/css/admin/pages/login.css">
-</head>
-<body>
+require APPROOT . '/views/inc/head-bare.php';
+?>
 
 <div class="login-wrapper">
     <div class="login-card">
@@ -131,5 +124,4 @@
 <!-- ملف JS المخصص لـ Admin Auth — لا يُحمَّل أي ملف JS آخر من المتجر -->
 <script src="<?= URLROOT ?>/js/admin/admin-auth.js" defer></script>
 
-</body>
-</html>
+<?php require APPROOT . '/views/inc/footer-bare.php'; ?>

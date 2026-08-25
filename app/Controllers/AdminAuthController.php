@@ -60,7 +60,7 @@ class AdminAuthController extends Controller
         header('Pragma: no-cache');
         header('Expires: 0');
 
-        $this->renderStandaloneView('admin/login');
+        $this->view('admin/login', [], 'bare');
     }
 
     // ════════════════════════════════════════════════════════
@@ -529,9 +529,9 @@ class AdminAuthController extends Controller
         header('Pragma: no-cache');
         header('Expires: 0');
 
-        $this->renderStandaloneView('admin/store-reauth', [
+        $this->view('admin/store-reauth', [
             'return' => $this->safeAdminReturn($_GET['return'] ?? ''),
-        ]);
+        ], 'bare');
     }
 
     // ════════════════════════════════════════════════════════
@@ -740,24 +740,9 @@ class AdminAuthController extends Controller
         return URLROOT . '/admin/home';
     }
 
-
-    /**
-     * عرض View بدون layout عام — مباشر (خاص بصفحات الأدمن المستقلة).
-     * مُسمّى renderStandaloneView لتجنب التصادم مع view() المورثة من Controller.
-     *
-     * @param string $viewPath اسم الـ view بدون المسار أو الامتداد
-     * @param array  $data     متغيرات إضافية تُمرَّر للـ view (مثل return)
-     */
-    private function renderStandaloneView(string $viewPath, array $data = []): void
-    {
-        extract($data);
-        $file = APPROOT . '/views/' . $viewPath . '.php';
-        if (file_exists($file)) {
-            require_once $file;
-        } else {
-            http_response_code(404);
-            echo "View not found: {$viewPath}";
-        }
-        exit;
-    }
+    // حُذفت renderStandaloneView() هنا: كانت تعرض view بلا layout لأن
+    // view() المورثة كانت تفرض head+navbar+footer. صار ذلك خياراً في
+    // الكلاس الأب — $this->view($path, $data, 'bare') — فلم يعد لنسخة
+    // محلية معنى. الفروق التي كسبناها بالحذف: فحص الوجود يسبق أي إخراج،
+    // وصفحة 404 حقيقية بدل "View not found: {$viewPath}" النصية.
 }

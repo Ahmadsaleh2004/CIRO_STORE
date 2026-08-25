@@ -1,8 +1,11 @@
 <?php
 /**
  * app/views/auth/reset-password.php
- * صفحة إعادة تعيين كلمة المرور — مستقلة (تُستدعى مباشرة من resetForm())
- * تتعامل مع نوعين: user / admin (يُحدد عبر $type القادم من الرابط)
+ * صفحة إعادة تعيين كلمة المرور — تخدم المستخدم والأدمن معاً حسب $type.
+ *
+ * layout: 'bare' — لا navbar ولا footer المتجر. كانت تكتب <!DOCTYPE html>
+ * و<head> كاملين بيدها؛ صارا في inc/head-bare.php.
+ *
  * المتغيرات المتاحة: $valid (bool), $token, $email, $type
  */
 
@@ -12,21 +15,15 @@ if (session_status() === PHP_SESSION_NONE) {
 }
 $csrfToken = generateCsrfToken();
 $isAdmin   = ($type ?? '') === 'admin';
-?>
-<!DOCTYPE html>
-<html lang="en" dir="ltr">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="robots" content="noindex, nofollow">
-    <title>Reset Password — <?= htmlspecialchars(SITENAME) ?></title>
 
-<?= themeBootScript() ?>
-    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="<?= URLROOT ?>/css/store.css">
+$bareTitle     = 'Reset Password — ' . SITENAME;
+$bareThemeBoot = true;
+$bareCss       = ['css/store.css'];
 
-    <style>
+// ⚠️ هذه الكتلة مرشّحة للمرحلة 5 (إخراج كل <style> المضمّن من الـviews).
+// نُقلت كما هي حرفياً كي تبقى المرحلة 4 بصفر تغيير بصري.
+$bareHead = <<<'HTML'
+<style>
         body {
             min-height: 100vh;
             display: flex;
@@ -51,8 +48,10 @@ $isAdmin   = ($type ?? '') === 'admin';
         body.dark-mode .reset-footer { background: #1a1d24; border-top-color: rgba(255,255,255,.08); }
         .reset-footer a { font-weight: 600; text-decoration: none; }
     </style>
-</head>
-<body>
+HTML;
+
+require APPROOT . '/views/inc/head-bare.php';
+?>
 
 <div class="reset-card">
     <div class="reset-header">
@@ -167,5 +166,4 @@ function showResetMsg(el, text, type) {
 }
 </script>
 
-</body>
-</html>
+<?php require APPROOT . '/views/inc/footer-bare.php'; ?>
