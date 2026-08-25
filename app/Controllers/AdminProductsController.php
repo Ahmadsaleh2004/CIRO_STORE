@@ -9,6 +9,7 @@ use App\Models\CategoryModel;
 use App\Models\AdminModel;
 use App\Models\StockNotificationModel;
 use App\Models\NotificationModel;
+use App\Services\ProductVariantUploader;
 use OpenApi\Attributes as OA;
 
 /**
@@ -205,29 +206,19 @@ class AdminProductsController extends AdminController
         // ── تحقق من الصورة الإجبارية (قبل beginTransaction)
         $variants     = $_POST['variants'] ?? [];
         $variantFiles = $_FILES['variants'] ?? [];
-        $hasImage     = false;
 
-        // فحص صورة variant رقم 0 (الافتراضية الأولى) أو أي variant فيه صورة
-        if (!empty($variantFiles['tmp_name'])) {
-            foreach ((array)$variantFiles['tmp_name'] as $tmpName) {
-                if (!empty($tmpName) && is_array($tmpName)) {
-                    foreach ($tmpName as $t) {
-                        if (!empty($t)) { $hasImage = true; break 2; }
-                    }
-                } elseif (!empty($tmpName)) {
-                    $hasImage = true;
-                    break;
-                }
-            }
-        }
-
-        if (!$hasImage) {
+        if (!ProductVariantUploader::hasAnyImage($variantFiles)) {
             $this->jsonError('Product image is required.');
         }
 
         // ── رفع صور الـ variants وبناء مصفوفة البيانات
-        $uploadDir    = ROOTPATH . '/public/images/';
-        $parsedVariants = $this->parseAndUploadVariants($variants, $variantFiles, $uploadDir);
+        $uploadDir      = ROOTPATH . '/public/images/';
+        $parsedVariants = ProductVariantUploader::parse(
+            $variants,
+            $variantFiles,
+            $uploadDir,
+            (int)($_POST['default_variant'] ?? 0)
+        );
 
         if (empty($parsedVariants)) {
             $this->jsonError('At least one variant with a valid name and price is required.');
@@ -253,7 +244,7 @@ class AdminProductsController extends AdminController
 
         if (!$productId) {
             // احذف أي صور رُفعت إذا فشل الإنشاء
-            $this->cleanupUploadedImages($parsedVariants, $uploadDir);
+            ProductVariantUploader::cleanup($parsedVariants, $uploadDir);
             $this->jsonError('Failed to create product. Please check the data and try again.');
         }
 
@@ -380,7 +371,12 @@ class AdminProductsController extends AdminController
         // هل كان المنتج بالكامل نافذ الكمية قبل هذا التعديل؟
         $wasOutOfStock = (AdminProductModel::getTotalStock($productId) === 0);
 
-        $parsedVariants = $this->parseAndUploadVariants($variants, $variantFiles, $uploadDir);
+        $parsedVariants = ProductVariantUploader::parse(
+            $variants,
+            $variantFiles,
+            $uploadDir,
+            (int)($_POST["default_variant"] ?? 0)
+        );
 
         if (empty($parsedVariants)) {
             $this->jsonError('At least one variant with a valid name and price is required.');
@@ -409,7 +405,7 @@ class AdminProductsController extends AdminController
         $ok = AdminProductModel::update($productId, $postData, $parsedVariants, array_values($categoryIds), $adminId);
 
         if (!$ok) {
-            $this->cleanupUploadedImages($parsedVariants, $uploadDir);
+            ProductVariantUploader::cleanup($parsedVariants, $uploadDir);
             $this->jsonError('Failed to update product.');
         }
 
@@ -904,88 +900,6 @@ class AdminProductsController extends AdminController
         }
     }
 
-    /**
-     * تحليل $_POST['variants'] + رفع الصور وإرجاع مصفوفة مُعالَجة.
-     * تتجاهل variant كل حقل name فارغ أو price <= 0.
-     */
-    private function parseAndUploadVariants(array $postVariants, array $filesVariants, string $uploadDir): array
-    {
-        $result      = [];
-        $defaultIdx  = (int)($_POST['default_variant'] ?? 0);
 
-        foreach ($postVariants as $i => $v) {
-            $colorName = trim($v['color_name'] ?? '');
-            $price     = (float)($v['price'] ?? 0);
 
-            if ($colorName === '' || $price <= 0) {
-                continue;
-            }
-
-            // رفع الصورة الجديدة لهذا الـ variant (إن وجدت)
-            $imagePath = null;
-            $fileEntry = $this->extractFileEntry($filesVariants, $i);
-            if ($fileEntry) {
-                $imagePath = AdminProductModel::uploadVariantImage($fileEntry, $uploadDir);
-            }
-
-            // الاحتفاظ بالصورة القديمة إذا لم تُرفع صورة جديدة
-            if ($imagePath === null && !empty($v['existing_image'])) {
-                $imagePath = $v['existing_image'];
-            }
-
-            $result[] = [
-                'id'         => isset($v['id']) && (int)$v['id'] > 0 ? (int)$v['id'] : null,
-                'color_name' => $colorName,
-                'color_hex'  => trim($v['color_hex']  ?? '') ?: null,
-                'price'      => $price,
-                'discount'   => (float)($v['discount'] ?? 0),
-                'stock'      => (int)($v['stock']      ?? 0),
-                'gender'     => in_array($v['gender'] ?? 'both', ['male', 'female', 'both'])
-                                    ? $v['gender'] : 'both',
-                'image_path' => $imagePath,
-                'is_default' => (count($result) === $defaultIdx),
-                'sort_order' => count($result),
-            ];
-        }
-
-        return $result;
-    }
-
-    /**
-     * استخراج file entry واحد من مصفوفة $_FILES متداخلة بشكل صحيح.
-     * PHP بتجمع $_FILES['variants']['tmp_name'][i] مش $_FILES['variants'][i]['tmp_name'].
-     */
-    private function extractFileEntry(array $filesVariants, int $idx): ?array
-    {
-        if (empty($filesVariants['tmp_name'][$idx])) {
-            return null;
-        }
-        $tmpName = $filesVariants['tmp_name'][$idx];
-        $error   = $filesVariants['error'][$idx]   ?? UPLOAD_ERR_NO_FILE;
-        if (empty($tmpName) || $error !== UPLOAD_ERR_OK) {
-            return null;
-        }
-        return [
-            'tmp_name' => $tmpName,
-            'name'     => $filesVariants['name'][$idx]     ?? '',
-            'size'     => $filesVariants['size'][$idx]     ?? 0,
-            'type'     => $filesVariants['type'][$idx]     ?? '',
-            'error'    => $error,
-        ];
-    }
-
-    /**
-     * حذف صور رُفعت بالفورم في حالة فشل حفظ المنتج — للتراجع عن الرفع.
-     */
-    private function cleanupUploadedImages(array $parsedVariants, string $uploadDir): void
-    {
-        foreach ($parsedVariants as $v) {
-            if (!empty($v['image_path'])) {
-                $disk = rtrim($uploadDir, '/\\') . DIRECTORY_SEPARATOR . basename($v['image_path']);
-                if (file_exists($disk)) {
-                    @unlink($disk);
-                }
-            }
-        }
-    }
 }
