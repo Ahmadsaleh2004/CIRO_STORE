@@ -8,8 +8,6 @@ use App\Models\AdminModel;
  *   $admins, $flashMsg, $flashErr, $csrf, $adminRole, $adminId
  */
 ?>
-<style>.clickable-row { cursor: pointer; }</style>
-
 <!-- ── Page Header ────────────────────────────────────────── -->
 <div class="admin-page-header">
     <h1>👑 Manage Admins <span class="badge bg-secondary fw-normal" style="font-size:.9rem;vertical-align:middle;"><?= (int)$totalAdmins ?></span></h1>

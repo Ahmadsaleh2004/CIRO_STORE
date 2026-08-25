@@ -269,6 +269,7 @@ class CheckoutController extends Controller
             'desc'        => 'Your order has been placed successfully.',
             'activePage'  => '',
             'robots'      => 'noindex, nofollow',
+            'extraHead'   => '<link rel="stylesheet" href="' . URLROOT . '/css/store/pages/confirmation.css">',
             'orderId'     => $orderId,
             'userLoggedIn'=> true,
             'userName'    => $_SESSION['user_name'] ?? '',

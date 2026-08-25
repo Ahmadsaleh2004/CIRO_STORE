@@ -9,8 +9,6 @@
 $totalPages = max(1, (int)ceil($total / $perPage));
 $startNum   = (($page - 1) * $perPage) + 1;
 ?>
-<style>.user-row { cursor: pointer; }</style>
-
 <!-- ── Page Header ────────────────────────────────────────── -->
 <div class="admin-page-header">
     <h1>👥 Manage Users <span class="badge bg-secondary fw-normal" style="font-size:.9rem;vertical-align:middle;"><?= (int)$totalUsers ?></span></h1>

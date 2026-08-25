@@ -1,0 +1,20 @@
+/* ==================================================
+   css/store/pages/confirmation.css — صفحة تأكيد الطلب
+   ==================================================
+   نُقلت من كتلة <style> مضمّنة داخل
+   app/views/checkout/confirmation.php. كان التعليق هناك يقول إن
+   «الصفحة لا تحمّل ملف أنماط خاصاً بها فالإصلاح مضمّن» — صار لها ملف.
+   ================================================== */
+
+@media (max-width: 375px) {
+    /* !important مقصودة وليست من صراع مع ملف آخر: الصنف p-5 من
+       Bootstrap مُعرَّف بـ`padding: 3rem !important` كبقية أدوات
+       التباعد، فلا يُغلَب إلا بـ!important. */
+    #main-content .card {
+        padding: 1.5rem !important;
+    }
+
+    #main-content .d-flex.gap-3.justify-content-center {
+        flex-direction: column;
+    }
+}

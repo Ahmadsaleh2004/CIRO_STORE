@@ -56,3 +56,16 @@
     .admin-table thead th,
     .admin-table td { padding: 5px 4px; font-size: 0.68rem; }
 }
+
+/* ── صفوف قابلة للنقر ──
+   كانت كل قاعدة منهما كتلة <style> مضمّنة من سطر واحد في الـview
+   الخاص بها: .clickable-row في manage-admins/index و .user-row في
+   users/index. الصنفان مختلفان اسماً ومتطابقان سلوكاً، وكلاهما يخصّ
+   جدول الأدمن — فمكانهما هنا.
+
+   الصنفان لا يُوحَّدان في اسم واحد: يقرأهما JS
+   (js/admin/manage-admins.js و js/admin/users.js) بهذين الاسمين. */
+.clickable-row,
+.user-row {
+    cursor: pointer;
+}
