@@ -16,7 +16,8 @@
  *   $bareBodyClass  string  كلاسات <body>                   (افتراضي '')
  *   $bareThemeBoot  bool    اطبع themeBootScript()          (افتراضي false)
  *   $bareCss        array   مسارات CSS نسبية لـURLROOT، بالترتيب
- *   $bareHead       string  HTML خام يُطبع آخر <head> (meta إضافي، <style>…)
+ *   $bareHead       string  HTML خام يُطبع آخر الترويسة (وسم meta إضافي،
+ *                           أو كتلة أنماط خاصة بالصفحة)
  *
  * كل صفحات الـbare حتى الآن صفحات مصادقة، فوسم robots المانع للفهرسة
  * مطبوع هنا دائماً لا كخيار. أول صفحة bare تحتاج الفهرسة تحوّله لمتغيّر.

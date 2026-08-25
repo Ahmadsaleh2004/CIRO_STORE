@@ -20,7 +20,7 @@ $bareTitle     = 'Reset Password — ' . SITENAME;
 $bareThemeBoot = true;
 $bareCss       = ['css/store.css'];
 
-// ⚠️ هذه الكتلة مرشّحة للمرحلة 5 (إخراج كل <style> المضمّن من الـviews).
+// ⚠️ هذه الكتلة مرشّحة للمرحلة 5 (إخراج الأنماط المضمّنة من الـviews).
 // نُقلت كما هي حرفياً كي تبقى المرحلة 4 بصفر تغيير بصري.
 $bareHead = <<<'HTML'
 <style>
