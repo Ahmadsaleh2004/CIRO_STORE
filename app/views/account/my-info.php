@@ -62,35 +62,13 @@
                         <label>Email Address <small class="text-muted">(cannot change)</small></label>
                     </div>
                     
-                    <!-- Phone Number — same pattern as the admin's My Info page -->
-                    <?php
-                        $savedPhone      = $user['phone_number'] ?? '';
-                        $countryPrefixes = ['+962','+966','+971','+20','+965','+974','+973','+968','+1','+44','+90','+49'];
-                        $detectedCode    = '';
-                        $localPhonePart  = $savedPhone;
-                        foreach ($countryPrefixes as $pfx) {
-                            if (str_starts_with($savedPhone, $pfx)) {
-                                $detectedCode   = $pfx;
-                                $localPhonePart = substr($savedPhone, strlen($pfx));
-                                break;
-                            }
-                        }
-                    ?>
+                    <!-- Phone Number — نفس الـpartial المستعمل في صفحة الأدمن -->
                     <div class="float-group mb-3">
-                        <div class="input-group">
-                            <select name="phone_country_code" class="form-select phone-code-select">
-                                <?php foreach ($countryPrefixes as $pfx): ?>
-                                <option value="<?= $pfx ?>" <?= $detectedCode === $pfx ? 'selected' : '' ?>><?= $pfx ?></option>
-                                <?php endforeach; ?>
-                            </select>
-                            <input type="tel"
-                                   id="profilePhone"
-                                   name="phone_local"
-                                   placeholder=" "
-                                   value="<?= htmlspecialchars($localPhonePart) ?>"
-                                   class="form-control"
-                                   autocomplete="tel">
-                        </div>
+                        <?php
+                        $phoneValue   = $user['phone_number'] ?? '';
+                        $phoneInputId = 'profilePhone';
+                        require APPROOT . '/views/shared/phone-input.php';
+                        ?>
                         <label class="phone-group-label">Phone Number</label>
                     </div>
                     

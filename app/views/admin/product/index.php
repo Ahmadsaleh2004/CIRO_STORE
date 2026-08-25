@@ -29,18 +29,7 @@
 </div>
 
 <!-- ── Flash Messages ─────────────────────────────────────── -->
-<?php if (!empty($flashMsg)): ?>
-<div class="alert alert-success alert-dismissible fade show" role="alert">
-    <?= htmlspecialchars($flashMsg) ?>
-    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-</div>
-<?php endif; ?>
-<?php if (!empty($flashErr)): ?>
-<div class="alert alert-danger alert-dismissible fade show" role="alert">
-    <?= htmlspecialchars($flashErr) ?>
-    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-</div>
-<?php endif; ?>
+<?php require APPROOT . '/views/shared/flash-messages.php'; ?>
 
 <!-- ── Sort & Filter Dropdown ──────────────────────────────── -->
 <?php

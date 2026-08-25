@@ -58,35 +58,13 @@
             <label>Email Address <small class="text-muted">(cannot change)</small></label>
         </div>
 
-        <!-- Phone Number -->
+        <!-- Phone Number — نفس الـpartial المستعمل في صفحة المستخدم -->
         <div class="float-group mb-3">
             <?php
-                $savedPhone     = $profile['phone_number'] ?? '';
-                $countryPrefixes = ['+962','+966','+971','+20','+965','+974','+973','+968','+1','+44','+90','+49'];
-                $detectedCode   = '';
-                $localPhonePart = $savedPhone;
-                foreach ($countryPrefixes as $pfx) {
-                    if (str_starts_with($savedPhone, $pfx)) {
-                        $detectedCode   = $pfx;
-                        $localPhonePart = substr($savedPhone, strlen($pfx));
-                        break;
-                    }
-                }
+            $phoneValue   = $profile['phone_number'] ?? '';
+            $phoneInputId = 'adminPhone';
+            require APPROOT . '/views/shared/phone-input.php';
             ?>
-            <div class="input-group">
-                <select name="phone_country_code" class="form-select phone-code-select">
-                    <?php foreach ($countryPrefixes as $pfx): ?>
-                    <option value="<?= $pfx ?>" <?= $detectedCode === $pfx ? 'selected' : '' ?>><?= $pfx ?></option>
-                    <?php endforeach; ?>
-                </select>
-                <input type="tel"
-                       id="adminPhone"
-                       name="phone_local"
-                       placeholder=" "
-                       value="<?= htmlspecialchars($localPhonePart) ?>"
-                       class="form-control"
-                       autocomplete="tel">
-            </div>
             <label class="phone-group-label">Phone Number</label>
         </div>
 
