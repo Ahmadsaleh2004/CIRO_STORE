@@ -259,13 +259,4 @@ class AdminMyInfoController extends AdminController
 
         $this->respond(true, '2FA disabled successfully.');
     }
-
-    private function respond(bool $success, string $message, array $extra = []): never
-    {
-        echo json_encode(
-            array_merge(['success' => $success, 'message' => $message], $extra),
-            JSON_UNESCAPED_UNICODE
-        );
-        exit;
-    }
 }

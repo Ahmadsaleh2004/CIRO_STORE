@@ -50,4 +50,38 @@ abstract class Controller
         // تأكد من وجود ملف footer.php داخل مجلد app/views/inc/
         require_once APPROOT . '/views/inc/footer.php';
     }
+
+    // ═══════════════════════════════════════════════════════════
+    // استجابات JSON — مشتركة بين كل الكنترولرز
+    // ═══════════════════════════════════════════════════════════
+    //
+    // كانت respond() منسوخة حرفياً في 16 كنترولر (نسختان تختلفان في
+    // المسافات فقط). نُقلت هنا مرة واحدة: كنترولرز المتجر ترثها مباشرة،
+    // وكنترولرز الأدمن عبر AdminController الذي يرث هذا الكلاس.
+
+    /**
+     * يطبع استجابة JSON موحّدة الشكل ويوقف التنفيذ.
+     *
+     * الشكل ثابت: {success, message, ...$extra}. الـfrontend يعتمد عليه
+     * في js/core/utils.js وبقية ملفات features، فلا تُغيَّر أسماء المفاتيح.
+     *
+     * ملاحظة: لا يضبط رأس Content-Type — بعض النقاط تضبطه بنفسها قبل
+     * الاستدعاء، وبعضها يستدعي respond() بعد إخراج بدأ فعلاً.
+     */
+    protected function respond(bool $success, string $message, array $extra = []): never
+    {
+        echo json_encode(
+            array_merge(['success' => $success, 'message' => $message], $extra),
+            JSON_UNESCAPED_UNICODE
+        );
+        exit;
+    }
+
+    /**
+     * اختصار لاستجابة فشل بلا بيانات إضافية.
+     */
+    protected function jsonError(string $message): never
+    {
+        $this->respond(false, $message);
+    }
 }

@@ -988,25 +988,4 @@ class AdminProductsController extends AdminController
             }
         }
     }
-
-    /**
-     * Renamed conceptually from "redirect with error" to "JSON error response" —
-     * kept as a thin wrapper around respond() so every one of the 12 call sites in
-     * storeAdd()/storeEdit() below only needs its two arguments changed, not its
-     * structure. The old $path argument is gone entirely (no longer meaningful).
-     */
-    private function jsonError(string $msg): never
-    {
-        $this->respond(false, $msg);
-    }
-
-    /** نفس نمط respond() المستخدم بـ AdminSupportController بالحرف. */
-    private function respond(bool $success, string $message, array $extra = []): never
-    {
-        echo json_encode(
-            array_merge(['success' => $success, 'message' => $message], $extra),
-            JSON_UNESCAPED_UNICODE
-        );
-        exit;
-    }
 }

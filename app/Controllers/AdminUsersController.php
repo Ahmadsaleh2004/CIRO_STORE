@@ -412,14 +412,4 @@ class AdminUsersController extends AdminController
             );
         }
     }
-
-    /** نفس نمط respond() المستخدم بـ AdminManageAdminsController بالحرف. */
-    private function respond(bool $success, string $message, array $extra = []): never
-    {
-        echo json_encode(
-            array_merge(['success' => $success, 'message' => $message], $extra),
-            JSON_UNESCAPED_UNICODE
-        );
-        exit;
-    }
 }

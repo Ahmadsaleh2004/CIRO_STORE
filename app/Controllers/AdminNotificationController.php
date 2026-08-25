@@ -260,14 +260,4 @@ class AdminNotificationController extends AdminController
             'unread_count' => AdminNotificationModel::countUnread($adminId),
         ]);
     }
-
-    /** نفس نمط respond() المستخدم بـ AdminMessagingController بالحرف. */
-    private function respond(bool $success, string $message, array $extra = []): never
-    {
-        echo json_encode(
-            array_merge(['success' => $success, 'message' => $message], $extra),
-            JSON_UNESCAPED_UNICODE
-        );
-        exit;
-    }
 }
