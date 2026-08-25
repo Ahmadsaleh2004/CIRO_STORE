@@ -113,8 +113,10 @@ document.addEventListener('DOMContentLoaded', function () {
             const uid = card.dataset.userId;
             if (!uid || uid === '0') return; // Guest — لا ملف مستخدم
 
-            // TODO: صفحة /admin/users/{id} لسا مو منشأة — راوت مستقبلي، تذكرة منفصلة
-            window.location.href = window.URLROOT + '/admin/users/' + uid;
+            // الراوت هو /admin/users/details?id=… لا /admin/users/{id}.
+            // كان الثاني مكتوباً هنا مع TODO يقول إن الصفحة «لسا مو منشأة» —
+            // وهي منشأة منذ البداية بشكل آخر، فكانت كل نقرة تعطي 404.
+            window.location.href = window.URLROOT + '/admin/users/details?id=' + encodeURIComponent(uid);
         });
     });
 
