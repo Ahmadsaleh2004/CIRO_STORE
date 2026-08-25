@@ -4,7 +4,7 @@ namespace App\Controllers;
 
 use App\Core\Controller;
 use App\Models\AboutModel;
-use App\Models\Product_dit;
+use App\Models\ProductModel;
 
 /**
  * AboutController — يعالج صفحة /about
@@ -20,7 +20,7 @@ class AboutController extends Controller
         $storeInfo = $model->getStoreInfo();
 
         // عدد المنتجات المرئية من قاعدة البيانات
-        $productsCount = Product_dit::countVisible();
+        $productsCount = ProductModel::countVisible();
 
         $this->view('page/about', [
             'title'         => 'About Us',

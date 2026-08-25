@@ -4,7 +4,7 @@ namespace App\Controllers;
 
 use App\Core\Controller;
 use App\Core\Database;
-use App\Models\Product_dit;
+use App\Models\ProductModel;
 use App\Models\CategoryModel;
 
 class ProductController extends Controller
@@ -13,19 +13,19 @@ class ProductController extends Controller
     {
         $perPage     = 9;
         $currentPage = max(1, (int)($_GET['page'] ?? 1));
-        $totalCount  = Product_dit::countVisible();
+        $totalCount  = ProductModel::countVisible();
         $totalPages  = max(1, (int)ceil($totalCount / $perPage));
         $currentPage = min($currentPage, $totalPages);
         $offset      = ($currentPage - 1) * $perPage;
 
-        $rows = Product_dit::findVisiblePaginated($perPage, $offset);
+        $rows = ProductModel::findVisiblePaginated($perPage, $offset);
 
         $db = Database::connect();
-        $visitorGender = function_exists('getVisitorGender') ? getVisitorGender($db) : null;
+        $visitorGender = getVisitorGender($db);
 
         // Fetch notified product IDs for current user (if logged in)
         $notifiedProductIds = [];
-        if (function_exists('isUser') && isUser()) {
+        if (isUser()) {
             $stmt = Database::connect()->prepare(
                 "SELECT product_id FROM stock_notifications WHERE user_id = ?"
             );
@@ -34,8 +34,8 @@ class ProductController extends Controller
         }
 
         $products = array_map(function (array $p) use ($visitorGender) {
-            $variants = Product_dit::getVariants((int)$p['id']);
-            $display  = (!empty($variants) && function_exists('pickDisplayVariant'))
+            $variants = ProductModel::getVariants((int)$p['id']);
+            $display  = !empty($variants)
                 ? pickDisplayVariant($variants, $visitorGender)
                 : null;
 
@@ -53,7 +53,7 @@ class ProductController extends Controller
             return $p;
         }, $rows);
 
-        $csrf = function_exists('generateCsrfToken') ? generateCsrfToken() : '';
+        $csrf = generateCsrfToken();
 
         $this->view('product/product', [
             'title'        => 'Products',
@@ -64,7 +64,7 @@ class ProductController extends Controller
             'totalPages'   => $totalPages,
             'currentPage'  => $currentPage,
             'csrf'         => $csrf,
-            'isAdminProd'  => function_exists('isAdmin') ? isAdmin() : false,
+            'isAdminProd'  => isAdmin(),
             'msg'          => $_GET['msg'] ?? '',
             'extraHead'    => '<link rel="stylesheet" href="' . URLROOT . '/css/store/pages/products.css">',
             'extraScripts' => '<script src="' . URLROOT . '/js/features/notify-stock.js" defer></script>',
@@ -82,7 +82,7 @@ class ProductController extends Controller
             exit;
         }
 
-        $p = Product_dit::findById($pid);
+        $p = ProductModel::findById($pid);
 
         // توجيه للرئيسية في حال عدم وجود المنتج لتجنب خطأ تحميل ملف 404 المفقود
         if (!$p) {
@@ -95,7 +95,7 @@ class ProductController extends Controller
         if (
             ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST'
             && isset($_POST['submit_review'])
-            && function_exists('isUser') && isUser()
+            && isUser()
             && empty($_SESSION['admin_in_store_mode'] ?? false)
         ) {
             if (!verifyCsrfToken($_POST['csrf_token'] ?? '')) {
@@ -103,7 +103,7 @@ class ProductController extends Controller
             } else {
                 $rating  = (int)($_POST['rating'] ?? 0);
                 $comment = trim($_POST['comment'] ?? '');
-                $result  = Product_dit::saveReview($pid, getCurrentUserId(), $rating, $comment);
+                $result  = ProductModel::saveReview($pid, getCurrentUserId(), $rating, $comment);
                 if ($result['ok']) {
                     $reviewMsg = $result['message'];
                 } else {
@@ -113,30 +113,35 @@ class ProductController extends Controller
         }
 
         // جلب الـ Variants إن وجدت
-        $variants = Product_dit::getVariants($pid);
+        $variants = ProductModel::getVariants($pid);
         
         // تجهيز الـ Variant المعروض (إن وجد، وإلا نستخدم بيانات المنتج الأساسية)
         $db = Database::connect();
-        $visitorGender   = function_exists('getVisitorGender') ? getVisitorGender($db) : 'M';
-        $selectedVariant = (!empty($variants) && function_exists('pickDisplayVariant')) 
+        $visitorGender   = getVisitorGender($db);
+        $selectedVariant = !empty($variants) 
             ? pickDisplayVariant($variants, $visitorGender) 
             : ($variants[0] ?? []);
 
-        if (function_exists('isUser') && isUser() && function_exists('updateUserActivity')) {
-            updateUserActivity();
-        }
+        // ملاحظة (كود ميت مُزال): كان هنا استدعاء updateUserActivity()
+        // محروساً بـfunction_exists — والدالة غير معرَّفة في المشروع أصلاً،
+        // فالكتلة لم تنفَّذ ولا مرة. الدالة الحقيقية هي
+        // UserModel::updateActivity() وتُستدعى عند تسجيل الدخول فقط
+        // (AuthController.php:72)، فعمود users.last_activity لا يتحدّث
+        // بالتصفّح. أثر ذلك: عدّاد "المستخدمون النشطون خلال 90 يوماً" في
+        // لوحة التحكم يقلّ عن الحقيقة. الإصلاح قرار أداء مستقل لأنه
+        // يعني كتابة في قاعدة البيانات مع كل عرض صفحة.
 
         // معالجة التقييمات
-        $reviews   = Product_dit::getReviews($pid);
+        $reviews   = ProductModel::getReviews($pid);
         $avgRating = count($reviews) ? round(array_sum(array_column($reviews, 'rating')) / count($reviews), 1) : 0;
 
         $myReview = null;
-        if (function_exists('isUser') && isUser() && function_exists('getCurrentUserId')) {
-            $myReview = Product_dit::getUserReview($pid, getCurrentUserId());
+        if (isUser()) {
+            $myReview = ProductModel::getUserReview($pid, getCurrentUserId());
         }
 
         // المنتجات المشابهة
-        $related = Product_dit::getRelated($pid, $p['manufacturer'] ?? null);
+        $related = ProductModel::getRelated($pid, $p['manufacturer'] ?? null);
 
         // الأسعار والمخزون مع المرونة (في حال عدم وجود الـ Variant يتم القراءة من المنتج الرئيسي مباشرة)
         $price      = (float)($selectedVariant['price'] ?? $p['price'] ?? 0);
@@ -145,11 +150,11 @@ class ProductController extends Controller
         $finalPrice = $discount > 0 ? $afterDisc : $price;
         $stock      = (int)($selectedVariant['stock_quantity'] ?? $p['stock_quantity'] ?? 0);
         $imgSrc     = fixImagePath($selectedVariant['image_path'] ?? $p['image_path'] ?? '');
-        $csrf       = function_exists('generateCsrfToken') ? generateCsrfToken() : '';
+        $csrf       = generateCsrfToken();
 
         // Check if current user already requested notification for this product
         $alreadyRequested = false;
-        if (function_exists('isUser') && isUser()) {
+        if (isUser()) {
             $stmt = Database::connect()->prepare(
                 "SELECT id FROM stock_notifications WHERE product_id = ? AND user_id = ? LIMIT 1"
             );

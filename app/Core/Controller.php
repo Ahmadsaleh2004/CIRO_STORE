@@ -11,7 +11,6 @@ abstract class Controller
      * @param array $data (Data passed to all views)
      * @return void
      *
-     * @edited by (Your Assistant) for MVC Integration.
      */
     protected function view(string $view, array $data = []): void
     {
@@ -43,19 +42,5 @@ abstract class Controller
         // الجزء الرابع: الـ <offcanvas> modals والـ <footer> وروابط الـ JS
         // تأكد من وجود ملف footer.php داخل مجلد app/views/inc/
         require_once APPROOT . '/views/inc/footer.php';
-    }
-
-    /**
-     * Instantiate model class.
-     * ... (دالة الـ model تبقى كما هي) ...
-     */
-    protected function model(string $model): object
-    {
-        $modelClass = "App\\Models\\" . $model;
-        if (class_exists($modelClass)) {
-            return new $modelClass();
-        }
-
-        die("Model class [{$modelClass}] not found!");
     }
 }

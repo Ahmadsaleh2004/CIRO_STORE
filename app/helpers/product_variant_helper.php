@@ -46,6 +46,10 @@ function pickDisplayVariant(array $variants, ?string $visitorGender): ?array
 
 function getVisitorGender(PDO $pdo): ?string
 {
+    // الحارس مقصود ويبقى: هذه الدالة قد تُستدعى من سكربتات CLI في
+    // scripts/ التي تحمّل الهيلبرز بترتيبها الخاص، فلا نفترض أن
+    // auth_helper.php محمَّل. باقي حُرّاس function_exists في المشروع
+    // كانت تحرس دوالّ محمَّلة دائماً وأُزيلت.
     if (!function_exists('isUser') || !isUser()) return null;
     $stmt = $pdo->prepare("SELECT gender FROM users WHERE id = ? LIMIT 1");
     $stmt->execute([getCurrentUserId()]);

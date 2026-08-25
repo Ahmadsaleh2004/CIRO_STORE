@@ -2,8 +2,6 @@
 
 namespace App\Core;
 
-require_once __DIR__ . '/../helpers/auth_helper.php';
-
 /**
  * AdminController — الكلاس الأب المشترك لكل كنترولرز لوحة الأدمن.
  *
@@ -41,15 +39,11 @@ abstract class AdminController extends Controller
         $adminName = $_SESSION['admin_name'] ?? 'Admin';
         $adminRole = getAdminRole();
         $adminId   = getCurrentAdminId();
-        $csrf      = function_exists('generateCsrfToken')
-            ? generateCsrfToken()
-            : ($_SESSION['csrf_token'] ?? '');
+        $csrf      = generateCsrfToken();
 
         // عدّادات غير المقروء (طلبات/رسائل دعم) — تُحقن تلقائيًا بكل صفحات الأدمن
         // حتى يظهر البادج في الـ navbar بدون استدعاء يدوي من كل Controller
-        $counters    = function_exists('getAdminUnreadCounters')
-            ? getAdminUnreadCounters()
-            : ['orders' => 0, 'messages' => 0];
+        $counters    = getAdminUnreadCounters();
         $newOrders   = $counters['orders'];
         $newMessages = $counters['messages'];
 

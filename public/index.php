@@ -17,18 +17,9 @@ foreach (glob(__DIR__ . '/../app/helpers/*.php') as $helperFile) {
     }
 }
 
-// Autoloader PSR-4 للكلاسات
-spl_autoload_register(function (string $class): void {
-    $prefix  = 'App\\';
-    $baseDir = dirname(__DIR__) . '/app/';
-
-    if (strncmp($prefix, $class, strlen($prefix)) !== 0) return;
-
-    $relativeClass = substr($class, strlen($prefix));
-    $file          = $baseDir . str_replace('\\', '/', $relativeClass) . '.php';
-
-    if (file_exists($file)) require_once $file;
-});
+// ملاحظة: لا حاجة لـautoloader يدوي هنا — composer.json يعرّف
+// PSR-4 على "App\\" => app/ (راجع vendor/composer/autoload_psr4.php)
+// وvendor/autoload.php المُحمَّل أعلاه يتكفّل بكل كلاسات App.
 
 use App\Core\App;
 use App\Controllers\HomeController;

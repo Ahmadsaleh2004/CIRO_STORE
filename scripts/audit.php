@@ -134,10 +134,10 @@ function grepFiles(array $files, string $pattern): array
 
 // ── جمع البيانات ───────────────────────────────────────────────────
 $layers = [
-    'app/controllers' => filesIn("$ROOT/app/controllers"),
-    'app/models'      => filesIn("$ROOT/app/models"),
+    'app/Controllers' => filesIn("$ROOT/app/Controllers"),
+    'app/Models'      => filesIn("$ROOT/app/Models"),
     'app/views'       => filesIn("$ROOT/app/views"),
-    'app/core'        => filesIn("$ROOT/app/core"),
+    'app/Core'        => filesIn("$ROOT/app/Core"),
     'app/helpers'     => filesIn("$ROOT/app/helpers"),
     'public/js'       => filesIn("$ROOT/public/js", 'js'),
     'public/css'      => filesIn("$ROOT/public/css", 'css'),
@@ -151,7 +151,7 @@ foreach ($layers as $name => $files) {
 }
 
 // OpenAPI داخل الكنترولرز
-$ctrl = $layers['app/controllers'];
+$ctrl = $layers['app/Controllers'];
 $oaTotal = 0;
 foreach ($ctrl as $f) {
     $oa = openApiLines($f);
@@ -181,14 +181,14 @@ uasort($inlinePerFile, fn($x, $y) => ($y['js'] + $y['css']) <=> ($x['js'] + $x['
 $report['issues'] = [
     'sql_in_controllers'   => grepCount($ctrl, '/->prepare\(|->query\(/'),
     'db_access_in_views'   => grepCount($views, '/Database::|->prepare\(|->query\(/'),
-    'function_exists'      => grepCount(array_merge($ctrl, $layers['app/core'], $views), '/function_exists\(/'),
+    'function_exists'      => grepCount(array_merge($ctrl, $layers['app/Core'], $views), '/function_exists\(/'),
     'inline_script_lines'  => $inlineJs,
     'inline_style_lines'   => $inlineCss,
     'unescaped_echo'       => grepCount($views, '/<\?=(?![^?]*(?:htmlspecialchars|json_encode|urlencode|number_format|\(int\)))[^?]*\?>/'),
     'openapi_lines_total'  => $oaTotal,
     'controllers_no_docs'  => count($undocumented),
-    'dead_Model_class'     => is_file("$ROOT/app/core/Model.php") ? 1 : 0,
-    'dead_model_helper'    => grepCount($layers['app/core'], '/function model\(/'),
+    'dead_Model_class'     => is_file("$ROOT/app/Core/Model.php") ? 1 : 0,
+    'dead_model_helper'    => grepCount($layers['app/Core'], '/function model\(/'),
     'shared_partials'      => count(filesIn("$ROOT/app/views/shared")),
 ];
 
@@ -233,12 +233,12 @@ printf("  مؤشرات\n  %s\n", $bar);
 $labels = [
     'sql_in_controllers'  => 'استعلامات SQL في الكنترولرز        (الهدف 0)',
     'db_access_in_views'  => 'وصول قاعدة بيانات من الـviews      (الهدف 0)',
-    'function_exists'     => 'حُرّاس function_exists()            (الهدف 2)',
+    'function_exists'     => 'حُرّاس function_exists() في ctrl/core/views (0)',
     'inline_script_lines' => 'أسطر <script> مضمّنة في الـviews',
     'inline_style_lines'  => 'أسطر <style> مضمّنة في الـviews     (الهدف 0)',
     'unescaped_echo'      => 'مواضع <?= ?> بلا هروب              (للمراجعة)',
     'controllers_no_docs' => 'كنترولرز بلا توثيق OpenAPI',
-    'dead_Model_class'    => 'app/core/Model.php كود ميت         (الهدف 0)',
+    'dead_Model_class'    => 'app/Core/Model.php كود ميت         (الهدف 0)',
     'dead_model_helper'   => 'Controller::model() كود ميت        (الهدف 0)',
     'shared_partials'     => 'partials في views/shared           (الهدف >5)',
 ];

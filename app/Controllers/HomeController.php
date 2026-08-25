@@ -3,7 +3,7 @@
 namespace App\Controllers;
 
 use App\Core\Controller;
-use App\Models\Product_dit;
+use App\Models\ProductModel;
 use App\Models\CategoryModel;
 use App\Models\BrandingModel;
 
@@ -12,7 +12,7 @@ class HomeController extends Controller
     public function index(): void
     {
         // 1. جلب كل المنتجات المرئية من الموديل
-        $products = Product_dit::findVisible();
+        $products = ProductModel::findVisible();
 
         // في حال كانت قاعدة البيانات فارغة أو غير متصلة بعد، نضمن عدم توقف الكود
         if (empty($products)) {
