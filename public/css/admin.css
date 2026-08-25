@@ -1,0 +1,42 @@
+/* ==================================================
+   admin.css — Entry point for the admin panel.
+   ==================================================
+   Load this AFTER store.css. The admin panel reuses the whole store
+   layer (tokens, Bootstrap overrides, buttons, modals, forms,
+   notifications) and only adds its own shell, components and page
+   styles on top. Anything in here that repeats a store rule is a
+   deliberate override, not a copy.
+
+   This file contains NO rules of its own — only load order.
+   ================================================== */
+
+/* ── 1. Shell ──────────────────────────────────────── */
+@import url("admin/layout/head.css");
+@import url("admin/layout/shell.css");
+@import url("admin/layout/navbar.css");
+@import url("admin/layout/footer.css");
+
+/* ── 2. Components ─────────────────────────────────
+   float-group.css intentionally overrides the store's
+   components/floating-labels.css with a more compact variant. */
+@import url("admin/components/stat-cards.css");
+@import url("admin/components/data-table.css");
+@import url("admin/components/page-header.css");
+@import url("admin/components/permissions-grid.css");
+@import url("admin/components/search-form.css");
+@import url("admin/components/export-button.css");
+@import url("admin/components/float-group.css");
+@import url("admin/components/pickers.css");
+
+/* ── 3. Pages ──────────────────────────────────────
+   These are small and mutually exclusive, so they ship together
+   rather than being wired per-controller. branding.css and
+   login.css are the exceptions: those two pages load them
+   separately (login.php does not load store.css at all). */
+@import url("admin/pages/home.css");
+@import url("admin/pages/dashboard.css");
+@import url("admin/pages/products.css");
+@import url("admin/pages/orders.css");
+@import url("admin/pages/users.css");
+@import url("admin/pages/support.css");
+@import url("admin/pages/settings.css");

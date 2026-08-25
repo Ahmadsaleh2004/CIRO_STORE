@@ -1,0 +1,20 @@
+/* ==================================================
+   admin/layout/footer.css — Admin footer bar.
+   ==================================================
+   The old admin-footer.css also contained a complete second copy of
+   the notification sidebar (#adminNotifSidebar, .notif-*). That copy
+   is gone: components/notifications.css styles both #notifSidebar
+   and #adminNotifSidebar, and admin pages load it via store.css.
+   ================================================== */
+.admin-footer {
+    background: var(--footer-bg);
+    color: var(--footer-text);
+    padding: 14px;
+    text-align: center;
+    font-size: .8rem;
+    margin-top: 3rem;
+}
+
+@media (max-width: 576px) {
+    .admin-footer { font-size: .72rem; padding: 10px; }
+}

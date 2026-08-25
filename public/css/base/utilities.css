@@ -1,0 +1,120 @@
+/* ==================================================
+   base/utilities.css — Shared layout utilities used by BOTH the store and the admin panel.
+   ================================================== */
+
+/* ==================================================
+   Shared Responsive Utilities (Foundation)
+   Used across public + admin pages — define once here,
+   apply the same class everywhere instead of re-solving
+   the same layout problem per page.
+   ================================================== */
+
+/* Generic flex toolbar (search/filter/action rows): stays inline on
+   tablet/desktop, stacks to full-width rows on phones. */
+.responsive-toolbar {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    flex-wrap: wrap;
+}
+@media (max-width: 575px) {
+    .responsive-toolbar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .responsive-toolbar > * {
+        width: 100%;
+    }
+}
+
+/* Generic fixed-width-input fix: replaces inline style="width:XXpx" on
+   search/filter inputs. Full width on phones, capped from `sm` up.
+   Override the cap per-instance with --fluid-input-max if 240px doesn't fit. */
+.fluid-input {
+    width: 100%;
+    max-width: 100%;
+}
+@media (min-width: 576px) {
+    .fluid-input {
+        max-width: var(--fluid-input-max, 240px);
+    }
+}
+
+/* Phone country-code <select> that sits next to a phone-number <input>
+   in a flex row. Used in register.php, account/my-info.php and
+   admin/my-info.php — keep all three in sync if this changes. */
+.phone-code-select {
+    flex: 0 0 auto;
+    width: auto;
+    min-width: 78px;
+    max-width: 110px;
+}
+@media (max-width: 375px) {
+    .phone-code-select {
+        min-width: 68px;
+        max-width: 92px;
+    }
+}
+
+/* Floating label positioned after a .phone-code-select inside the
+   same .input-group (account/my-info.php, admin/my-info.php) — must
+   track the select's shrink at ≤375px or it drifts into the phone
+   input's own text.
+   NOTE: selector is .float-group .phone-group-label (two classes),
+   not just .phone-group-label — the base rule ".float-group label"
+   further down this file is class+type (specificity 0,1,1), which
+   beats a bare single class. Two classes (0,2,0) beats it cleanly
+   regardless of source order. */
+.float-group .phone-group-label {
+    left: 120px;
+}
+@media (max-width: 375px) {
+    .float-group .phone-group-label {
+        left: 100px;
+    }
+}
+
+/* Touch-target safety net: buttons/links stay comfortably tappable on
+   phones without changing desktop density. #theme-toggle is excluded —
+   it's a fixed 38x38 circular icon button; min-height would stretch it
+   into an oval since CSS min-height always wins over a smaller height. */
+@media (max-width: 767px) {
+    .btn:not(#theme-toggle),
+    .btn-sm:not(#theme-toggle),
+    button.btn-close,
+    .info-tab-btn {
+        min-height: 40px;
+    }
+}
+
+
+/* ==================================================
+   Image Error Fallback
+   ================================================== */
+img.img-error {
+    opacity: 0.4;
+    filter: grayscale(1);
+}
+
+
+/* About Page Stat Classes */
+.about-stat-value { font-size: 2rem; color: var(--accent); }
+.about-stat-label { color: var(--muted-text); }
+
+
+
+/* --- Section padding on phones --- */
+@media (max-width: 767px) {
+    .container.py-5 { padding-top: 2rem !important; padding-bottom: 2rem !important; }
+    .container.py-4 { padding-top: 1.5rem !important; padding-bottom: 1.5rem !important; }
+}
+
+/* --- Last-resort horizontal-overflow guard on tiny screens --- */
+@media (max-width: 320px) {
+    .container,
+    .container-fluid,
+    .row {
+        max-width: 100%;
+        overflow-x: hidden;
+    }
+}

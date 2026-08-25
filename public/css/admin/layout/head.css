@@ -1,0 +1,11 @@
+/* ==================================================
+   admin/layout/head.css — <body> shell for admin pages.
+   ==================================================
+   This file used to also carry a verbatim copy of .skip-nav. That
+   copy is gone: admin pages load store.css first, and its
+   base/accessibility.css declares the identical rule.
+   ================================================== */
+body.admin-layout {
+    padding-top: 0;
+    background-color: var(--bg-color);
+}

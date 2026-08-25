@@ -1,0 +1,202 @@
+<?php
+
+namespace App\Models;
+
+use App\Core\Database;
+use Exception;
+
+/**
+ * BackupModel — نسخ احتياطي لقاعدة البيانات SQL.
+ * التخزين: <root>/storage/backups (خارج public/ تمامًا + حماية .htaccess).
+ * الإنشاء: يحاول mysqldump عبر exec() أولًا، فإن فشل يلجأ لتصدير PHP-native
+ * (SHOW CREATE TABLE + SELECT * لكل جدول).
+ */
+class BackupModel
+{
+    private const DIR    = ROOTPATH . '/storage/backups';
+    private const PREFIX = 'backup_';
+    private const PATTERN = '/^backup_\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}\.sql$/';
+
+    /**
+     * إنشاء نسخة جديدة.
+     * @return array ['success'=>bool, 'filename'=>?string, 'message'=>string]
+     */
+    public static function createBackup(): array
+    {
+        $dir = self::getDir();
+        if (!is_dir($dir) && !@mkdir($dir, 0755, true)) {
+            return ['success' => false, 'filename' => null, 'message' => 'Backup directory is not writable.'];
+        }
+
+        $filename = self::PREFIX . date('Y-m-d_H-i-s') . '.sql';
+        $path     = $dir . DIRECTORY_SEPARATOR . $filename;
+
+        // 1) محاولة mysqldump عبر exec() — الطريقة القياسية
+        $dump = self::tryMysqldump($path);
+        if ($dump['success'] && is_file($path) && filesize($path) > 0) {
+            return ['success' => true, 'filename' => $filename, 'message' => 'Backup created via mysqldump.'];
+        }
+
+        // 2) Fallback: تصدير SQL يدوي عبر PDO
+        $sql = self::exportSqlNative();
+        if (!is_string($sql) || $sql === '') {
+            return ['success' => false, 'filename' => null, 'message' => 'Both mysqldump and native export failed.'];
+        }
+
+        if (@file_put_contents($path, $sql) === false) {
+            return ['success' => false, 'filename' => null, 'message' => 'Failed to write backup file.'];
+        }
+
+        return ['success' => true, 'filename' => $filename, 'message' => 'Backup created via PHP native export.'];
+    }
+
+    /**
+     * محاولة تشغيل mysqldump — يجرب عدّة مسارات شائعة للـ binary.
+     */
+    private static function tryMysqldump(string $path): array
+    {
+        if (!function_exists('exec') || !function_exists('is_executable')) {
+            return ['success' => false];
+        }
+
+        $candidates = ['mysqldump'];
+        if (PHP_OS_FAMILY === 'Windows') {
+            $candidates = array_merge($candidates, [
+                'C:\\xampp\\mysql\\bin\\mysqldump.exe',
+                'C:\\wamp64\\bin\\mysql\\mysql8.0\\bin\\mysqldump.exe',
+            ]);
+        } else {
+            $candidates[] = '/usr/bin/mysqldump';
+        }
+
+        $host = escapeshellarg(DB_HOST);
+        $user = escapeshellarg(DB_USER);
+        $pass = escapeshellarg(DB_PASS);
+        $name = escapeshellarg(DB_NAME);
+        $out  = escapeshellarg($path);
+
+        foreach ($candidates as $bin) {
+            if ($bin !== 'mysqldump' && !is_file($bin)) continue;
+            $cmd = sprintf(
+                '%s --single-transaction --routines --triggers'
+                . ' --host=%s --user=%s --password=%s %s > %s 2>&1',
+                escapeshellarg($bin), $host, $user, $pass, $name, $out
+            );
+            @exec($cmd, $_, $code);
+            if ($code === 0 && is_file($path) && filesize($path) > 0) {
+                return ['success' => true];
+            }
+            @unlink($path); // مسح أي ملف جزئي قبل التجربة التالية
+        }
+
+        return ['success' => false];
+    }
+
+    /**
+     * تصدير SQL كامل يدويًا عبر PDO (fallback إن لم يتوفر mysqldump).
+     */
+    private static function exportSqlNative(): string
+    {
+        try {
+            $db    = Database::connect();
+            $tables = $db->query('SHOW TABLES')->fetchAll(\PDO::FETCH_COLUMN);
+            if (!$tables) return '';
+
+            $out  = "-- Cairo Store Database Backup\n";
+            $out .= "-- Generated: " . date('Y-m-d H:i:s') . " (PHP native export)\n";
+            $out .= "SET NAMES utf8mb4;\nSET FOREIGN_KEY_CHECKS = 0;\n\n";
+
+            foreach ($tables as $table) {
+                $stmt = $db->query("SHOW CREATE TABLE `{$table}`");
+                $row  = $stmt->fetch(\PDO::FETCH_ASSOC);
+                $out .= "-- --------------------------------------------------------\n";
+                $out .= "-- Table structure: `{$table}`\n";
+                $out .= "-- --------------------------------------------------------\n";
+                $out .= ($row['Create Table'] ?? '') . ";\n\n";
+
+                $rows = $db->query("SELECT * FROM `{$table}`")->fetchAll(\PDO::FETCH_ASSOC);
+                if (!$rows) continue;
+
+                $out .= "-- Data: `{$table}`\n";
+                foreach ($rows as $row) {
+                    $cols  = array_map(fn(string $c) => "`{$c}`", array_keys($row));
+                    $vals  = implode(',', array_map(function ($v) use ($db) {
+                        if ($v === null) return 'NULL';
+                        if (is_int($v) || is_float($v)) return (string)$v;
+                        return $db->quote((string)$v);
+                    }, array_values($row)));
+                    $out .= "INSERT INTO `{$table}` (" . implode(',', $cols) . ") VALUES ({$vals});\n";
+                }
+                $out .= "\n";
+            }
+
+            $out .= "SET FOREIGN_KEY_CHECKS = 1;\n";
+            return $out;
+        } catch (Exception $e) {
+            error_log("BackupModel::exportSqlNative Error: " . $e->getMessage());
+            return '';
+        }
+    }
+
+    /**
+     * قائمة النسخ الموجودة (الاسم، الحجم بالبايت + بصيغة مقروءة، التاريخ).
+     */
+    public static function listBackups(): array
+    {
+        $dir = self::getDir();
+        if (!is_dir($dir)) return [];
+
+        $files = glob($dir . '/' . self::PREFIX . '*.sql');
+        if (!$files) return [];
+
+        $result = [];
+        foreach ($files as $file) {
+            if (!is_file($file)) continue;
+            $result[] = [
+                'filename'  => basename($file),
+                'size'      => filesize($file),
+                'size_human'=> self::formatBytes((int)filesize($file)),
+                'date'      => date('Y-m-d H:i:s', filemtime($file)),
+            ];
+        }
+
+        usort($result, fn($a, $b) => strcmp($b['filename'], $a['filename']));
+        return $result;
+    }
+
+    /**
+     * حذف نسخة — يقبل اسم ملف مفهرس فقط (عبر getBackupPath).
+     */
+    public static function deleteBackup(string $filename): bool
+    {
+        $path = self::getBackupPath($filename);
+        if ($path === null) return false;
+        return @unlink($path);
+    }
+
+    /**
+     * مسار آمن داخل مجلد الباك اب — يرفض أي Path Traversal.
+     * يُقبل الاسم فقط لو: basename() مطابق تمامًا + بالصيغة المطلوبة + ملف موجود.
+     */
+    public static function getBackupPath(string $filename): ?string
+    {
+        if (basename($filename) !== $filename) return null;
+        if (!preg_match(self::PATTERN, $filename)) return null;
+
+        $path = self::getDir() . DIRECTORY_SEPARATOR . $filename;
+        return is_file($path) ? $path : null;
+    }
+
+    /** مجلد التخزين (يبقى خارج public/ — الدفاع الأساسي). */
+    public static function getDir(): string
+    {
+        return self::DIR;
+    }
+
+    private static function formatBytes(int $bytes): string
+    {
+        if ($bytes >= 1048576) return number_format($bytes / 1048576, 2) . ' MB';
+        if ($bytes >= 1024)    return number_format($bytes / 1024, 1) . ' KB';
+        return $bytes . ' B';
+    }
+}

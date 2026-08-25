@@ -1,0 +1,80 @@
+/* ==================================================
+   animations/micro-interactions.css — Checkout steps, tab panels, dropdown fade, toasts, range thumb, click feedback.
+   ================================================== */
+
+/* ── Step-by-Step Checkout Transitions ── */
+.checkout-step {
+    display: none;
+}
+.checkout-step.active {
+    display: block !important;
+    --slide-x: 20px;
+    animation: fadeSlideIn var(--dur-base) var(--ease-decelerate) both;
+}
+
+/* ── My Info Tabs Transitions ── */
+.tab-section {
+    display: none;
+    opacity: 0;
+    transform: translateY(10px);
+    transition: opacity var(--dur-base) var(--ease-decelerate), transform var(--dur-base) var(--ease-decelerate);
+}
+.tab-section.active-tab {
+    display: block !important;
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* ── Dropdown Menu Fade + Scale Transitions ── */
+.dropdown-menu {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+    transition: opacity var(--dur-fast) var(--ease-decelerate), transform var(--dur-fast) var(--ease-decelerate) !important;
+    display: block !important;
+    pointer-events: none;
+    visibility: hidden;
+}
+.dropdown-menu.show {
+    opacity: 1 !important;
+    transform: translateY(0) scale(1) !important;
+    pointer-events: auto !important;
+    visibility: visible !important;
+}
+
+/* ── SweetAlert2 Toast Custom Animations ── */
+.swal2-toast-show {
+    animation: toastFadeInDown var(--dur-slow) var(--ease-decelerate) forwards !important;
+}
+.swal2-toast-hide {
+    animation: toastFadeOutUp var(--dur-base) var(--ease-decelerate) forwards !important;
+}
+@keyframes toastFadeInDown {
+    from { opacity: 0; transform: translateY(-12px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+@keyframes toastFadeOutUp {
+    from { opacity: 1; transform: translateY(0); }
+    to { opacity: 0; transform: translateY(-12px); }
+}
+
+/* ── Range slider thumb ────────────────────────── */
+input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none;
+    width: 18px; height: 18px; border-radius: 50%;
+    background: var(--accent); cursor: pointer;
+    border: 2px solid var(--card-bg); box-shadow: 0 1px 4px var(--shadow-color);
+}
+input[type="range"]::-moz-range-thumb {
+    width: 18px; height: 18px; border-radius: 50%;
+    background: var(--accent); cursor: pointer;
+    border: 2px solid var(--card-bg); box-shadow: 0 1px 4px var(--shadow-color);
+}
+
+/* ── Micro-interactions: scale on click ── */
+.btn:active, 
+.favorite-btn:active,
+.info-tab-btn:active {
+    transform: scale(0.97) !important;
+    transition: transform var(--dur-fast) ease !important;
+}
+

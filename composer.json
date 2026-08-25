@@ -1,0 +1,20 @@
+{
+    "name": "store/app",
+    "description": "PHP E-Commerce Store MVC Application",
+    "type": "project",
+    "license": "MIT",
+    "autoload": {
+        "psr-4": {
+            "App\\": "app/"
+        },
+        "files": [
+            "app/config/openapi_info.php"
+        ]
+    },
+    "scripts": {
+        "docs:generate": "vendor/bin/openapi app/controllers app/config -o public/docs/openapi.yaml"
+    },
+    "require": {
+        "phpmailer/phpmailer": "^7.1"
+    }
+}

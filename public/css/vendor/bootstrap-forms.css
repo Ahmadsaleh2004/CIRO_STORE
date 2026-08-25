@@ -1,0 +1,91 @@
+/* ==================================================
+   vendor/bootstrap-forms.css — Bootstrap form controls.
+   ================================================== */
+
+/* ==================================================
+   Select / Optgroup — Dark Mode Fix
+   ================================================== */
+select option,
+select optgroup {
+    background-color: var(--input-bg) !important;
+    color: var(--input-text) !important;
+}
+
+/* ==================================================
+    Bootstrap Form Elements — Dark Mode Fix
+    ================================================== */
+.form-check-input {
+    background-color: var(--input-bg) !important;
+    border-color: var(--input-border) !important;
+    accent-color: #16a34a;
+}
+
+.form-check-input:checked {
+    background-color: #16a34a !important;
+    border-color: #16a34a !important;
+}
+
+.form-check-input:focus {
+    border-color: #16a34a !important;
+    box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.20) !important;
+}
+
+.form-check-label {
+    color: var(--text-color) !important;
+}
+
+
+/* ==================================================
+   .form-select chevron — Dark Mode Fix
+   ==================================================
+   BUG FIX: Bootstrap paints the dropdown chevron as an inline SVG
+   with a hard-coded #343a40 stroke. components/forms.css repaints
+   the control's background-color but cannot touch a colour baked
+   into a background-image, so on a dark field the arrow disappears
+   and the Sort dropdown on the products page looks like a plain
+   text box. Re-declare the image per theme.
+   ================================================== */
+.form-select {
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23343a40' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e") !important;
+    background-repeat: no-repeat !important;
+    background-position: right 0.75rem center !important;
+    background-size: 16px 12px !important;
+}
+
+body.dark-mode .form-select,
+html[data-bs-theme="dark"] body .form-select {
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23e6edf3' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e") !important;
+}
+
+/* RTL mirrors the chevron to the left edge. */
+[dir="rtl"] .form-select {
+    background-position: left 0.75rem center !important;
+    padding-right: 0.75rem !important;
+    padding-left: 2.25rem !important;
+}
+
+/* --- Range slider track ------------------------------------
+   The thumb is styled in animations/micro-interactions.css; the
+   track needs a theme-aware colour of its own or it renders as a
+   pale grey line that vanishes on the dark background. */
+.form-range {
+    /* The old blanket "input { border: 1px ... }" rule also hit
+       <input type="range">, boxing the slider in a field border.
+       Height is restated because styling the runnable track below
+       makes Chrome lay the control out from the track otherwise. */
+    height: 1.5rem;
+    padding: 0;
+    background-color: transparent !important;
+    border: none !important;
+}
+.form-range::-webkit-slider-runnable-track {
+    background-color: var(--section-border);
+    border-radius: 4px;
+    height: 6px;
+}
+.form-range::-moz-range-track {
+    background-color: var(--section-border);
+    border-radius: 4px;
+    height: 6px;
+}
+

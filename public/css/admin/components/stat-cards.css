@@ -1,0 +1,74 @@
+/* ==================================================
+   admin/components/stat-cards.css — Dashboard KPI tiles and the chart card that sits beside them.
+   ================================================== */
+
+.stat-card {
+    background: var(--card-bg);
+    border: 1px solid var(--section-border);
+    border-radius: 14px;
+    padding: 22px 20px;
+    text-align: center;
+    transition: transform .25s ease, box-shadow .25s ease;
+}
+.stat-card:hover { transform: translateY(-4px); box-shadow: 0 12px 30px var(--shadow-hover); }
+.stat-card .stat-icon  { font-size: 2.2rem; display: block; margin-bottom: 8px; }
+.stat-card .stat-value { font-size: 2rem; font-weight: 800; color: var(--accent); line-height: 1; }
+.stat-card .stat-label { font-size: .78rem; color: var(--muted-text); margin-top: 6px; text-transform: uppercase; letter-spacing: .5px; }
+
+.chart-card { background:var(--card-bg); border:1px solid var(--section-border); border-radius:14px; padding:22px; margin-bottom:24px; }
+.chart-card h5 { color:var(--text-color); font-weight:600; margin-bottom:16px; }
+
+/* --- Responsive. This is the original cascade order, assembled
+       from the two separate responsive sections the old admin.css
+       had. Several blocks match at once on a phone and the last one
+       wins, so the <=1024 block genuinely belongs after <=400.
+       Do not reorder. --- */
+@media (max-width: 768px) {
+    .stat-card .stat-value { font-size: 1.6rem; }
+    .chart-card { padding: 16px; }
+}
+
+@media (max-width: 576px) {
+    .stat-card { padding: 16px 12px; }
+    .stat-card .stat-value { font-size: 1.4rem; }
+    .stat-card .stat-icon  { font-size: 1.6rem; }
+}
+
+@media (max-width: 400px) {
+    .stat-card .stat-value { font-size: 1.15rem; }
+}
+
+@media (max-width: 1024px) {
+    .stat-card .stat-value { font-size: 1.7rem; }
+}
+
+@media (max-width: 991px) {
+    .chart-card { padding: 14px; }
+}
+
+@media (max-width: 576px) {
+    .stat-card { min-width: 0; }
+}
+
+@media (max-width: 414px) {
+    .stat-card { padding: 14px 10px; }
+    .stat-card .stat-value { font-size: 1.4rem; }
+    .stat-card .stat-icon  { font-size: 1.6rem; }
+}
+
+@media (max-width: 375px) {
+    .stat-card { padding: 12px 8px; }
+    .stat-card .stat-value { font-size: 1.25rem; }
+    .stat-card .stat-icon  { font-size: 1.4rem; }
+}
+
+@media (max-width: 320px) {
+    .stat-card,
+    .row .col-6 {
+        flex: 0 0 100% !important;
+        max-width: 100% !important;
+    }
+    .stat-card .stat-value { font-size: 1.1rem; }
+    .stat-card .stat-icon  { font-size: 1.2rem; }
+    .stat-card .stat-label { font-size: 0.65rem; }
+}

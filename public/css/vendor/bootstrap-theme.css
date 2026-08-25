@@ -1,0 +1,76 @@
+/* ==================================================
+   vendor/bootstrap-theme.css — Bootstrap 5.3 theme bridge.
+   ==================================================
+   WHY THIS FILE EXISTS
+   Bootstrap 5.3 reads its own dark mode from data-bs-theme="dark"
+   on <html>. This project switches themes with body.dark-mode.
+   js/core/theme.js now sets BOTH, so Bootstrap's own components
+   follow the theme instead of staying stuck on light colours.
+
+   The rules below are the bridge: they map Bootstrap's generic
+   colour utilities and surfaces onto this project's own tokens so
+   the two systems never disagree. Anything Bootstrap-specific
+   belongs in this folder, not in components/.
+   ================================================== */
+
+/* Tell the browser which form-control / scrollbar palette to use. */
+:root            { color-scheme: light; }
+body.dark-mode   { color-scheme: dark; }
+html[data-bs-theme="dark"] body   { color-scheme: dark; }
+
+/* --- Text colour utilities ---------------------------------
+   BUG FIX: .text-muted is used 49 times across 19 views. Bootstrap
+   resolves it to rgba(33,37,41,.75) — dark grey — which on the dark
+   background (#0d1117) lands at roughly 1.4:1 contrast and is
+   effectively invisible. --muted-text is a dedicated token that
+   clears 4.5:1 (WCAG AA) in BOTH themes. */
+.text-muted,
+.text-secondary,
+.text-body-secondary {
+    color: var(--muted-text) !important;
+}
+
+/* .text-dark is only ever used in this project as part of a badge
+   pairing (bg-warning/bg-info/bg-light + text-dark). Those badge
+   backgrounds are handled in vendor/bootstrap-feedback.css, which
+   sets the text colour at higher specificity, so nothing more is
+   needed here. A bare .text-dark outside a badge follows the theme. */
+:not(.badge).text-dark {
+    color: var(--text-color) !important;
+}
+
+/* --- Generic background utilities -------------------------- */
+.bg-body,
+.bg-body-tertiary {
+    background-color: var(--bg-color) !important;
+    color: var(--text-color) !important;
+}
+
+/* --- Tabs -------------------------------------------------- */
+.nav-tabs {
+    border-bottom-color: var(--section-border) !important;
+}
+.nav-tabs .nav-link {
+    color: var(--muted-text) !important;
+    border-color: transparent !important;
+}
+.nav-tabs .nav-link:hover {
+    color: var(--text-color) !important;
+    border-color: var(--section-border) !important;
+}
+.nav-tabs .nav-link.active {
+    color: var(--text-color) !important;
+    background-color: var(--card-bg) !important;
+    border-color: var(--section-border) var(--section-border) var(--card-bg) !important;
+}
+
+/* --- Utility class replacing an inline style in
+       admin/product/index.php (the Sort & Filter panel divider) --- */
+.filter-divider {
+    /* Matches Bootstrap's default <hr> box so swapping the inline
+       style for this class changes the colour and nothing else. */
+    border: 0;
+    border-top: 1px solid var(--section-border);
+    opacity: 1;
+    margin: 1rem 0;
+}

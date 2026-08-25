@@ -1,0 +1,176 @@
+/* ==================================================
+   components/forms.css — Inputs, selects, autofill and the dark-mode field overrides.
+   ================================================== */
+
+/* ==================================================
+   Inputs & Selects (Global)
+   ================================================== */
+input,
+textarea,
+select,
+.form-control,
+.form-select {
+    background-color: var(--input-bg) !important;
+    color: var(--input-text) !important;
+    border: 1px solid var(--input-border) !important;
+    transition: background-color var(--dur-slow) ease, border-color var(--dur-slow) ease, color var(--dur-slow) ease;
+}
+
+input::placeholder,
+textarea::placeholder {
+    color: var(--placeholder-color) !important;
+}
+
+input:focus,
+textarea:focus,
+select:focus,
+.form-control:focus,
+.form-select:focus {
+    background-color: var(--input-bg) !important;
+    color: var(--input-text) !important;
+    border-color: var(--accent) !important;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15) !important;
+    outline: none;
+}
+
+/* ==================================================
+   Autofill — Dark Mode Fix
+   ================================================== */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+textarea:-webkit-autofill,
+textarea:-webkit-autofill:hover,
+textarea:-webkit-autofill:focus,
+select:-webkit-autofill,
+select:-webkit-autofill:hover,
+select:-webkit-autofill:focus {
+    -webkit-box-shadow: 0 0 0px 1000px var(--input-bg) inset !important;
+    -webkit-text-fill-color: var(--input-text) !important;
+    transition: background-color 5000s ease-in-out 0s;
+    caret-color: var(--input-text);
+}
+
+.input-group-text {
+    background-color: var(--input-bg) !important;
+    color: var(--input-text) !important;
+    border-color: var(--input-border) !important;
+}
+
+
+/* --- Auth Modals: تثبيت لون الـ inputs عند الـ focus --- */
+#loginModal    .float-group input:focus,
+#registerModal .float-group input:focus,
+#registerModal .float-group textarea:focus,
+#registerModal .float-group select:focus,
+#forgotModal   .float-group input:focus,
+#loginModal    .modal-body input:focus,
+#loginModal    .modal-body .form-control:focus,
+#forgotModal   .modal-body input:focus,
+#forgotModal   .modal-body .form-control:focus {
+    background-color: var(--input-bg) !important;
+    color: var(--input-text) !important;
+    caret-color: var(--input-text) !important;
+    -webkit-text-fill-color: var(--input-text) !important;
+}
+
+/* --- إلغاء autofill المتصفح الأبيض داخل الـ Modals --- */
+#loginModal    input:-webkit-autofill,
+#loginModal    input:-webkit-autofill:focus,
+#registerModal input:-webkit-autofill,
+#registerModal input:-webkit-autofill:focus,
+#forgotModal   input:-webkit-autofill,
+#forgotModal   input:-webkit-autofill:focus {
+    -webkit-box-shadow: 0 0 0px 1000px var(--input-bg) inset !important;
+    -webkit-text-fill-color: var(--input-text) !important;
+    caret-color: var(--input-text) !important;
+}
+
+/* dark mode: قيم ثابتة لأن webkit لا يقرأ CSS vars داخل inset shadow */
+body.dark-mode #loginModal    input,
+html[data-bs-theme="dark"] body #loginModal    input,
+body.dark-mode #loginModal    input:focus,
+html[data-bs-theme="dark"] body #loginModal    input:focus,
+body.dark-mode #registerModal input,
+html[data-bs-theme="dark"] body #registerModal input,
+body.dark-mode #registerModal input:focus,
+html[data-bs-theme="dark"] body #registerModal input:focus,
+body.dark-mode #registerModal select,
+html[data-bs-theme="dark"] body #registerModal select,
+body.dark-mode #registerModal select:focus,
+html[data-bs-theme="dark"] body #registerModal select:focus,
+body.dark-mode #forgotModal   input,
+html[data-bs-theme="dark"] body #forgotModal   input,
+body.dark-mode #forgotModal   input:focus,
+html[data-bs-theme="dark"] body #forgotModal   input:focus {
+    background-color: #21262d !important;
+    color:            #e6edf3 !important;
+    caret-color:      #e6edf3 !important;
+    -webkit-text-fill-color: #e6edf3 !important;
+    border-color: #30363d !important;
+}
+
+body.dark-mode #loginModal    input:-webkit-autofill,
+html[data-bs-theme="dark"] body #loginModal    input:-webkit-autofill,
+body.dark-mode #loginModal    input:-webkit-autofill:focus,
+html[data-bs-theme="dark"] body #loginModal    input:-webkit-autofill:focus,
+body.dark-mode #registerModal input:-webkit-autofill,
+html[data-bs-theme="dark"] body #registerModal input:-webkit-autofill,
+body.dark-mode #registerModal input:-webkit-autofill:focus,
+html[data-bs-theme="dark"] body #registerModal input:-webkit-autofill:focus,
+body.dark-mode #forgotModal   input:-webkit-autofill,
+html[data-bs-theme="dark"] body #forgotModal   input:-webkit-autofill,
+body.dark-mode #forgotModal   input:-webkit-autofill:focus,
+html[data-bs-theme="dark"] body #forgotModal   input:-webkit-autofill:focus {
+    -webkit-box-shadow: 0 0 0px 1000px #21262d inset !important;
+    -webkit-text-fill-color: #e6edf3 !important;
+    caret-color: #e6edf3 !important;
+}
+
+
+/* ==================================================
+   Dark Mode — إصلاح شامل لكل الحقول بالموقع
+   (تغطية عامة لأي حقل خارج الـ Auth Modals الثلاثة)
+   WebKit لا يقرأ CSS Variables داخل inset box-shadow
+   ================================================== */
+body.dark-mode input,
+html[data-bs-theme="dark"] body input,
+body.dark-mode input:focus,
+html[data-bs-theme="dark"] body input:focus,
+body.dark-mode textarea,
+html[data-bs-theme="dark"] body textarea,
+body.dark-mode textarea:focus,
+html[data-bs-theme="dark"] body textarea:focus,
+body.dark-mode select,
+html[data-bs-theme="dark"] body select,
+body.dark-mode select:focus,
+html[data-bs-theme="dark"] body select:focus,
+body.dark-mode .form-control,
+html[data-bs-theme="dark"] body .form-control,
+body.dark-mode .form-control:focus,
+html[data-bs-theme="dark"] body .form-control:focus {
+    background-color: #21262d !important;
+    color:            #e6edf3 !important;
+    caret-color:      #e6edf3 !important;
+    -webkit-text-fill-color: #e6edf3 !important;
+    border-color: #30363d !important;
+}
+
+body.dark-mode input:-webkit-autofill,
+html[data-bs-theme="dark"] body input:-webkit-autofill,
+body.dark-mode input:-webkit-autofill:hover,
+html[data-bs-theme="dark"] body input:-webkit-autofill:hover,
+body.dark-mode input:-webkit-autofill:focus,
+html[data-bs-theme="dark"] body input:-webkit-autofill:focus,
+body.dark-mode textarea:-webkit-autofill,
+html[data-bs-theme="dark"] body textarea:-webkit-autofill,
+body.dark-mode textarea:-webkit-autofill:focus,
+html[data-bs-theme="dark"] body textarea:-webkit-autofill:focus,
+body.dark-mode select:-webkit-autofill,
+html[data-bs-theme="dark"] body select:-webkit-autofill,
+body.dark-mode select:-webkit-autofill:focus,
+html[data-bs-theme="dark"] body select:-webkit-autofill:focus {
+    -webkit-box-shadow: 0 0 0px 1000px #21262d inset !important;
+    -webkit-text-fill-color: #e6edf3 !important;
+    caret-color: #e6edf3 !important;
+}

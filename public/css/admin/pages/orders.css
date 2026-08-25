@@ -1,0 +1,38 @@
+/* ==================================================
+   admin/pages/orders.css — Order detail header and the status timeline.
+   ================================================== */
+
+.order-detail-header {
+    background: var(--card-bg);
+    border: 1px solid var(--section-border);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.order-status-timeline {
+    display: flex;
+    justify-content: space-between;
+    position: relative;
+    margin: 20px 0;
+}
+
+.order-status-timeline::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: var(--section-border);
+    z-index: 1;
+    transform: translateY(-50%);
+}
+
+.order-status-step {
+    position: relative;
+    z-index: 2;
+    background: var(--card-bg);
+    padding: 0 10px;
+    text-align: center;
+}

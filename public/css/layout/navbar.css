@@ -1,0 +1,87 @@
+/* ==================================================
+   layout/navbar.css — Public store navbar.
+   ================================================== */
+
+/* ==================================================
+   Navbar
+   ================================================== */
+.custom-navbar {
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 1030;
+    background-color: var(--navbar-bg) !important;
+    transition: background-color var(--dur-slow) ease;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.15);
+}
+
+.custom-navbar .navbar-brand,
+.custom-navbar .nav-link,
+.custom-navbar .nav-link:visited {
+    color: var(--navbar-text) !important;
+    transition: color var(--dur-fast) ease, opacity var(--dur-fast) ease;
+}
+
+.custom-navbar .nav-link:hover {
+    color: var(--accent) !important;
+    opacity: 1 !important;
+}
+
+.custom-navbar .nav-link.active {
+    color: var(--accent) !important;
+    border-bottom: 2px solid var(--accent);
+    padding-bottom: 2px;
+}
+
+.custom-navbar .navbar-toggler {
+    border-color: var(--navbar-text) !important;
+}
+
+.custom-navbar .navbar-toggler-icon {
+    filter: invert(1);
+}
+
+
+/* ==================================================
+   Navbar — Wishlist/Cart active highlight
+   ================================================== */
+.navbar-icon-active {
+    box-shadow: 0 0 0 2px var(--accent) !important;
+    border-color: var(--accent) !important;
+}
+
+/* --- Responsive ------------------------------------------- */
+@media (max-width: 767px) {
+    .navbar-brand { font-size: 1rem !important; }
+}
+
+@media (max-width: 768px) {
+    /* Right-hand icon strip may wrap instead of overflowing */
+    #mainNavbar .d-flex.gap-2.align-items-center {
+        flex-wrap: wrap;
+        gap: 6px !important;
+    }
+}
+
+@media (max-width: 414px) {
+    #mainNavbar .d-flex.gap-2.align-items-center {
+        gap: 4px !important;
+    }
+    /* Trim long account names in the navbar dropdown trigger */
+    .custom-navbar .dropdown .btn {
+        max-width: 130px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+}
+
+@media (max-width: 320px) {
+    #mainNavbar .d-flex.gap-2.align-items-center {
+        flex-wrap: wrap;
+        gap: 3px !important;
+        max-width: 100%;
+    }
+    .custom-navbar .navbar-brand .badge {
+        display: none;
+    }
+}

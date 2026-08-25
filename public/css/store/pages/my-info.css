@@ -1,0 +1,60 @@
+/* ==================================================
+   css/pages/my-info.css — أنماط صفحة حسابي (My Info)
+   ================================================== */
+
+/* ── My Info Tabs Transitions ── */
+.tab-section {
+    display: none;
+    opacity: 0;
+    transform: translateY(10px);
+    background-color: var(--card-bg) !important;
+    color: var(--text-color) !important;
+    border: 1px solid var(--section-border) !important;
+    border-radius: 12px;
+    padding: 24px;
+    transition: opacity var(--dur-base) var(--ease-decelerate), transform var(--dur-base) var(--ease-decelerate);
+}
+
+.tab-section.active-tab {
+    display: block !important;
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.info-tab-btn {
+    border-radius: 10px !important;
+    font-weight: 600;
+    transition: background var(--dur-fast) ease, color var(--dur-fast) ease;
+}
+
+.info-tab-btn.active {
+    background: var(--accent) !important;
+    color: #ffffff !important;
+}
+
+/* ==================================================
+   Responsive — account/my-info.php tabs
+   NOTE: account/my-info.php actually uses Bootstrap's native
+   .nav-tabs / .tab-pane system, not the .info-tab-btn/.tab-section
+   pair above (that pair belongs to admin/my-info.php instead — two
+   different tab implementations share this file's name-adjacent
+   purpose but not its markup). Bootstrap's .nav already wraps by
+   default; this just guarantees the touch-target floor on phones.
+   ================================================== */
+@media (max-width: 767px) {
+    #myInfoTabs .nav-link {
+        min-height: 40px;
+        display: flex;
+        align-items: center;
+    }
+}
+
+/* Moved here from style.css — admin/my-info.php's .info-tab-btn row. */
+@media (max-width: 575px) {
+    .info-tab-btn {
+        flex: 1 1 auto;
+        text-align: center;
+        font-size: .82rem;
+        padding: 8px 10px;
+    }
+}

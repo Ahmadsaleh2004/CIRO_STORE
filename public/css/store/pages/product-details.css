@@ -1,0 +1,129 @@
+/* ==================================================
+   store/pages/product-details.css — Product details page.
+   ==================================================
+   .product-specs, .quantity-box, .new-price/.old-price and
+   .product-image used to be declared BOTH here and in style.css.
+   The shared versions now live in components/; what remains below
+   is only what this page overrides or owns outright.
+   ================================================== */
+
+/* ── Product Specs Box ────────────────────────────
+   Kept here (not in components/) because .product-specs only
+   appears on this page, and this page's card-coloured version is
+   the one that was actually winning before the split. */
+.product-specs {
+    background-color: var(--card-bg) !important;
+    border: 1px solid var(--section-border) !important;
+    color: var(--text-color) !important;
+    border-radius: 10px !important;
+    transition: background-color var(--dur-slow) ease;
+}
+
+.spec-label {
+    font-weight: 600;
+    color: var(--text-color) !important;
+}
+
+.spec-value {
+    color: var(--muted-text) !important;
+}
+
+/* ── Product Description ────────────────────────── */
+.product-description {
+    color: var(--muted-text) !important;
+    line-height: 1.7;
+    font-size: 0.97rem;
+}
+
+/* ── Quantity Box — page override ─────────────────
+   components/quantity-box.css sets the shared 38px stepper; the
+   details page runs it slightly larger. Only the deltas are here. */
+.quantity-box .btn {
+    width: 40px;
+    height: 40px;
+}
+
+.quantity-input {
+    width: 60px !important;
+    height: 40px !important;
+}
+
+/* ── Static Style Replacements ─────────────────── */
+.badge-zindex { z-index: 5; }
+.rating-stars-yellow { color: #f59e0b; font-size: 1.1rem; }
+.reviews-count-text { color: var(--muted-text); }
+.old-price-sub { color: var(--muted-text); }
+.qty-input-md { width: 70px !important; }
+.no-reviews-text { color: var(--muted-text); }
+.review-stars-yellow { color: #f59e0b; }
+.review-date-text { color: var(--muted-text); }
+
+/* ── Main Product Image + Hover Zoom ─────────────── */
+.zoom-wrapper {
+    overflow: hidden;
+    border-radius: var(--radius-lg, 12px);
+}
+
+.product-detail-main-img {
+    width: 100%;
+    max-height: 480px;
+    object-fit: cover;
+    display: block;
+    cursor: zoom-in;
+    transition: transform 0.35s ease;
+}
+
+@media (hover: hover) {
+    .zoom-wrapper:hover .product-detail-main-img {
+        transform: scale(1.15);
+    }
+}
+
+/* ==================================================
+   Responsive — layout (moved here from style.css)
+   ================================================== */
+@media (max-width: 991px) and (min-width: 768px) {
+    #product-details .row { gap: 2rem; }
+}
+
+@media (max-width: 767px) {
+    #product-details .col-lg-6 {
+        flex: 0 0 100%;
+        max-width: 100%;
+    }
+    #product-details .col-lg-6:first-child img {
+        max-height: 260px;
+        object-fit: contain;
+        margin: 0 auto;
+        display: block;
+    }
+}
+
+/* ==================================================
+   Responsive — Qty/Add-to-Cart row
+   #addCartBtn keeps Bootstrap's px-5 (3rem each side) from the
+   view, which is fine at desktop sizes but forces "Add To Cart"
+   onto two lines at <=375px, doubling the button's height. Reclaim
+   space here instead of touching the view's utility classes.
+   ================================================== */
+@media (max-width: 575px) {
+    #qtyCartBlock .d-flex.gap-2,
+    #notifyBlock .d-flex.gap-2 {
+        flex-wrap: nowrap;
+    }
+    #addCartBtn {
+        flex: 1 1 auto;
+        padding-left: 1rem !important;
+        padding-right: 1rem !important;
+        white-space: nowrap;
+    }
+    #wishBtn {
+        flex: 0 0 auto;
+    }
+}
+
+@media (max-width: 375px) {
+    #addCartBtn {
+        font-size: 1rem !important;
+    }
+}

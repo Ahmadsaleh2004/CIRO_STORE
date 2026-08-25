@@ -1,0 +1,41 @@
+/* ==================================================
+   base/breakpoints.css — Card-size scale per breakpoint.
+   ==================================================
+   These are the ONLY blocks in the project that redefine
+   --card-height / --img-height. Custom properties have no
+   specificity contest, so on any viewport where more than one
+   block matches, the one that appears LAST here wins.
+   DO NOT REORDER.
+
+     >=1400px   Large desktop      360 / 210
+     768-991px  Tablet landscape   300 / 160
+     <=767px    Tablet portrait    280 / 145
+     <=575px    Small mobile       260 / 130
+   ================================================== */
+@media (min-width: 1400px) {
+    :root {
+        --card-height: 360px;
+        --img-height:  210px;
+    }
+}
+
+@media (max-width: 991px) and (min-width: 768px) {
+    :root {
+        --card-height: 300px;
+        --img-height:  160px;
+    }
+}
+
+@media (max-width: 767px) {
+    :root {
+        --card-height: 280px;
+        --img-height:  145px;
+    }
+}
+
+@media (max-width: 575px) {
+    :root {
+        --card-height: 260px;
+        --img-height:  130px;
+    }
+}

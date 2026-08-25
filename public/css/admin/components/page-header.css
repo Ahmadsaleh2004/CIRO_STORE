@@ -1,0 +1,49 @@
+/* ==================================================
+   admin/components/page-header.css — The title + action-button row at the top of every admin page.
+   ================================================== */
+
+.admin-page-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem; flex-wrap:wrap; gap:12px; }
+.admin-page-header h1 { font-size:1.5rem; font-weight:700; color:var(--text-color); margin:0; }
+
+/* --- Responsive. Original cascade order; do not reorder. --- */
+@media (max-width: 768px) {
+    .admin-page-header { flex-direction: column; align-items: flex-start; }
+    .admin-page-header h1 { font-size: 1.25rem; }
+}
+
+@media (max-width: 576px) {
+    .admin-page-header h1 { font-size: 1.1rem; }
+}
+
+@media (max-width: 400px) {
+    .admin-page-header h1 { font-size: 1rem; }
+}
+
+@media (max-width: 991px) {
+    .admin-page-header {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 0.75rem !important;
+    }
+    .admin-page-header h1 { font-size: 1.25rem; }
+}
+
+@media (max-width: 576px) {
+    .admin-page-header .btn {
+        width: 100%;
+        text-align: center;
+    }
+}
+
+@media (max-width: 414px) {
+    .admin-page-header h1 { font-size: 1.1rem; }
+}
+
+@media (max-width: 375px) {
+    .admin-page-header { gap: 0.5rem !important; }
+    .admin-page-header h1 { font-size: 1rem; }
+}
+
+@media (max-width: 320px) {
+    .admin-page-header h1 { font-size: 0.95rem; }
+}

@@ -1,0 +1,27 @@
+/* ==================================================
+   admin/pages/dashboard.css — Dashboard product thumbnails and typography helpers.
+   ================================================== */
+.dash-product-img {
+    height: 70px;
+    width: 70px;
+    object-fit: contain;
+    margin: auto;
+    display: block;
+}
+.dash-product-name {
+    font-size: .72rem;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+.dash-badge-month {
+    font-size: .85rem;
+    padding: 6px 12px;
+}
+.dash-search-input {
+    width: 100%;
+    max-width: 180px;
+}
+@media (max-width: 575px) {
+    .dash-search-input { max-width: 100%; }
+}

@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(grep -v \"^\\\\s*/\\\\*\")",
+      "Bash(node --check public/js/_diag-permmodal.js)",
+      "Bash(php -l app/views/admin/manage-admins/index.php)"
+    ]
+  }
+}

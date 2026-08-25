@@ -1,0 +1,43 @@
+/* ==================================================
+   layout/footer.css — Public store footer.
+   ================================================== */
+
+/* ==================================================
+   Footer
+   ================================================== */
+.custom-footer {
+    background-color: var(--footer-bg) !important;
+    color: var(--footer-text) !important;
+    transition: background-color var(--dur-slow) ease, color var(--dur-slow) ease;
+}
+
+.custom-footer p,
+.custom-footer h4,
+.custom-footer h5,
+.custom-footer li,
+.custom-footer span {
+    color: var(--footer-text) !important;
+}
+
+.custom-footer a {
+    color: var(--footer-link) !important;
+    text-decoration: none;
+    transition: color var(--dur-fast) ease;
+}
+
+.custom-footer a:hover {
+    color: var(--accent) !important;
+}
+
+.custom-footer hr {
+    border-color: var(--section-border) !important;
+    opacity: 0.3;
+}
+
+
+/* --- Responsive --- */
+@media (max-width: 575px) {
+    .custom-footer .col-lg-4 {
+        margin-bottom: 1.5rem;
+    }
+}

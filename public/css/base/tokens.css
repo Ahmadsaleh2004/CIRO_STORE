@@ -1,0 +1,108 @@
+/* ==================================================
+   base/tokens.css — Design tokens: colour variables (light + dark), radii, durations, easings, spacing scale.
+   ================================================== */
+
+/* ==================================================
+   نظام الألوان المتغير — CSS Variables
+   ================================================== */
+:root {
+    --bg-color:          #f0f2f5;
+    --text-color:        #1a1a2e;
+    --card-bg:           #ffffff;
+    --navbar-bg:         #1a1a2e;
+    --navbar-text:       #ffffff;
+    --footer-bg:         #1a1a2e;
+    --footer-text:       #e2e8f0;
+    --footer-link:       #94a3b8;
+    --input-bg:          #ffffff;
+    --input-border:      #d1d5db;
+    --input-text:        #1a1a2e;
+    --placeholder-color: #9ca3af;
+    /* Secondary/"muted" body text. Bootstrap resolves .text-muted to a
+       fixed dark grey that drops to ~1.4:1 on the dark background, so
+       vendor/bootstrap-theme.css maps .text-muted onto this token
+       instead. Both values clear 4.5:1 (WCAG AA) on their own theme's
+       card and page backgrounds. */
+    --muted-text:        #5b6472;
+    --modal-bg:          #ffffff;
+    --modal-text:        #1a1a2e;
+    --modal-border:      #e5e7eb;
+    --shadow-color:      rgba(15, 15, 15, 0.04);
+    --shadow-hover:      rgba(15, 15, 15, 0.10);
+    --accent:            #6366f1;
+    --accent-hover:      #4f46e5;
+    /* Accent roles that carry a contrast guarantee. --accent on its own
+       is tuned to look right, not to be readable everywhere:
+       #6366f1 text on the light page background is only 3.98:1, and
+       #818cf8 as a solid fill under white text is only 2.98:1. Use
+       these two instead wherever the accent has to be READ. */
+    --accent-text:       #4f46e5;  /* accent-coloured text on bg/card */
+    --accent-strong:     #4f46e5;  /* solid accent fill under white text */
+    --price-color:       #6366f1;
+    --badge-bg:          #ef4444;
+    --badge-text:        #ffffff;
+    --badge-bg-soft:     #1a1a2e;
+    --badge-text-soft:   #ffffff;
+    --section-border:    #e5e7eb;
+    --card-radius:       10px;
+    --card-border-color:  rgba(15, 15, 15, 0.09);
+    --card-border-hover:   rgba(15, 15, 15, 0.16);
+    --img-height:        180px;
+    --card-height:       320px;
+    --disabled-opacity:  0.45;
+    --dur-fast:          150ms;
+    --dur-base:          250ms;
+    --dur-slow:          400ms;
+    --ease-standard:     cubic-bezier(0.4, 0, 0.2, 1);
+    --ease-bounce:       cubic-bezier(0.34, 1.56, 0.64, 1);
+    --ease-decelerate:   cubic-bezier(0.16, 1, 0.3, 1);
+
+    /* Spacing scale — added for the responsive refactor.
+       Use these instead of ad-hoc px values in new rules. */
+    --space-1: 4px;
+    --space-2: 8px;
+    --space-3: 12px;
+    --space-4: 16px;
+    --space-5: 24px;
+    --space-6: 32px;
+}
+
+/* الوضع الليلي.
+   السيلكتور الثاني موجود لمنع الومضة البيضاء (FOUC): سكربت صغير في
+   <head> (themeBootScript في assets_helper.php) يضبط data-bs-theme
+   على <html> قبل أول رسم، بينما class="dark-mode" لا يُضاف إلا بعد
+   تحميل الـ body. الاثنان معاً يعنيان أن الألوان صحيحة من أول إطار.
+   ================================================== */
+body.dark-mode,
+html[data-bs-theme="dark"] body {
+    --bg-color:          #0d1117;
+    --text-color:        #e6edf3;
+    --card-bg:           #161b22;
+    --navbar-bg:         #010409;
+    --navbar-text:       #e6edf3;
+    --footer-bg:         #010409;
+    --footer-text:       #8b949e;
+    --footer-link:       #58a6ff;
+    --input-bg:          #21262d;
+    --input-border:      #30363d;
+    --input-text:        #e6edf3;
+    --placeholder-color: #484f58;
+    --muted-text:        #9aa4b2;
+    --modal-bg:          #161b22;
+    --modal-text:        #e6edf3;
+    --modal-border:      #30363d;
+    --shadow-color:      rgba(0, 0, 0, 0.40);
+    --shadow-hover:      rgba(0, 0, 0, 0.60);
+    --accent:            #818cf8;
+    --accent-hover:      #6366f1;
+    --accent-text:       #818cf8;
+    --accent-strong:     #4338ca;
+    --price-color:       #818cf8;
+    --badge-bg:          #f87171;
+    --badge-text:        #ffffff;
+    --badge-bg-soft:     #e6edf3;
+    --badge-text-soft:   #1a1a2e;
+    --section-border:    #30363d;
+    --card-border-color:  rgba(230, 237, 243, 0.12);
+    --card-border-hover:   rgba(230, 237, 243, 0.22);
+}

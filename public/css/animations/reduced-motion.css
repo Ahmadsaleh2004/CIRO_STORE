@@ -1,0 +1,27 @@
+/* ==================================================
+   animations/reduced-motion.css — prefers-reduced-motion. MUST be imported LAST so it wins.
+   ================================================== */
+
+/* prefers-reduced-motion — احترام إعدادات المستخدم */
+@media (prefers-reduced-motion: reduce) {
+    main[role="main"] { animation: none !important; }
+    #page-overlay     { transition: none !important; }
+    #page-progress-bar { display: none !important; }
+    .reveal { opacity: 1 !important; transform: none !important; transition: none !important; }
+    .fade-in-up { animation: none !important; }
+    .product-card, .home-product-card, .image-only-product { transform: none !important; transition: none !important; box-shadow: none !important; border-color: var(--card-border-color) !important; }
+    #products-container .product-card { animation: none !important; opacity: 1 !important; }
+    .checkout-step.active { animation: none !important; }
+    .tab-section { transition: none !important; transform: none !important; opacity: 1 !important; }
+    .dropdown-menu { transition: none !important; transform: none !important; }
+    .swal2-toast-show, .swal2-toast-hide { animation: none !important; }
+    .btn { transition: none !important; }
+    .favorite-btn { transition: none !important; }
+    #theme-toggle { transition: none !important; }
+    .section-carousel-btn { transition: none !important; }
+    .cart-bounce { animation: none !important; }
+    .modal.show .modal-dialog, .modal.fade .modal-dialog, .modal-dialog { animation: none !important; transition: none !important; transform: none !important; }
+    .toast, .toast.show, .toast.fade { animation: none !important; transition: none !important; }
+    .skeleton, .skeleton-card, .skeleton-img, .skeleton-line { animation: none !important; }
+}
+

@@ -1,0 +1,103 @@
+/* ==================================================
+   admin/layout/shell.css — Admin page shell: container padding
+   scale, overflow guards and the grid overrides that apply to
+   every admin screen.
+   ==================================================
+   Order below is the original cascade order. Several blocks set
+   .container-fluid padding at different widths and the last
+   matching one wins. Do not reorder.
+   ================================================== */
+
+/* Global horizontal-overflow guard for admin pages */
+html,
+body {
+    overflow-x: hidden;
+}
+
+@media (max-width: 1440px) {
+    .container-fluid.py-4.px-4 {
+        padding-left: 1.5rem !important;
+        padding-right: 1.5rem !important;
+    }
+}
+
+@media (max-width: 1024px) {
+    .container-fluid.py-4.px-4 {
+        padding-left: 1rem !important;
+        padding-right: 1rem !important;
+    }
+}
+
+@media (max-width: 991px) {
+    /* Stat/summary cards: 2 per row on tablet */
+    .row .col-md-3,
+    .row .col-lg-3 {
+        flex: 0 0 50%;
+        max-width: 50%;
+    }
+}
+
+@media (max-width: 768px) {
+    /* Order-detail columns go full width */
+    body.admin-layout .col-lg-8,
+    body.admin-layout .col-lg-4 {
+        max-width: 100%;
+        overflow-x: hidden;
+    }
+    /* Admin forms stack their column pairs */
+    body.admin-layout .row.g-3 > [class*="col-"] {
+        flex: 0 0 100% !important;
+        max-width: 100% !important;
+    }
+    body.admin-layout .card {
+        max-width: 100%;
+        overflow-x: hidden;
+    }
+}
+
+@media (max-width: 576px) {
+    .row.g-3 > [class*="col-"] {
+        flex: 0 0 100% !important;
+        max-width: 100% !important;
+    }
+    .container-fluid.py-4.px-4 {
+        padding-left: 0.75rem !important;
+        padding-right: 0.75rem !important;
+    }
+}
+
+@media (max-width: 414px) {
+    .row .col-md-3,
+    .row .col-lg-3,
+    .row .col-sm-6 {
+        flex: 0 0 100% !important;
+        max-width: 100% !important;
+    }
+}
+
+@media (max-width: 375px) {
+    .container-fluid.py-4.px-4 {
+        padding-left: 0.5rem !important;
+        padding-right: 0.5rem !important;
+    }
+}
+
+@media (max-width: 320px) {
+    .row .col-md-3,
+    .row .col-lg-3,
+    .row .col-sm-6,
+    .row .col-6 {
+        flex: 0 0 100% !important;
+        max-width: 100% !important;
+    }
+    .card,
+    .chart-card,
+    .admin-table {
+        max-width: 100%;
+        overflow-x: hidden;
+    }
+    .container-fluid {
+        padding-left: 0.4rem !important;
+        padding-right: 0.4rem !important;
+    }
+}

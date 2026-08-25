@@ -1,0 +1,73 @@
+/* ==================================================
+   components/cart-sidebar.css — Cart offcanvas panel.
+   ================================================== */
+
+/* ==================================================
+   Cart Sidebar (Offcanvas)
+   ================================================== */
+#cartSidebar {
+    background-color: var(--modal-bg) !important;
+    color: var(--modal-text) !important;
+}
+
+#cartSidebar .offcanvas-header,
+#cartSidebar .offcanvas-body,
+#cartSidebar .offcanvas-title {
+    background-color: var(--modal-bg) !important;
+    color: var(--modal-text) !important;
+}
+
+#cartSidebar .border-bottom,
+#cartSidebar .border-top,
+#cartSidebar .border-secondary {
+    border-color: var(--section-border) !important;
+}
+
+/* Keep the Total + "Proceed to Checkout" block always visible: the
+   item list scrolls on its own instead of the whole offcanvas body
+   scrolling, which could otherwise push the checkout button below
+   the fold on a short landscape phone with a full cart. cart.js only
+   touches #cart-items-list/#cart-total by id, never this structure. */
+#cartSidebar .offcanvas-body {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+#cart-items-list {
+    flex: 1 1 auto;
+    overflow-y: auto;
+    min-height: 0;
+}
+#cartSidebar .offcanvas-body > div:last-child {
+    flex-shrink: 0;
+}
+
+#cartSidebar small {
+    color: var(--footer-text) !important;
+}
+
+
+/* --- Responsive width. The order below is the original cascade
+       order and is load-bearing: several of these match at once on
+       a phone and the last one wins. --- */
+@media (max-width: 767px) {
+    #cartSidebar { max-width: 360px; }
+}
+@media (max-width: 575px) {
+    #cartSidebar { max-width: 100vw !important; }
+}
+@media (max-width: 768px) {
+    .offcanvas.offcanvas-end { max-width: 340px; }
+}
+@media (max-width: 576px) {
+    .offcanvas.offcanvas-end {
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+}
+@media (max-width: 320px) {
+    .offcanvas.offcanvas-end {
+        width: 100vw !important;
+        max-width: 100vw !important;
+    }
+}

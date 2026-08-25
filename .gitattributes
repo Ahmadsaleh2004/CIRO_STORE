@@ -1,0 +1,10 @@
+# سطور موحّدة عبر الأنظمة — يمنع ضجيج الـdiff بين Windows وغيره
+* text=auto
+
+# ملفات ثنائية — لا تُعالَج
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.ico binary

@@ -1,0 +1,30 @@
+/* ==================================================
+   components/breadcrumb.css — .store-breadcrumb, used on 6 store pages.
+   ================================================== */
+
+/* ==================================================
+   Breadcrumb
+   ================================================== */
+.store-breadcrumb {
+    padding: 10px 0 4px;
+    font-size: 0.85rem;
+}
+
+.store-breadcrumb a {
+    color: var(--muted-text) !important;
+    text-decoration: none;
+    transition: color var(--dur-fast);
+}
+
+.store-breadcrumb a:hover { color: var(--accent) !important; }
+
+.store-breadcrumb .sep {
+    margin: 0 6px;
+    color: var(--muted-text);
+}
+
+.store-breadcrumb .current {
+    color: var(--text-color);
+    font-weight: 600;
+}
+

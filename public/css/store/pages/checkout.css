@@ -1,0 +1,136 @@
+/* ==================================================
+   css/pages/checkout.css — أنماط صفحة إتمام الطلب (Checkout)
+   ================================================== */
+
+/* ── Step-by-Step Checkout Transitions ── */
+.checkout-step {
+    display: none;
+}
+.checkout-step.active {
+    display: block !important;
+    --slide-x: 20px;
+    animation: fadeSlideIn var(--dur-base) var(--ease-decelerate) both;
+}
+
+/* ── Checkout Steps Bar ── */
+.step-circle {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: var(--section-border);
+    color: var(--muted-text);
+    font-weight: 700;
+    line-height: 38px;
+    text-align: center;
+    margin: 0 auto 6px;
+    transition: background var(--dur-base) ease, color var(--dur-base) ease;
+}
+
+.step-item.active .step-circle {
+    background: var(--accent);
+    color: #ffffff;
+    box-shadow: 0 0 12px rgba(99, 102, 241, 0.4);
+}
+
+.step-label {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--muted-text);
+}
+
+.step-item.active .step-label {
+    color: var(--text-color);
+}
+
+.step-item:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    top: 19px;
+    right: -50%;
+    width: 100%;
+    height: 2px;
+    background: var(--section-border);
+    z-index: -1;
+}
+
+.step-item.active:not(:last-child)::after {
+    background: var(--accent);
+}
+
+/* ==================================================
+   Responsive — Step Bar
+   NOTE: checkout.php has its own inline <style> block that
+   redeclares .step-item/.step-circle/.step-label with NO media
+   queries. That inline block is printed in the page body, so it
+   loads after this stylesheet (linked in <head>) and wins any
+   tie on source order. Every rule below therefore needs
+   !important to actually take effect — this is not a general
+   pattern, it's specific to this page's duplicated inline CSS.
+   ================================================== */
+@media (max-width: 575px) {
+    .step-item { max-width: 90px !important; }
+    /* Connector line offset is calculated from the circle's own
+       radius (half its width). style.css already shrinks
+       .step-circle to 32px at this breakpoint — keep this in sync
+       if that value ever changes. */
+    .step-item:not(:last-child)::after {
+        left: calc(50% + 16px) !important;
+        width: calc(100% - 32px) !important;
+    }
+}
+
+@media (max-width: 375px) {
+    .step-item { max-width: 70px !important; }
+}
+
+@media (max-width: 320px) {
+    /* style.css shrinks .step-circle to 28px at this breakpoint */
+    .step-item:not(:last-child)::after {
+        left: calc(50% + 14px) !important;
+        width: calc(100% - 28px) !important;
+    }
+}
+
+/* ==================================================
+   Responsive — Order Review (Step 3)
+   #reviewCartList <li> rows are built by inline JS in checkout.php
+   as `d-flex justify-content-between` — allow them to wrap so a
+   long product name never pushes the price off-row.
+   ================================================== */
+#reviewCartList li {
+    flex-wrap: wrap;
+    gap: 4px 12px;
+}
+
+/* ==================================================
+   Responsive — step circle + label size scale
+   ==================================================
+   Moved here from style.css so the circle size and the connector
+   offsets that are calculated from it finally live in one file.
+   The connector maths above assumes these exact widths: 32px at
+   <=575 and 28px at <=320.
+   ================================================== */
+@media (max-width: 575px) {
+    .step-circle {
+        width: 32px !important;
+        height: 32px !important;
+        font-size: .82rem !important;
+        line-height: 32px !important;
+    }
+    .step-label { font-size: .72rem !important; }
+    .step-item:not(:last-child)::after { top: 15px !important; }
+}
+
+@media (max-width: 375px) {
+    .step-label { font-size: 0.6rem !important; }
+}
+
+@media (max-width: 320px) {
+    .step-label { font-size: 0.55rem !important; }
+    .step-circle {
+        width: 28px !important;
+        height: 28px !important;
+        font-size: 0.75rem !important;
+        line-height: 28px !important;
+    }
+}

@@ -1,0 +1,28 @@
+/* ==================================================
+   css/pages/wishlist.css — أنماط صفحة قائمة الرغبات (Wishlist)
+   ================================================== */
+
+#wishlist-container .product-card {
+    --slide-y: 16px;
+    --slide-scale: 0.97;
+    animation: fadeSlideIn var(--dur-slow) var(--ease-decelerate) both;
+}
+
+@media (max-width: 575px) {
+    #wishlist-container .col-lg-4,
+    #wishlist-container .col-md-6,
+    #wishlist-container .col-sm-6 {
+        flex: 0 0 100% !important;
+        max-width: 100% !important;
+    }
+}
+
+/* Moved here from style.css — enforce a single column on tiny phones. */
+@media (max-width: 320px) {
+    #wishlist-container .col-lg-4,
+    #wishlist-container .col-md-6,
+    #wishlist-container .col-sm-6 {
+        flex: 0 0 100% !important;
+        max-width: 100% !important;
+    }
+}

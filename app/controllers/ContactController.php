@@ -1,0 +1,118 @@
+<?php
+
+namespace App\Controllers;
+
+use App\Core\Controller;
+use App\Models\ContactModel;
+use App\Models\UserModel;
+
+/**
+ * ContactController — يعالج صفحة /contact (GET + POST)
+ * منقول من PageController::contact()
+ */
+class ContactController extends Controller
+{
+    public function contact(): void
+    {
+        // بيانات التواصل الثابتة
+        $phone        = '+20 123 456 789';
+        $workingHours = 'Sun - Thu: 9 AM - 6 PM';
+        $email        = 'info@cairostore.com';
+
+        $successMsg = '';
+        $errorMsg   = '';
+
+        // معالجة إرسال الفورم (POST)
+        if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['send_message'])) {
+
+            $token = $_POST['csrf_token'] ?? '';
+
+            if (!verifyCsrfToken($token)) {
+                $errorMsg = 'Invalid request, please refresh the page and try again.';
+            } else {
+                $msgText  = trim($_POST['message']   ?? '');
+                $userId   = getCurrentUserId();
+
+                // الزوار غير المسجلين لا يمكنهم الإرسال إطلاقًا
+                if (!$userId) {
+                    $errorMsg = 'You must be logged in to send a message.';
+                } else {
+                    // للمستخدمين المسجلين: تجاهل full_name/email من الـ POST، واستخدم بيانات الجلسة/قاعدة البيانات
+                    $user = UserModel::findById($userId);
+                    $fullName = $user['full_name'] ?? '';
+                    $msgEmail = $user['email'] ?? '';
+
+                    if (strlen($msgText) < 10) {
+                        $errorMsg = 'Message is too short (at least 10 characters).';
+                    } else {
+                        $saved = ContactModel::save($userId, $fullName, $msgEmail, $msgText);
+                        if ($saved) {
+                            $successMsg = 'Your message has been sent! We will get back to you soon.';
+                        } else {
+                            $errorMsg = 'Something went wrong, please try again later.';
+                        }
+                    }
+                }
+            }
+        }
+
+        $userLoggedIn = isUserLoggedIn();
+
+        $this->view('page/contact', [
+            'title'        => 'Contact Us',
+            'desc'         => 'Get in touch with Cairo Store for support and inquiries.',
+            'activePage'   => 'contact',
+            'extraScripts' => '',
+            'phone'        => $phone,
+            'workingHours' => $workingHours,
+            'email'        => $email,
+            'csrf'         => generateCsrfToken(),
+            'prefillName'  => $_SESSION['user_name']  ?? '',
+            'prefillEmail' => $_SESSION['user_email'] ?? '',
+            'successMsg'   => $successMsg,
+            'errorMsg'     => $errorMsg,
+            'userLoggedIn' => $userLoggedIn,
+            'userName'     => $_SESSION['user_name'] ?? '',
+        ]);
+    }
+
+    public function send(): void
+    {
+        header('Content-Type: application/json; charset=utf-8');
+
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            echo json_encode(['success' => false, 'message' => 'Method not allowed.']);
+            exit;
+        }
+
+        $token = $_POST['csrf_token'] ?? '';
+        if (!verifyCsrfToken($token)) {
+            echo json_encode(['success' => false, 'message' => 'Invalid request, please refresh the page and try again.']);
+            exit;
+        }
+
+        $userId = getCurrentUserId();
+        if (!$userId) {
+            echo json_encode(['success' => false, 'message' => 'You must be logged in to send a message.']);
+            exit;
+        }
+
+        $msgText = trim($_POST['message'] ?? '');
+        if (strlen($msgText) < 10) {
+            echo json_encode(['success' => false, 'message' => 'Message is too short (at least 10 characters).']);
+            exit;
+        }
+
+        $user     = UserModel::findById($userId);
+        $fullName = $user['full_name'] ?? '';
+        $msgEmail = $user['email']     ?? '';
+
+        $saved = ContactModel::save($userId, $fullName, $msgEmail, $msgText);
+
+        echo json_encode([
+            'success' => (bool)$saved,
+            'message' => $saved ? 'Your message has been sent! We will get back to you soon.' : 'Something went wrong, please try again later.',
+        ]);
+        exit;
+    }
+}

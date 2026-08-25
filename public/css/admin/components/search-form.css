@@ -1,0 +1,26 @@
+/* ==================================================
+   admin/components/search-form.css — The search/filter bar on manage-orders, manage-users and support.
+   ================================================== */
+
+.search-form {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    flex-wrap: wrap;
+}
+.search-form input,
+.search-form select {
+    background: var(--input-bg);
+    color: var(--input-text);
+    border: 1px solid var(--input-border);
+    border-radius: 8px;
+    padding: 0.45rem 0.75rem;
+    font-size: .88rem;
+    transition: border-color var(--dur-fast);
+}
+.search-form input:focus,
+.search-form select:focus {
+    border-color: var(--accent);
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(99,102,241,.12);
+}

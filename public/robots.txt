@@ -1,0 +1,19 @@
+User-agent: *
+
+# ── حجب لوحة التحكم بالكامل ──────────────────────────────────
+Disallow: /STORE/public/admin/
+Disallow: /admin/
+
+# ── حجب صفحة تسجيل دخول الأدمن تحديداً ──────────────────────
+Disallow: /STORE/public/admin/login
+Disallow: /admin/login
+
+# ── حجب مسارات API الداخلية ──────────────────────────────────
+Disallow: /STORE/public/auth/
+Disallow: /auth/
+
+# ── السماح بباقي الصفحات العامة ──────────────────────────────
+Allow: /STORE/public/
+Allow: /
+
+Sitemap: http://localhost/STORE/public/sitemap.xml

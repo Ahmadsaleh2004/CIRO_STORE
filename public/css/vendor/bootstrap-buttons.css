@@ -1,0 +1,105 @@
+/* ==================================================
+   vendor/bootstrap-buttons.css — Bootstrap button variants that the
+   project's unified green button system does not cover, plus the
+   disabled-state and close-button systems.
+   ================================================== */
+
+/* ==================================================
+   نظام الأزرار المعطلة الموحد (Disabled Button Design System)
+   ================================================== */
+.btn-disabled-faded, 
+.btn-disabled-faded:hover, 
+.btn-disabled-faded:focus, 
+.btn-disabled-faded:active {
+    opacity: var(--disabled-opacity) !important;
+    filter: saturate(0.6) !important;
+    cursor: not-allowed !important;
+    pointer-events: none !important;
+    box-shadow: none !important;
+    transform: none !important;
+}
+
+/* ==================================================
+   Theme-aware Outline Button (for sidebars on variable backgrounds)
+   ================================================== */
+.btn-outline-theme {
+    color: var(--text-color) !important;
+    border: 1px solid var(--card-border-color) !important;
+    background-color: transparent !important;
+}
+.btn-outline-theme:hover {
+    background-color: var(--bg-color) !important;
+    border-color: var(--card-border-hover) !important;
+}
+.btn-outline-theme:focus {
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15) !important;
+}
+
+
+/* ==================================================
+   Outline buttons — Dark Mode Fix
+   ==================================================
+   components/buttons.css repaints btn-primary / btn-secondary /
+   btn-dark / btn-success / btn-outline-secondary green, but leaves
+   the remaining outline variants on Bootstrap's defaults:
+
+     .btn-outline-dark    -> #212529 text on a #0d1117 page = invisible
+                             (used on the homepage category buttons and
+                             the order-confirmation "My Orders" button)
+     .btn-outline-primary -> #0d6efd on #0d1117 = 3.1:1, under WCAG AA
+                             (used on 10 admin controls including the
+                             "Sort & Filter" trigger itself)
+
+   These keep the outline treatment — only the colours become
+   theme-aware, so the light-mode look is essentially unchanged.
+   ================================================== */
+.btn-outline-dark {
+    color: var(--text-color) !important;
+    border: 1px solid var(--text-color) !important;
+    background-color: transparent !important;
+    box-shadow: none !important;
+}
+.btn-outline-dark:hover,
+.btn-outline-dark:focus {
+    background-color: var(--text-color) !important;
+    color: var(--card-bg) !important;
+    border-color: var(--text-color) !important;
+}
+
+.btn-outline-primary {
+    color: var(--accent-text) !important;
+    border: 1px solid var(--accent-text) !important;
+    background-color: transparent !important;
+    box-shadow: none !important;
+}
+.btn-outline-primary:hover,
+.btn-outline-primary:focus,
+.btn-outline-primary.active,
+.btn-outline-primary.show {
+    background-color: var(--accent-strong) !important;
+    color: #ffffff !important;
+    border-color: var(--accent-strong) !important;
+}
+
+/* .btn-outline-secondary is painted green by components/buttons.css
+   but only in its resting state, so hovering it fell back to
+   Bootstrap's grey fill. Match the rest of the green family. */
+.btn-outline-secondary:hover,
+.btn-outline-secondary:focus {
+    background: linear-gradient(135deg, #22c55e, #16a34a) !important;
+    color: #ffffff !important;
+    border: none !important;
+    box-shadow: 0 6px 20px rgba(22, 163, 74, 0.40) !important;
+}
+
+/* ==================================================
+   Close button
+   ================================================== */
+.btn-close {
+    filter: invert(0);
+}
+
+body.dark-mode .btn-close,
+html[data-bs-theme="dark"] body .btn-close {
+    filter: invert(1);
+}

@@ -1,0 +1,130 @@
+<?php
+/**
+ * app/views/admin/dashboard.php — fragment فقط (بدون DOCTYPE/html/head/body)
+ * يُحمَّل من AdminController::adminView() بعد inc/head.php و inc/navbar.php
+ * كل المتغيرات جاهزة من AdminDashboardController::index()
+ * لا يحتوي على أي استعلامات أو منطق — هذا مكانه في الـ Controller والـ Model فقط.
+ */
+?>
+
+<div class="admin-page-header">
+    <h1>📊 Dashboard</h1>
+</div>
+
+<!-- ── Stats ──────────────────────────────────────────────── -->
+<div class="row g-3 mb-4">
+    <div class="col-6 col-lg-3">
+        <div class="stat-card">
+            <span class="stat-icon">💰</span>
+            <div class="stat-value">$<?= number_format($todaySales, 2) ?></div>
+            <div class="stat-label">Today's Sales</div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="stat-card" style="<?= $pendingOrders > 0 ? 'border-color:#f59e0b;' : '' ?>">
+            <span class="stat-icon">📦</span>
+            <div class="stat-value" style="<?= $pendingOrders > 0 ? 'color:#f59e0b;' : '' ?>"><?= $pendingOrders ?></div>
+            <div class="stat-label">Pending Orders</div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="stat-card" style="<?= $newMessages > 0 ? 'border-color:#6366f1;' : '' ?>">
+            <span class="stat-icon">💬</span>
+            <div class="stat-value" style="<?= $newMessages > 0 ? 'color:#6366f1;' : '' ?>"><?= $newMessages ?></div>
+            <div class="stat-label">New Messages</div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="stat-card">
+            <span class="stat-icon">👤</span>
+            <div class="stat-value"><?= $newUsersWeek ?></div>
+            <div class="stat-label">New Users (7d)</div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="stat-card">
+            <span class="stat-icon">⚠️</span>
+            <div class="stat-value" style="color:#dc3545;"><?= $totalStrikes ?></div>
+            <div class="stat-label">Strikes (7d)</div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="stat-card">
+            <span class="stat-icon">📈</span>
+            <div class="stat-value">$<?= number_format($monthToDateSales, 2) ?></div>
+            <div class="stat-label">Revenue This Month</div>
+        </div>
+    </div>
+</div>
+
+<!-- ── Charts ─────────────────────────────────────────────── -->
+<div class="row g-4 mb-4">
+    <div class="col-lg-8">
+        <div class="chart-card">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
+                <h5 class="mb-0">📈 Sales — Last 30 Days</h5>
+                <span class="badge bg-success dash-badge-month">
+                    Total this month: $<?= number_format($monthToDateSales, 2) ?>
+                </span>
+            </div>
+            <div style="position:relative;min-height:200px"><canvas id="salesChart"></canvas></div>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="chart-card">
+            <h5>👥 Users</h5>
+            <div class="table-responsive">
+                <table class="table admin-table mb-0">
+                    <tbody>
+                        <tr>
+                            <td>🟢 Active</td>
+                            <td class="text-end fw-bold"><?= $activeUsersCount ?></td>
+                        </tr>
+                        <tr>
+                            <td>⚪ Not Active</td>
+                            <td class="text-end fw-bold"><?= $notActiveUsersCount ?></td>
+                        </tr>
+                        <tr>
+                            <td>🔴 Blocked</td>
+                            <td class="text-end fw-bold"><?= $blockedUsersCount ?></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ── Best Sellers ───────────────────────────────────────── -->
+<div class="card p-4">
+    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+        <h5 class="mb-0">⭐ Best Selling Products</h5>
+        <form method="GET" action="<?= URLROOT ?>/admin/dashboard" class="d-flex gap-2 flex-wrap">
+            <input type="text" name="q" class="form-control form-control-sm dash-search-input"
+                   placeholder="Search..." value="<?= htmlspecialchars($bsQ) ?>">
+            <button class="btn btn-sm btn-success">Go</button>
+            <?php if ($bsQ): ?>
+            <a href="<?= URLROOT ?>/admin/dashboard" class="btn btn-sm btn-outline-secondary">✕</a>
+            <?php endif; ?>
+        </form>
+    </div>
+    <div class="row g-3">
+        <?php if (empty($bestProducts)): ?>
+        <p class="text-center" style="color:var(--muted-text);">No products found.</p>
+        <?php endif; ?>
+        <?php foreach ($bestProducts as $bp): ?>
+        <div class="col-6 col-md-4 col-lg-2">
+            <div class="card p-2 text-center h-100 d-block" style="cursor:default;">
+                <img src="<?= htmlspecialchars(fixImagePath($bp['image_path'] ?? '')) ?>"
+                     alt="<?= htmlspecialchars($bp['name']) ?>"
+                     class="dash-product-img"
+                     loading="lazy">
+                <p class="small fw-bold mb-0 mt-1 dash-product-name">
+                    <?= htmlspecialchars($bp['name']) ?>
+                </p>
+                <span class="badge bg-success mt-1"><?= (int) $bp['sales_count'] ?> sold</span>
+            </div>
+        </div>
+        <?php endforeach; ?>
+    </div>
+</div>

@@ -1,0 +1,70 @@
+/* ==================================================
+   admin/components/float-group.css — Admin's compact floating-label
+   input. Deliberately overrides components/floating-labels.css:
+   the admin forms run a tighter variant (smaller padding, 8px
+   radius, no bottom margin). Loaded after the store layer so it
+   wins on admin pages only.
+   ================================================== */
+
+.float-group {
+    position: relative;
+    margin-bottom: 0;
+}
+
+.float-group input,
+.float-group select,
+.float-group textarea {
+    width: 100%;
+    padding: 1.1rem 0.85rem 0.4rem;
+    border: 1px solid var(--input-border);
+    border-radius: 8px;
+    background: var(--input-bg);
+    color: var(--input-text);
+    font-size: 0.9rem;
+    transition: border-color var(--dur-fast) ease, box-shadow var(--dur-fast) ease;
+    outline: none;
+}
+
+.float-group textarea {
+    min-height: 120px;
+    resize: vertical;
+}
+
+.float-group input:focus,
+.float-group select:focus,
+.float-group textarea:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(99,102,241,0.15);
+}
+
+.float-group label {
+    position: absolute;
+    top: 50%;
+    left: 0.85rem;
+    transform: translateY(-50%);
+    font-size: 0.9rem;
+    color: var(--placeholder-color);
+    pointer-events: none;
+    transition: all var(--dur-fast) ease;
+    white-space: nowrap;
+}
+
+/* adjust label top for textarea */
+.float-group:has(textarea) label {
+    top: 1rem;
+    transform: none;
+}
+
+.float-group input:focus ~ label,
+.float-group input:not(:placeholder-shown) ~ label,
+.float-group select:focus ~ label,
+.float-group select:not([value=""]) ~ label,
+.float-group textarea:focus ~ label,
+.float-group textarea:not(:placeholder-shown) ~ label {
+    top: 0.35rem;
+    left: 0.8rem;
+    transform: none;
+    font-size: 0.7rem;
+    color: var(--accent);
+    font-weight: 600;
+}
