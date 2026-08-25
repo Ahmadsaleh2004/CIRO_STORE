@@ -62,6 +62,9 @@ function syncCartWithStock() {
     const variantIds = cart.map(item => item.variant_id).filter(v => v !== undefined && v !== null);
     if (variantIds.length === 0) return;
 
+    // fetch عارٍ عن قصد — لا fetchWithCsrfRetry: CartController::checkStock
+    // **لا تتحقق من توكن CSRF** (استعلام مخزون للقراءة)، والطلب لا يرسل
+    // توكناً أصلاً. فلا يمكن أن تُرجع «Invalid CSRF token».
     fetch(window.BASE_URL + '/cart/check-stock', {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },

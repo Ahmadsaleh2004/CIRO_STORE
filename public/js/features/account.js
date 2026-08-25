@@ -13,12 +13,11 @@ document.addEventListener('DOMContentLoaded', () => {
             msgEl.style.display = 'none';
 
             try {
-                const res = await fetch(window.BASE_URL + '/user/info', {
+                const data = await fetchWithCsrfRetry(window.BASE_URL + '/user/info', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(Object.fromEntries(formData))
                 });
-                const data = await res.json();
 
                 msgEl.className = 'alert py-2 small ' + (data.success ? 'alert-success' : 'alert-danger');
                 msgEl.textContent = data.message;
@@ -48,18 +47,24 @@ document.addEventListener('DOMContentLoaded', () => {
             msgEl.style.display = 'none';
 
             try {
-                const res = await fetch(window.BASE_URL + '/user/addresses', {
+                // ⚠️ كان اسم نتيجة الطلب `data` أيضاً — أي أنه يُظلّل `data`
+                // المُعلَنة فوق try. وبما أن const مرتبطة بالكتلة، كان
+                // JSON.stringify(data) في السطر أدناه يقرأ المتغيّر **داخل
+                // منطقته الميتة** فيرمي
+                // «ReferenceError: Cannot access 'data' before initialization»
+                // في كل مرة — أي أن «إضافة عنوان» لم تعمل ولا مرة.
+                // أعيدت تسمية النتيجة إلى `result` كي ينفكّ التظليل.
+                const result = await fetchWithCsrfRetry(window.BASE_URL + '/user/addresses', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(data)
                 });
-                const data = await res.json();
 
-                msgEl.className = 'alert py-2 small ' + (data.success ? 'alert-success' : 'alert-danger');
-                msgEl.textContent = data.message;
+                msgEl.className = 'alert py-2 small ' + (result.success ? 'alert-success' : 'alert-danger');
+                msgEl.textContent = result.message;
                 msgEl.style.display = 'block';
 
-                if (data.success) {
+                if (result.success) {
                     setTimeout(() => location.reload(), 1200);
                 }
             } catch (err) {
@@ -81,7 +86,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!conf.isConfirmed) return;
 
             try {
-                const res = await fetch(window.BASE_URL + '/user/addresses/delete', {
+                const data = await fetchWithCsrfRetry(window.BASE_URL + '/user/addresses/delete', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -89,7 +94,6 @@ document.addEventListener('DOMContentLoaded', () => {
                         address_id: addrId,
                     })
                 });
-                const data = await res.json();
 
                 if (data.success) {
                     btn.closest('.col-md-6')?.remove();
