@@ -87,3 +87,30 @@ repos:
         language: system
         pass_filenames: false
         stages: [pre-push]
+
+      # ── ثغرات معروفة في الاعتماديات — يدوي ───────────────
+      #
+      # يشغَّل عند الطلب:
+      #     pre-commit run trivy --hook-stage manual
+      #
+      # `stages: [manual]` **بقرارك** لا لأنه بطيء: الفحص المستهدف
+      # يكلّف **ثانيتين** ويصلح للعمل التلقائي لو أردت. وسببٌ وجيه
+      # لإبقائه يدوياً: قاعدة الثغرات تتغيّر بلا أن يتغيّر كودك، فقد
+      # يفشل commit لم تلمس فيه شيئاً — وهو إزعاج بلا ذنب.
+      #
+      # ولماذا `composer.lock` لا `.`: هذا هو ما تضيفه الأداة فعلاً —
+      # ثغرات **معروفة (CVE)** في الاعتماديات، وهو ما لا يفعله gitleaks
+      # ولا semgrep. وفحص المجلد كله يستغرق 91 ثانية ولا يجد هدفاً
+      # آخر — الملف نفسه هو كل ما فُحص.
+      #
+      # `--exit-code 1` لازمة: بدونها يطبع trivy النتائج ويخرج بكود 0
+      # فيبدو ناجحاً وهو يبلّغ عن ثغرات — نفس فخّ `--error` في semgrep.
+      #
+      # `--scanners vuln` وحدها: فحص الأسرار عند gitleaks والإعدادات
+      # الخاطئة لا هدف لها هنا (لا Dockerfile ولا Kubernetes).
+      - id: trivy
+        name: trivy — ثغرات معروفة في اعتماديات composer
+        entry: trivy fs --scanners vuln --exit-code 1 composer.lock
+        language: system
+        pass_filenames: false
+        stages: [manual]
