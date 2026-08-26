@@ -6,8 +6,10 @@ repos:
         entry: gitleaks git --pre-commit --staged --redact -v
         language: system
         pass_filenames: false
+        stages: [pre-commit]
       - id: semgrep
         name: semgrep
         entry: semgrep --config auto --error .
         language: system
         pass_filenames: false
+        stages: [pre-push]
