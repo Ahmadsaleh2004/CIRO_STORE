@@ -1,6 +1,62 @@
+# ══════════════════════════════════════════════════════════════
+# جذر الويب — Cairo Store
+# ══════════════════════════════════════════════════════════════
+
+# ── توجيه كل ما ليس ملفاً أو مجلداً إلى الراوتر ──────────────
 <IfModule mod_rewrite.c>
     RewriteEngine On
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteCond %{REQUEST_FILENAME} !-d
     RewriteRule ^ index.php [QSA,L]
+</IfModule>
+
+# ── ترويسات أمنية ────────────────────────────────────────────
+#
+# لم تكن هنا أي ترويسة أمنية إطلاقاً (مفحوص: صفر موضع في المشروع كله).
+# `always` مقصود: بدونه لا تُضاف الترويسة إلى استجابات الخطأ — وصفحة
+# 404 أو 500 تحتاج الحماية كما تحتاجها الصفحة الناجحة.
+<IfModule mod_headers.c>
+
+    # المتصفح لا يخمّن نوع المحتوى. يقطع هجمات رفع ملف يُقدَّم كـHTML.
+    Header always set X-Content-Type-Options "nosniff"
+
+    # لا يُدرَج الموقع في إطار من نطاق آخر — حماية من clickjacking.
+    # (frame-ancestors في CSP أدناه هو البديل الحديث؛ يبقى هذا
+    #  للمتصفحات التي لا تقرأه.)
+    Header always set X-Frame-Options "SAMEORIGIN"
+
+    # لا يُسرَّب المسار الكامل للمواقع الخارجية — النطاق وحده، وفقط
+    # عند البقاء على https.
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+
+    # صلاحيات المتصفح التي لا يستعملها المتجر — تُغلق صراحةً.
+    Header always set Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=(), usb=()"
+
+    # HSTS مشروط بـHTTPS عمداً. إرساله على http بلا معنى، وإرساله من
+    # بيئة تطوير محلية يثبّت المتصفح على https للـlocalhost كله —
+    # فيكسر كل مشروع آخر على الجهاز نفسه ويصعب التراجع عنه.
+    Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains" env=HTTPS
+
+    # إخفاء نسخة PHP من الترويسات.
+    Header always unset X-Powered-By
+
+    # ── CSP: وضع الإبلاغ فقط، مؤقتاً ──────────────────────────
+    #
+    # ⚠️ `-Report-Only` مقصود ولا يجوز نزعه اليوم. السياسة أدناه تمنع
+    # السكربت المضمّن، و**16 ملف view يحوي `<script>` مضمّناً** (مفحوص:
+    # home.php و inc/navbar.php و product.php وthirteen غيرها). تفعيلها
+    # الآن يكسر المتجر كله في لحظة.
+    #
+    # وضع الإبلاغ يعطي القيمة بلا الكسر: المخالفات تظهر في وحدة تحكّم
+    # المتصفح فتُرى وتُعدّ، ولا شيء يُمنع. المرحلة 12 من الخطة تُخرج
+    # الـ16 سكربتاً إلى ملفات، وعندها يصير التفعيل حذفَ كلمة واحدة من
+    # اسم الترويسة.
+    #
+    # النطاقات الخارجية مقيسة لا مفترضة:
+    #   cdn.jsdelivr.net  → Bootstrap و Swagger UI (13 موضعاً)
+    #   code.jquery.com   → jQuery (موضعان)
+    #   js.hcaptcha.com   → كابتشا دخول الأدمن
+    #   hcaptcha.com      → إطار التحدّي واتصالاته
+    Header always set Content-Security-Policy-Report-Only "default-src 'self'; script-src 'self' https://cdn.jsdelivr.net https://code.jquery.com https://js.hcaptcha.com https://*.hcaptcha.com; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://*.hcaptcha.com; img-src 'self' data: https:; font-src 'self' data: https://cdn.jsdelivr.net; connect-src 'self' https://*.hcaptcha.com; frame-src https://*.hcaptcha.com; form-action 'self'; frame-ancestors 'self'; base-uri 'self'; object-src 'none'"
+
 </IfModule>

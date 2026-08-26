@@ -13,15 +13,16 @@ class Database
 
     private function __construct()
     {
-        // قراءة الإعدادات من الثوابت (config.php) أو من $_ENV مع وجود قيم افتراضية
-        $host    = defined('DB_HOST')    ? DB_HOST    : ($_ENV['DB_HOST']    ?? '127.0.0.1');
-        $port    = defined('DB_PORT')    ? DB_PORT    : ($_ENV['DB_PORT']    ?? '3306');
-        $db      = defined('DB_NAME')    ? DB_NAME    : ($_ENV['DB_DATABASE'] ?? 'store_db');
-        $user    = defined('DB_USER')    ? DB_USER    : ($_ENV['DB_USERNAME'] ?? 'root');
-        $pass    = defined('DB_PASS')    ? DB_PASS    : ($_ENV['DB_PASSWORD'] ?? '');
-        $charset = defined('DB_CHARSET') ? DB_CHARSET : 'utf8mb4';
-
-        $dsn = "mysql:host={$host};port={$port};dbname={$db};charset={$charset}";
+        // الثوابت مضمونة: config.php يعرّفها كلها من .env، وهو يُحمَّل
+        // قبل أي وصول لهذا الكلاس من كل نقطة دخول (public/index.php
+        // وسكربتات scripts/). كان هنا `defined(...) ? ... : $_ENV[...]`
+        // لكل مفتاح — احتياط لم يكن يعمل: الثوابت كانت **دائماً**
+        // معرَّفة بقيم مكتوبة صراحةً في config.php، فالفرع الثاني ميّت
+        // وملف .env يُقرأ ثم يُتجاهل.
+        $dsn = 'mysql:host=' . DB_HOST
+             . ';port='     . DB_PORT
+             . ';dbname='   . DB_NAME
+             . ';charset='  . DB_CHARSET;
 
         $options = [
             PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
@@ -30,9 +31,17 @@ class Database
         ];
 
         try {
-            $this->connection = new PDO($dsn, $user, $pass, $options);
+            $this->connection = new PDO($dsn, DB_USER, DB_PASS, $options);
         } catch (PDOException $e) {
-            die("خطأ في الاتصال بقاعدة البيانات: " . $e->getMessage());
+            // ⚠️ لا تُمرَّر رسالة PDO إلى المتصفح أبداً. كانت هنا
+            //     die("خطأ في الاتصال بقاعدة البيانات: " . $e->getMessage())
+            // ورسالة PDO تحمل اسم المضيف واسم القاعدة واسم المستخدم
+            // حرفياً — أي أن أول خطأ اتصال على الإنتاج كان يسلّم الزائرَ
+            // نصفَ بيانات الدخول. وdie تُنهي الطلب بكود **200**، فتقرأ
+            // محرّكات البحث وأدوات المراقبة الصفحةَ المكسورة كصفحة سليمة.
+            //
+            // 503 لا 500: القاعدة ساقطة يعني الخدمة غير متاحة مؤقتاً.
+            ErrorPage::serverError('فشل الاتصال بقاعدة البيانات: ' . $e->getMessage(), 503);
         }
     }
 
