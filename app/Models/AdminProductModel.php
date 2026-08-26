@@ -306,22 +306,41 @@ class AdminProductModel
      * @param array $variants    كل variant مع بياناتها
      * @param array $categoryIds مصفوفة IDs
      * @param int   $adminId     ID الأدمن المعدِّل
-     * @return bool
+     *
+     * القيمة المُرجَعة ثلاثية كما في delete():
+     *   true  — حُدِّث فعلاً
+     *   false — المعرّف غير موجود
+     *   null  — فشل تقني أو مدخل غير صالح
+     *
+     * @return bool|null
      */
-    public static function update(int $productId, array $data, array $variants, array $categoryIds, int $adminId): bool
+    public static function update(int $productId, array $data, array $variants, array $categoryIds, int $adminId): ?bool
     {
         if (empty($variants)) {
             error_log("AdminProductModel::update — variants array is empty.");
-            return false;
+            return null;
         }
         if (empty($categoryIds)) {
             error_log("AdminProductModel::update — categoryIds array is empty.");
-            return false;
+            return null;
         }
 
         $db = Database::connect();
         try {
             $db->beginTransaction();
+
+            // ⚠️ الوجود يُفحص صراحةً لا بـrowCount الخاص بجملة UPDATE.
+            // في MySQL تُرجع UPDATE بقيم مطابقة **صفر صفوف متأثرة** رغم
+            // وجود الصفّ، فالاعتماد عليها يخلط «غير موجود» بـ«لم يتغيّر
+            // شيء» — ويجعل حفظ منتج بلا تعديل يُجيب «Product not found».
+            // (delete() تستطيع الاعتماد على rowCount لأن الحذف لا يملك
+            // هذا الالتباس.)
+            $exists = $db->prepare("SELECT 1 FROM products WHERE id = ? LIMIT 1");
+            $exists->execute([$productId]);
+            if ($exists->fetchColumn() === false) {
+                $db->rollBack();
+                return false;
+            }
 
             $fields = [
                 'name'                => trim($data['name']),
@@ -344,6 +363,12 @@ class AdminProductModel
             $params = array_values($fields);
             $params[] = $productId;
 
+            // القاعدة تُطلق على «UPDATE متسلسل ثم return true» لأنها لا
+            // ترى ما يثبت وجود الصفّ. والتبرير هنا: الوجود مفحوص صراحةً
+            // قبل هذا السطر بـSELECT، ولم يُستعمل rowCount عمداً — راجع
+            // التعليق أعلى الـtransaction. وإطلاق القاعدة هنا هو غرضها:
+            // أن تُجبر على كتابة هذا التبرير لا أن تمرّ صامتة.
+            // nosemgrep: cairo-execute-then-return-true
             $db->prepare("UPDATE products SET {$setSql} WHERE id = ?")->execute($params);
 
             $db->prepare("DELETE FROM product_variants WHERE product_id = ?")->execute([$productId]);
@@ -355,7 +380,7 @@ class AdminProductModel
         } catch (Exception $e) {
             $db->rollBack();
             error_log("AdminProductModel::update Error: " . $e->getMessage());
-            return false;
+            return null;
         }
     }
 
