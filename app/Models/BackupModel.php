@@ -69,27 +69,65 @@ class BackupModel
             $candidates[] = '/usr/bin/mysqldump';
         }
 
-        $host = escapeshellarg(DB_HOST);
-        $user = escapeshellarg(DB_USER);
-        $pass = escapeshellarg(DB_PASS);
-        $name = escapeshellarg(DB_NAME);
-        $out  = escapeshellarg($path);
-
-        foreach ($candidates as $bin) {
-            if ($bin !== 'mysqldump' && !is_file($bin)) continue;
-            $cmd = sprintf(
-                '%s --single-transaction --routines --triggers'
-                . ' --host=%s --user=%s --password=%s %s > %s 2>&1',
-                escapeshellarg($bin), $host, $user, $pass, $name, $out
-            );
-            @exec($cmd, $_, $code);
-            if ($code === 0 && is_file($path) && filesize($path) > 0) {
-                return ['success' => true];
+        // ── كلمة السر لا تُمرَّر على سطر الأوامر ────────────────────
+        //
+        // كانت تُمرَّر بـ--password=… . وسطر أوامر أي عملية **مقروء لكل
+        // مستخدمي الجهاز**: `ps aux` على لينكس، وTask Manager أو
+        // Get-CimInstance Win32_Process على ويندوز. وmysqldump نفسه يحذّر
+        // من ذلك. الهروب بـescapeshellarg يمنع الحقن ولا يمنع القراءة —
+        // مشكلتان مختلفتان.
+        //
+        // البديل: ملف إعدادات مؤقّت يقرأه mysqldump بـ--defaults-extra-file،
+        // ويجب أن يكون **أول** وسيط وإلا تجاهله. يُحذف في finally مهما حدث.
+        $cnfPath = null;
+        try {
+            $cnfPath = tempnam(sys_get_temp_dir(), 'cs_dump_');
+            if ($cnfPath === false) {
+                return ['success' => false];
             }
-            @unlink($path); // مسح أي ملف جزئي قبل التجربة التالية
-        }
 
-        return ['success' => false];
+            // صلاحيات ضيّقة قبل الكتابة (بلا أثر على ويندوز لكن لازمة على
+            // لينكس حيث tempnam يعطي 0600 أصلاً — التثبيت صراحةً أوضح).
+            @chmod($cnfPath, 0600);
+
+            // القيم داخل ملف ini لا تُهرَّب بـescapeshellarg — تُقتبس
+            // ويُهرَّب المحرف \ و" وحدهما، وهذا ما يفهمه قارئ my.cnf.
+            $q = static fn (string $v): string => '"' . str_replace(['\\', '"'], ['\\\\', '\\"'], $v) . '"';
+            $ini = "[client]\n"
+                 . 'host=' . $q(DB_HOST) . "\n"
+                 . 'user=' . $q(DB_USER) . "\n"
+                 . 'password=' . $q(DB_PASS) . "\n";
+
+            if (@file_put_contents($cnfPath, $ini) === false) {
+                return ['success' => false];
+            }
+
+            $name = escapeshellarg(DB_NAME);
+            $out  = escapeshellarg($path);
+            $cnf  = escapeshellarg($cnfPath);
+
+            foreach ($candidates as $bin) {
+                if ($bin !== 'mysqldump' && !is_file($bin)) continue;
+                $cmd = sprintf(
+                    '%s --defaults-extra-file=%s'
+                    . ' --single-transaction --routines --triggers %s > %s 2>&1',
+                    escapeshellarg($bin), $cnf, $name, $out
+                );
+                @exec($cmd, $_, $code);
+                if ($code === 0 && is_file($path) && filesize($path) > 0) {
+                    return ['success' => true];
+                }
+                @unlink($path); // مسح أي ملف جزئي قبل التجربة التالية
+            }
+
+            return ['success' => false];
+        } finally {
+            // الملف يحمل كلمة السر — لا يجوز أن يبقى في مجلد المؤقتات
+            // ولو فشل كل شيء أو رُمي استثناء.
+            if ($cnfPath !== null && is_file($cnfPath)) {
+                @unlink($cnfPath);
+            }
+        }
     }
 
     /**
