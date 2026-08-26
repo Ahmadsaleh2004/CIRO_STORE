@@ -278,7 +278,14 @@ class AuthController extends Controller
             session_start();
         }
 
-        header('Content-Type: application/json; charset=utf-8');
+        // التحقق قبل التدمير — ولسبب أمني لا تنظيمي: بدونه كان أي موقع
+        // خارجي يستطيع تسجيل خروج زائرك بمجرد `<img src=".../auth/logout">`
+        // أو فورم مخفي، لأن المتصفح يرسل كوكي الجلسة تلقائياً. الأثر
+        // إزعاج لا سرقة بيانات، لكنه CSRF قائم بلا مبرّر.
+        //
+        // beginJsonPost تقرأ التوكن عبر requestData() قبل أي مساس
+        // بالجلسة، فترتيب الاستدعاء هنا ليس تفصيلاً.
+        $this->beginJsonPost();
 
         // مسح الجلسة بالكامل
         $_SESSION = [];

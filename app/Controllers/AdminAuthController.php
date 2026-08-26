@@ -352,6 +352,21 @@ class AdminAuthController extends Controller
     {
         startAdminSession();
 
+        // التحقق قبل التدمير. لا beginJsonPost هنا: هذه النقطة تحوّل
+        // بـ302 ولا تُرجع JSON إطلاقاً (js/admin/admin-layout/admin-navbar.js
+        // يستدعيها بـfetch عارٍ ثم يوجّه بنفسه).
+        //
+        // بدون هذا الفحص كان أي موقع خارجي يستطيع تسجيل خروج الأدمن
+        // بـ`<img src=".../admin/logout">` — المتصفح يرسل كوكي
+        // admin_session تلقائياً. الأثر إزعاج لا اختراق، لكنه CSRF قائم.
+        //
+        // عند الفشل نحوّل إلى لوحة التحكم بلا تدمير الجلسة: الطلب لم
+        // يأتِ من صفحاتنا، فالسلوك الآمن ألّا نطيعه.
+        if (!verifyCsrfToken($_POST['csrf_token'] ?? '')) {
+            header('Location: ' . URLROOT . '/admin/home');
+            exit;
+        }
+
         // تدمير جلسة الأدمن فقط — لا تلمس جلسة المستخدم العادي (PHPSESSID)
         $_SESSION = [];
         if (ini_get('session.use_cookies')) {
