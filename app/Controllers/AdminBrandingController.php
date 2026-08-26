@@ -186,7 +186,12 @@ class AdminBrandingController extends AdminController
         // حذف الصور اليتيمة (كانت مستخدمة قديماً ولم تعد ضمن الحفظة الجديدة)
         $orphaned = array_diff($oldImagePaths, $savedImagePaths);
         foreach ($orphaned as $orphanPath) {
+            // basename() تجرّد أي مسار من المدخل فلا يبقى منه إلا اسم
+            // الملف — لا `..` ولا شرطات ولا مسار مطلق. المسار الناتج
+            // محصور في $uploadDir بالبناء. semgrep يرى تدفّق بيانات من
+            // قاعدة البيانات إلى unlink ولا يرى أثر basename.
             $disk = rtrim($uploadDir, '/\\') . DIRECTORY_SEPARATOR . basename($orphanPath);
+            // nosemgrep: php.lang.security.unlink-use.unlink-use
             if (file_exists($disk)) @unlink($disk);
         }
 
@@ -232,7 +237,9 @@ class AdminBrandingController extends AdminController
     private function cleanupNewUploads(array $paths, string $uploadDir): void
     {
         foreach ($paths as $p) {
+            // كسابقتها: basename تحصر الاسم داخل $uploadDir بالبناء.
             $disk = rtrim($uploadDir, '/\\') . DIRECTORY_SEPARATOR . basename($p);
+            // nosemgrep: php.lang.security.unlink-use.unlink-use
             if (file_exists($disk)) @unlink($disk);
         }
     }

@@ -92,3 +92,51 @@ function themeBootScript(): string
 
 HTML;
 }
+
+/**
+ * publicFileToDelete(string $relPath): ?string
+ *
+ * يحوّل مساراً نسبياً مخزَّناً في قاعدة البيانات (مثل images/x.jpg) إلى
+ * مسار مطلق على القرص **بشرط أن يبقى داخل public/**، ويرجع null إن خرج
+ * عنه أو لم يوجد.
+ *
+ * لماذا وُجدت: مواضع حذف صور المنتجات كانت تبني المسار بـ
+ * `ROOTPATH . '/public/' . ltrim($p, '/')`. و`ltrim` تزيل الشرطات
+ * البادئة **ولا تمنع `..`** — فقيمة مثل `../../.env` كانت تخرج من
+ * المجلد. مصادر القيم اليوم آمنة (`uploadVariantImage` يولّد الاسم
+ * كاملاً على الخادم: product_<time>_<hex>.<ext>)، فلا ثغرة قائمة —
+ * لكن الحارس يجب أن يكون في الدالة لا في عادة المستدعي، لأن أي مسار
+ * كتابة جديد إلى العمود يصير ثغرة صامتة.
+ *
+ * الاحتواء بـrealpath لا بفحص نصّي: realpath يفكّ `..` والوصلات الرمزية
+ * معاً، والمقارنة على الناتج المُفكَّك هي وحدها التي لا تُخدع.
+ *
+ * @param  string $relPath المسار كما هو مخزَّن (نسبي لـpublic/)
+ * @return string|null المسار المطلق الصالح للحذف، أو null إن رُفض
+ */
+function publicFileToDelete(string $relPath): ?string
+{
+    $relPath = trim($relPath);
+    if ($relPath === '') {
+        return null;
+    }
+
+    $publicRoot = realpath(ROOTPATH . '/public');
+    if ($publicRoot === false) {
+        return null;
+    }
+
+    $candidate = realpath($publicRoot . DIRECTORY_SEPARATOR . ltrim($relPath, '/\\'));
+    if ($candidate === false || !is_file($candidate)) {
+        return null;   // غير موجود، أو مجلد
+    }
+
+    // الفاصل في النهاية مقصود: بدونه يمرّ مجلد شقيق اسمه بادئة
+    // (public_backup مثلاً) على فحص str_starts_with.
+    if (!str_starts_with($candidate, $publicRoot . DIRECTORY_SEPARATOR)) {
+        error_log('[Cairo Store] رُفض حذف ملف خارج public/: ' . $relPath);
+        return null;
+    }
+
+    return $candidate;
+}
