@@ -123,7 +123,7 @@ class BackupModel
                     return ['success' => true];
                 }
                 // $path مولَّد في createBackup من طابع زمني، لا مدخل فيه.
-                // nosemgrep: php.lang.security.unlink-use.unlink-use
+                // nosemgrep: php.lang.security.unlink-use.unlink-use,cairo-unlink-unvalidated-path
                 @unlink($path); // مسح أي ملف جزئي قبل التجربة التالية
             }
 
@@ -133,7 +133,7 @@ class BackupModel
             // ولو فشل كل شيء أو رُمي استثناء.
             if ($cnfPath !== null && is_file($cnfPath)) {
                 // $cnfPath من tempnam() في هذه الدالة — لا مدخل مستخدم.
-                // nosemgrep: php.lang.security.unlink-use.unlink-use
+                // nosemgrep: php.lang.security.unlink-use.unlink-use,cairo-unlink-unvalidated-path
                 @unlink($cnfPath);
             }
         }

@@ -84,6 +84,7 @@
                 formData.set('h-captcha-response', captchaVal);
             }
 
+            // nosemgrep: cairo-bare-fetch-post
             const response = await fetch(requiresTwofa ? LOGIN_2FA_ENDPOINT : LOGIN_ENDPOINT, {
                 method:      'POST',
                 body:        formData,

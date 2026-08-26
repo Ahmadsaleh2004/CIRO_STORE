@@ -237,6 +237,7 @@ function openDeleteConfirm(id, name) {
     // تُرجع «Invalid CSRF token»، ولا شيء لشبكة الأمان لتفعله هنا.
     const fd = new FormData();
     fd.append('q', name);
+    // nosemgrep: cairo-bare-fetch-post
     fetch(window.URLROOT + '/admin/products/categories/suggest', { method: 'POST', body: fd })
         .then(r => r.json())
         .then(data => {
