@@ -55,4 +55,55 @@ final class ErrorPage
 
         exit;
     }
+
+    /**
+     * يرسل صفحة 403 كاملة ويوقف التنفيذ.
+     *
+     * وُجدت لنفس سبب notFound(): كان الرد على الرفض في BackupController
+     * و AdminManageAdminsController هو
+     * `http_response_code(403); die('Unauthorized — Root admin only (ID=1)')`
+     * — نصّاً خاماً بلا <head> ولا لايوت ولا طريق رجوع. وهو يكشف قاعدة
+     * الصلاحية للزائر بلا فائدة؛ الرسالة المعروضة الآن عامة والتفصيل
+     * إلى السجل.
+     *
+     * @param string|null $logDetail تفصيل تشخيصي — إلى error_log وحده،
+     *        لا يُطبع في المتصفح أبداً.
+     * @param string|null $backUrl   وجهة زر الرجوع. الافتراضي جذر الموقع؛
+     *        تمرّره صفحات الأدمن كي لا تُلقي الأدمن في واجهة المتجر.
+     * @param string|null $backLabel نصّ زر الرجوع.
+     */
+    public static function forbidden(
+        ?string $logDetail = null,
+        ?string $backUrl   = null,
+        ?string $backLabel = null
+    ): never {
+        if ($logDetail !== null && $logDetail !== '') {
+            error_log('[Cairo Store] 403: ' . $logDetail);
+        }
+
+        if (!headers_sent()) {
+            http_response_code(403);
+            header('Content-Type: text/html; charset=utf-8');
+        }
+
+        // متاحان للـview
+        $backUrl   = $backUrl   ?? URLROOT . '/';
+        $backLabel = $backLabel ?? 'العودة للصفحة الرئيسية';
+
+        // نفس احتياط notFound(): لو غاب ملف الصفحة نطبع بديلاً مضمّناً
+        // بدل استدعاء view() — وهو تكرار محتمل داخل معالج خطأ.
+        $page = APPROOT . '/views/errors/403.php';
+        if (is_file($page)) {
+            require $page;
+        } else {
+            echo '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">'
+               . '<title>403 — Access Denied</title></head><body>'
+               . '<h1>403</h1><p>You do not have permission to access this page.</p>'
+               . '<p><a href="' . htmlspecialchars($backUrl) . '">'
+               . htmlspecialchars($backLabel) . '</a></p>'
+               . '</body></html>';
+        }
+
+        exit;
+    }
 }

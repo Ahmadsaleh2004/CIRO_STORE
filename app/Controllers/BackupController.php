@@ -3,6 +3,7 @@
 namespace App\Controllers;
 
 use App\Core\AdminController;
+use App\Core\ErrorPage;
 use App\Models\BackupModel;
 use App\Models\AdminModel;
 use OpenApi\Attributes as OA;
@@ -109,17 +110,25 @@ class BackupController extends AdminController
     )]
     public function download(): void
     {
+        // كانت الحالتان أدناه ترّدان بـdie() ونصّ خام: صفحة بيضاء بلا
+        // <head> ولا لايوت ولا طريق رجوع، على نقطة يصلها الأدمن بنقرة
+        // من جدول النسخ. صارتا صفحتَي خطأ حقيقيتين عبر ErrorPage.
         if (getCurrentAdminId() !== 1) {
-            http_response_code(403);
-            die('Unauthorized — Root admin only (ID=1)');
+            ErrorPage::forbidden(
+                'backup/download: محاولة من أدمن #' . (getCurrentAdminId() ?? 0),
+                URLROOT . '/admin',
+                'العودة للوحة التحكم'
+            );
         }
 
         $filename = $_GET['file'] ?? '';
         $path     = BackupModel::getBackupPath($filename);
 
+        // getBackupPath تُرجع null لثلاث حالات: اسم فيه مسار · اسم لا
+        // يطابق النمط · ملف غير موجود. من زاوية الأدمن كلها «الملف
+        // المطلوب غير موجود»، و404 يكشف عن قاعدة التحقق أقل من 403.
         if ($path === null) {
-            http_response_code(403);
-            die('Invalid backup file.');
+            ErrorPage::notFound('backup/download: ملف غير صالح أو غير موجود');
         }
 
         header('Content-Type: application/octet-stream');
