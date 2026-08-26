@@ -86,8 +86,17 @@ final class ErrorPage
             header('Content-Type: text/html; charset=utf-8');
         }
 
-        // متاحان للـview
+        // متاحان للـview.
+        //
+        // ⚠️ الوجهة تُقيَّد بجذر الموقع عمداً. كل المستدعين اليوم يمرّرون
+        // ثابتاً مبنياً على URLROOT، لكن التوقيع يقبل نصّاً — ومستدعٍ
+        // لاحق يمرّر مدخلاً من المستخدم كان سيزرع `javascript:` في href.
+        // htmlspecialchars في الـview يهرّب المحارف ولا يمنع مخطّطاً خبيثاً.
         $backUrl   = $backUrl   ?? URLROOT . '/';
+        if (!str_starts_with($backUrl, URLROOT)) {
+            error_log('[Cairo Store] 403: وجهة رجوع خارج الموقع رُفضت: ' . $backUrl);
+            $backUrl = URLROOT . '/';
+        }
         $backLabel = $backLabel ?? 'العودة للصفحة الرئيسية';
 
         // نفس احتياط notFound(): لو غاب ملف الصفحة نطبع بديلاً مضمّناً
