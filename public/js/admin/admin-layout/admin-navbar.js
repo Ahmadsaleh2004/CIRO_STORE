@@ -16,6 +16,7 @@
 // **لا تتحقق من توكن CSRF** (تُدمّر الجلسة وتحوّل بـ302، ولا تُرجع
 // JSON أصلاً). والغلاف يستدعي response.json() فكان سيرمي على تحويل.
 function logoutAdmin() {
+    // nosemgrep: cairo-bare-fetch-post
     fetch(window.URLROOT + '/admin/logout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },

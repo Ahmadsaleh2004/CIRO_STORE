@@ -65,6 +65,7 @@ function syncCartWithStock() {
     // fetch عارٍ عن قصد — لا fetchWithCsrfRetry: CartController::checkStock
     // **لا تتحقق من توكن CSRF** (استعلام مخزون للقراءة)، والطلب لا يرسل
     // توكناً أصلاً. فلا يمكن أن تُرجع «Invalid CSRF token».
+    // nosemgrep: cairo-bare-fetch-post
     fetch(window.BASE_URL + '/cart/check-stock', {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },

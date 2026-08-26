@@ -307,6 +307,7 @@ window.logoutUser = async function () {
     try {
         // fetch عارٍ عن قصد — AuthController::logout لا تتحقق من CSRF
         // (تُدمّر الجلسة مباشرة). لا شيء لشبكة الأمان لتتعافى منه.
+        // nosemgrep: cairo-bare-fetch-post
         const res  = await fetch(window.BASE_URL + '/auth/logout', { method: 'POST', body: fd });
         const data = await res.json();
         window.location.href = data.redirect || window.BASE_URL;
