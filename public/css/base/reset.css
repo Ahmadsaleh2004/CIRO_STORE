@@ -1,0 +1,40 @@
+/* ==================================================
+   base/reset.css — Global reset, <html>/<body> defaults, Bootstrap body-padding fix, overflow guards.
+   ================================================== */
+
+/* ==================================================
+   Fix Bootstrap padding-right on body (modal/offcanvas)
+   ================================================== */
+body {
+    /* overflow-x: clip بدلاً من hidden حتى لا يُنشئ scroll container
+       يكسر position: sticky على الناف بار (مطلوب لتأثير initNavbarBlur) */
+    overflow-x: clip !important;
+    padding-right: 0 !important;
+    min-height: 100vh;
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    transition: background-color var(--dur-slow) ease, color var(--dur-slow) ease;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.modal-open {
+    padding-right: 0 !important;
+    overflow: hidden;
+}
+
+/* ==================================================
+   Base Reset
+   ================================================== */
+*, *::before, *::after {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+
+/* ── Global overflow guard ── */
+html {
+    overflow-x: hidden;
+}
+
+/* body already has overflow-x: hidden via existing rule */

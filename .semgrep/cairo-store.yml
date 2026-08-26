@@ -1,0 +1,276 @@
+# ══════════════════════════════════════════════════════════════
+# قواعد semgrep محلية — Cairo Store
+# ══════════════════════════════════════════════════════════════
+#
+# لماذا قواعد محلية بينما `--config auto` يشغّل 1074 قاعدة عامة؟
+#
+# لأن **أخطر أربعة أعطال في هذا المشروع لم تكشفها قاعدة عامة قط**:
+# سجل تدقيق يكذب عن حذف لم يحدث · صفحة دفع خارج شبكة CSRF · صفحة بيضاء
+# بنصّ خام تكشف قاعدة الصلاحية · ومسار حذف يخرج من public/. كُشفت كلها
+# بالقراءة، وأُصلحت في هذه السيشن.
+#
+# القواعد الأربع أدناه تُشفّر تلك الأعطال بالذات. وكل واحدة **مُثبَتة
+# على النسخة المعطوبة من التاريخ**: تُطلق على الكود قبل الإصلاح وتسكت
+# بعده. قاعدة لا تُثبَت هكذا لا تُضاف — لأنها قد لا تمسك شيئاً أبداً
+# وتعطي طمأنينة بلا سبب.
+#
+# ولا تحتاج شبكة ولا حساباً: `semgrep --config .semgrep/` يعمل محلياً.
+#
+# ── الإضافة ──────────────────────────────────────────────────
+# أضف قاعدة هنا **بعد** أن يقع عطل حقيقي، لا قبله. والمعيار: هل كانت
+# ستمسك عطلاً وقع فعلاً؟ إن لم تكن، فهي ضجيج.
+
+rules:
+
+  # ════════════════════════════════════════════════════════════
+  # 1. die() خام في كنترولر
+  # ════════════════════════════════════════════════════════════
+  #
+  # العطل الحقيقي: `BackupController` و`AdminManageAdminsController`
+  # كانا يرّدان بـ`die('Unauthorized — Root admin only (ID=1)')` —
+  # جسم استجابة بـ39 بايتاً بلا <head> ولا لايوت ولا طريق رجوع،
+  # **ويكشف قاعدة الصلاحية** لمن لا يملكها.
+  #
+  # وأسوأ منه: نقطتان من الخمس كانتا **نقاط JSON**، فيصل الـJS ردّاً
+  # `text/html` فيعرض «Network error» بدل السبب الحقيقي.
+  #
+  # البديل: ErrorPage::forbidden() للصفحات، و$this->respond() للنقاط.
+  - id: cairo-raw-die-in-controller
+    languages: [php]
+    severity: ERROR
+    message: >-
+      ردّ بـdie()/exit() بنصّ خام في كنترولر: صفحة بيضاء بلا لايوت ولا
+      طريق رجوع، وقد تكشف قاعدة الصلاحية. استعمل ErrorPage::forbidden()
+      أو ErrorPage::notFound() للصفحات، و$this->respond(false, ...)
+      لنقاط JSON.
+    paths:
+      include:
+        - "app/Controllers/*.php"
+    patterns:
+      - pattern-either:
+          - pattern: die("...")
+          - pattern: exit("...")
+
+  # ════════════════════════════════════════════════════════════
+  # 2. unlink() على مسار لم يُحتوَ
+  # ════════════════════════════════════════════════════════════
+  #
+  # العطل الحقيقي: `AdminProductsController` كان يبني مسار الحذف بـ
+  # `ROOTPATH . '/public/' . ltrim($oldPath, '/')`. و`ltrim` تزيل
+  # الشرطات البادئة **ولا تمنع `..`** — فقيمة `../.env` كانت تُفكّ إلى
+  # ملف الأسرار الحقيقي، و`@unlink` كان سيحذفه.
+  #
+  # المسارات الآمنة الثلاثة في المشروع: publicFileToDelete (realpath
+  # محتوى) · getBackupPath (basename + نمط + is_file) · basename().
+  - id: cairo-unlink-unvalidated-path
+    languages: [php]
+    severity: ERROR
+    message: >-
+      unlink() على مسار لم يمرّ بحارس احتواء. ltrim() لا تمنع «..».
+      مرّر المسار بـpublicFileToDelete() أو basename() أو
+      BackupModel::getBackupPath() قبل الحذف.
+    paths:
+      include:
+        - "app/**/*.php"
+    patterns:
+      - pattern: unlink($PATH)
+      - pattern-not: unlink(publicFileToDelete(...))
+      - pattern-not: unlink($X . basename(...))
+      - pattern-not: unlink(basename(...))
+      # الشكل الثلاثي: $disk = $x ? publicFileToDelete($x) : null;
+      - pattern-not-inside: |
+          $PATH = $COND ? publicFileToDelete(...) : null;
+          ...
+      # المتغيّر المُسنَد من حارس معروف قبل السطر
+      - pattern-not-inside: |
+          $PATH = publicFileToDelete(...);
+          ...
+      - pattern-not-inside: |
+          $PATH = $X . DIRECTORY_SEPARATOR . basename(...);
+          ...
+      - pattern-not-inside: |
+          $PATH = self::getBackupPath(...);
+          ...
+      - pattern-not-inside: |
+          $PATH = BackupModel::getBackupPath(...);
+          ...
+      - pattern-not-inside: |
+          $PATH = tempnam(...);
+          ...
+
+  # ════════════════════════════════════════════════════════════
+  # 3. return true بعد execute() بلا فحص rowCount
+  # ════════════════════════════════════════════════════════════
+  #
+  # العطل الحقيقي: `AdminProductModel::delete` كانت تُرجع `true` بلا
+  # شرط. و`DELETE ... WHERE id = ?` على معرّف غير موجود **ينجح** ويحذف
+  # صفر صفوف. فأجابت النقطة «Product deleted successfully» لمنتج لم
+  # يوجد، **وكتبت صفّ تدقيق وإشعاراً يزعمان حذفاً لم يحدث**.
+  #
+  # سجل التدقيق آخر ما يجوز أن يكذب — فهو المرجع حين يُسأل «من حذف
+  # ماذا ومتى».
+  - id: cairo-execute-then-return-true
+    languages: [php]
+    severity: WARNING
+    message: >-
+      return true مباشرة بعد execute() بلا فحص rowCount(). جملة
+      DELETE/UPDATE على معرّف غير موجود تنجح وتؤثّر في صفر صفوف، فتُرجع
+      الدالة «نجح» لعملية لم تحدث. افحص $stmt->rowCount() وميّز «لم
+      يوجد» عن «فشل تقني».
+    paths:
+      include:
+        - "app/Models/*.php"
+    patterns:
+      # صيغة «=~/…/» داخل النمط غير صالحة في semgrep — الترشيح
+      # على قيمة المتغيّر يكون بـmetavariable-regex منفصلاً.
+      - pattern: |
+          $DB->prepare($SQL)->execute(...);
+          ...
+          return true;
+      - metavariable-regex:
+          metavariable: $SQL
+          regex: (?i).*(DELETE|UPDATE)\s.*
+      # لا استثناء لـrowCount: الشكل المتسلسل نفسه هو الرائحة.
+      # النسخة المُصلَحة تفصل `$stmt = prepare(); $stmt->execute();`
+      # كي تستطيع قراءة rowCount من $stmt — فلا تطابق هذا النمط
+      # أصلاً. أي أن الفصل هو الإصلاح، والتسلسل هو العطل.
+
+  # ════════════════════════════════════════════════════════════
+  # 4. fetch() بـPOST خارج شبكة أمان CSRF
+  # ════════════════════════════════════════════════════════════
+  #
+  # العطل الحقيقي: `features/checkout.js` كان يرسل نقطتي الدفع بغلاف
+  # محلي بلا إعادة محاولة. والتوكن في هذا المشروع **واحد لكل جلسة**،
+  # فيكفي أن يفشل فورم في تبويب آخر ليُبطل توكن صفحة الدفع — فتضيع
+  # عملية شراء بعد ثلاث خطوات مكتملة.
+  #
+  # وأفلت الملف من جرد المرحلة 6 لأنه يمرّر الطريقة بمتغيّر، فلم
+  # يطابقه بحث `method: 'POST'`.
+  #
+  # ⚠️ خمس نقاط تستعمل fetch عارياً **بحقّ** لأن الخادم لا يتحقق من
+  # CSRF فيها (نقطتا الخروج · check-stock · اقتراح التصنيفات · دخول
+  # الأدمن). كلها موثَّقة في مكانها بتعليق يبدأ بـ«fetch عارٍ عن قصد»،
+  # ويُستثنى بـ// nosemgrep عند الحاجة.
+  - id: cairo-bare-fetch-post
+    languages: [js]
+    severity: WARNING
+    message: >-
+      fetch() بـPOST خارج fetchWithCsrfRetry. التوكن واحد لكل جلسة في
+      هذا المشروع، فأي تدوير له يُبطل توكن كل صفحة مفتوحة ويضيع الطلب.
+      استعمل fetchWithCsrfRetry، أو وثّق السبب فوق السطر إن كانت النقطة
+      لا تتحقق من CSRF أصلاً.
+    paths:
+      include:
+        - "public/js/**/*.js"
+    patterns:
+      - pattern-either:
+          # الاقتباس لازم: النمط يحوي «: » فيقرأه YAML كخريطة
+          - pattern: 'fetch($URL, {..., method: "POST", ...})'
+          - pattern: "fetch($URL, {..., method: 'POST', ...})"
+          # ⚠️ الشكل المختصر `method,` — وهو **بالضبط** ما جعل
+          # checkout.js يفلت من جرد المرحلة 6: البحث كان عن
+          # `method: 'POST'` فلم يطابق تمرير المتغيّر. قاعدة
+          # تغفل هذا الشكل تكرّر الغفلة نفسها.
+          - pattern: 'fetch($URL, {..., method: $M, ...})'
+      # الطلبات القرائية لا تحتاج توكناً
+      - pattern-not: 'fetch($URL, {..., method: "GET", ...})'
+      - pattern-not: "fetch($URL, {..., method: 'GET', ...})"
+
+  # ════════════════════════════════════════════════════════════════
+  # 5) اكتشاف فشل CSRF بنصّ الرسالة بدل error_code
+  # ════════════════════════════════════════════════════════════════
+  # وقع هذا العطل ثلاث مرات في هذا المشروع قبل أن يُصلَح جذرياً:
+  # WishlistController::notify كانت ترد بـ'Invalid session…' و
+  # ContactController::send بـ'Invalid request…'، فكانت
+  # fetchWithCsrfRetry لا تتعرّف على الفشل ولا تُعيد المحاولة — والزرّان
+  # يفشلان نهائياً حيث تتعافى بقية الأزرار بصمت. وست نقاط أخرى نجت
+  # بالصدفة وحدها لأن صياغتها بدأت بالبادئة نفسها.
+  #
+  # العقد اليوم: {error_code: 'csrf_invalid'} من respondCsrfFailure().
+  # أي عودة لمطابقة النصّ تُعيد العطل، ولن يظهر إلا لمستخدم بتوكن منتهٍ.
+  - id: cairo-csrf-detect-by-message
+    languages: [js]
+    severity: ERROR
+    message: >-
+      اكتشاف فشل CSRF بنصّ الرسالة. الرسالة نصّ للعرض يتغيّر بحرية،
+      والعقد هو error_code === 'csrf_invalid' الذي ترسله
+      Controller::respondCsrfFailure(). مطابقة النصّ تنكسر بصمت عند أول
+      إعادة صياغة — وقد كسرت ثلاث نقاط في هذا المشروع فعلاً.
+    paths:
+      include:
+        - "public/js/**/*.js"
+    patterns:
+      - pattern-either:
+          - pattern: $D.message.startsWith("Invalid CSRF ...")
+          - pattern: $D.message.includes("Invalid CSRF ...")
+          - pattern: $D.message === "Invalid CSRF ..."
+
+  # ════════════════════════════════════════════════════════════════
+  # 6) نقطة JSON تعدّل الحالة بلا فحص CSRF
+  # ════════════════════════════════════════════════════════════════
+  # NotificationController كان فيه requireAuth() و requirePost() خاصتان
+  # به وصفر verifyCsrfToken في الملف كله — فبدا محميّاً وهو ليس كذلك.
+  # /notifications/delete-all كان يحذف كل إشعارات المستخدم من أي أصل.
+  #
+  # القاعدة تمسك النمط: دالة عامة في كنترولر تضبط رأس JSON ولا تستدعي
+  # beginJsonPost ولا verifyCsrfToken. الاستثناءات المشروعة (قراءة على
+  # GET، صفحة تحوّل بـredirect) تُوثَّق بـnosemgrep فوق السطر.
+  - id: cairo-json-endpoint-without-csrf
+    languages: [php]
+    severity: WARNING
+    message: >-
+      نقطة تضبط رأس JSON بلا beginJsonPost() ولا verifyCsrfToken().
+      إن كانت تعدّل الحالة فهي مفتوحة لـCSRF. استعمل beginJsonPost()،
+      أو وثّق السبب بـnosemgrep إن كانت قراءة محضة على GET.
+    paths:
+      include:
+        - "app/Controllers/*.php"
+    # النمط يطابق **الدالة كاملة** لا سطر الرأس وحده. المحاولة الأولى
+    # استعملت pattern-inside للدالة مع pattern-not-inside للبوابة، فلم
+    # يربط semgrep المتغيّر $F بين الشرطين وأنتجت 11 نتيجة أغلبها كاذب
+    # (login و reauth تستدعيان verifyCsrfToken فعلاً). مطابقة الدالة
+    # كاملة ثم استثناؤها بـpattern-not تجعل النطاق واحداً لا اثنين.
+    patterns:
+      - pattern: |
+          public function $F(...) {
+            ...
+            header('Content-Type: application/json; charset=utf-8');
+            ...
+          }
+      - pattern-not: |
+          public function $F(...) {
+            ...
+            $this->beginJsonPost(...);
+            ...
+          }
+      # الاستدعاء في هذا المشروع يقع دائماً داخل شرط `if (!verifyCsrfToken(...))`
+      # لا كعبارة مستقلة، فنمط العبارة وحده لا يطابقه.
+      - pattern-not: |
+          public function $F(...) {
+            ...
+            if (!verifyCsrfToken(...)) { ... }
+            ...
+          }
+      # ── استثناءات مسمّاة ──────────────────────────────────────────
+      # سبع نقاط تضبط رأس JSON بحق بلا توكن، وكلها قراءة لا تعدّل حالة.
+      # الاستثناء هنا لا بتعليق nosemgrep فوق كل واحدة: مطابقة القاعدة
+      # تبدأ عند كتلة سمة #[OA\...] لا عند سطر الرأس، فالتعليق يجب أن
+      # يعلو السمة كلها — موضع هشّ يزيحه أول من «ينظّف» الملف. القائمة
+      # هنا يراها المراجع دفعةً واحدة.
+      #
+      #   getCsrf        — جلب التوكن نفسه؛ لا يمكن أن يشترط توكناً
+      #   list           — قراءة إشعارات على GET (المستخدم والأدمن)
+      #   searchProducts — بحث للقراءة على GET
+      #   stock          — استعلام مخزون عام على GET
+      #   checkStock     — استعلام مخزون على POST (قائمة معرّفات طويلة)،
+      #                    لا يعدّل حالة ولا يحمل توكناً أصلاً
+      - pattern-not: |
+          public function getCsrf(...) { ... }
+      - pattern-not: |
+          public function list(...) { ... }
+      - pattern-not: |
+          public function searchProducts(...) { ... }
+      - pattern-not: |
+          public function stock(...) { ... }
+      - pattern-not: |
+          public function checkStock(...) { ... }

@@ -1,0 +1,223 @@
+/* ══════════════════════════════════════════════════════════════
+   home-slider.css — صور مرنة + Hover احترافي حسب عدد الصور بالشريحة
+   ══════════════════════════════════════════════════════════════ */
+
+.slide-items-row {
+    display: flex;
+    width: 100%;
+    height: 480px; /* عدّل حسب ارتفاع السلايدر الحالي بالمشروع (راجع slider-image بـ home.css) */
+    overflow: hidden;
+    gap: 2px;
+}
+
+/* كل عنصر إما <div class="slide-item"> أو <a class="slide-item-link"><div class="slide-item">…
+   فعنصر flex نفسه هو .slide-item أو .slide-item-link — لذا كل القواعد الهوفرية تشمل الاثنين. */
+.slide-item,
+.slide-item-link {
+    position: relative;
+    flex: 1 1 0;
+    min-width: 0;
+    display: block;
+    height: 100%;
+    overflow: hidden;
+    text-decoration: none;
+    transition: flex-grow .45s cubic-bezier(.22, 1, .36, 1),
+                box-shadow .35s ease,
+                z-index 0s;
+}
+
+.slide-item-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    transition: transform .45s cubic-bezier(.22, 1, .36, 1);
+}
+
+.slide-item-caption {
+    position: absolute;
+    left: 0; right: 0; bottom: 0;
+    padding: 14px 16px;
+    color: #fff;
+    font-weight: 600;
+    background: linear-gradient(to top, rgba(0,0,0,.65), transparent);
+    text-shadow: 0 1px 3px rgba(0,0,0,.6);
+    pointer-events: none;
+}
+
+/* ── حالة 1-4 صور: هوفر بسيط تقليدي ─────────────────────────── */
+.slide-items-row.count-1 > .slide-item:hover > .slide-item-img,
+.slide-items-row.count-2 > .slide-item:hover > .slide-item-img,
+.slide-items-row.count-3 > .slide-item:hover > .slide-item-img,
+.slide-items-row.count-4 > .slide-item:hover > .slide-item-img,
+.slide-items-row.count-1 > .slide-item-link:hover > .slide-item > .slide-item-img,
+.slide-items-row.count-2 > .slide-item-link:hover > .slide-item > .slide-item-img,
+.slide-items-row.count-3 > .slide-item-link:hover > .slide-item > .slide-item-img,
+.slide-items-row.count-4 > .slide-item-link:hover > .slide-item > .slide-item-img {
+    transform: scale(1.04);
+}
+
+/* ── حالة 5+ صور: هوفر يكبّر لربع عرض السلايدر تقريباً ──────── */
+.slide-items-row.compact-count .slide-item,
+.slide-items-row.compact-count .slide-item-link {
+    flex-grow: 1; /* الحالة الطبيعية: توزيع متساوٍ */
+}
+.slide-items-row.compact-count:hover > .slide-item,
+.slide-items-row.compact-count:hover > .slide-item-link {
+    flex-grow: 0.6; /* الصور غير المُحوَّم عليها تنكمش قليلاً لإفساح المجال */
+}
+.slide-items-row.compact-count > .slide-item:hover,
+.slide-items-row.compact-count > .slide-item-link:hover {
+    flex-grow: 4;              /* يقارب 25% من العرض الكلي حسب عدد العناصر */
+    z-index: 5;
+    box-shadow: 0 12px 32px rgba(0,0,0,.35);
+}
+.slide-items-row.compact-count .slide-item-link:hover > .slide-item > .slide-item-img,
+.slide-items-row.compact-count .slide-item:hover > .slide-item-img {
+    transform: scale(1.02); /* تكبير إضافي طفيف جداً فوق التوسّع بالـ flex نفسه */
+}
+
+/* الوصف يظهر بوضوح أكبر فقط بالحالة الموسّعة (تقليل الزحمة البصرية بالوضع الرفيع) */
+.slide-items-row.compact-count .slide-item .slide-item-caption,
+.slide-items-row.compact-count .slide-item-link .slide-item-caption {
+    opacity: 0;
+    transition: opacity .3s ease .1s;
+}
+.slide-items-row.compact-count .slide-item-link:hover .slide-item-caption,
+.slide-items-row.compact-count .slide-item:hover .slide-item-caption {
+    opacity: 1;
+}
+
+/* ── الاستجابة على الجوال: عمود بدل صف عند الشاشات الصغيرة ───── */
+@media (max-width: 767px) {
+    .slide-items-row { height: 320px; }
+    .slide-items-row.compact-count:hover > .slide-item,
+    .slide-items-row.compact-count:hover > .slide-item-link { flex-grow: 1; } /* لا تكبير عند اللمس بالجوال */
+    .slide-items-row.compact-count > .slide-item:hover,
+    .slide-items-row.compact-count > .slide-item-link:hover {
+        flex-grow: 1; box-shadow: none; z-index: auto;
+    }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   Slider Navigation Arrows — Compact & Non-blocking
+   ═══════════════════════════════════════════════════════════════════
+   الهدف: تصغير منطقة الزر (hitbox) من full-height/15%-width الافتراضي
+   إلى دائرة صغيرة، وجعلها مخفية افتراضيًا (opacity:0 + pointer-events:none)
+   لتتوقف عن حجب Hover على أول/آخر منتج في الشريحة.
+   يظهر السهم فقط عند hover على السلايدر ككل (#mainSlider:hover).
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* إلغاء تنسيقات Bootstrap الافتراضية للزر (عرض/ارتفاع كامل، تدرّج شفاف) */
+#mainSlider .carousel-control-prev,
+#mainSlider .carousel-control-next {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 44px !important;        /* حجم دائرة ثابت بدل 15% عرض السلايدر */
+    height: 44px !important;       /* بدل full-height */
+    min-width: 0 !important;       /* إلغاء min-width: 15% من Bootstrap */
+    opacity: 0;                    /* مخفي افتراضيًا */
+    pointer-events: none;          /* لا يعترض كليكات/hover على العناصر تحته — المفتاح التقني */
+    background: rgba(0, 0, 0, 0.35);  /* خلفية دائرية شبه شفافة */
+    border-radius: 50%;            /* دائرة */
+    backdrop-filter: blur(4px);    /* تأثير زجاجي (مدعوم حديثًا) */
+    -webkit-backdrop-filter: blur(4px);
+    border: none;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);
+    transition: opacity 0.3s ease, transform 0.25s ease, background-color 0.25s ease, box-shadow 0.25s ease;
+    z-index: 10;                   /* فوق الصور، لكن pointer-events:none يجعله غير معترض */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#mainSlider .carousel-control-prev { left: 12px !important; }
+#mainSlider .carousel-control-next { right: 12px !important; }
+
+/* أيقونة السهم: تصغير حجمها داخل الدائرة */
+#mainSlider .carousel-control-prev-icon,
+#mainSlider .carousel-control-next-icon {
+    width: 20px !important;
+    height: 20px !important;
+    background-size: 45% 45% !important;  /* بدل الحجم الكبير الافتراضي */
+    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.5));
+}
+
+/* إظهار الأسهم عند hover على السلايدر ككل */
+#mainSlider:hover .carousel-control-prev,
+#mainSlider:hover .carousel-control-next {
+    opacity: 0.85;
+    pointer-events: auto;  /* الآن يمكن التفاعل معها */
+}
+
+/* Hover على السهم نفسه */
+#mainSlider .carousel-control-prev:hover,
+#mainSlider .carousel-control-next:hover {
+    opacity: 1;
+    transform: translateY(-50%) scale(1.08);
+    background: rgba(0, 0, 0, 0.55);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+}
+
+/* ── استجابة الجوال: دوائر أصغر، تظهر بثبات أكبر (لأن لا hover باللمس) ───── */
+@media (max-width: 767px) {
+    #mainSlider .carousel-control-prev,
+    #mainSlider .carousel-control-next {
+        width: 36px !important;
+        height: 36px !important;
+        opacity: 0.55;           /* مرئية دائمًا بخفوت على الجوال */
+        pointer-events: auto;    /* قابلة للنقر مباشرة */
+    }
+    #mainSlider .carousel-control-prev { left: 8px !important; }
+    #mainSlider .carousel-control-next { right: 8px !important; }
+    #mainSlider .carousel-control-prev-icon,
+    #mainSlider .carousel-control-next-icon {
+        width: 16px !important;
+        height: 16px !important;
+    }
+}
+
+/* ──────────────────────────────────────────────────────────────────
+   Alternative Design (Commented) — مؤشرات نقاط + أسهم تظهر فقط عند حافة 40px
+   ═══════════════════════════════════════════════════════════════════
+   تصميم بديل أكثر احترافية: إخفاء الأسهم بالكامل، واستخدام
+   .carousel-indicators كنقاط صغيرة أسفل السلايدر، والأسهم تظهر
+   فقط عند hover الحافة القصوى (أول/آخر 40px من العرض).
+   هذا يلغي التغطية على المنتجات نهائيًا لأن منطقة الكشف تكون
+   خارج نطاق الصور غالبًا.
+   
+   لتفعيله: ألغِ التعليق عن الكود أدناه وأخفِ الحل الأساسي أعلاه.
+   
+   #mainSlider .carousel-control-prev,
+   #mainSlider .carousel-control-next {
+       width: 40px !important;
+       height: 100% !important;
+       opacity: 0;
+       pointer-events: none;
+       background: transparent !important;
+       border-radius: 0;
+   }
+   #mainSlider .carousel-control-prev { left: 0 !important; }
+   #mainSlider .carousel-control-next { right: 0 !important; }
+   #mainSlider:hover .carousel-control-prev:hover,
+   #mainSlider:hover .carousel-control-next:hover {
+       opacity: 0.8;
+       pointer-events: auto;
+       background: linear-gradient(90deg, rgba(0,0,0,.35), transparent) !important;
+   }
+   #mainSlider .carousel-control-next:hover {
+       background: linear-gradient(270deg, rgba(0,0,0,.35), transparent) !important;
+   }
+   #mainSlider .carousel-indicators {
+       bottom: 16px !important;
+   }
+   #mainSlider .carousel-indicators button {
+       width: 8px !important; height: 8px !important; border-radius: 50% !important;
+       background: rgba(255,255,255,.7) !important; border: none !important;
+       margin: 0 4px !important; opacity: .7;
+   }
+   #mainSlider .carousel-indicators button.active {
+       background: #fff !important; opacity: 1; transform: scale(1.2);
+   }
+   ────────────────────────────────────────────────────────────────── */

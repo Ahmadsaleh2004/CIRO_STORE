@@ -1,0 +1,71 @@
+/* ==================================================
+   admin/components/data-table.css — .admin-table, the listing table used on every admin index page.
+   ================================================== */
+
+.admin-table { background: var(--card-bg); border-radius: 12px; overflow: hidden; border: 1px solid var(--section-border); }
+.admin-table thead th { background: var(--navbar-bg); color: var(--navbar-text); font-size: .8rem; text-transform: uppercase; letter-spacing: .5px; padding: 12px 16px; border: none; }
+.admin-table tbody tr { transition: background .15s; }
+.admin-table tbody tr:hover { background: rgba(99,102,241,.06); }
+.admin-table td { padding: 11px 16px; vertical-align: middle; border-color: var(--section-border)!important; color: var(--text-color); font-size: .88rem; }
+
+/* Always scrollable horizontally rather than overflowing the page. */
+.admin-table,
+.card.admin-table {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+    max-width: 100%;
+}
+
+/* A table nested in a card should not draw a second border. */
+.card .admin-table {
+    border-radius: 0;
+    border: none;
+}
+
+/* --- Responsive density. Original cascade order; do not reorder. --- */
+@media (max-width: 576px) {
+    .admin-table thead th,
+    .admin-table td { padding: 8px 10px; font-size: .8rem; }
+}
+
+@media (max-width: 400px) {
+    .admin-table thead th,
+    .admin-table td { padding: 6px 6px; font-size: .72rem; }
+}
+
+@media (max-width: 768px) {
+    /* Cells wrap instead of forcing the table wider than the screen */
+    .admin-table td,
+    .admin-table th {
+        white-space: normal !important;
+        word-break: break-word;
+    }
+}
+
+@media (max-width: 414px) {
+    .admin-table thead th,
+    .admin-table td { padding: 7px 8px; font-size: 0.78rem; }
+}
+
+@media (max-width: 375px) {
+    .admin-table thead th,
+    .admin-table td { padding: 6px 6px; font-size: 0.73rem; }
+}
+
+@media (max-width: 320px) {
+    .admin-table thead th,
+    .admin-table td { padding: 5px 4px; font-size: 0.68rem; }
+}
+
+/* ── صفوف قابلة للنقر ──
+   كانت كل قاعدة منهما كتلة <style> مضمّنة من سطر واحد في الـview
+   الخاص بها: .clickable-row في manage-admins/index و .user-row في
+   users/index. الصنفان مختلفان اسماً ومتطابقان سلوكاً، وكلاهما يخصّ
+   جدول الأدمن — فمكانهما هنا.
+
+   الصنفان لا يُوحَّدان في اسم واحد: يقرأهما JS
+   (js/admin/manage-admins.js و js/admin/users.js) بهذين الاسمين. */
+.clickable-row,
+.user-row {
+    cursor: pointer;
+}

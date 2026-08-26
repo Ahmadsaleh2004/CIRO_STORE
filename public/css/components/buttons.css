@@ -1,0 +1,114 @@
+/* ==================================================
+   components/buttons.css — The unified green button system and its per-context exceptions.
+   ================================================== */
+
+/* ==================================================
+   Buttons — Global Unified (Green)
+   ================================================== */
+.btn {
+    transition: transform var(--dur-base) var(--ease-bounce),
+                box-shadow var(--dur-fast) ease,
+                background var(--dur-base) ease,
+                opacity var(--dur-fast) ease !important;
+    border-radius: 10px !important;
+    font-weight: 600 !important;
+    letter-spacing: 0.3px;
+}
+
+.btn:hover  { transform: translateY(-2px) scale(1.02); }
+.btn:active { transform: translateY(1px)  scale(0.97) !important; }
+
+/* --- الزر الأخضر الموحد (الافتراضي لكل الصفحات) --- */
+.btn-success,
+.btn-primary,
+.btn-secondary,
+.btn-dark,
+.btn-outline-secondary {
+    background: linear-gradient(135deg, #16a34a, #15803d) !important;
+    border: none !important;
+    color: #ffffff !important;
+    box-shadow: 0 3px 12px rgba(22, 163, 74, 0.25) !important;
+}
+
+.btn-success:hover,
+.btn-primary:hover,
+.btn-secondary:hover,
+.btn-dark:hover {
+    background: linear-gradient(135deg, #22c55e, #16a34a) !important;
+    box-shadow: 0 6px 20px rgba(22, 163, 74, 0.40) !important;
+    color: #ffffff !important;
+}
+
+/* --- أزرار الـ Modals فقط — زرقاء --- */
+#loginModal    .btn-dark,
+#registerModal .btn-success,
+#forgotModal   .btn-warning {
+    background: linear-gradient(135deg, #2563eb, #1d4ed8) !important;
+    border: none !important;
+    color: #ffffff !important;
+    box-shadow: 0 3px 12px rgba(37, 99, 235, 0.30) !important;
+}
+
+
+#loginModal    .btn-dark:hover,
+#registerModal .btn-success:hover,
+#forgotModal   .btn-warning:hover {
+    background: linear-gradient(135deg, #3b82f6, #2563eb) !important;
+    box-shadow: 0 6px 20px rgba(37, 99, 235, 0.45) !important;
+}
+
+/* --- Proceed to Checkout — يبقى أخضر --- */
+#cartSidebar .btn-warning {
+    background: linear-gradient(135deg, #16a34a, #15803d) !important;
+    color: #ffffff !important;
+    box-shadow: 0 3px 12px rgba(22, 163, 74, 0.25) !important;
+}
+
+#cartSidebar .btn-warning:hover {
+    background: linear-gradient(135deg, #22c55e, #16a34a) !important;
+    box-shadow: 0 6px 20px rgba(22, 163, 74, 0.40) !important;
+}
+
+/* --- أزرار الكمية ± تبقى neutral --- */
+.btn-outline-secondary.btn-sm {
+    background: transparent !important;
+    border: 1px solid var(--input-border) !important;
+    color: var(--text-color) !important;
+    box-shadow: none !important;
+    border-radius: 8px !important;
+}
+
+.btn-outline-secondary.btn-sm:hover {
+    background: var(--section-border) !important;
+    transform: scale(1.08) !important;
+    box-shadow: none !important;
+}
+
+/* --- Theme toggle يبقى كما هو --- */
+#theme-toggle {
+    border-radius: 50% !important;
+    width: 38px;
+    height: 38px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    background: transparent !important;
+    border-color: var(--navbar-text) !important;
+    color: var(--navbar-text) !important;
+    box-shadow: none !important;
+    transition: transform var(--dur-slow) var(--ease-bounce),
+                box-shadow var(--dur-fast) ease !important;
+}
+
+#theme-toggle:hover {
+    background: rgba(255,255,255,0.1) !important;
+    transform: rotate(20deg) scale(1.15) !important;
+    box-shadow: 0 0 14px rgba(255,255,255,0.25) !important;
+}
+
+#theme-toggle:active {
+    transform: scale(0.88) rotate(-10deg) !important;
+}
+

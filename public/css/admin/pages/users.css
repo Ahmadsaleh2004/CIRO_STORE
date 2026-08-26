@@ -1,0 +1,48 @@
+/* ==================================================
+   admin/pages/users.css — Strike (warning) system on the user-details screen.
+   ================================================== */
+
+.strike-btn {
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    border: 2px solid var(--section-border);
+    background: transparent;
+    color: var(--muted-text);
+    font-size: 1.3rem;
+    cursor: pointer;
+    transition: all var(--dur-base) var(--ease-bounce);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+.strike-btn:hover {
+    border-color: #dc2626;
+    background: rgba(220,38,38,.08);
+    color: #dc2626;
+}
+.strike-btn.active {
+    border-color: #dc2626;
+    background: #dc2626;
+    color: #fff;
+    box-shadow: 0 0 12px rgba(220,38,38,.4);
+}
+.strike-btn.active:hover { background: #b91c1c; }
+
+.strike-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    padding: 0.85rem 0;
+    border-bottom: 1px solid var(--section-border);
+}
+.strike-row:last-child { border-bottom: none; }
+
+.strike-reason {
+    font-size: .88rem;
+    color: var(--text-color);
+    line-height: 1.5;
+}
+.strike-reason .reason-label { font-weight: 700; color: #dc2626; }
+.strike-reason .reason-date  { font-size: .75rem; color: var(--muted-text); margin-top: 2px; }

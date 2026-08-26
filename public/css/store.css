@@ -1,0 +1,83 @@
+/* ==================================================
+   store.css — Entry point for every public store page.
+   ==================================================
+   This file contains NO rules of its own. It only declares the load
+   order, because in CSS the load order IS part of the meaning: many
+   of the rules below collide at equal specificity and the later file
+   wins. The order here reproduces the order the old single
+   style.css had, so the rendered result is unchanged.
+
+   Anything that must stay in a fixed position is called out with a
+   WHY comment. Everything else may be reordered within its own
+   group, but never across groups.
+
+   Admin pages load this file first and then admin.css on top.
+   ================================================== */
+
+/* ── 1. Base ─────────────────────────────────────────
+   tokens.css must be first: everything else reads its variables.
+   breakpoints.css must follow it directly — it redefines the same
+   custom properties per viewport. */
+@import url("base/tokens.css");
+@import url("base/breakpoints.css");
+@import url("base/reset.css");
+@import url("base/utilities.css");
+@import url("base/accessibility.css");
+@import url("base/typography.css");
+
+/* ── 2. Vendor — every Bootstrap 5.3 override lives here ──
+   Loaded before components/ so a component can always override a
+   Bootstrap default. The one exception is bootstrap-surfaces.css,
+   which is deliberately loaded later (see group 4). */
+@import url("vendor/bootstrap-theme.css");
+@import url("vendor/bootstrap-forms.css");
+@import url("vendor/bootstrap-tables.css");
+@import url("vendor/bootstrap-feedback.css");
+@import url("vendor/bootstrap-navigation.css");
+@import url("vendor/bootstrap-buttons.css");
+
+/* ── 3. Layout ─────────────────────────────────────── */
+@import url("layout/navbar.css");
+@import url("layout/store-mode-bar.css");
+@import url("layout/footer.css");
+
+/* ── 4. Components ───────────────────────────────────
+   WHY MODALS FIRST: modals.css declares
+   ".modal-body label { color: var(--modal-text) }" and
+   floating-labels.css declares
+   ".float-group label { color: var(--placeholder-color) }".
+   Both are one class + one type (specificity 0,1,1) and both use
+   !important, so the file loaded LATER wins — and a floating label
+   inside a modal matches both. Floating labels must win, or every
+   auth-modal label renders at full text colour instead of sitting
+   back like a placeholder. Keep modals above them. */
+@import url("components/modals.css");
+@import url("components/forms.css");
+@import url("components/floating-labels.css");
+@import url("components/buttons.css");
+@import url("components/hero-slider.css");
+@import url("components/product-card.css");
+/* WHY HERE: a product card is <div class="card product-card">, so
+   .card and .product-card collide at equal specificity. Bootstrap's
+   .card override has to come after the card component to keep the
+   border colour it had before the split. */
+@import url("vendor/bootstrap-surfaces.css");
+@import url("components/favorite-button.css");
+@import url("components/discount-badge.css");
+@import url("components/quantity-box.css");
+@import url("components/price-display.css");
+@import url("components/cart-badge.css");
+@import url("components/cart-sidebar.css");
+@import url("components/breadcrumb.css");
+@import url("components/skeleton.css");
+@import url("components/back-to-top.css");
+@import url("components/notifications.css");
+
+/* ── 5. Animations ─────────────────────────────────
+   reduced-motion.css MUST be last in this file: it switches off
+   animations declared anywhere above it, and it wins by being
+   later, not by specificity. */
+@import url("animations/keyframes.css");
+@import url("animations/page-transitions.css");
+@import url("animations/micro-interactions.css");
+@import url("animations/reduced-motion.css");

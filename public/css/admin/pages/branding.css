@@ -1,0 +1,30 @@
+/* public/css/admin/branding.css — أنماط صفحة Manage Slider
+   كل الألوان عبر متغيرات الثيم (--bg-color, --card-bg, --section-border, --accent, --placeholder-color) */
+
+.slide-card { background: var(--card-bg); }
+.slide-item-card { background: var(--bg-color); }
+.mode-toggle-btn.active { font-weight: 600; }
+.default-btn { transition: all .15s ease; }
+#brandingDirtyHint { color: var(--muted-text); }
+.product-picker-row:hover { background: var(--bg-color); border-color: var(--accent) !important; }
+
+/* ==================================================
+   Responsive — Slide item cards
+   .slide-item-card is a fixed 260px width (inline style in
+   _templates.php, both the <template> and its JS-cloned copies).
+   branding.js has no width-dependent logic and no drag/reorder
+   library, so widening .items-container into a horizontal-scroll
+   filmstrip on phones is safe — lower risk than changing the card's
+   own width, which the JS clones verbatim on every "Add Image".
+   ================================================== */
+@media (max-width: 575px) {
+    .items-container {
+        flex-wrap: nowrap !important;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        padding-bottom: 8px;
+    }
+    .slide-item-card {
+        flex: 0 0 auto;
+    }
+}

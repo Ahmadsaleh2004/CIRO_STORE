@@ -1,0 +1,66 @@
+/* ==================================================
+   admin/layout/navbar.css — Admin navbar sizing.
+   ==================================================
+   The colour/behaviour rules that used to head this file
+   (.custom-navbar, .counter-badge, .dropdown-menu) were verbatim
+   copies of layout/navbar.css, components/cart-badge.css and
+   animations/micro-interactions.css. Admin pages load store.css
+   first, so only the admin-specific responsive sizing is left here.
+
+   Order below is the original cascade order across the two files
+   this was assembled from. Do not reorder.
+   ================================================== */
+@media (max-width: 1024px) {
+    #mainNavbar .d-flex.gap-2.align-items-center { gap: 4px !important; }
+    .custom-navbar .dropdown .btn {
+        max-width: 130px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+}
+
+@media (max-width: 991px) {
+    /* Collapse the nav links into a vertical stack */
+    #mainNavbar .navbar-nav {
+        flex-direction: column !important;
+        padding: 0.5rem 0 !important;
+        width: 100%;
+    }
+    #mainNavbar .navbar-nav .nav-item {
+        width: 100%;
+    }
+    #mainNavbar .navbar-nav .nav-link {
+        padding: 0.5rem 1rem !important;
+        border-bottom: 1px solid var(--section-border);
+    }
+}
+
+@media (max-width: 768px) {
+    #mainNavbar .navbar-brand { font-size: .95rem; }
+    #mainNavbar .dropdown .btn {
+        max-width: 140px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+}
+
+@media (max-width: 576px) {
+    #mainNavbar .btn { font-size: .8rem; padding: 4px 8px; }
+    #mainNavbar .dropdown .btn { max-width: 110px; font-size: .78rem; }
+    #mainNavbar .navbar-toggler { padding: 2px 6px; font-size: 1rem; }
+    #mainNavbar .navbar-brand { font-size: .85rem; }
+    #mainNavbar .navbar-brand .badge { display: none; }
+    .custom-navbar .navbar-brand .badge { display: none; }
+}
+
+@media (max-width: 400px) {
+    #mainNavbar .container-fluid { flex-wrap: wrap; }
+    #mainNavbar .navbar-collapse { flex-basis: 100%; }
+    #mainNavbar .d-flex.gap-2 { flex-wrap: wrap; justify-content: flex-end; gap: 4px !important; }
+}
+
+@media (max-width: 320px) {
+    #mainNavbar .navbar-brand { font-size: 0.8rem !important; }
+}

@@ -1,0 +1,260 @@
+/* ==================================================
+   css/pages/home.css — أنماط الصفحة الرئيسية (Homepage)
+   ================================================== */
+
+/* ── Hero Slider ────────────────────────────────── */
+.slider-image {
+    height: 500px;
+    object-fit: cover;
+}
+
+.carousel-item img {
+    transition: transform var(--dur-slow);
+}
+
+.carousel-item img:hover {
+    transform: scale(1.015);
+}
+
+.carousel-item {
+    overflow: hidden;
+}
+
+.text-shadow {
+    text-shadow: 2px 2px 6px rgba(0,0,0,0.75);
+}
+
+/* ── Section Carousel (Horizontal Scroll) ────────── */
+.section-carousel-wrapper {
+    position: relative;
+    padding: 0 26px;
+}
+
+.section-carousel-btn {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 10;
+    width: 40px;
+    height: 40px;
+    border-radius: 50% !important;
+    border: none !important;
+    background: var(--card-bg) !important;
+    color: var(--text-color) !important;
+    box-shadow: 0 4px 14px var(--shadow-hover) !important;
+    font-size: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background var(--dur-fast) ease,
+                transform var(--dur-base) cubic-bezier(0.34,1.56,0.64,1),
+                box-shadow var(--dur-fast) ease !important;
+    padding: 0 !important;
+}
+
+.section-carousel-btn:hover {
+    background: var(--accent) !important;
+    color: #ffffff !important;
+    transform: translateY(-50%) scale(1.12) !important;
+    box-shadow: 0 6px 20px rgba(99,102,241,0.35) !important;
+}
+
+.section-carousel-btn.prev-btn { left: 0; }
+.section-carousel-btn.next-btn { right: 0; }
+
+.section-carousel-track {
+    display: flex;
+    gap: 18px;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scroll-behavior: smooth;
+    padding: 8px 4px 16px;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+.section-carousel-track::-webkit-scrollbar { display: none; }
+
+.section-carousel-track .carousel-item-wrap {
+    flex: 0 0 calc(33.333% - 12px);
+    min-width: 220px;
+    max-width: 300px;
+    scroll-snap-align: start;
+}
+
+/* ── Home Product Cards ──────────────────────────── */
+.home-product-card {
+    position: relative;
+    border-radius: var(--card-radius);
+    overflow: hidden;
+    background-color: var(--card-bg);
+    border: 1px solid var(--section-border);
+    box-shadow: 0 2px 8px var(--shadow-color);
+    transition: transform var(--dur-fast) var(--ease-decelerate),
+                box-shadow var(--dur-fast) var(--ease-decelerate);
+    text-decoration: none !important;
+    display: block;
+    height: var(--card-height);
+}
+
+.home-product-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 24px var(--shadow-hover);
+}
+
+.home-product-card:active {
+    transform: translateY(-2px) scale(0.97);
+}
+
+.home-product-card .hpc-img {
+    width: 100%;
+    height: 70%;
+    object-fit: contain;
+    padding: 16px;
+    background-color: var(--bg-color);
+    transition: transform var(--dur-slow) var(--ease-standard),
+                background-color var(--dur-slow) ease;
+}
+
+.home-product-card:hover .hpc-img {
+    transform: scale(1.06);
+}
+
+.home-product-card .hpc-body {
+    padding: 10px 14px 12px;
+    background-color: var(--card-bg);
+    transition: background-color var(--dur-slow) ease;
+}
+
+.home-product-card .hpc-name {
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: var(--text-color) !important;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 2px;
+}
+
+.home-product-card .hpc-price {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--price-color) !important;
+}
+
+.home-product-card .hpc-tag {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 6px;
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+    z-index: 5;
+}
+
+.hpc-tag-best   { background: #6366f1; color: #fff; }
+.hpc-tag-new    { background: #16a34a; color: #fff; }
+.hpc-tag-limited{ background: #dc2626; color: #fff; }
+.hpc-tag-regular{ background: #64748b; color: #fff; }
+
+/* ── Image Only Products ─────────────────────────── */
+.image-only-product {
+    position: relative;
+    height: var(--card-height);
+    border-radius: var(--card-radius);
+    overflow: hidden;
+    cursor: pointer;
+    display: block;
+    background-color: var(--card-bg);
+    border: 1px solid var(--card-border-color);
+    box-shadow: none;
+    transition: border-color 120ms ease, box-shadow 120ms ease;
+    text-decoration: none !important;
+}
+
+.image-only-product:hover {
+    border-color: var(--card-border-hover);
+    box-shadow: 0 4px 12px var(--shadow-hover);
+}
+
+.image-only-product .img-fill {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    padding: 20px;
+    background-color: var(--bg-color);
+    transition: transform var(--dur-slow) var(--ease-standard),
+                background-color var(--dur-slow) ease;
+}
+
+.image-only-product:hover .img-fill {
+    transform: scale(1.02);
+}
+
+.image-only-product .price-overlay {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 10px 14px;
+    background: linear-gradient(transparent, rgba(0,0,0,0.65));
+    color: #ffffff !important;
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    backdrop-filter: blur(2px);
+    text-align: center;
+}
+
+/* ── Responsive Overrides for Home ─────────────── */
+@media (max-width: 992px) {
+    .section-carousel-track .carousel-item-wrap {
+        flex: 0 0 calc(50% - 9px);
+    }
+}
+
+@media (max-width: 576px) {
+    .section-carousel-track .carousel-item-wrap {
+        flex: 0 0 calc(75% - 9px);
+    }
+    .section-carousel-btn { display: none !important; }
+    /* .section-carousel-wrapper reserves 26px each side for the
+       prev/next buttons above — reclaim it now that they're hidden. */
+    .section-carousel-wrapper { padding: 0; }
+    .slider-image { height: 200px; }
+    .carousel-caption { display: none !important; }
+}
+
+/* Section header (title + "View All") — defensive wrap in case a
+   future/longer section title no longer fits next to the link. */
+section.container .d-flex.justify-content-between.align-items-center.mb-3 {
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+/* ── View All Link ───────────────────────────────
+   Moved here from style.css: home.php is the only page that uses it. */
+.section-view-all {
+    display: inline-block;
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: var(--accent) !important;
+    text-decoration: none;
+    transition: color var(--dur-fast), gap var(--dur-fast);
+}
+
+.section-view-all:hover {
+    color: var(--accent-hover) !important;
+    text-decoration: underline;
+}
+
+/* The <=576px block above hides the carousel arrows on phones; this
+   covers 577-767px, where there is still no hover to reveal them.
+   (Moved here from style.css.) */
+@media (max-width: 767px) {
+    .section-carousel-btn { display: none; }
+}

@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Cairo Store — API Docs</title>
+
+    <!--
+        Swagger UI من jsDelivr، **بنسخة مثبَّتة وببصمة SRI**.
+
+        كان هنا `swagger-ui-dist@5` بلا integrity — أي نسخة متحرّكة من
+        طرف ثالث تُنفَّذ بثقة كاملة في هذه الصفحة. لو اختُرق الـCDN أو
+        نُشرت نسخة 5.x خبيثة، لنُفِّذ سكربت غريب على نطاق الموقع نفسه
+        وفي جلسة الأدمن المفتوحة.
+
+        `integrity` يجعل المتصفح يرفض الملف إن لم تطابق بصمته، و
+        `crossorigin="anonymous"` شرط لازم لعمل الفحص على مورد من نطاق
+        آخر (بدونه يتجاهل المتصفح السمة بصمت).
+
+        ⚠️ النسخة مثبَّتة على 5.32.14 عن قصد لا سهواً: البصمة تُحسب على
+        محتوى ملف بعينه، و`@5` المتحرك كان سيكسر الصفحة عند أول تحديث.
+        لترقيتها: بدّل رقم النسخة في الرابطين ثم أعد حساب البصمتين بـ
+            curl -s <URL> | openssl dgst -sha384 -binary | openssl base64 -A
+    -->
+    <link rel="stylesheet"
+          href="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5.32.14/swagger-ui.css"
+          integrity="sha384-fgyWYkUAamzuI8mJFu/xpRP0JWCJRwkwUwsYDoOYVHUJ8NQE5cENn8ib3ppwFFSX"
+          crossorigin="anonymous">
+</head>
+<body>
+    <div id="swagger-ui"></div>
+    <script src="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5.32.14/swagger-ui-bundle.js"
+            integrity="sha384-Dt83RhU85ZmX7werw9uTFCzmauXUoSyx3pdzTQMABtsnFmooJy4Vz9/ACh7n5m1A"
+            crossorigin="anonymous"></script>
+    <script>
+        window.onload = () => {
+            window.ui = SwaggerUIBundle({
+                url: './openapi.yaml',
+                dom_id: '#swagger-ui',
+                presets: [SwaggerUIBundle.presets.apis],
+            });
+        };
+    </script>
+</body>
+</html>

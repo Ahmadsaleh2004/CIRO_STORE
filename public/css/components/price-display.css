@@ -1,0 +1,19 @@
+/* ==================================================
+   components/price-display.css — New price / struck-through old price.
+   ================================================== */
+
+/* ==================================================
+   Price Display
+   ================================================== */
+.new-price {
+    color: var(--price-color) !important;
+    font-size: 22px;
+    font-weight: 700;
+}
+
+.old-price {
+    color: var(--muted-text) !important;
+    text-decoration: line-through;
+    font-size: 14px;
+}
+

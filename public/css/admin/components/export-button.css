@@ -1,0 +1,25 @@
+/* ==================================================
+   admin/components/export-button.css — The green "Export CSV" button.
+   ================================================== */
+
+.btn-export-csv {
+    background: linear-gradient(135deg, #16a34a, #15803d);
+    color: #fff !important;
+    border: none;
+    font-weight: 600;
+    letter-spacing: .3px;
+    box-shadow: 0 2px 8px rgba(22,163,74,.25);
+    transition: transform var(--dur-base) var(--ease-bounce),
+                box-shadow var(--dur-base) ease,
+                background var(--dur-base) ease;
+}
+.btn-export-csv:hover {
+    background: linear-gradient(135deg, #22c55e, #16a34a);
+    box-shadow: 0 6px 20px rgba(22,163,74,.45);
+    transform: translateY(-2px) scale(1.04);
+    color: #fff !important;
+}
+
+@media (max-width: 576px) {
+    .btn-export-csv { width: 100%; margin-top: 6px; }
+}

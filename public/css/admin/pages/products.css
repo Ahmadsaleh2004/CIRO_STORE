@@ -1,0 +1,21 @@
+/* ==================================================
+   admin/pages/products.css — Manage-products grid: the add tile, the delete button and hidden rows.
+   ================================================== */
+
+.add-product-card { background:var(--card-bg); border:2px dashed var(--accent); border-radius:var(--card-radius); display:flex; align-items:center; justify-content:center; height:var(--card-height); cursor:pointer; transition:background .2s, transform .2s; font-size:3rem; color:var(--accent); text-decoration:none; }
+.add-product-card:hover { background:rgba(99,102,241,.08); transform:translateY(-4px); color:var(--accent); }
+
+.delete-product-btn { position:absolute; top:8px; right:8px; width:30px; height:30px; border-radius:50%; background:#dc3545; color:#fff; border:none; font-size:13px; cursor:pointer; z-index:20; display:flex; align-items:center; justify-content:center; transition:transform .2s; }
+.delete-product-btn:hover { transform:scale(1.15); }
+
+.product-hidden-row {
+    opacity: .4;
+}
+.product-hidden-row a.fw-semibold {
+    color: var(--muted-text) !important;
+}
+
+@media (max-width: 576px) {
+    .add-product-card { height: auto; min-height: 120px; font-size: 2rem; padding: 16px; }
+    .delete-product-btn { width: 38px; height: 38px; font-size: 15px; }
+}

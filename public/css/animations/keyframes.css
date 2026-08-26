@@ -1,0 +1,52 @@
+/* ==================================================
+   animations/keyframes.css — Shared keyframes and the reveal/fade-in helpers built on them.
+   ================================================== */
+
+/* ==================================================
+   Unified Slide/Fade Animation (fadeSlideIn)
+   ================================================== */
+@keyframes fadeSlideIn {
+    from {
+        opacity: 0;
+        transform: translate(var(--slide-x, 0), var(--slide-y, 0)) scale(var(--slide-scale, 1));
+    }
+    to {
+        opacity: 1;
+        transform: translate(0, 0) scale(1);
+    }
+}
+
+.fade-in-up {
+    --slide-y: 28px;
+    animation: fadeSlideIn var(--dur-slow) var(--ease-decelerate) both;
+}
+
+.reveal {
+    opacity: 0;
+    --slide-y: 28px;
+    transform: translate(0, var(--slide-y)) scale(1);
+    transition: opacity var(--dur-slow) var(--ease-decelerate),
+                transform var(--dur-slow) var(--ease-decelerate);
+}
+
+.reveal.visible {
+    opacity: 1;
+    transform: translate(0, 0) scale(1);
+}
+
+/* stagger delay for cards */
+.reveal:nth-child(2) { transition-delay: var(--dur-fast); }
+.reveal:nth-child(3) { transition-delay: var(--dur-fast); }
+.reveal:nth-child(4) { transition-delay: var(--dur-base); }
+
+
+/* ── Cart bounce global definition ── */
+@keyframes cartBounce {
+    0%, 100% { transform: scale(1); }
+    30%      { transform: scale(1.25); }
+    60%      { transform: scale(0.92); }
+}
+.cart-bounce {
+    animation: cartBounce var(--dur-slow) var(--ease-decelerate) both;
+}
+

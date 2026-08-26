@@ -1,0 +1,98 @@
+/* ==================================================
+   components/hero-slider.css — Bootstrap carousel hero slider and its arrow controls.
+   ================================================== */
+
+/* ==================================================
+   Slider — DO NOT MODIFY
+   ================================================== */
+.slider-image {
+    height: 500px;
+    object-fit: cover;
+}
+
+.carousel-item img {
+    transition: transform var(--dur-slow);
+}
+
+.carousel-item img:hover {
+    transform: scale(1.015);
+}
+
+.carousel-item {
+    overflow: hidden;
+}
+
+.text-shadow {
+    text-shadow: 2px 2px 6px rgba(0,0,0,0.75);
+}
+
+/* ==================================================
+   Main Slider Controls — Smaller, Subtle Arrows
+   ================================================== */
+#mainSlider .carousel-control-prev,
+#mainSlider .carousel-control-next {
+    width: 36px !important;
+    height: 36px !important;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
+    opacity: 0.45 !important;
+    transition: opacity var(--dur-fast) ease, transform var(--dur-base) ease, background-color var(--dur-fast) ease !important;
+    background-color: rgba(0, 0, 0, 0.25) !important;
+    border-radius: 50% !important;
+}
+
+#mainSlider .carousel-control-prev-icon,
+#mainSlider .carousel-control-next-icon {
+    width: 18px !important;
+    height: 18px !important;
+    background-size: 100% 100% !important;
+    filter: drop-shadow(0 1px 2px rgba(0,0,0,0.4));
+}
+
+#mainSlider .carousel-control-prev {
+    left: 8px !important;
+}
+
+#mainSlider .carousel-control-next {
+    right: 8px !important;
+}
+
+#mainSlider .carousel-control-prev:hover,
+#mainSlider .carousel-control-next:hover {
+    opacity: 0.85 !important;
+    transform: translateY(-50%) scale(1.05) !important;
+    background-color: rgba(0, 0, 0, 0.5) !important;
+}
+
+@media (max-width: 767px) {
+    #mainSlider .carousel-control-prev,
+    #mainSlider .carousel-control-next {
+        width: 32px !important;
+        height: 32px !important;
+    }
+    #mainSlider .carousel-control-prev-icon,
+    #mainSlider .carousel-control-next-icon {
+        width: 16px !important;
+        height: 16px !important;
+    }
+    #mainSlider .carousel-control-prev { left: 6px !important; }
+    #mainSlider .carousel-control-next { right: 6px !important; }
+}
+
+
+/* --- Height scale. Keep this order: the >=992 block must stay
+       above the max-width blocks, and the max-width blocks run
+       widest-first so the narrowest one wins on a phone. --- */
+@media (min-width: 992px) {
+    .slider-image { height: 480px; }
+}
+@media (max-width: 991px) and (min-width: 768px) {
+    .slider-image { height: 360px; }
+}
+@media (max-width: 767px) {
+    .slider-image { height: 260px; }
+}
+@media (max-width: 575px) {
+    .slider-image { height: 200px; }
+    .carousel-caption { display: none !important; }
+}

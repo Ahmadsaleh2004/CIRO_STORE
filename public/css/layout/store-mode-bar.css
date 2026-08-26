@@ -1,0 +1,39 @@
+/* ==================================================
+   layout/store-mode-bar.css — Bar shown to an admin while browsing the store as a visitor.
+   ================================================== */
+
+/* ==================================================
+   Store Mode Bar — يظهر للأدمن أثناء تصفح المتجر كزائر
+   ================================================== */
+.store-mode-bar {
+    background: linear-gradient(90deg, #1e293b, #4338ca);
+    color: #e2e8f0;
+    font-size: 0.85rem;
+    padding: 0.5rem 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    position: sticky;
+    top: 0;
+    z-index: 1031;
+}
+
+.store-mode-bar .store-mode-return {
+    color: #ffffff;
+    font-weight: 600;
+    text-decoration: none;
+    background: rgba(255,255,255,0.12);
+    border: 1px solid rgba(255,255,255,0.25);
+    border-radius: 8px;
+    padding: 0.3rem 0.85rem;
+    transition: background 0.2s, transform 0.15s;
+    white-space: nowrap;
+}
+
+.store-mode-bar .store-mode-return:hover {
+    background: rgba(255,255,255,0.22);
+    transform: translateY(-1px);
+}
+

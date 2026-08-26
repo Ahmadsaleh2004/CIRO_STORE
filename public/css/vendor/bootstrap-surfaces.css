@@ -1,0 +1,38 @@
+/* ==================================================
+   vendor/bootstrap-surfaces.css — Bootstrap's generic container
+   components (.card, .list-group, hr) mapped onto the theme tokens.
+   ==================================================
+   IMPORT ORDER: this file must load AFTER components/product-card.css.
+   A product card carries BOTH classes ("card product-card"), so
+   .card and .product-card collide at equal specificity and the later
+   file wins the border colour. That was the original behaviour and is
+   preserved here deliberately.
+   ================================================== */
+.card {
+    background-color: var(--card-bg) !important;
+    color: var(--text-color) !important;
+    border: 1px solid var(--section-border) !important;
+    transition: background-color var(--dur-slow) ease, color var(--dur-slow) ease;
+}
+
+.card h3, .card h4, .card h5, .card p, .card label, .card strong {
+    color: var(--text-color) !important;
+}
+
+.card-header,
+.card-footer {
+    background-color: var(--bg-color) !important;
+    color: var(--text-color) !important;
+    border-color: var(--section-border) !important;
+}
+
+.list-group-item {
+    background-color: var(--card-bg) !important;
+    color: var(--text-color) !important;
+    border-color: var(--section-border) !important;
+}
+
+hr {
+    border-color: var(--section-border);
+    opacity: 0.4;
+}

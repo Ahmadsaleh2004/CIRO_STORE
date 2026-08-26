@@ -1,0 +1,142 @@
+<?php
+/**
+ * app/helpers/assets_helper.php
+ * وسوم الأصول (CSS) + سكربت تهيئة الثيم.
+ *
+ * يُحمَّل تلقائياً من public/index.php عبر glob على مجلد helpers،
+ * فلا يحتاج require يدوي.
+ *
+ * لماذا هذا الملف؟
+ * بعد تقسيم style.css إلى ملفات صغيرة، صار لكل صفحة "حزمة" واحدة
+ * (store أو admin) بدل قائمة وسوم <link> طويلة داخل الـ View.
+ * الحزمة نفسها ملف @import فقط — راجع public/css/store.css.
+ */
+
+/**
+ * قائمة ملفات الدخول لكل حزمة، بالترتيب.
+ * admin يُحمِّل store أولاً لأن لوحة التحكم تعيد استخدام كل طبقة المتجر.
+ *
+ * حُذفت حزمة 'admin-auth' هنا: لم تكن مستدعاة من أي مكان، وكانت تناقض
+ * ما تعلنه public/css/admin/pages/login.css صراحةً في رأسها — أنه ملف
+ * مستقل لا يعتمد على tokens.css. صفحتا الأدمن المستقلتان تعلنان ملف
+ * الـCSS في $bareCss مباشرة.
+ */
+function cssBundleFiles(string $bundle): array
+{
+    return match ($bundle) {
+        'admin' => ['css/store.css', 'css/admin.css'],
+        default => ['css/store.css'],
+    };
+}
+
+/**
+ * يطبع وسوم <link> الخاصة بحزمة.
+ *
+ * ملاحظة حول الأداء: الحزمة ملف @import، أي طلب HTTP لكل ملف داخلي
+ * بشكل متسلسل. هذا مقبول تماماً على localhost ومناسب للتطوير لأن كل
+ * ملف يظهر منفصلاً في DevTools. إن احتجنا لاحقاً طلباً واحداً فقط،
+ * الترقية هي دمج الملفات في public/css/dist/<bundle>.css وإرجاع
+ * وسم واحد من هنا — بلا أي تغيير في الـ Views.
+ */
+function cssBundle(string $bundle = 'store'): string
+{
+    $out = '';
+    foreach (cssBundleFiles($bundle) as $file) {
+        $out .= '    <link rel="stylesheet" href="' . URLROOT . '/' . $file . '">' . "\n";
+    }
+    return $out;
+}
+
+/**
+ * وسم <link> لملف CSS خاص بصفحة واحدة (يُستدعى من الـ Controllers
+ * عبر extraHead).
+ */
+function pageCss(string ...$paths): string
+{
+    $out = '';
+    foreach ($paths as $p) {
+        $out .= '<link rel="stylesheet" href="' . URLROOT . '/css/' . ltrim($p, '/') . '">' . "\n";
+    }
+    return $out;
+}
+
+/**
+ * سكربت صغير يُطبع داخل <head> قبل أي محتوى مرئي.
+ *
+ * يقرأ الثيم المحفوظ ويضبط data-bs-theme على <html> فوراً. سببان:
+ *
+ * 1) Bootstrap 5.3 يقرأ وضعه المظلم من data-bs-theme على <html> فقط.
+ *    المشروع كان يضبط body.dark-mode وحدها، فبقيت كل مكوّنات
+ *    Bootstrap (الـ pagination، القوائم المنسدلة، .text-muted،
+ *    سهم الـ select …) على ألوان النهار فوق خلفية داكنة.
+ *
+ * 2) js/core/theme.js يعمل بعد رسم الصفحة، فكانت تظهر ومضة بيضاء
+ *    عند كل تنقّل في الوضع الليلي. ضبط السمة هنا يسبق أول رسم.
+ *
+ * class="dark-mode" على <body> يبقى كما هو — كل CSS المشروع يعتمد
+ * عليها — ويضيفه theme.js عند التحميل.
+ */
+function themeBootScript(): string
+{
+    return <<<'HTML'
+    <script>
+    (function () {
+        try {
+            var t = localStorage.getItem('theme');
+            document.documentElement.setAttribute('data-bs-theme', t === 'dark' ? 'dark' : 'light');
+        } catch (e) {
+            document.documentElement.setAttribute('data-bs-theme', 'light');
+        }
+    })();
+    </script>
+
+HTML;
+}
+
+/**
+ * publicFileToDelete(string $relPath): ?string
+ *
+ * يحوّل مساراً نسبياً مخزَّناً في قاعدة البيانات (مثل images/x.jpg) إلى
+ * مسار مطلق على القرص **بشرط أن يبقى داخل public/**، ويرجع null إن خرج
+ * عنه أو لم يوجد.
+ *
+ * لماذا وُجدت: مواضع حذف صور المنتجات كانت تبني المسار بـ
+ * `ROOTPATH . '/public/' . ltrim($p, '/')`. و`ltrim` تزيل الشرطات
+ * البادئة **ولا تمنع `..`** — فقيمة مثل `../../.env` كانت تخرج من
+ * المجلد. مصادر القيم اليوم آمنة (`uploadVariantImage` يولّد الاسم
+ * كاملاً على الخادم: product_<time>_<hex>.<ext>)، فلا ثغرة قائمة —
+ * لكن الحارس يجب أن يكون في الدالة لا في عادة المستدعي، لأن أي مسار
+ * كتابة جديد إلى العمود يصير ثغرة صامتة.
+ *
+ * الاحتواء بـrealpath لا بفحص نصّي: realpath يفكّ `..` والوصلات الرمزية
+ * معاً، والمقارنة على الناتج المُفكَّك هي وحدها التي لا تُخدع.
+ *
+ * @param  string $relPath المسار كما هو مخزَّن (نسبي لـpublic/)
+ * @return string|null المسار المطلق الصالح للحذف، أو null إن رُفض
+ */
+function publicFileToDelete(string $relPath): ?string
+{
+    $relPath = trim($relPath);
+    if ($relPath === '') {
+        return null;
+    }
+
+    $publicRoot = realpath(ROOTPATH . '/public');
+    if ($publicRoot === false) {
+        return null;
+    }
+
+    $candidate = realpath($publicRoot . DIRECTORY_SEPARATOR . ltrim($relPath, '/\\'));
+    if ($candidate === false || !is_file($candidate)) {
+        return null;   // غير موجود، أو مجلد
+    }
+
+    // الفاصل في النهاية مقصود: بدونه يمرّ مجلد شقيق اسمه بادئة
+    // (public_backup مثلاً) على فحص str_starts_with.
+    if (!str_starts_with($candidate, $publicRoot . DIRECTORY_SEPARATOR)) {
+        error_log('[Cairo Store] رُفض حذف ملف خارج public/: ' . $relPath);
+        return null;
+    }
+
+    return $candidate;
+}

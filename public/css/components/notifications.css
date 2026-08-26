@@ -1,0 +1,190 @@
+/* ==================================================
+   components/notifications.css — Notification sidebar (store + admin).
+   ================================================== */
+
+/* ==================================================
+   Notification System Styles (Phase 15)
+   ================================================== */
+#notifSidebar {
+    position: fixed;
+    top: 0;
+    right: 0;
+    width: 350px;
+    height: 100%;
+    background-color: var(--card-bg);
+    border-left: 1px solid var(--section-border);
+    box-shadow: -4px 0 16px var(--shadow-color);
+    z-index: 1060;
+    display: flex;
+    flex-direction: column;
+    transform: translateX(100%);
+    transition: transform var(--dur-base) var(--ease-standard);
+    border-top-left-radius: 16px;
+    border-bottom-left-radius: 16px;
+    overflow: hidden;
+}
+#notifSidebar.open {
+    transform: translateX(0);
+}
+
+.notif-backdrop {
+    position: fixed;
+    inset: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 1055;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity var(--dur-base) ease;
+}
+.notif-backdrop.show {
+    opacity: 1;
+    pointer-events: auto;
+}
+.notif-header {
+    padding: 16px;
+    background-color: var(--bg-color);
+    border-bottom: 1px solid var(--section-border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-weight: 700;
+    color: var(--text-color);
+}
+.notif-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0;
+    margin: 0;
+    list-style: none;
+}
+.notif-item {
+    padding: 16px;
+    padding-right: 32px; /* مساحة لزر X */
+    border-bottom: 1px solid var(--section-border);
+    cursor: pointer;
+    position: relative;
+    transition: background-color var(--dur-fast) ease;
+    color: var(--text-color);
+}
+
+/* ── زر X لحذف إشعار واحد ── */
+.notif-dismiss-btn {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: transparent;
+    border: none;
+    color: var(--muted-text);
+    cursor: pointer;
+    font-size: 0.75rem;
+    line-height: 1;
+    padding: 2px 5px;
+    border-radius: 4px;
+    transition: color var(--dur-fast) ease, background var(--dur-fast) ease;
+    z-index: 2;
+}
+.notif-dismiss-btn:hover {
+    color: #ef4444;
+    background: rgba(239, 68, 68, 0.1);
+}
+.notif-item:hover {
+    background-color: var(--bg-color);
+}
+.notif-item.unread {
+    background-color: rgba(99, 102, 241, 0.05); /* Light indigo highlight */
+}
+.notif-item.unread .notif-title {
+    font-weight: 700;
+}
+.notif-title {
+    font-size: 0.95rem;
+    font-weight: 600;
+    margin-bottom: 4px;
+    color: var(--text-color);
+}
+.notif-msg {
+    font-size: 0.85rem;
+    color: var(--text-color);
+    opacity: 0.8;
+    margin-bottom: 6px;
+    line-height: 1.4;
+}
+.notif-time {
+    font-size: 0.75rem;
+    color: var(--muted-text);
+}
+.notif-dot {
+    position: absolute;
+    top: 20px;
+    left: 16px; /* Place on the left in RTL/LTR layout suitably */
+    width: 8px;
+    height: 8px;
+    background-color: #ef4444;
+    border-radius: 50%;
+}
+.notif-empty {
+    padding: 40px 20px;
+    text-align: center;
+    color: var(--muted-text);
+    font-size: 0.9rem;
+}
+#adminNotifSidebar {
+    position: fixed;
+    top: 0;
+    right: 0;
+    width: 350px;
+    height: 100%;
+    background-color: var(--card-bg);
+    border-left: 1px solid var(--section-border);
+    box-shadow: -4px 0 16px var(--shadow-color);
+    z-index: 1060;
+    display: flex;
+    flex-direction: column;
+    transform: translateX(100%);
+    transition: transform var(--dur-base) var(--ease-standard);
+    border-top-left-radius: 16px;
+    border-bottom-left-radius: 16px;
+    overflow: hidden;
+}
+#adminNotifSidebar.open {
+    transform: translateX(0);
+}
+
+
+
+/* --- Responsive -------------------------------------------
+   #notifSidebar is 350px fixed on desktop and 100% at <=576px.
+   Without the tablet block below, 577-991px would inherit the
+   350px desktop value, which reads as too narrow on a tablet.
+   #adminNotifSidebar is the same component duplicated for the
+   admin panel, so both selectors are listed everywhere. --- */
+@media (min-width: 577px) and (max-width: 991px) {
+    #notifSidebar,
+    #adminNotifSidebar {
+        width: min(70vw, 400px);
+    }
+}
+
+/* Dismiss button: grow the invisible tap box to 40x40 on phones
+   without growing the visible icon. */
+@media (max-width: 767px) {
+    .notif-dismiss-btn {
+        min-width: 40px;
+        min-height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        top: 2px;
+        right: 2px;
+    }
+    .notif-item {
+        padding-right: 44px;
+    }
+}
+
+@media (max-width: 576px) {
+    #notifSidebar,
+    #adminNotifSidebar {
+        width: 100% !important;
+    }
+}

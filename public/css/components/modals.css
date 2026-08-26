@@ -1,0 +1,180 @@
+/* ==================================================
+   components/modals.css — Every modal in the store and the admin
+   panel: theme colours, the coloured auth-modal headers, the
+   responsive margin/padding scale, and the backdrop.
+   ==================================================
+   The @media blocks below are interleaved with the plain rules on
+   purpose. ".modal-body { padding: 28px !important }" in the
+   "Enhanced Design" section sits AFTER the <=767 and <=575 blocks
+   and therefore wins on those widths; the <=414 / <=375 / <=320
+   blocks sit after it and win in turn. Reordering changes the
+   rendered padding. DO NOT REORDER.
+   ================================================== */
+
+.modal-content {
+    background-color: var(--modal-bg) !important;
+    color: var(--modal-text) !important;
+    border: 1px solid var(--modal-border) !important;
+    border-radius: 20px !important;
+    overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.25) !important;
+    transition: background-color var(--dur-slow) ease, color var(--dur-slow) ease;
+}
+
+.modal-header {
+    background-color: var(--modal-bg) !important;
+    border-bottom: 1px solid var(--modal-border) !important;
+}
+
+.modal-body {
+    background-color: var(--modal-bg) !important;
+}
+
+.modal-title,
+.modal-body p,
+.modal-body label,
+.modal-body a,
+.modal-body small {
+    color: var(--modal-text) !important;
+}
+
+.modal-body a:hover {
+    color: var(--accent) !important;
+}
+
+
+/* ==================================================
+    Bootstrap Modal Footer — Dark Mode Fix
+    ================================================== */
+.modal-footer {
+    background-color: var(--modal-bg) !important;
+    border-top: 1px solid var(--modal-border) !important;
+}
+
+
+/* --- Responsive, part 1 (runs BEFORE the enhanced design) --- */
+@media (max-width: 767px) {
+    .modal-dialog { margin: 0.75rem !important; }
+    .modal-header.modal-header-login,
+    .modal-header.modal-header-register,
+    .modal-header.modal-header-forgot {
+        padding: 20px 20px 14px !important;
+    }
+    .modal-body { padding: 20px !important; }
+    .modal-icon { font-size: 1.8rem !important; }
+}
+
+@media (max-width: 575px) {
+    .modal-dialog { margin: 0.25rem !important; }
+    .modal-content { border-radius: 14px !important; }
+}
+/* ==================================================
+   Modals — Enhanced Design
+   ================================================== */
+@keyframes modalSlideIn {
+    from { opacity: 0; transform: translateY(-30px) scale(0.96); }
+    to   { opacity: 1; transform: translateY(0)    scale(1);    }
+}
+
+.modal.show .modal-dialog {
+    animation: modalSlideIn var(--dur-slow) var(--ease-bounce);
+}
+
+/* Header ملون مع gradient */
+.modal-header.modal-header-login {
+    background: linear-gradient(135deg, var(--navbar-bg), #2d2f6e) !important;
+    padding: 28px 28px 20px !important;
+    border-bottom: none !important;
+}
+
+.modal-header.modal-header-register {
+    background: linear-gradient(135deg, #14532d, #166534) !important;
+    padding: 28px 28px 20px !important;
+    border-bottom: none !important;
+}
+
+.modal-header.modal-header-forgot {
+    background: linear-gradient(135deg, #7c2d12, #9a3412) !important;
+    padding: 28px 28px 20px !important;
+    border-bottom: none !important;
+}
+
+.modal-header-login  .modal-title,
+.modal-header-register .modal-title,
+.modal-header-forgot .modal-title {
+    color: #ffffff !important;
+    font-size: 1.3rem !important;
+    font-weight: 700 !important;
+}
+
+.modal-header-login  .modal-icon,
+.modal-header-register .modal-icon,
+.modal-header-forgot .modal-icon {
+    font-size: 2.5rem;
+    display: block;
+    margin-bottom: 6px;
+}
+
+.modal-header-login  .btn-close,
+.modal-header-register .btn-close,
+.modal-header-forgot .btn-close {
+    filter: invert(1) !important;
+    opacity: 0.8;
+}
+
+.modal-body {
+    padding: 28px !important;
+}
+
+.modal-divider {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 16px 0;
+    color: var(--muted-text);
+    font-size: 0.8rem;
+}
+
+.modal-divider::before,
+.modal-divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--section-border);
+}
+
+/* Input labels داخل الـ modal — محجوزة للاستخدام المستقبلي */
+
+
+/* --- Responsive, part 2 (runs AFTER the enhanced design) --- */
+@media (max-width: 414px) {
+    .modal-dialog { margin: 0.6rem !important; }
+    .modal-body   { padding: 1.1rem !important; }
+}
+
+@media (max-width: 375px) {
+    .modal-dialog { margin: 0.5rem !important; }
+    .modal-body   { padding: 1rem !important; }
+    #registerModal .input-group #phoneCountryCode {
+        max-width: 90px !important;
+        min-width: 70px !important;
+    }
+}
+
+@media (max-width: 320px) {
+    .modal-dialog { margin: 0.25rem !important; }
+    .modal-body   { padding: 0.85rem !important; }
+    #registerModal .input-group #phoneCountryCode {
+        max-width: 80px !important;
+        min-width: 60px !important;
+    }
+}
+
+/* --- Backdrop: a light blur instead of Bootstrap's heavy black --- */
+:root {
+    --bs-backdrop-opacity: 0.12;
+}
+.modal-backdrop {
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
+}

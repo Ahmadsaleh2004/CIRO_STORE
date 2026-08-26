@@ -1,0 +1,217 @@
+/* ==================================================
+   css/store/pages/checkout.css — أنماط صفحة إتمام الطلب (Checkout)
+   ==================================================
+   كان هذا الملف يتصارع مع كتلة <style> مضمّنة داخل
+   app/views/checkout/checkout.php: الكتلة تُطبع في جسم الصفحة فتُحمَّل
+   بعد هذا الملف (المربوط في <head>)، فتغلبه في أي تعادل بترتيب المصدر.
+   لذلك كانت **عشرون قاعدة هنا تحتاج !important** لتعمل أصلاً.
+
+   أُخرجت الكتلة المضمّنة ودُمجت هنا، فسقط سبب كل تلك الـ!important
+   وحُذفت. القواعد أدناه تحمل القيم **الفعّالة** قبل الدمج — أي أن ما
+   كانت الكتلة المضمّنة تغلب فيه بقي هو الفائز، وما انفرد به هذا الملف
+   بقي كما هو.
+   ================================================== */
+
+/* ── Steps Bar ── */
+.step-bar {
+    display: flex;
+    justify-content: center;
+    gap: 0;
+    margin-bottom: 2rem;
+}
+
+.step-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    flex: 1;
+    max-width: 150px;
+    position: relative;
+}
+
+/* دمج: العرض والارتفاع ونصف القطر والوزن كانا متطابقين في النسختين.
+   الخلفية واللون والانتقال والحدّ وتوسيط flex من الكتلة المضمّنة (كانت
+   تغلب)، وline-height و text-align و margin من هذا الملف (انفرد بها). */
+.step-circle {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    line-height: 38px;
+    text-align: center;
+    margin: 0 auto 6px;
+    border: 2px solid var(--section-border);
+    background: var(--card-bg);
+    color: var(--text-color);
+    transition: .3s;
+}
+
+.step-item.active .step-circle {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+    box-shadow: 0 0 12px rgba(99, 102, 241, 0.4);
+}
+
+.step-item.done .step-circle {
+    background: #16a34a;
+    border-color: #16a34a;
+    color: #fff;
+}
+
+/* دمج: حجم الخط من الكتلة المضمّنة (.72rem — كانت تغلب 0.8rem هنا)،
+   والوزن 600 من هذا الملف. */
+.step-label {
+    font-size: .72rem;
+    font-weight: 600;
+    color: var(--muted-text);
+}
+
+/* دمج: اللون من الكتلة المضمّنة (var(--accent) كان يغلب var(--text-color)). */
+.step-item.active .step-label {
+    color: var(--accent);
+    font-weight: 600;
+}
+
+/* الخط الواصل بين الخطوات.
+   left + width من الكتلة المضمّنة، وz-index من هذا الملف.
+   right يبقى مكتوباً كما كان: مع position:absolute ووجود left و width
+   معاً يتجاهله المتصفح في الاتجاه ltr، لكن حذفه تغيير لا داعي له. */
+.step-item:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    top: 19px;
+    right: -50%;
+    left: calc(50% + 19px);
+    width: calc(100% - 38px);
+    height: 2px;
+    background: var(--section-border);
+    z-index: -1;
+}
+
+.step-item.active:not(:last-child)::after {
+    background: var(--accent);
+}
+
+/* ترتيب مقصود: .done بعد .active كما كان — الخطوة المكتملة تغلب
+   المفعّلة لو حملت الصفتين معاً. */
+.step-item.done:not(:last-child)::after {
+    background: #16a34a;
+}
+
+/* ── Trust Badges ── */
+.trust-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    justify-content: center;
+    margin-top: 14px;
+}
+
+.trust-badge {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: .78rem;
+    color: var(--muted-text);
+}
+
+/* ── Saved Address Cards ──
+   الـ!important هنا **ليست** من صراع الكتلة المضمّنة — كانت مكتوبة
+   داخلها أصلاً لتغلب حدود Bootstrap على عناصر الفورم. بقيت كما هي. */
+.addr-label {
+    border: 2px solid var(--section-border) !important;
+    border-radius: 10px;
+    padding: 12px 14px;
+    cursor: pointer;
+    display: block;
+    transition: .2s;
+}
+
+.addr-label:hover {
+    border-color: var(--accent) !important;
+}
+
+.addr-radio:checked + .addr-label {
+    border-color: var(--accent) !important;
+}
+
+/* ==================================================
+   Responsive — Step Bar
+   لا !important بعد الآن: القواعد الأساسية أعلاه في هذا الملف نفسه،
+   فاستعلامات الوسائط تغلبها بترتيب المصدر وحده.
+   ================================================== */
+@media (max-width: 575px) {
+    .step-item { max-width: 90px; }
+
+    /* إزاحة الخط الواصل محسوبة من نصف قطر الدائرة. الدائرة تصير 32px
+       عند هذا الحدّ (أسفل هذا الملف) — أبقِ الرقمين متوافقين. */
+    .step-item:not(:last-child)::after {
+        left: calc(50% + 16px);
+        width: calc(100% - 32px);
+    }
+}
+
+@media (max-width: 375px) {
+    .step-item { max-width: 70px; }
+}
+
+@media (max-width: 320px) {
+    /* الدائرة تصير 28px عند هذا الحدّ */
+    .step-item:not(:last-child)::after {
+        left: calc(50% + 14px);
+        width: calc(100% - 28px);
+    }
+}
+
+/* ==================================================
+   Responsive — Order Review (Step 3)
+   صفوف #reviewCartList يبنيها JS صفحة الدفع كـ
+   `d-flex justify-content-between` — نسمح بالالتفاف كي لا يدفع اسم
+   منتج طويل السعرَ خارج السطر.
+   ================================================== */
+#reviewCartList li {
+    flex-wrap: wrap;
+    gap: 4px 12px;
+}
+
+/* ==================================================
+   Responsive — مقاس الدائرة والتسمية
+   ==================================================
+   نُقلت هنا من style.css كي يعيش قياس الدائرة والإزاحات المحسوبة منه
+   في ملف واحد. حسابات الخط الواصل أعلاه تفترض هذين المقاسين بالضبط:
+   32px عند <=575 و 28px عند <=320.
+   ================================================== */
+@media (max-width: 575px) {
+    .step-circle {
+        width: 32px;
+        height: 32px;
+        font-size: .82rem;
+        line-height: 32px;
+    }
+    .step-label { font-size: .72rem; }
+    .step-item:not(:last-child)::after { top: 15px; }
+}
+
+@media (max-width: 375px) {
+    .step-label { font-size: 0.6rem; }
+}
+
+@media (max-width: 320px) {
+    .step-label { font-size: 0.55rem; }
+    .step-circle {
+        width: 28px;
+        height: 28px;
+        font-size: 0.75rem;
+        line-height: 28px;
+    }
+}
+
+/* ملاحظة: قواعد .checkout-step و .checkout-step.active كانت مكرّرة هنا
+   وفي animations/micro-interactions.css بنصّ واحد. حُذفت النسخة هنا
+   وبقيت هناك — مكانها الصحيح مع بقية انتقالات الواجهة، وهي محمَّلة
+   على كل صفحة عبر store.css. */

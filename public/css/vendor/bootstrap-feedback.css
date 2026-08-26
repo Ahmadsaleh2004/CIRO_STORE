@@ -1,0 +1,78 @@
+/* ==================================================
+   vendor/bootstrap-feedback.css — Bootstrap .alert and .badge theme overrides + WCAG AA contrast fixes.
+   ================================================== */
+
+/* ==================================================
+    Bootstrap Alert — Dark Mode Fix
+    ================================================== */
+.alert-success {
+    background-color: rgba(22, 163, 74, 0.15) !important;
+    color: #16a34a !important;
+    border-color: rgba(22, 163, 74, 0.3) !important;
+}
+
+.alert-danger {
+    background-color: rgba(220, 38, 38, 0.15) !important;
+    color: #dc2626 !important;
+    border-color: rgba(220, 38, 38, 0.3) !important;
+}
+
+body.dark-mode .alert-success,
+html[data-bs-theme="dark"] body .alert-success {
+    color: #4ade80 !important;
+}
+
+body.dark-mode .alert-danger,
+html[data-bs-theme="dark"] body .alert-danger {
+    color: #f87171 !important;
+}
+
+/* ==================================================
+    Bootstrap Badge — Dark Mode Fix
+    ================================================== */
+.badge.bg-secondary {
+    background-color: var(--section-border) !important;
+    color: var(--text-color) !important;
+}
+
+.badge.bg-dark {
+    background-color: var(--input-bg) !important;
+    color: var(--text-color) !important;
+}
+
+.badge.bg-info {
+    background-color: var(--accent) !important;
+    color: #ffffff !important;
+}
+
+
+/* ── WCAG AA Color Contrast Overrides ── */
+.btn-warning {
+    background-color: #d97706 !important;
+    border-color: #d97706 !important;
+    color: #ffffff !important;
+}
+.btn-warning:hover {
+    background-color: #b45309 !important;
+    border-color: #b45309 !important;
+}
+.badge.bg-warning {
+    background-color: #d97706 !important;
+    color: #ffffff !important;
+}
+
+
+/* ==================================================
+   .badge.bg-light — Dark Mode Fix
+   ==================================================
+   Used in the admin Sort & Filter panel as a product counter
+   ("bg-light text-dark"). Bootstrap keeps it at #f8f9fa, so in dark
+   mode it reads as a bright white chip. Repainting the background
+   AND the text here means the paired .text-dark class no longer has
+   anything to fight over.
+   ================================================== */
+.badge.bg-light,
+.badge.bg-light.text-dark {
+    background-color: var(--section-border) !important;
+    color: var(--text-color) !important;
+}

@@ -1,0 +1,31 @@
+/* ==================================================
+   admin/pages/support.css — Support inbox cards and the message box on the detail view.
+   ================================================== */
+
+.support-msg-card {
+    cursor: pointer;
+    border: 1px solid var(--section-border);
+    border-radius: var(--card-radius);
+    background: var(--card-bg);
+    transition: box-shadow var(--dur-fast), transform var(--dur-fast);
+    padding: 1rem 1.25rem;
+    margin-bottom: 0.75rem;
+}
+.support-msg-card:hover {
+    box-shadow: 0 4px 16px var(--shadow-hover);
+    transform: translateY(-2px);
+}
+.support-msg-card .msg-content {
+    color: var(--text-color);
+    white-space: pre-wrap;
+    font-size: .88rem;
+    line-height: 1.6;
+}
+
+.support-message-box {
+    background: var(--card-bg);
+    border: 1px solid var(--section-border);
+    border-radius: 12px;
+    padding: 18px;
+    margin-bottom: 14px;
+}

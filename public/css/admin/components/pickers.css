@@ -1,0 +1,21 @@
+/* ==================================================
+   admin/components/pickers.css — Category picker and product picker modals.
+   ================================================== */
+
+.sort-bar,
+.category-filter-bar {
+    display:       flex;
+    flex-wrap:     wrap;
+    gap:           8px;
+    align-items:   center;
+}
+
+#categoryPickerList {
+    max-height:  320px;
+    overflow-y:  auto;
+}
+
+#selectedCategoriesChips .badge {
+    font-size: .8rem;
+    padding:   6px 10px;
+}

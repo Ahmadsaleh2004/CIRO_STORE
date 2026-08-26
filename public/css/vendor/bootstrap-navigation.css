@@ -1,0 +1,119 @@
+/* ==================================================
+   vendor/bootstrap-navigation.css — Pagination and dropdown menus.
+   ================================================== */
+
+/* ==================================================
+   Pagination ("Prev / 1 2 3 / Next")
+   ==================================================
+   BUG FIX: the project had NO pagination rules at all, so the
+   Prev/Next box kept Bootstrap's light palette — a bright white
+   block sitting in the middle of a dark page, with the disabled
+   state rendering grey-on-white. Used on the products page and on
+   admin orders / products / users / support.
+   ================================================== */
+.pagination {
+    --bs-pagination-bg:              var(--card-bg);
+    --bs-pagination-color:           var(--text-color);
+    --bs-pagination-border-color:    var(--section-border);
+    --bs-pagination-hover-bg:        var(--bg-color);
+    --bs-pagination-hover-color:     var(--accent-text);
+    --bs-pagination-hover-border-color: var(--card-border-hover);
+    --bs-pagination-focus-bg:        var(--bg-color);
+    --bs-pagination-focus-color:     var(--accent-text);
+    --bs-pagination-active-bg:       var(--accent-strong);
+    --bs-pagination-active-color:    #ffffff;
+    --bs-pagination-active-border-color: var(--accent-strong);
+    --bs-pagination-disabled-bg:     var(--bg-color);
+    --bs-pagination-disabled-color:  var(--muted-text);
+    --bs-pagination-disabled-border-color: var(--section-border);
+}
+
+/* Explicit rules as well as the variables above: the variables cover
+   Bootstrap 5.3, these cover any .page-link that ends up outside a
+   .pagination wrapper. */
+.page-link {
+    background-color: var(--card-bg) !important;
+    color: var(--text-color) !important;
+    border-color: var(--section-border) !important;
+    transition: background-color var(--dur-fast) ease,
+                color var(--dur-fast) ease,
+                border-color var(--dur-fast) ease;
+}
+
+.page-link:hover {
+    background-color: var(--bg-color) !important;
+    color: var(--accent-text) !important;
+    border-color: var(--card-border-hover) !important;
+}
+
+.page-link:focus {
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15) !important;
+}
+
+.page-item.active .page-link {
+    background-color: var(--accent-strong) !important;
+    border-color: var(--accent-strong) !important;
+    color: #ffffff !important;
+}
+
+.page-item.disabled .page-link {
+    background-color: var(--bg-color) !important;
+    color: var(--muted-text) !important;
+    border-color: var(--section-border) !important;
+}
+
+/* ==================================================
+   Dropdown menus (including the admin "Sort & Filter" panel)
+   ==================================================
+   BUG FIX: .dropdown-menu kept Bootstrap's white background while
+   the project forces .form-check-label to var(--text-color) — light
+   grey in dark mode. The result was white-on-white: every label in
+   the Sort & Filter panel disappeared, and .form-check-input was
+   repainted dark, so the checkboxes read as black squares on white.
+   Giving the panel the same surface token as everything else makes
+   the two systems agree.
+   ================================================== */
+.dropdown-menu {
+    /* Colours only. The panel keeps Bootstrap's own radius and
+       elevation so nothing about its shape changes. */
+    background-color: var(--card-bg) !important;
+    color: var(--text-color) !important;
+    border: 1px solid var(--section-border) !important;
+}
+
+.dropdown-item {
+    color: var(--text-color) !important;
+}
+
+.dropdown-item:hover,
+.dropdown-item:focus {
+    background-color: var(--bg-color) !important;
+    color: var(--accent-text) !important;
+}
+
+.dropdown-item.active,
+.dropdown-item:active {
+    background-color: var(--accent-strong) !important;
+    color: #ffffff !important;
+}
+
+.dropdown-item.disabled,
+.dropdown-item:disabled {
+    color: var(--muted-text) !important;
+}
+
+.dropdown-divider {
+    border-top-color: var(--section-border) !important;
+}
+
+.dropdown-header {
+    color: var(--muted-text) !important;
+}
+
+/* Text inside a dropdown that is a plain <p>/<span> rather than a
+   .dropdown-item — the section headings in the Sort & Filter panel. */
+.dropdown-menu p,
+.dropdown-menu span:not(.badge),
+.dropdown-menu label {
+    color: var(--text-color) !important;
+}

@@ -1,0 +1,39 @@
+/* ==================================================
+   admin/components/permissions-grid.css — The permission checkbox grid on the manage-admins screens.
+   ================================================== */
+
+.perm-grid { display: grid; grid-template-columns: repeat(auto-fill,minmax(200px,1fr)); gap: 10px; }
+.perm-item { background: var(--bg-color); border: 1px solid var(--section-border); border-radius: 8px; padding: 10px 14px; display: flex; align-items: center; gap: 10px; font-size: .86rem; color: var(--text-color); cursor: pointer; transition: border-color .2s, background .2s; }
+.perm-item:hover { border-color: #16a34a; }
+.perm-item:has(input:checked) { border-color: #16a34a; background: rgba(22,163,74,.08); }
+
+/* --- Responsive columns. Original cascade order; do not reorder. --- */
+@media (max-width: 768px) {
+    .perm-grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 991px) {
+    .perm-grid { grid-template-columns: 1fr 1fr !important; }
+}
+
+@media (max-width: 576px) {
+    .perm-grid {
+        grid-template-columns: 1fr 1fr !important;
+        gap: 8px !important;
+    }
+}
+
+@media (max-width: 375px) {
+    .perm-grid { grid-template-columns: 1fr !important; }
+}
+
+@media (max-width: 320px) {
+    .perm-grid {
+        grid-template-columns: 1fr !important;
+        gap: 6px !important;
+    }
+    .perm-item {
+        font-size: 0.78rem;
+        padding: 8px 10px;
+    }
+}

@@ -1,0 +1,60 @@
+/* ==================================================
+   animations/page-transitions.css — Page enter animation, exit overlay and top loading bar.
+   ================================================== */
+
+/* ==================================================
+   Page Transition — Professional Slide + Blur
+   ================================================== */
+
+/* Enter animation — الصفحة الجديدة تدخل من الأسفل */
+@keyframes pageEnter {
+    0%   { opacity: 0; transform: translateY(12px); }
+    100% { opacity: 1; transform: translateY(0); }
+}
+
+main[role="main"] {
+    animation: pageEnter var(--dur-base) var(--ease-decelerate) both;
+}
+
+/* Overlay — يغطي الشاشة عند الخروج */
+#page-overlay {
+    position: fixed;
+    inset: 0;
+    background: var(--bg-color);
+    z-index: 1040;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity var(--dur-fast) var(--ease-decelerate);
+}
+
+#page-overlay.active {
+    opacity: 1;
+    pointer-events: all;
+}
+
+/* Loading bar — أعلى الصفحة مثل YouTube */
+@keyframes progressBar {
+    0%   { width: 0%;   opacity: 1; }
+    60%  { width: 75%;  opacity: 1; }
+    90%  { width: 90%;  opacity: 1; }
+    100% { width: 100%; opacity: 0; }
+}
+
+#page-progress-bar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 3px;
+    width: 0%;
+    background: linear-gradient(90deg, var(--accent), #a78bfa);
+    z-index: 99999;
+    opacity: 0;
+    pointer-events: none;
+    border-radius: 0 2px 2px 0;
+    box-shadow: 0 0 10px var(--accent);
+}
+
+#page-progress-bar.loading {
+    animation: progressBar var(--dur-slow) cubic-bezier(0.4, 0, 0.6, 1) forwards;
+}
+

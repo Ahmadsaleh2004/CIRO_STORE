@@ -1,0 +1,238 @@
+/* ==================================================
+   css/pages/products.css — أنماط صفحة المنتجات (Products Catalog)
+   ================================================== */
+
+
+/* ── Results Count ──────────────────────────────── */
+#results-count {
+    font-size: 0.88rem;
+    color: var(--muted-text);
+    margin-bottom: 1rem;
+    min-height: 22px;
+}
+
+
+/* ── Products Grid Entrance Animations ─────────── */
+#products-container .product-card {
+    --slide-y: 16px;
+    --slide-scale: 0.97;
+    animation: fadeSlideIn var(--dur-slow) var(--ease-decelerate) both;
+}
+
+#products-container .product-card:nth-child(1) { animation-delay: var(--dur-fast); }
+#products-container .product-card:nth-child(2) { animation-delay: var(--dur-fast); }
+#products-container .product-card:nth-child(3) { animation-delay: var(--dur-fast); }
+#products-container .product-card:nth-child(4) { animation-delay: var(--dur-fast); }
+#products-container .product-card:nth-child(5) { animation-delay: var(--dur-fast); }
+#products-container .product-card:nth-child(6) { animation-delay: var(--dur-fast); }
+#products-container .product-card:nth-child(7) { animation-delay: var(--dur-base); }
+#products-container .product-card:nth-child(8) { animation-delay: var(--dur-base); }
+#products-container .product-card:nth-child(9) { animation-delay: var(--dur-slow); }
+
+/* ── Inline Style Class Replacements ─────────────── */
+.price-range-val { white-space: nowrap; color: var(--accent); }
+.results-count-text { color: var(--muted-text); font-size: .85rem; }
+.admin-delete-form { position: absolute; top: 8px; right: 8px; z-index: 20; }
+.product-link { text-decoration: none; }
+.qty-input-sm { width: 60px; }
+
+/* ═══════════════════════════════════════════════════════════════════
+   Quantity & Action Buttons — Redesign
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* Stepper موحّد — حاوية واحدة متصلة الحواف */
+.quantity-box {
+    display: inline-flex !important;
+    align-items: center;
+    gap: 0 !important;
+    background: var(--card-bg);
+    border: 1px solid var(--card-border-color);
+    border-radius: 8px;
+    overflow: hidden;
+    padding: 0;
+}
+
+.quantity-box > * {
+    border-radius: 0 !important;
+    border: none !important;
+}
+
+/* فواصل داخلية بين العناصر */
+.quantity-box > *:not(:last-child) {
+    border-right: 1px solid var(--card-border-color) !important;
+}
+
+/* أول عنصر: radius على اليسار */
+.quantity-box > *:first-child {
+    border-top-left-radius: 7px !important;
+    border-bottom-left-radius: 7px !important;
+}
+
+/* آخر عنصر: radius على اليمين */
+.quantity-box > *:last-child {
+    border-top-right-radius: 7px !important;
+    border-bottom-right-radius: 7px !important;
+}
+
+/* أزرار +/- داخل الحاوية */
+.quantity-box .btn {
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+    line-height: 1;
+    background: transparent !important;
+    color: var(--text-color) !important;
+    box-shadow: none !important;
+    transition: background-color 0.2s ease !important;
+}
+
+.quantity-box .btn:hover {
+    background: var(--bg-color) !important;
+}
+
+.quantity-box .btn:active {
+    background: var(--section-border) !important;
+}
+
+/* حقل الكمية: بلا حدود، شفاف، مركّز */
+.quantity-input {
+    width: 56px !important;
+    height: 40px !important;
+    text-align: center;
+    border: none !important;
+    background: transparent !important;
+    color: var(--text-color) !important;
+    font-size: 1rem;
+    font-weight: 600;
+    padding: 0 8px !important;
+    -moz-appearance: textfield;
+    appearance: textfield;
+}
+
+.quantity-input::-webkit-outer-spin-button,
+.quantity-input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.quantity-input:focus {
+    outline: none;
+    background: transparent !important;
+    box-shadow: none !important;
+}
+
+/* زر Add to Cart / Notify Me أسفل الستِبر */
+.quantity-box + .btn,
+.quantity-box + form .btn {
+    border-radius: 8px !important;
+    font-weight: 600 !important;
+    transition: transform 0.15s ease, box-shadow 0.15s ease !important;
+}
+
+.quantity-box + .btn:hover,
+.quantity-box + form .btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.12) !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   Product Card Hover Effect — Restored
+   ═══════════════════════════════════════════════════════════════════ */
+/* الكارد الرئيسي في product.php يحمل: class="card product-card h-100 shadow border-0 position-relative" */
+/* الصورة الداخلية: class="card-img-top product-image" */
+
+#products-container .product-card {
+    transition: box-shadow var(--dur-base) var(--ease-decelerate), border-color var(--dur-base) var(--ease-decelerate) !important;
+    overflow: hidden;
+}
+
+#products-container .product-card:hover {
+    box-shadow: 0 12px 28px var(--shadow-hover) !important;
+    border-color: var(--card-border-hover) !important;
+}
+
+#products-container .product-card .product-image {
+    transition: transform var(--dur-slow) var(--ease-decelerate) !important;
+}
+
+#products-container .product-card:hover .product-image {
+    transform: scale(1.05);
+}
+
+/* ── Filter Toolbar — tablet/phone spacing ─────── */
+/* .row's own gutter already stacks these to 1 col on phones, 2 on
+   tablet (see product.php's col-md-6 classes); this just keeps the
+   price-range slider + its label readable when the column narrows. */
+@media (max-width: 575px) {
+    #results-count { text-align: center; }
+}
+
+/* ── Pagination — wrap on phones ─────────────────
+   Bootstrap's .pagination is a flex row with no wrap by default;
+   with enough pages the "Next" link can be pushed off-screen on
+   narrow phones instead of dropping to a second line. */
+@media (max-width: 575px) {
+    .pagination {
+        flex-wrap: wrap;
+        justify-content: center;
+        row-gap: 8px;
+    }
+}
+
+/* احترام prefers-reduced-motion */
+@media (prefers-reduced-motion: reduce) {
+    #products-container .product-card,
+    #products-container .product-card .product-image {
+        transition: none !important;
+        transform: none !important;
+    }
+    #products-container .product-card:hover {
+        box-shadow: 0 4px 12px var(--shadow-hover) !important;
+    }
+}
+
+
+/* ==================================================
+   Responsive — products grid
+   ==================================================
+   Moved here from style.css. The order is the original cascade
+   order and is load-bearing: on a 375px screen all four blocks
+   match and the last one wins.
+   ================================================== */
+@media (max-width: 767px) {
+    /* 2 columns on tablet portrait */
+    #products-container .col-lg-4 {
+        flex: 0 0 50%;
+        max-width: 50%;
+    }
+}
+
+@media (max-width: 575px) {
+    #products-container .col-lg-4,
+    #products-container .col-md-6 {
+        flex: 0 0 100%;
+        max-width: 100%;
+    }
+}
+
+@media (max-width: 576px) {
+    #products-container .col-lg-4,
+    #products-container .col-md-6,
+    #products-container .col-sm-6 {
+        flex: 0 0 100% !important;
+        max-width: 100% !important;
+    }
+}
+
+@media (max-width: 320px) {
+    #products-container .col-lg-4,
+    #products-container .col-md-6,
+    #products-container .col-sm-6 {
+        flex: 0 0 100% !important;
+        max-width: 100% !important;
+    }
+}

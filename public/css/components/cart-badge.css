@@ -1,0 +1,23 @@
+/* ==================================================
+   components/cart-badge.css — Counter badge on the cart and notification icons.
+   ================================================== */
+
+/* ==================================================
+   Cart & Counter Badge
+   ================================================== */
+.counter-badge {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    background-color: var(--badge-bg);
+    color: var(--badge-text);
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 5px;
+    border-radius: 50%;
+    line-height: 1;
+    border: 1px solid var(--navbar-bg);
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    transition: var(--dur-slow);
+}
+

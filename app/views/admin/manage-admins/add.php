@@ -1,0 +1,193 @@
+<?php
+/**
+ * app/views/admin/manage-admins/add.php — fragment فقط
+ * المتغيرات من AdminManageAdminsController::showAdd():
+ *   $formErr, $csrf, $adminRole
+ */
+?>
+
+<!-- ── Page Header ────────────────────────────────────────── -->
+<div class="admin-page-header">
+    <h1>➕ Add New Admin</h1>
+    <a href="<?= URLROOT ?>/admin/admins" class="btn btn-secondary btn-sm">← Back to Manage Admins</a>
+</div>
+
+<!-- ── Error Message ──────────────────────────────────────── -->
+
+<!-- ── Add Admin Form ─────────────────────────────────────── -->
+<div class="card p-4">
+    <form method="POST" action="<?= URLROOT ?>/admin/admins/add" id="addAdminForm" novalidate>
+        <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf) ?>">
+
+        <!-- ── Basic Info ──────────────────────────────────── -->
+        <h5 class="mb-3">👤 Basic Info</h5>
+        <div class="row g-3 mb-4">
+
+            <div class="col-12 col-md-6">
+                <div class="float-group">
+                    <input type="text"
+                           id="newAdmName"
+                           name="new_name"
+                           placeholder=" "
+                           required>
+                    <label for="newAdmName">Full Name <span class="text-danger">*</span></label>
+                </div>
+            </div>
+
+            <div class="col-12 col-md-6">
+                <div class="float-group">
+                    <input type="email"
+                           id="newAdmEmail"
+                           name="new_email"
+                           placeholder=" "
+                           required>
+                    <label for="newAdmEmail">Email (@gmail.com) <span class="text-danger">*</span></label>
+                </div>
+            </div>
+
+            <div class="col-12 col-md-6">
+                <div class="float-group">
+                    <input type="tel"
+                           id="newAdmPhone"
+                           name="new_phone"
+                           placeholder=" ">
+                    <label for="newAdmPhone">Phone Number (optional)</label>
+                </div>
+            </div>
+
+            <div class="col-12 col-md-6">
+                <div class="float-group position-relative">
+                    <input type="password"
+                           id="newAdmPassword"
+                           name="new_password"
+                           placeholder=" "
+                           required
+                           style="padding-right:40px;">
+                    <label for="newAdmPassword">Password <span class="text-danger">*</span></label>
+                    <button type="button"
+                            id="toggleNewAdmPassword"
+                            class="btn btn-sm position-absolute"
+                            style="right:6px; top:50%; transform:translateY(-50%); border:none; background:none; padding:2px 6px;"
+                            tabindex="-1"
+                            aria-label="Show/Hide Password">👁</button>
+                </div>
+                <small style="color:var(--muted-text);font-size:.75rem;">
+                    Min 8 chars — uppercase, lowercase, number, symbol
+                </small>
+            </div>
+
+        </div>
+
+        <!-- ── Role ────────────────────────────────────────── -->
+        <h5 class="mb-3">🎖 Role</h5>
+        <div class="row g-3 mb-4">
+            <div class="col-12 col-md-4">
+                <div class="float-group">
+                    <select name="new_role" id="newAdmRole">
+                        <?php
+                        // يُظهر فقط الرتب الأدنى من رتبة الأدمن الحالي (STRICT lower only)
+                        $roleMap = ['A' => 4, 'B' => 3, 'C' => 2, 'D' => 1];
+                        $myRank  = $roleMap[$adminRole] ?? 0;
+                        foreach (['B' => 'B — Admin', 'C' => 'C — Moderator', 'D' => 'D — Support'] as $val => $label):
+                            if (($roleMap[$val] ?? 0) < $myRank):
+                        ?>
+                        <option value="<?= $val ?>"><?= $label ?></option>
+                        <?php
+                            endif;
+                        endforeach;
+                        ?>
+                    </select>
+                    <label for="newAdmRole">Admin Role</label>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── Permissions ─────────────────────────────────── -->
+        <h5 class="mb-3">🔐 Permissions</h5>
+        <div class="perm-grid mb-4">
+
+            <label class="perm-item">
+                <input type="checkbox" name="perm_admins" value="1">
+                <span>👑 Manage Admins</span>
+            </label>
+            <label class="perm-item">
+                <input type="checkbox" name="perm_products" value="1">
+                <span>🛍️ Manage Products</span>
+            </label>
+            <label class="perm-item">
+                <input type="checkbox" name="perm_users" value="1">
+                <span>👥 Manage Users</span>
+            </label>
+            <label class="perm-item">
+                <input type="checkbox" name="perm_dashboard" value="1">
+                <span>📊 View Dashboard</span>
+            </label>
+            <label class="perm-item">
+                <input type="checkbox" name="perm_support" value="1">
+                <span>💬 Manage Support</span>
+            </label>
+            <label class="perm-item">
+                <input type="checkbox" name="perm_content" value="1">
+                <span>⚙️ Edit Site Content</span>
+            </label>
+            <label class="perm-item">
+                <input type="checkbox" name="perm_checkout" value="1">
+                <span>💳 Checkout Settings</span>
+            </label>
+            <label class="perm-item">
+                <input type="checkbox" name="perm_branding" value="1">
+                <span>🎬 Manage Branding (Slider)</span>
+            </label>
+            <label class="perm-item">
+                <input type="checkbox" name="perm_orders" value="1">
+                <span>📦 Manage Orders</span>
+            </label>
+
+        </div>
+
+        <!-- ── Confirmation ────────────────────────────────── -->
+        <h5 class="mb-3">🔒 Confirmation</h5>
+        <div class="row g-3 mb-4">
+
+            <div class="col-12">
+                <div class="float-group">
+                    <textarea id="newAdmReason"
+                              name="add_reason"
+                              rows="3"
+                              placeholder=" "></textarea>
+                    <label for="newAdmReason">Reason for adding this admin <span class="text-danger">*</span></label>
+                </div>
+            </div>
+
+            <div class="col-12 col-md-6">
+                <div class="float-group position-relative">
+                    <input type="password"
+                           id="newAdmCurrentPass"
+                           name="confirm_current_pass"
+                           placeholder=" "
+                           required
+                           style="padding-right:40px;">
+                    <label for="newAdmCurrentPass">Your Current Password <span class="text-danger">*</span></label>
+                    <button type="button"
+                            id="toggleNewAdmCurrentPass"
+                            class="btn btn-sm position-absolute"
+                            style="right:6px; top:50%; transform:translateY(-50%); border:none; background:none; padding:2px 6px;"
+                            tabindex="-1"
+                            aria-label="Show/Hide Password">👁</button>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- ── Submit (مخفي بالبداية، يظهر بـ JS عند اكتمال الحقول) ── -->
+        <div class="d-flex justify-content-end">
+            <button type="submit"
+                    id="addAdminBtn"
+                    class="btn btn-success btn-lg px-5"
+                    style="display:none;">
+                ✅ Add Admin
+            </button>
+        </div>
+
+    </form>
+</div>
