@@ -480,8 +480,15 @@ class AdminProductsController extends AdminController
             }
         }
 
-        if (!AdminProductModel::delete($productId)) {
+        // ثلاث حالات متمايزة: null فشل تقني · false لم يوجد · true حُذف.
+        // الفصل بينها مقصود: قبله كانت النقطة تُجيب «نجح» لمنتج غير موجود
+        // ثم تكتب صفّ تدقيق وإشعاراً يزعمان حذفاً لم يحدث.
+        $deleted = AdminProductModel::delete($productId);
+        if ($deleted === null) {
             $this->respond(false, 'Failed to delete product.');
+        }
+        if ($deleted === false) {
+            $this->respond(false, 'Product not found.');
         }
 
         $adminId = getCurrentAdminId();

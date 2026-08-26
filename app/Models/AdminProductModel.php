@@ -362,21 +362,39 @@ class AdminProductModel
     /**
      * حذف منتج + variants + pivot في transaction واحدة.
      * صور الـ variants تُحذف من الكنترولر قبل استدعاء هذه الدالة.
+     *
+     * القيمة المُرجَعة ثلاثية عمداً:
+     *   true  — حُذف فعلاً (صفّ واحد على الأقل تأثّر)
+     *   false — المعرّف غير موجود، فلم يُحذف شيء (والـtransaction رُوجعت)
+     *   null  — فشل تقني (استثناء)
+     * الفصل بين false وnull مقصود: المستدعي يحتاج رسالة مختلفة لكلٍّ منهما،
+     * ولا يجوز أن يكتب سجل تدقيق أو يطلق إشعاراً في حالة false.
      */
-    public static function delete(int $productId): bool
+    public static function delete(int $productId): ?bool
     {
         $db = Database::connect();
         try {
             $db->beginTransaction();
             $db->prepare("DELETE FROM product_variants WHERE product_id = ?")->execute([$productId]);
             $db->prepare("DELETE FROM product_category_pivot WHERE product_id = ?")->execute([$productId]);
-            $db->prepare("DELETE FROM products WHERE id = ?")->execute([$productId]);
+
+            $stmt = $db->prepare("DELETE FROM products WHERE id = ?");
+            $stmt->execute([$productId]);
+
+            // DELETE على معرّف غير موجود ينجح بلا خطأ ويحذف صفر صفوف. بلا
+            // هذا الفحص كانت الدالة تُرجع true لمنتج لم يوجد قط، فيكتب
+            // الكنترولر صفّ تدقيق وإشعاراً عن حذف لم يحدث.
+            if ($stmt->rowCount() === 0) {
+                $db->rollBack();
+                return false;
+            }
+
             $db->commit();
             return true;
         } catch (Exception $e) {
             $db->rollBack();
             error_log("AdminProductModel::delete Error: " . $e->getMessage());
-            return false;
+            return null;
         }
     }
 

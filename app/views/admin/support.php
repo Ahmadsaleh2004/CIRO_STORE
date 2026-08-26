@@ -95,8 +95,15 @@
 
 <?php endif; ?>
 
-<!-- Hidden CSRF input used by JS -->
-<input type="hidden" id="csrfTokenSupport" value="<?= htmlspecialchars($csrf) ?>">
+<!--
+    حقل CSRF يقرأه support.js عند كل إرسال.
+    سمة name مطلوبة لا زائدة: updateCsrfToken() في js/core/csrf.js تستهدف
+    input[name="csrf_token"]، فبلا الاسم كان الحقل يبقى على التوكن القديم
+    بعد أي تعافٍ — ويحتاج أول إرسال يدوي تالٍ جولة تعافٍ أخرى بلا داعٍ.
+    والحقل خارج أي <form> (فورم البحث أعلى الصفحة مغلق قبله)، وsupport.js
+    يبني FormData يدوياً، فالاسم لا يدخل أي إرسال بغير قصد.
+-->
+<input type="hidden" name="csrf_token" id="csrfTokenSupport" value="<?= htmlspecialchars($csrf) ?>">
 
 <!-- ── Pagination ─────────────────────────────────────────── -->
 <?php if ($totalPages > 1): ?>

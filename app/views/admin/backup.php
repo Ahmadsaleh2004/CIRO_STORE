@@ -16,8 +16,17 @@
     </div>
 </div>
 
-<!-- ── Flash Messages ─────────────────────────────────────── -->
-<?php require APPROOT . '/views/shared/flash-messages.php'; ?>
+<?php
+/*
+ * لا كتلة flash هنا عن قصد. كانت الصفحة تستدعي
+ * shared/flash-messages.php، و**لم تُنفَّذ الكتلة ولا مرة**:
+ * BackupController لا يقرأ $_SESSION['flash_*'] ولا يمرّر
+ * $flashMsg/$flashErr إطلاقاً (بخلاف خمسة كنترولرز أخرى تفعل).
+ * ولا يوجد في المشروع أي تحويل إلى /admin/backup يضع رسالة عابرة —
+ * الصفحة تُفتح بالتنقّل فقط، ونقاطها الثلاث JSON أو تنزيل ملف،
+ * ونتائجها تصل المستخدم عبر توست في backup.js.
+ */
+?>
 
 <input type="hidden" name="csrf_token" id="backupCsrfToken" value="<?= htmlspecialchars($csrf) ?>">
 
