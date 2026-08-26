@@ -231,12 +231,17 @@ function changedPhpFiles(string $root): ?array
 {
     $out = [];
     $rc  = 0;
+    // سكربت تطوير لا يُخدَّم عبر الويب. $root ثابت يمرّ بـescapeshellarg،
+    // وبقية الأمر حرفية في هذا الملف — لا مدخل مستخدم في أي موضع.
+    // nosemgrep: php.lang.security.exec-use.exec-use
     exec('git -C ' . escapeshellarg($root) . ' rev-parse --is-inside-work-tree 2>&1', $out, $rc);
     if ($rc !== 0) return null;
 
     $files = [];
     foreach (['diff --name-only HEAD', 'ls-files --others --exclude-standard'] as $cmd) {
         $lines = [];
+        // $cmd يأتي من مصفوفة حرفية في السطر أعلاه، لا من أي مدخل.
+        // nosemgrep: php.lang.security.exec-use.exec-use
         exec('git -C ' . escapeshellarg($root) . ' ' . $cmd . ' 2>&1', $lines);
         foreach ($lines as $line) {
             $line = trim($line);
@@ -256,6 +261,8 @@ function runLintChecks(array $files): array
     foreach ($files as $path) {
         $out = [];
         $rc  = 0;
+        // $path من مخرَج git داخل هذا السكربت، ويمرّ بـescapeshellarg.
+        // nosemgrep: php.lang.security.exec-use.exec-use
         exec('php -l ' . escapeshellarg($path) . ' 2>&1', $out, $rc);
         if ($rc !== 0) {
             $failures[] = ['file' => $path, 'msg' => implode(' ', $out)];

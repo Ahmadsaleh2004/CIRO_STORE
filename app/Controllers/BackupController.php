@@ -141,9 +141,15 @@ class BackupController extends AdminController
             ErrorPage::notFound('backup/download: ملف غير صالح أو غير موجود');
         }
 
+        // $path ناتج getBackupPath المُتحقَّق منه (basename + نمط صارم +
+        // is_file)، ورُفض قبل هذا السطر إن كان null. لا يصل هنا اسم من
+        // المستخدم بل مسار مفهرس داخل مجلد النسخ.
+        // nosemgrep: php.lang.security.injection.tainted-filename.tainted-filename
         header('Content-Type: application/octet-stream');
         header('Content-Disposition: attachment; filename="' . basename($path) . '"');
+        // nosemgrep: php.lang.security.injection.tainted-filename.tainted-filename
         header('Content-Length: ' . filesize($path));
+        // nosemgrep: php.lang.security.injection.tainted-filename.tainted-filename
         readfile($path);
         exit;
     }

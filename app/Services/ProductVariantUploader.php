@@ -117,8 +117,11 @@ class ProductVariantUploader
             if (empty($v['image_path'])) {
                 continue;
             }
+            // basename تجرّد أي مسار، فالنتيجة محصورة في $uploadDir
+            // بالبناء لا بالثقة في مصدر القيمة.
             $disk = rtrim($uploadDir, '/\\') . DIRECTORY_SEPARATOR . basename($v['image_path']);
             if (file_exists($disk)) {
+                // nosemgrep: php.lang.security.unlink-use.unlink-use,php.lang.security.injection.tainted-filename.tainted-filename
                 @unlink($disk);
             }
         }

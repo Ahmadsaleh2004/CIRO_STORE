@@ -113,10 +113,17 @@ class BackupModel
                     . ' --single-transaction --routines --triggers %s > %s 2>&1',
                     escapeshellarg($bin), $cnf, $name, $out
                 );
+                // الأمر لا يحمل أي مدخل مستخدم: $bin من قائمة مسارات
+                // مكتوبة في هذا الملف، و$name من ثابت DB_NAME، و$path
+                // و$cnfPath مولَّدان داخلياً — وكلها تمرّ بـescapeshellarg.
+                // وكلمة السر لم تعد على سطر الأوامر أصلاً.
+                // nosemgrep: php.lang.security.exec-use.exec-use
                 @exec($cmd, $_, $code);
                 if ($code === 0 && is_file($path) && filesize($path) > 0) {
                     return ['success' => true];
                 }
+                // $path مولَّد في createBackup من طابع زمني، لا مدخل فيه.
+                // nosemgrep: php.lang.security.unlink-use.unlink-use
                 @unlink($path); // مسح أي ملف جزئي قبل التجربة التالية
             }
 
@@ -125,6 +132,8 @@ class BackupModel
             // الملف يحمل كلمة السر — لا يجوز أن يبقى في مجلد المؤقتات
             // ولو فشل كل شيء أو رُمي استثناء.
             if ($cnfPath !== null && is_file($cnfPath)) {
+                // $cnfPath من tempnam() في هذه الدالة — لا مدخل مستخدم.
+                // nosemgrep: php.lang.security.unlink-use.unlink-use
                 @unlink($cnfPath);
             }
         }
@@ -209,6 +218,10 @@ class BackupModel
     {
         $path = self::getBackupPath($filename);
         if ($path === null) return false;
+        // getBackupPath هي الحارس: تشترط basename($f) === $f، وتطابق
+        // نمطاً صارماً للاسم، وتتحقق is_file — فما يصل هنا مسار مفهرس
+        // داخل مجلد النسخ لا غير.
+        // nosemgrep: php.lang.security.unlink-use.unlink-use
         return @unlink($path);
     }
 

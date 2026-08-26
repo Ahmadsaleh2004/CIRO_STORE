@@ -402,6 +402,9 @@ class AdminProductsController extends AdminController
                 // كان هنا ltrim وحدها، وهي لا تمنع `..`.
                 $disk = publicFileToDelete($oldPath);
                 if ($disk !== null) {
+                    // $disk ناتج publicFileToDelete: realpath محتوى داخل
+                    // public/ وis_file — لا يصل هنا مسار خارجه.
+                    // nosemgrep: php.lang.security.unlink-use.unlink-use,php.lang.security.injection.tainted-filename.tainted-filename
                     @unlink($disk);
                 }
             }
@@ -476,6 +479,8 @@ class AdminProductsController extends AdminController
             // كسابقه: الاحتواء داخل الهيلبر لا في المستدعي.
             $disk = $imgPath ? publicFileToDelete($imgPath) : null;
             if ($disk !== null) {
+                // كسابقه: الاحتواء تمّ في publicFileToDelete.
+                // nosemgrep: php.lang.security.unlink-use.unlink-use,php.lang.security.injection.tainted-filename.tainted-filename
                 @unlink($disk);
             }
         }

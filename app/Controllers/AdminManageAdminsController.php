@@ -115,6 +115,11 @@ class AdminManageAdminsController extends AdminController
 
         $newRole = in_array($_POST['new_role'] ?? '', ['A','B','C','D'], true) ? $_POST['new_role'] : 'B';
         if (!AdminModel::canManageTarget($myRole, $newRole)) {
+            // ليست SQL إطلاقاً: نصّ رسالة يُرسَل في JSON. القاعدة تطابق
+            // أي نصّ مُركَّب فيه مدخل مستخدم. ولا XSS أيضاً — الواجهة
+            // تعرضه بـshowToast الذي يمرّره إلى خيار text في SweetAlert2،
+            // وهو يضبط textContent لا innerHTML.
+            // nosemgrep: php.lang.security.injection.tainted-sql-string.tainted-sql-string
             $this->respond(false, "You cannot create an admin with rank {$newRole}.");
         }
 
@@ -321,6 +326,9 @@ class AdminManageAdminsController extends AdminController
             $this->respond(false, 'Admin not found.');
         }
         if (!AdminModel::canManageTarget(getAdminRole(), $target['role'])) {
+            // كسابقتها: رسالة JSON لا استعلام. والقيمة هنا من قاعدة
+            // البيانات (عمود role) لا من الطلب أصلاً.
+            // nosemgrep: php.lang.security.injection.tainted-sql-string.tainted-sql-string
             $this->respond(false, "You cannot delete an admin with rank {$target['role']}.");
         }
         if (AdminModel::countAdmins() <= 1) {
