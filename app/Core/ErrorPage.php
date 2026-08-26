@@ -115,4 +115,72 @@ final class ErrorPage
 
         exit;
     }
+
+    /**
+     * يرسل صفحة 500 كاملة ويوقف التنفيذ.
+     *
+     * وُجدت لسبب notFound() نفسه. كان فشل الاتصال بقاعدة البيانات يُعالج
+     * في Database::__construct بـ
+     *     die("خطأ في الاتصال بقاعدة البيانات: " . $e->getMessage())
+     * ورسالة PDO تحمل **اسم المضيف واسم القاعدة واسم المستخدم** حرفياً.
+     * أي أن أول خطأ اتصال على الإنتاج كان يسلّم الزائرَ نصفَ بيانات
+     * الدخول، بلا صفحة ولا كود حالة صحيح (die تُرجع 200).
+     *
+     * ثلاثة فروق عن أختيها:
+     *
+     *   1. **الوضع CLI**: سكربتات scripts/ تعمل على الطرفية بلا composer
+     *      autoload — فطباعة صفحة HTML هناك بلا معنى، واستدعاء دوال
+     *      الـlayout خطأ قاتل. الفرع CLI يطبع نصّاً خاماً على STDERR
+     *      ويخرج بكود 1 كي يلتقطه أي سكربت مُشغِّل.
+     *
+     *   2. **الاحتياط المضمّن أوسع**: هذه الصفحة قد تُستدعى وقاعدة
+     *      البيانات ساقطة، فلا تعتمد على أي شيء يقرأ منها. head-bare.php
+     *      لا يلمس القاعدة (مفحوص)، لكن الاحتياط يبقى مكتفياً بذاته
+     *      تماماً — بلا CSS خارجي ولا دوال هيلبرز.
+     *
+     *   3. **503 لا 500 عند فشل الاتصال**: الخدمة غير متاحة مؤقتاً لا
+     *      «خطأ في الخادم». الفرق يهمّ محرّكات البحث وأدوات المراقبة.
+     *
+     * @param string|null $logDetail تفصيل تشخيصي — إلى error_log وحده،
+     *        لا يُطبع في المتصفح أبداً.
+     * @param int         $status    503 (غير متاح مؤقتاً) أو 500.
+     */
+    public static function serverError(?string $logDetail = null, int $status = 500): never
+    {
+        if ($logDetail !== null && $logDetail !== '') {
+            error_log('[Cairo Store] ' . $status . ': ' . $logDetail);
+        }
+
+        // الطرفية: لا HTML ولا ترويسات. النصّ إلى STDERR وكود خروج غير صفري.
+        if (PHP_SAPI === 'cli') {
+            fwrite(STDERR, "خطأ: تعذّر إكمال العملية. التفاصيل في سجلّ الأخطاء.
+");
+            exit(1);
+        }
+
+        if (!headers_sent()) {
+            http_response_code($status);
+            header('Content-Type: text/html; charset=utf-8');
+            // لا تُخزَّن صفحة خطأ مؤقت في أي وسيط.
+            header('Cache-Control: no-store');
+            if ($status === 503) {
+                header('Retry-After: 60');
+            }
+        }
+
+        $page = APPROOT . '/views/errors/500.php';
+        if (is_file($page)) {
+            require $page;
+        } else {
+            echo '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">'
+               . '<meta name="viewport" content="width=device-width,initial-scale=1">'
+               . '<title>' . $status . ' — Service Unavailable</title></head>'
+               . '<body style="font-family:system-ui,sans-serif;text-align:center;padding:60px">'
+               . '<h1>' . $status . '</h1>'
+               . '<p>الخدمة غير متاحة مؤقتاً. حاول بعد قليل.</p>'
+               . '</body></html>';
+        }
+
+        exit;
+    }
 }

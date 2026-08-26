@@ -1,15 +1,10 @@
 <?php
 
 // ==========================================
-// 1. إعدادات البيئة وتتبع الأخطاء (Error Reporting)
+// 1. الثوابت الأساسية للمسارات (Path Constants)
 // ==========================================
-ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1);
-error_reporting(E_ALL);
-
-// ==========================================
-// 2. الثوابت الأساسية للمسارات (Path Constants)
-// ==========================================
+//
+// المسارات أولاً لأن تحميل .env أدناه يحتاج ROOTPATH.
 
 // مسار مجلد app الرئيسي على القرص الصلب (App Root)
 define('APPROOT', dirname(__DIR__));
@@ -17,23 +12,86 @@ define('APPROOT', dirname(__DIR__));
 // مسار المجلد الرئيسي للمشروع (Project Root)
 define('ROOTPATH', dirname(dirname(__DIR__)));
 
-// رابط الموقع الرئيسي الذي يصل إليه المتصفح (URL Root)
-define('URLROOT', 'http://localhost/STORE/public');
+// ==========================================
+// 2. تحميل البيئة (.env)
+// ==========================================
+//
+// يُحمَّل من **هنا** لا من نقطة الدخول وحدها. كان public/index.php
+// يستدعي loadEnv بنفسه، لكن scripts/reset_admins_keep_root.php يحمّل
+// config.php مباشرة بلا استدعاء — فكان سيعمل ببيئة فارغة ويتصل بقاعدة
+// غير المقصودة **بصمت**. جعل config.php مكتفياً بذاته يغلق هذا الباب
+// لكل نقطة دخول قائمة أو قادمة.
+//
+// loadEnv يحمل حارس `static $loaded`، فاستدعاؤه مرّة أخرى من
+// public/index.php لا يفعل شيئاً ولا يدهس ما حُمّل.
+require_once __DIR__ . '/env_loader.php';
+loadEnv(ROOTPATH . '/.env');
+
+// ==========================================
+// 3. البيئة وتتبّع الأخطاء (Error Reporting)
+// ==========================================
+//
+// كان هنا `ini_set('display_errors', 1)` مثبَّتاً بلا شرط — أي أن كل
+// أثر استثناء، بما فيه مسارات الخادم وأسماء القواعد ونصوص الاستعلامات،
+// كان سيُطبع للزائر على الإنتاج. الآن العرض مشروط بالبيئة والتسجيل
+// دائم: المطوّر يرى الخطأ على شاشته، والخادم يكتبه في سجلّه، والزائر
+// لا يرى إلا صفحة خطأ نظيفة.
+
+define('APP_ENV',   env('APP_ENV', 'production'));
+define('APP_DEBUG', envBool('APP_DEBUG', APP_ENV !== 'production'));
+
+// الافتراضي الآمن مقصود: غياب APP_ENV يعني **إنتاج** لا تطوير. نسيان
+// ضبط المتغيّر يجب أن يُخفي الأخطاء لا أن يكشفها.
+ini_set('display_errors',         APP_DEBUG ? '1' : '0');
+ini_set('display_startup_errors', APP_DEBUG ? '1' : '0');
+error_reporting(E_ALL);
+
+// التسجيل دائم في الحالتين — إطفاء العرض لا يعني فقدان الخطأ.
+ini_set('log_errors', '1');
+
+// إخفاء نسخة PHP. `Header always unset X-Powered-By` في .htaccess لا
+// يكفي: PHP يضيف الترويسة بعد معالجة Apache لترويسات mod_headers،
+// فتنجو منها (مقيس — بقيت `X-Powered-By: PHP/8.2.12` ظاهرة). والإصلاح
+// الجذري `expose_php = Off` في php.ini إعداد خادم لا يملكه المستودع،
+// فيبقى هذا هو الموضع الوحيد الذي يضمنه التطبيق لنفسه.
+header_remove('X-Powered-By');
+if (is_dir(ROOTPATH . '/storage')) {
+    ini_set('error_log', ROOTPATH . '/storage/php-error.log');
+}
+
+// ==========================================
+// 4. هوية الموقع
+// ==========================================
+
+// رابط الموقع الرئيسي الذي يصل إليه المتصفح (URL Root).
+// يأتي من APP_URL كي لا يحتاج النشر تعديل ملف كود. الافتراضي هو مسار
+// التطوير المحلي، فبيئة XAMPP القائمة تعمل بلا تغيير في .env.
+define('URLROOT', rtrim(env('APP_URL', 'http://localhost/STORE/public'), '/'));
 
 // اسم المتجر
-define('SITENAME', 'Cairo Store');
+define('SITENAME', env('APP_NAME', 'Cairo Store'));
 
 // ==========================================
-// 3. إعدادات قاعدة البيانات (Database Config)
+// 5. إعدادات قاعدة البيانات (Database Config)
 // ==========================================
-define('DB_HOST', 'localhost');
-define('DB_USER', 'root');
-define('DB_PASS', '');
-define('DB_NAME', 'ciro_db');
-define('DB_CHARSET', 'utf8mb4');
+//
+// القيم كانت مكتوبة صراحةً هنا (`DB_USER = 'root'`, `DB_PASS = ''`)
+// وكانت **تتقدّم** على .env: Database.php يفحص `defined('DB_USER')`
+// أولاً، فكان ملف .env موجوداً بلا أثر — يُقرأ ويُتجاهل.
+//
+// الآن .env هو المصدر الوحيد، والثوابت مجرّد نسخة مقروءة منه. أُبقيت
+// كثوابت لا كقراءة مباشرة لأن BackupModel::createDump يستعملها في ملف
+// خيارات mysqldump؛ تحويلها إلى $_ENV هناك كان تغييراً بلا داعٍ في
+// مسار يتعامل مع كلمة السر.
+define('DB_HOST',    env('DB_HOST',     '127.0.0.1'));
+define('DB_PORT',    env('DB_PORT',     '3306'));
+define('DB_NAME',    env('DB_DATABASE', 'store_db'));
+define('DB_USER',    env('DB_USERNAME', 'root'));
+define('DB_PASS',    $_ENV['DB_PASSWORD'] ?? '');  // ← لا env(): كلمة السر الفارغة قيمة صالحة هنا
+define('DB_CHARSET', env('DB_CHARSET',  'utf8mb4'));
 
 // ==========================================
-// 4. تصليب الجلسة (Session Hardening)
+// 6. تصليب الجلسة (Session Hardening)
 // ==========================================
 //
 // مكانها هنا لا في auth_helper: كلا الإعدادين يجب أن يُضبط **قبل** أي
