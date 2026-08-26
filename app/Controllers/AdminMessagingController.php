@@ -50,17 +50,10 @@ class AdminMessagingController extends AdminController
     )]
     public function notify(): void
     {
-        header('Content-Type: application/json; charset=utf-8');
+        $this->beginJsonPost();
         // ملاحظة: صلاحية ثابتة حاليًا لأن Manage Admins فقط موجود. لما يُبنى
         // Manage Users، بدّلها لفحص ديناميكي حسب target_type.
         Middleware::requirePermission('can_manage_admins');
-
-        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            $this->respond(false, 'Method not allowed.');
-        }
-        if (!verifyCsrfToken($_POST['csrf_token'] ?? '')) {
-            $this->respond(false, 'Invalid CSRF token, please refresh and try again.');
-        }
 
         $targetType = $_POST['target_type'] ?? 'admin';
         $targetId   = (int)($_POST['target_id'] ?? 0);

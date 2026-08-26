@@ -166,12 +166,8 @@ class AdminProductsController extends AdminController
     )]
     public function storeAdd(): void
     {
-        header('Content-Type: application/json; charset=utf-8');
+        $this->beginJsonPost();
         Middleware::requirePermission('can_manage_products');
-
-        if (!verifyCsrfToken($_POST['csrf_token'] ?? '')) {
-            $this->jsonError('Invalid CSRF token, please refresh and try again.');
-        }
 
         // ── تحقق من الكاتوجري (قبل أي شيء)
         $categoryIds = array_filter(array_map('intval', $_POST['category_ids'] ?? []));
@@ -324,12 +320,8 @@ class AdminProductsController extends AdminController
     )]
     public function storeEdit(): void
     {
-        header('Content-Type: application/json; charset=utf-8');
+        $this->beginJsonPost();
         Middleware::requirePermission('can_manage_products');
-
-        if (!verifyCsrfToken($_POST['csrf_token'] ?? '')) {
-            $this->jsonError('Invalid CSRF token, please refresh and try again.');
-        }
 
         $productId   = (int)($_POST['product_id'] ?? 0);
         $categoryIds = array_filter(array_map('intval', $_POST['category_ids'] ?? []));
@@ -430,7 +422,6 @@ class AdminProductsController extends AdminController
 
         $this->respond(true, 'Product updated successfully.');
     }
-
 
     // ═══════════════════════════════════════════════════════════
     // 4) حذف منتج (AJAX)
@@ -629,12 +620,8 @@ class AdminProductsController extends AdminController
     )]
     public function addCategory(): void
     {
-        header('Content-Type: application/json; charset=utf-8');
+        $this->beginJsonPost();
         Middleware::requirePermission('can_manage_products');
-
-        if (!verifyCsrfToken($_POST['csrf_token'] ?? '')) {
-            $this->respond(false, 'Invalid CSRF token, please refresh and try again.');
-        }
 
         $name = trim($_POST['name'] ?? '');
         if ($name === '') {
@@ -692,12 +679,8 @@ class AdminProductsController extends AdminController
     )]
     public function deleteCategory(): void
     {
-        header('Content-Type: application/json; charset=utf-8');
+        $this->beginJsonPost();
         Middleware::requirePermission('can_manage_products');
-
-        if (!verifyCsrfToken($_POST['csrf_token'] ?? '')) {
-            $this->respond(false, 'Invalid CSRF token, please refresh and try again.');
-        }
 
         $catId  = (int)($_POST['category_id']    ?? 0);
         $destId = (int)($_POST['destination_id'] ?? 0);
@@ -834,8 +817,5 @@ class AdminProductsController extends AdminController
             );
         }
     }
-
-
-
 
 }

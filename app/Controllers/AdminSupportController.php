@@ -137,17 +137,8 @@ class AdminSupportController extends AdminController
 
     public function reply(): void
     {
-        header('Content-Type: application/json; charset=utf-8');
+        $this->beginJsonPost();
         Middleware::requirePermission('can_manage_support');
-
-        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            $this->respond(false, 'Method not allowed.');
-        }
-
-        $token = $_POST['csrf_token'] ?? '';
-        if (!verifyCsrfToken($token)) {
-            $this->respond(false, 'Invalid CSRF token, please refresh and try again.');
-        }
 
         $targetUserId = (int) ($_POST['user_id'] ?? 0);
         $replyText    = trim($_POST['reply_text'] ?? '');
@@ -194,17 +185,8 @@ class AdminSupportController extends AdminController
 
     public function delete(): void
     {
-        header('Content-Type: application/json; charset=utf-8');
+        $this->beginJsonPost();
         Middleware::requirePermission('can_manage_support');
-
-        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            $this->respond(false, 'Method not allowed.');
-        }
-
-        $token = $_POST['csrf_token'] ?? '';
-        if (!verifyCsrfToken($token)) {
-            $this->respond(false, 'Invalid CSRF token, please refresh and try again.');
-        }
 
         $msgId = (int) ($_POST['message_id'] ?? 0);
         if (!$msgId) {

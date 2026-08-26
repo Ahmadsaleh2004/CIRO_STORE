@@ -51,16 +51,7 @@ class AuthController extends Controller
             session_start();
         }
 
-        header('Content-Type: application/json; charset=utf-8');
-
-        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            $this->respond(false, 'Method not allowed.');
-        }
-
-        $token = $_POST['csrf_token'] ?? '';
-        if (!verifyCsrfToken($token)) {
-            $this->respond(false, 'Invalid CSRF token, please refresh and try again.');
-        }
+        $this->beginJsonPost();
 
         $email = trim(strtolower($_POST['email']    ?? ''));
         $pass  = $_POST['password'] ?? '';
@@ -174,16 +165,7 @@ class AuthController extends Controller
             session_start();
         }
 
-        header('Content-Type: application/json; charset=utf-8');
-
-        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            $this->respond(false, 'Method not allowed.');
-        }
-
-        $token = $_POST['csrf_token'] ?? '';
-        if (!verifyCsrfToken($token)) {
-            $this->respond(false, 'Invalid CSRF token, please refresh and try again.');
-        }
+        $this->beginJsonPost();
 
         // جمع البيانات
         $fullName    = trim($_POST['full_name']       ?? '');
@@ -344,10 +326,7 @@ class AuthController extends Controller
             $this->respond(false, 'Method not allowed.');
         }
 
-        $token = $_POST['csrf_token'] ?? '';
-        if (!verifyCsrfToken($token)) {
-            $this->respond(false, 'Invalid CSRF token, please refresh and try again.');
-        }
+        $this->beginJsonPost();
 
         $email = trim(strtolower($_POST['email'] ?? ''));
         $user = UserModel::findByEmail($email);

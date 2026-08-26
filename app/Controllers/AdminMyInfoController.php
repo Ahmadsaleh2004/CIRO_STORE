@@ -81,19 +81,9 @@ class AdminMyInfoController extends AdminController
     )]
     public function updateProfile(): void
     {
-        header('Content-Type: application/json; charset=utf-8');
+        $this->beginJsonPost();
 
-        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            $this->respond(false, 'Method not allowed.');
-        }
-
-        $body = json_decode(file_get_contents('php://input'), true) ?? [];
-        $post = array_merge($_POST, $body);
-
-        $token = $post['csrf_token'] ?? '';
-        if (!verifyCsrfToken($token)) {
-            $this->respond(false, 'Invalid CSRF token, please refresh and try again.');
-        }
+        $post = $this->requestData();
 
         $adminId = (int)$_SESSION['admin_id'];
         $admin   = AdminModel::findById($adminId);
@@ -173,23 +163,13 @@ class AdminMyInfoController extends AdminController
     )]
     public function generate2FASecret(): void
     {
-        header('Content-Type: application/json; charset=utf-8');
-
-        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            $this->respond(false, 'Method not allowed.');
-        }
-
-        // كان هذا السطر مفقوداً وحده من بين الدوال الأربع في هذا الملف،
-        // فكان $post متغيّراً غير معرَّف و$token فارغاً دائماً — أي أن زر
-        // «تفعيل 2FA» كان يُرفض بـ«Invalid CSRF token» في كل مرة منذ كُتب.
-        // الطلب يصل بجسم JSON من js/admin/my-info.js فلا يملأ $_POST.
-        $body = json_decode(file_get_contents('php://input'), true) ?? [];
-        $post = array_merge($_POST, $body);
-
-        $token = $post['csrf_token'] ?? '';
-        if (!verifyCsrfToken($token)) {
-            $this->respond(false, 'Invalid CSRF token, please refresh and try again.');
-        }
+        // ملاحظة تاريخية: كان دمج جسم JSON مفقوداً هنا وحده من بين الدوال
+        // الأربع في هذا الملف، فكان $post غير معرَّف و$token فارغاً دائماً
+        // — أي أن زر «تفعيل 2FA» كان يُرفض بـ«Invalid CSRF token» في كل
+        // مرة. الطلب يصل بجسم JSON من js/admin/my-info.js فلا يملأ $_POST.
+        // اليوم لا مجال لتكرار ذلك: beginJsonPost تقرأ التوكن عبر
+        // requestData() التي تدمج $_POST بجسم JSON دائماً.
+        $this->beginJsonPost();
 
         $adminId = (int)$_SESSION['admin_id'];
         $admin   = AdminModel::findById($adminId);
@@ -231,19 +211,9 @@ class AdminMyInfoController extends AdminController
     )]
     public function confirm2FA(): void
     {
-        header('Content-Type: application/json; charset=utf-8');
+        $this->beginJsonPost();
 
-        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            $this->respond(false, 'Method not allowed.');
-        }
-
-        $body = json_decode(file_get_contents('php://input'), true) ?? [];
-        $post = array_merge($_POST, $body);
-
-        $token = $post['csrf_token'] ?? '';
-        if (!verifyCsrfToken($token)) {
-            $this->respond(false, 'Invalid CSRF token, please refresh and try again.');
-        }
+        $post = $this->requestData();
 
         $adminId = (int)$_SESSION['admin_id'];
         $admin   = AdminModel::findById($adminId);
@@ -297,19 +267,9 @@ class AdminMyInfoController extends AdminController
     )]
     public function disable2FA(): void
     {
-        header('Content-Type: application/json; charset=utf-8');
+        $this->beginJsonPost();
 
-        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            $this->respond(false, 'Method not allowed.');
-        }
-
-        $body = json_decode(file_get_contents('php://input'), true) ?? [];
-        $post = array_merge($_POST, $body);
-
-        $token = $post['csrf_token'] ?? '';
-        if (!verifyCsrfToken($token)) {
-            $this->respond(false, 'Invalid CSRF token, please refresh and try again.');
-        }
+        $post = $this->requestData();
 
         $adminId = (int)$_SESSION['admin_id'];
         $admin   = AdminModel::findById($adminId);
