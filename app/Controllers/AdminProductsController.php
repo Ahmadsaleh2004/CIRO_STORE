@@ -398,8 +398,10 @@ class AdminProductsController extends AdminController
         $newImagePaths = array_column($parsedVariants, 'image_path');
         foreach ($oldImagePaths as $oldPath) {
             if ($oldPath && !in_array($oldPath, $newImagePaths, true)) {
-                $disk = ROOTPATH . '/public/' . ltrim($oldPath, '/');
-                if (file_exists($disk)) {
+                // publicFileToDelete يحتوي المسار داخل public/ بـrealpath.
+                // كان هنا ltrim وحدها، وهي لا تمنع `..`.
+                $disk = publicFileToDelete($oldPath);
+                if ($disk !== null) {
                     @unlink($disk);
                 }
             }
@@ -470,13 +472,11 @@ class AdminProductsController extends AdminController
 
         // احذف الصور من القرص قبل حذف السجلات
         $imagePaths = AdminProductModel::getVariantImagePaths($productId);
-        $uploadDir  = ROOTPATH . '/public/';
         foreach ($imagePaths as $imgPath) {
-            if ($imgPath) {
-                $disk = $uploadDir . ltrim($imgPath, '/');
-                if (file_exists($disk)) {
-                    @unlink($disk);
-                }
+            // كسابقه: الاحتواء داخل الهيلبر لا في المستدعي.
+            $disk = $imgPath ? publicFileToDelete($imgPath) : null;
+            if ($disk !== null) {
+                @unlink($disk);
             }
         }
 
