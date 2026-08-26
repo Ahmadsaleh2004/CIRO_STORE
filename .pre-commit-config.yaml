@@ -1,38 +1,13 @@
-# ══════════════════════════════════════════════════════════════
-# فحص الأسرار قبل كل commit — gitleaks
-# ══════════════════════════════════════════════════════════════
-#
-# لماذا hook محلي بـlanguage: system بدل المستودع البعيد؟
-#
-# الخطّاف الرسمي في github.com/gitleaks/gitleaks معرَّف بـlanguage: golang،
-# فيطلب من pre-commit أن **يبني** الملف التنفيذي بـGo. وGo غير مثبَّت على
-# هذا الجهاز، فكان كل commit يُرفض بـ«Executable gitleaks not found» —
-# أي أن الخطّاف كان يمنع الالتزام **بلا أن يفحص شيئاً**، وهو أسوأ من
-# غيابه: يعطي إحساساً بالأمان ولا يقدّمه.
-#
-# gitleaks مثبَّت هنا عبر winget (المعرّف Gitleaks.Gitleaks، الإصدار
-# 8.30.1) في %LOCALAPPDATA%\Microsoft\WinGet\Links، وهذا المجلد على PATH
-# المستخدم — فالنداء المباشر يعمل بلا Go وبلا بناء وبلا شبكة.
-#
-# ⚠️ إن حدّثت gitleaks أو نقلته، لا شيء هنا يحتاج تغييراً ما دام على PATH.
-# وإن انتقل المشروع إلى جهاز آخر، يكفي تثبيت gitleaks فيه:
-#     winget install Gitleaks.Gitleaks
-#
-# الأمر ومعانيه:
-#   git --pre-commit --staged   افحص ما هو مُدرَج للالتزام وحده، لا التاريخ
-#                               كله — فالفحص سريع ويخصّ ما ستكتبه الآن
-#   --redact                    لا تطبع السرّ نفسه في المخرَج (وإلا لتسرّب
-#                               إلى سجلّ الطرفية بينما تمنعه من المستودع)
-#   --no-banner                 مخرَج أنظف عند الفشل
-#
-# pass_filenames: false مقصود — gitleaks يقرأ الـdiff المُدرَج بنفسه، وتمرير
-# أسماء الملفات إليه يجعله يفحص الملفات كاملة لا التغيير.
-
 repos:
   - repo: local
     hooks:
       - id: gitleaks
-        name: gitleaks — فحص الأسرار في التغيير المُدرَج
-        entry: gitleaks git --pre-commit --staged --redact --no-banner
+        name: gitleaks
+        entry: gitleaks git --pre-commit --staged --redact -v
+        language: system
+        pass_filenames: false
+      - id: semgrep
+        name: semgrep
+        entry: semgrep --config auto --error .
         language: system
         pass_filenames: false
