@@ -175,3 +175,102 @@ rules:
       # الطلبات القرائية لا تحتاج توكناً
       - pattern-not: 'fetch($URL, {..., method: "GET", ...})'
       - pattern-not: "fetch($URL, {..., method: 'GET', ...})"
+
+  # ════════════════════════════════════════════════════════════════
+  # 5) اكتشاف فشل CSRF بنصّ الرسالة بدل error_code
+  # ════════════════════════════════════════════════════════════════
+  # وقع هذا العطل ثلاث مرات في هذا المشروع قبل أن يُصلَح جذرياً:
+  # WishlistController::notify كانت ترد بـ'Invalid session…' و
+  # ContactController::send بـ'Invalid request…'، فكانت
+  # fetchWithCsrfRetry لا تتعرّف على الفشل ولا تُعيد المحاولة — والزرّان
+  # يفشلان نهائياً حيث تتعافى بقية الأزرار بصمت. وست نقاط أخرى نجت
+  # بالصدفة وحدها لأن صياغتها بدأت بالبادئة نفسها.
+  #
+  # العقد اليوم: {error_code: 'csrf_invalid'} من respondCsrfFailure().
+  # أي عودة لمطابقة النصّ تُعيد العطل، ولن يظهر إلا لمستخدم بتوكن منتهٍ.
+  - id: cairo-csrf-detect-by-message
+    languages: [js]
+    severity: ERROR
+    message: >-
+      اكتشاف فشل CSRF بنصّ الرسالة. الرسالة نصّ للعرض يتغيّر بحرية،
+      والعقد هو error_code === 'csrf_invalid' الذي ترسله
+      Controller::respondCsrfFailure(). مطابقة النصّ تنكسر بصمت عند أول
+      إعادة صياغة — وقد كسرت ثلاث نقاط في هذا المشروع فعلاً.
+    paths:
+      include:
+        - "public/js/**/*.js"
+    patterns:
+      - pattern-either:
+          - pattern: $D.message.startsWith("Invalid CSRF ...")
+          - pattern: $D.message.includes("Invalid CSRF ...")
+          - pattern: $D.message === "Invalid CSRF ..."
+
+  # ════════════════════════════════════════════════════════════════
+  # 6) نقطة JSON تعدّل الحالة بلا فحص CSRF
+  # ════════════════════════════════════════════════════════════════
+  # NotificationController كان فيه requireAuth() و requirePost() خاصتان
+  # به وصفر verifyCsrfToken في الملف كله — فبدا محميّاً وهو ليس كذلك.
+  # /notifications/delete-all كان يحذف كل إشعارات المستخدم من أي أصل.
+  #
+  # القاعدة تمسك النمط: دالة عامة في كنترولر تضبط رأس JSON ولا تستدعي
+  # beginJsonPost ولا verifyCsrfToken. الاستثناءات المشروعة (قراءة على
+  # GET، صفحة تحوّل بـredirect) تُوثَّق بـnosemgrep فوق السطر.
+  - id: cairo-json-endpoint-without-csrf
+    languages: [php]
+    severity: WARNING
+    message: >-
+      نقطة تضبط رأس JSON بلا beginJsonPost() ولا verifyCsrfToken().
+      إن كانت تعدّل الحالة فهي مفتوحة لـCSRF. استعمل beginJsonPost()،
+      أو وثّق السبب بـnosemgrep إن كانت قراءة محضة على GET.
+    paths:
+      include:
+        - "app/Controllers/*.php"
+    # النمط يطابق **الدالة كاملة** لا سطر الرأس وحده. المحاولة الأولى
+    # استعملت pattern-inside للدالة مع pattern-not-inside للبوابة، فلم
+    # يربط semgrep المتغيّر $F بين الشرطين وأنتجت 11 نتيجة أغلبها كاذب
+    # (login و reauth تستدعيان verifyCsrfToken فعلاً). مطابقة الدالة
+    # كاملة ثم استثناؤها بـpattern-not تجعل النطاق واحداً لا اثنين.
+    patterns:
+      - pattern: |
+          public function $F(...) {
+            ...
+            header('Content-Type: application/json; charset=utf-8');
+            ...
+          }
+      - pattern-not: |
+          public function $F(...) {
+            ...
+            $this->beginJsonPost(...);
+            ...
+          }
+      # الاستدعاء في هذا المشروع يقع دائماً داخل شرط `if (!verifyCsrfToken(...))`
+      # لا كعبارة مستقلة، فنمط العبارة وحده لا يطابقه.
+      - pattern-not: |
+          public function $F(...) {
+            ...
+            if (!verifyCsrfToken(...)) { ... }
+            ...
+          }
+      # ── استثناءات مسمّاة ──────────────────────────────────────────
+      # سبع نقاط تضبط رأس JSON بحق بلا توكن، وكلها قراءة لا تعدّل حالة.
+      # الاستثناء هنا لا بتعليق nosemgrep فوق كل واحدة: مطابقة القاعدة
+      # تبدأ عند كتلة سمة #[OA\...] لا عند سطر الرأس، فالتعليق يجب أن
+      # يعلو السمة كلها — موضع هشّ يزيحه أول من «ينظّف» الملف. القائمة
+      # هنا يراها المراجع دفعةً واحدة.
+      #
+      #   getCsrf        — جلب التوكن نفسه؛ لا يمكن أن يشترط توكناً
+      #   list           — قراءة إشعارات على GET (المستخدم والأدمن)
+      #   searchProducts — بحث للقراءة على GET
+      #   stock          — استعلام مخزون عام على GET
+      #   checkStock     — استعلام مخزون على POST (قائمة معرّفات طويلة)،
+      #                    لا يعدّل حالة ولا يحمل توكناً أصلاً
+      - pattern-not: |
+          public function getCsrf(...) { ... }
+      - pattern-not: |
+          public function list(...) { ... }
+      - pattern-not: |
+          public function searchProducts(...) { ... }
+      - pattern-not: |
+          public function stock(...) { ... }
+      - pattern-not: |
+          public function checkStock(...) { ... }
