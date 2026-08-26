@@ -142,24 +142,21 @@ class WishlistController extends Controller
     )]
     public function notify(): void
     {
-        header('Content-Type: application/json; charset=utf-8');
-
-        if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'POST') {
-            http_response_code(400);
-            echo json_encode(['success' => false, 'message' => 'Invalid request method.']);
-            exit;
-        }
+        // كانت هذه الدالة تكتب فحوصها الثلاثة بيدها بـhttp_response_code
+        // و echo json_encode و exit. المشكلة لم تكن التكرار بل رسالة فشل
+        // CSRF: 'Invalid session, please refresh the page.'
+        //
+        // js/core/csrf.js يكتشف فشل التوكن بـ
+        //     message.startsWith('Invalid CSRF token')
+        // ليجلب توكناً جديداً ويُعيد المحاولة مرة واحدة. الرسالة أعلاه لا
+        // تبدأ بتلك البادئة، فكانت إعادة المحاولة **لا تُفعَّل أبداً** لزر
+        // «نبّهني عند التوفّر» رغم أن notify-stock.js يستدعي
+        // fetchWithCsrfRetry — أي أن المستخدم بتوكن منتهٍ كان يرى فشلاً
+        // نهائياً حيث ترى بقية الأزرار تعافياً صامتاً.
+        $this->beginJsonPost();
 
         if (!isUser()) {
-            http_response_code(401);
-            echo json_encode(['success' => false, 'message' => 'Please log in first.']);
-            exit;
-        }
-
-        if (!verifyCsrfToken($_POST['csrf_token'] ?? '')) {
-            http_response_code(403);
-            echo json_encode(['success' => false, 'message' => 'Invalid session, please refresh the page.']);
-            exit;
+            $this->respond(false, 'Please log in first.');
         }
 
         $pid = (int)($_POST['product_id'] ?? 0);
