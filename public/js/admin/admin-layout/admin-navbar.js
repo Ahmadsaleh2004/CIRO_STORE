@@ -13,8 +13,12 @@
 // ومحتوى (admin_session مقابل PHPSESSID) ونقطتا الخروج مختلفتان.
 
 // fetch عارٍ عن قصد — لا fetchWithCsrfRetry: AdminAuthController::logout
-// **لا تتحقق من توكن CSRF** (تُدمّر الجلسة وتحوّل بـ302، ولا تُرجع
-// JSON أصلاً). والغلاف يستدعي response.json() فكان سيرمي على تحويل.
+// تحوّل بـ302 ولا تُرجع JSON أصلاً، والغلاف يستدعي response.json() فكان
+// سيرمي على التحويل.
+//
+// التوكن يُرسَل ويُتحقَّق منه على الخادم منذ إصلاح CSRF الخروج. توكن
+// منتهٍ يعني بقاء الأدمن داخلاً وتحويله إلى /admin/home — وهو فشل مرئي
+// لا صامت، فلا حاجة لإعادة محاولة تلقائية هنا.
 function logoutAdmin() {
     // nosemgrep: cairo-bare-fetch-post
     fetch(window.URLROOT + '/admin/logout', {

@@ -304,12 +304,18 @@ document.addEventListener('DOMContentLoaded', () => {
 window.logoutUser = async function () {
     const fd = new FormData();
     fd.append('action', 'logout');
+    // AuthController::logout صارت تتحقق من CSRF (كانت لا تتحقق، فكان أي
+    // موقع خارجي يستطيع تسجيل خروج الزائر). التوكن من حقل مخفي تطبعه
+    // مودالات المصادقة على كل صفحة متجر، ويحدّثه csrf.js عند كل تجديد.
+    fd.append('csrf_token', document.querySelector('input[name="csrf_token"]')?.value || '');
+
     try {
-        // fetch عارٍ عن قصد — AuthController::logout لا تتحقق من CSRF
-        // (تُدمّر الجلسة مباشرة). لا شيء لشبكة الأمان لتتعافى منه.
-        // nosemgrep: cairo-bare-fetch-post
-        const res  = await fetch(window.BASE_URL + '/auth/logout', { method: 'POST', body: fd });
-        const data = await res.json();
+        // شبكة الأمان مطلوبة الآن فعلاً: توكن منتهٍ يعني فشل خروج، وهذه
+        // تجلب توكناً جديداً وتُعيد المحاولة مرة واحدة.
+        const data = await fetchWithCsrfRetry(window.BASE_URL + '/auth/logout', {
+            method: 'POST',
+            body: fd,
+        });
         window.location.href = data.redirect || window.BASE_URL;
     } catch {
         window.location.href = window.BASE_URL;

@@ -51,16 +51,7 @@ class AuthController extends Controller
             session_start();
         }
 
-        header('Content-Type: application/json; charset=utf-8');
-
-        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            $this->respond(false, 'Method not allowed.');
-        }
-
-        $token = $_POST['csrf_token'] ?? '';
-        if (!verifyCsrfToken($token)) {
-            $this->respond(false, 'Invalid CSRF token, please refresh and try again.');
-        }
+        $this->beginJsonPost();
 
         $email = trim(strtolower($_POST['email']    ?? ''));
         $pass  = $_POST['password'] ?? '';
@@ -174,16 +165,7 @@ class AuthController extends Controller
             session_start();
         }
 
-        header('Content-Type: application/json; charset=utf-8');
-
-        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            $this->respond(false, 'Method not allowed.');
-        }
-
-        $token = $_POST['csrf_token'] ?? '';
-        if (!verifyCsrfToken($token)) {
-            $this->respond(false, 'Invalid CSRF token, please refresh and try again.');
-        }
+        $this->beginJsonPost();
 
         // جمع البيانات
         $fullName    = trim($_POST['full_name']       ?? '');
@@ -296,7 +278,14 @@ class AuthController extends Controller
             session_start();
         }
 
-        header('Content-Type: application/json; charset=utf-8');
+        // التحقق قبل التدمير — ولسبب أمني لا تنظيمي: بدونه كان أي موقع
+        // خارجي يستطيع تسجيل خروج زائرك بمجرد `<img src=".../auth/logout">`
+        // أو فورم مخفي، لأن المتصفح يرسل كوكي الجلسة تلقائياً. الأثر
+        // إزعاج لا سرقة بيانات، لكنه CSRF قائم بلا مبرّر.
+        //
+        // beginJsonPost تقرأ التوكن عبر requestData() قبل أي مساس
+        // بالجلسة، فترتيب الاستدعاء هنا ليس تفصيلاً.
+        $this->beginJsonPost();
 
         // مسح الجلسة بالكامل
         $_SESSION = [];
@@ -344,10 +333,7 @@ class AuthController extends Controller
             $this->respond(false, 'Method not allowed.');
         }
 
-        $token = $_POST['csrf_token'] ?? '';
-        if (!verifyCsrfToken($token)) {
-            $this->respond(false, 'Invalid CSRF token, please refresh and try again.');
-        }
+        $this->beginJsonPost();
 
         $email = trim(strtolower($_POST['email'] ?? ''));
         $user = UserModel::findByEmail($email);
@@ -431,12 +417,7 @@ class AuthController extends Controller
     public function resetSubmit(): void
     {
         if (session_status() === PHP_SESSION_NONE) session_start();
-        header('Content-Type: application/json; charset=utf-8');
-
-        $csrf = $_POST['csrf_token'] ?? '';
-        if (!verifyCsrfToken($csrf)) {
-            $this->respond(false, 'Invalid CSRF token.');
-        }
+        $this->beginJsonPost();
 
         $email = trim(strtolower($_POST['email'] ?? ''));
         $token = $_POST['token'] ?? '';

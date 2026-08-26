@@ -134,6 +134,10 @@ abstract class Controller
      * بـredirect عند الفشل (مثل AdminBrandingController::save) لها
      * معالجتها الخاصة ولا تستعمل هذه.
      *
+     * ⚠️ نصّ رسالة فشل CSRF عقد لا تجميل: js/core/csrf.js يكتشف الفشل
+     * بـmessage.startsWith('Invalid CSRF token') ليُعيد المحاولة بتوكن
+     * جديد. أي صياغة لا تبدأ بهذه البادئة تُعطّل إعادة المحاولة بصمت.
+     *
      * @param bool $requireCsrf مرّر false للنقاط العامة التي لا تملك
      *                          توكناً بعد (مثل جلب التوكن نفسه).
      */
@@ -145,8 +149,35 @@ abstract class Controller
             $this->respond(false, 'Method not allowed.');
         }
 
-        if ($requireCsrf && !verifyCsrfToken($_POST['csrf_token'] ?? '')) {
+        if ($requireCsrf && !verifyCsrfToken($this->requestData()['csrf_token'] ?? '')) {
             $this->respond(false, 'Invalid CSRF token, please refresh and try again.');
         }
+    }
+
+    /**
+     * مدخلات الطلب موحّدة: $_POST مدموجاً بجسم JSON إن وُجد.
+     *
+     * لماذا؟ جزء من نقاط المشروع يرسل FormData وجزء يرسل JSON
+     * (cart.js و account.js مثلاً يرسلان JSON عبر fetchWithCsrfRetry).
+     * النقاط التي تستقبل JSON كانت تبني `array_merge($_POST, $body)`
+     * بنفسها ثم تقرأ التوكن منه — تسع نقاط تكرّر السطرين نفسيهما.
+     *
+     * وهذا ما كان يمنع توحيدها: beginJsonPost كانت تقرأ من $_POST وحده،
+     * فتحويلها كان سيكسر كل نقطة يصل توكنها في جسم JSON.
+     *
+     * النتيجة تُحسب مرة واحدة لكل طلب: php://input تيّار يُقرأ مرة، وقد
+     * تُستدعى هذه من beginJsonPost ثم من جسم الدالة.
+     *
+     * @return array<string,mixed>
+     */
+    protected function requestData(): array
+    {
+        static $cache = null;
+        if ($cache !== null) {
+            return $cache;
+        }
+
+        $body = json_decode(file_get_contents('php://input') ?: '', true);
+        return $cache = array_merge($_POST, is_array($body) ? $body : []);
     }
 }

@@ -83,21 +83,11 @@ class CheckoutController extends Controller
     )]
     public function placeOrder(): void
     {
-        header('Content-Type: application/json; charset=utf-8');
+        $this->beginJsonPost();
         Middleware::requireLogin();
 
-        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            $this->respond(false, 'Method not allowed.');
-        }
-
         // قراءة body JSON من cart.js (fetchWithCsrfRetry)
-        $body = json_decode(file_get_contents('php://input'), true) ?? [];
-        $post = array_merge($_POST, $body);
-
-        $token = $post['csrf_token'] ?? '';
-        if (!verifyCsrfToken($token)) {
-            $this->respond(false, 'Invalid CSRF token.');
-        }
+        $post = $this->requestData();
 
         $userId         = (int)$_SESSION['user_id'];
         $addressId      = (int)($post['address_id']      ?? 0);
@@ -201,20 +191,10 @@ class CheckoutController extends Controller
     )]
     public function cancelOrder(): void
     {
-        header('Content-Type: application/json; charset=utf-8');
+        $this->beginJsonPost();
         Middleware::requireLogin();
 
-        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            $this->respond(false, 'Method not allowed.');
-        }
-
-        $body = json_decode(file_get_contents('php://input'), true) ?? [];
-        $post = array_merge($_POST, $body);
-
-        $token = $post['csrf_token'] ?? '';
-        if (!verifyCsrfToken($token)) {
-            $this->respond(false, 'Invalid CSRF token.');
-        }
+        $post = $this->requestData();
 
         $orderId = (int)($post['order_id'] ?? 0);
         $userId  = (int)$_SESSION['user_id'];

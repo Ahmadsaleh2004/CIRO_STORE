@@ -94,12 +94,8 @@ class AdminManageAdminsController extends AdminController
     )]
     public function storeAdd(): void
     {
-        header('Content-Type: application/json; charset=utf-8');
+        $this->beginJsonPost();
         Middleware::requirePermission('can_manage_admins');
-
-        if (!verifyCsrfToken($_POST['csrf_token'] ?? '')) {
-            $this->respond(false, 'Invalid CSRF token, please refresh and try again.');
-        }
 
         $adminId = getCurrentAdminId();
         $myRole  = getAdminRole();
@@ -200,12 +196,8 @@ class AdminManageAdminsController extends AdminController
     )]
     public function storeEdit(): void
     {
-        header('Content-Type: application/json; charset=utf-8');
+        $this->beginJsonPost();
         Middleware::requirePermission('can_manage_admins');
-
-        if (!verifyCsrfToken($_POST['csrf_token'] ?? '')) {
-            $this->respond(false, 'Invalid CSRF token, please refresh and try again.');
-        }
 
         $adminId  = getCurrentAdminId();
         $targetId = (int)($_POST['target_id'] ?? 0);

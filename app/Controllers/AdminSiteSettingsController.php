@@ -89,17 +89,8 @@ class AdminSiteSettingsController extends AdminController
 
     public function save(): void
     {
-        header('Content-Type: application/json; charset=utf-8');
+        $this->beginJsonPost();
         Middleware::requirePermission('can_edit_site_content');
-
-        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            $this->respond(false, 'Method not allowed.');
-        }
-
-        $token = $_POST['csrf_token'] ?? '';
-        if (!verifyCsrfToken($token)) {
-            $this->respond(false, 'Invalid CSRF token, please refresh and try again.');
-        }
 
         // ── جلب القيم الحالية قبل التحديث (للمقارنة) ─────────────────────
         $before = SettingsModel::get();

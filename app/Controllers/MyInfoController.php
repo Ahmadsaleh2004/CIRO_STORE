@@ -93,21 +93,11 @@ class MyInfoController extends Controller
     )]
     public function updateProfile(): void
     {
-        header('Content-Type: application/json; charset=utf-8');
+        $this->beginJsonPost();
         Middleware::requireLogin();
 
-        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            $this->respond(false, 'Method not allowed.');
-        }
-
         // Support both JSON body (what account.js currently sends) and regular FormData — same pattern as admin
-        $body = json_decode(file_get_contents('php://input'), true) ?? [];
-        $post = array_merge($_POST, $body);
-
-        $token = $post['csrf_token'] ?? '';
-        if (!verifyCsrfToken($token)) {
-            $this->respond(false, 'Invalid CSRF token, please refresh and try again.');
-        }
+        $post = $this->requestData();
 
         $userId = (int)$_SESSION['user_id'];
         $user   = UserModel::findById($userId);
@@ -197,20 +187,10 @@ class MyInfoController extends Controller
     )]
     public function addAddress(): void
     {
-        header('Content-Type: application/json; charset=utf-8');
+        $this->beginJsonPost();
         Middleware::requireLogin();
 
-        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            $this->respond(false, 'Method not allowed.');
-        }
-
-        $body = json_decode(file_get_contents('php://input'), true) ?? [];
-        $post = array_merge($_POST, $body);
-
-        $token = $post['csrf_token'] ?? '';
-        if (!verifyCsrfToken($token)) {
-            $this->respond(false, 'Invalid CSRF token.');
-        }
+        $post = $this->requestData();
 
         $userId = (int)$_SESSION['user_id'];
         $full   = trim($post['full_address'] ?? '');
@@ -260,20 +240,10 @@ class MyInfoController extends Controller
     )]
     public function deleteAddress(): void
     {
-        header('Content-Type: application/json; charset=utf-8');
+        $this->beginJsonPost();
         Middleware::requireLogin();
 
-        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            $this->respond(false, 'Method not allowed.');
-        }
-
-        $body = json_decode(file_get_contents('php://input'), true) ?? [];
-        $post = array_merge($_POST, $body);
-
-        $token = $post['csrf_token'] ?? '';
-        if (!verifyCsrfToken($token)) {
-            $this->respond(false, 'Invalid CSRF token.');
-        }
+        $post = $this->requestData();
 
         $userId    = (int)$_SESSION['user_id'];
         $addressId = (int)($post['address_id'] ?? 0);
