@@ -1,29 +1,29 @@
 /**
  * js/features/notifications.js
- * محرك الإشعارات الذكي الموحد لصفحات المستخدم والأدمن
+ * جرس الإشعارات وسايدبارها — **لصفحات المتجر وحدها**.
+ *
+ * ⚠️ لا تُضف هنا فرعاً للأدمن. لوحة الأدمن يخدمها ملف مستقل هو
+ * js/admin/admin-notifications.js، بجلسة أخرى (admin_session لا
+ * PHPSESSID) ونقاط أخرى (/admin/notifications/*) وماركب مختلف.
+ *
+ * كان هذا الملف يحمل وضعين: يكتشف #adminNotifBell فيتصرّف كملف أدمن،
+ * وإلا فكملف متجر. **والفرع الأول لم يُنفَّذ ولا مرة**، لأن ثلاث
+ * حقائق مستقلة تمنعه:
+ *   1. #adminNotifBell موجود في app/views/admin/inc/navbar.php وحده.
+ *   2. هذا الملف مُدرَج في app/views/inc/footer.php وحده — فوتر المتجر.
+ *   3. layout الأدمن في Core/Controller يستدعي admin/inc/footer.php،
+ *      وهو ملف مختلف تماماً لا يذكر هذا السكربت.
+ * أي أن الجرس الذي يبحث عنه لا يكون في الصفحة أبداً حين يعمل الملف.
  */
 
 (function () {
     'use strict';
 
-    const adminBell = document.getElementById('adminNotifBell');
-    const userBell  = document.getElementById('notifBell');
+    const userBell = document.getElementById('notifBell');
 
-    if (!adminBell && !userBell) return;
+    if (!userBell) return;
 
-    const isAdmin = !!adminBell;
-
-    const cfg = isAdmin ? {
-        bell:        adminBell,
-        badge:       document.getElementById('adminNotifBadge'),
-        sidebar:     document.getElementById('adminNotifSidebar'),
-        sidebarList: document.getElementById('adminNotifList'),
-        closeBtn:    document.getElementById('adminNotifClose'),
-        markAllBtn:  document.getElementById('adminNotifMarkAll'),
-        deleteAllBtn:document.getElementById('adminNotifDeleteAll'),
-        endpoint:    '/admin/notifications',
-        senderName:  'System',
-    } : {
+    const cfg = {
         bell:        userBell,
         badge:       document.getElementById('notifBadge'),
         sidebar:     document.getElementById('notifSidebar'),
@@ -31,7 +31,6 @@
         closeBtn:    document.getElementById('notifClose'),
         markAllBtn:  document.getElementById('notifMarkAll'),
         deleteAllBtn:document.getElementById('notifDeleteAll'),
-        endpoint:    '/notifications',
         senderName:  'Cairo Store',
     };
 
@@ -39,10 +38,7 @@
 
     async function fetchNotifications() {
         try {
-            const url = isAdmin
-                ? window.BASE_URL + cfg.endpoint + '/list'
-                : window.BASE_URL + '/notifications/list';
-            const res  = await fetch(url);
+            const res  = await fetch(window.BASE_URL + '/notifications/list');
             const data = await res.json();
             if (!data.success) return;
 
@@ -66,14 +62,16 @@
             cfg.sidebarList.innerHTML = '<li class="notif-empty">No notifications</li>';
             return;
         }
-        const clickFn = isAdmin ? 'handleAdminNotifClick' : 'openNotifDetail';
-        const dismissFn = isAdmin ? 'dismissAdminNotif' : 'dismissNotif';
-
+        // الاسمان حرفيّان لا متغيّران: كان هنا ترشيح بـisAdmin يختار بين
+        // اسمَي الأدمن واسمَي المتجر، وكان يقع دائماً على هذين. ولاحظ أن
+        // المتغيّر المحلي dismissFn كان **يُظلّل** الدالة dismissFn المعرَّفة
+        // في نطاق الـIIFE — تظليل بلا ضرر هنا، لكنه من نفس عائلة العطل
+        // الذي عطّل «إضافة عنوان» في features/account.js.
         cfg.sidebarList.innerHTML = allNotifs.map(n => `
             <li class="notif-item ${n.is_read == 1 ? 'read' : 'unread'}"
-                data-id="${n.id}" onclick="${clickFn}(${n.id})">
+                data-id="${n.id}" onclick="openNotifDetail(${n.id})">
                 <button class="notif-dismiss-btn"
-                        onclick="${dismissFn}(event, ${n.id})"
+                        onclick="dismissNotif(event, ${n.id})"
                         title="Dismiss">✕</button>
                 <div class="notif-title">${escHtml(n.title)}</div>
                 <div class="notif-msg">${escHtml(n.message.length > 80 ? n.message.slice(0,80) + '…' : n.message)}</div>
@@ -140,7 +138,6 @@
                     <small style="color:#6b7280;">
                         <strong>From:</strong> ${escHtml(senderName)}<br>
                         ${senderEmail ? `<strong>Email:</strong> ${escHtml(senderEmail)}<br>` : ''}
-                        ${isAdmin && notif.type ? `<strong>Type:</strong> ${escHtml(notif.type)}<br>` : ''}
                         <strong>Date:</strong> ${sentDate}
                     </small>
                 </div>`,
@@ -152,63 +149,25 @@
             width: '500px',
         }).then((result) => {
             if (result.isDenied && hasProductLink) {
-                const targetUrl = isAdmin
-                    ? window.BASE_URL + '/admin/products/edit?id=' + notif.related_id
-                    : window.BASE_URL + '/product?id=' + notif.related_id;
-                window.location.href = targetUrl;
+                window.location.href = window.BASE_URL + '/product?id=' + notif.related_id;
             }
         });
     };
 
+    // الماركب المُولَّد يستدعي هذا الاسم نصّاً في onclick، فيجب أن يبقى
+    // على window. وحُذف معه توأمه openAdminNotifDetail — لم يكن يشير إليه
+    // شيء في المشروع كله (لا ماركب ولا admin-notifications.js).
     window.openNotifDetail = openDetail;
-    window.openAdminNotifDetail = openDetail;
-
-    if (isAdmin) {
-        window.handleAdminNotifClick = function (id) {
-            const notif = allNotifs.find(n => n.id == id);
-            if (!notif) return;
-
-            const isStockRequest = notif.type === 'stock_notify_request';
-            const hasProductLink = notif.related_type === 'product' && notif.related_id;
-            const isOrderTaken = notif.type === 'order_taken' && notif.related_type === 'order' && notif.related_id;
-
-            if (isOrderTaken) {
-                if (notif.is_read == 0) markAsRead(id);
-                window.location.href = window.BASE_URL + '/admin/orders/details?id=' + notif.related_id;
-                return;
-            }
-
-            if (isStockRequest && hasProductLink) {
-                if (notif.is_read == 0) markAsRead(id);
-                window.location.href = window.BASE_URL + '/admin/products/edit?id=' + notif.related_id;
-                return;
-            }
-
-            openDetail(id);
-        };
-    }
 
     async function markAsRead(id) {
         try {
-            let data;
-            if (isAdmin) {
-                const fd = new FormData();
-                fd.append('notification_id', id);
-                fd.append('csrf_token', window._csrfToken || '');
-                data = await fetchWithCsrfRetry(
-                    window.BASE_URL + cfg.endpoint + '/mark-read',
-                    { method: 'POST', body: fd }
-                );
-            } else {
-                // المستخدم: Route الجديد
-                const fd = new FormData();
-                fd.append('notification_id', id);
-                fd.append('csrf_token', window._csrfToken || '');
-                data = await fetchWithCsrfRetry(
-                    window.BASE_URL + '/notifications/mark-read',
-                    { method: 'POST', body: fd }
-                );
-            }
+            const fd = new FormData();
+            fd.append('notification_id', id);
+            fd.append('csrf_token', window._csrfToken || '');
+            const data = await fetchWithCsrfRetry(
+                window.BASE_URL + '/notifications/mark-read',
+                { method: 'POST', body: fd }
+            );
             if (data.csrf_token && typeof updateCsrfToken === 'function') updateCsrfToken(data.csrf_token);
             const n = allNotifs.find(n => n.id == id);
             if (n) n.is_read = 1;
@@ -225,19 +184,10 @@
 
     const dismissFn = async function(event, id) {
         if (event && event.stopPropagation) event.stopPropagation();
-        let data;
-        if (isAdmin) {
-            const fd = new FormData();
-            fd.append('notification_id', id);
-            fd.append('csrf_token', window._csrfToken || document.querySelector('input[name="csrf_token"]')?.value || '');
-            data = await fetchWithCsrfRetry(window.BASE_URL + cfg.endpoint + '/dismiss', { method: 'POST', body: fd });
-        } else {
-            // المستخدم: Route الجديد
-            const fd = new FormData();
-            fd.append('notification_id', id);
-            fd.append('csrf_token', window._csrfToken || document.querySelector('input[name="csrf_token"]')?.value || '');
-            data = await fetchWithCsrfRetry(window.BASE_URL + '/notifications/dismiss', { method: 'POST', body: fd });
-        }
+        const fd = new FormData();
+        fd.append('notification_id', id);
+        fd.append('csrf_token', window._csrfToken || document.querySelector('input[name="csrf_token"]')?.value || '');
+        const data = await fetchWithCsrfRetry(window.BASE_URL + '/notifications/dismiss', { method: 'POST', body: fd });
         if (data.success) {
             allNotifs = allNotifs.filter(n => n.id != id);
             const unread = data.unread_count !== undefined
@@ -251,22 +201,16 @@
         }
     };
 
+    // كسابقه: الاسم مطلوب على window لأن الماركب يستدعيه نصّاً. وحُذف
+    // توأمه dismissAdminNotif — كان يشير إليه سطر واحد في هذا الملف
+    // نفسه، وهو السطر المحذوف في renderSidebar.
     window.dismissNotif = dismissFn;
-    window.dismissAdminNotif = dismissFn;
 
     if (cfg.deleteAllBtn) {
         cfg.deleteAllBtn.addEventListener('click', async () => {
-            let data;
-            if (isAdmin) {
-                const fd = new FormData();
-                fd.append('csrf_token', window._csrfToken || document.querySelector('input[name="csrf_token"]')?.value || '');
-                data = await fetchWithCsrfRetry(window.BASE_URL + cfg.endpoint + '/delete-all', { method: 'POST', body: fd });
-            } else {
-                // المستخدم: Route الجديد
-                const fd = new FormData();
-                fd.append('csrf_token', window._csrfToken || document.querySelector('input[name="csrf_token"]')?.value || '');
-                data = await fetchWithCsrfRetry(window.BASE_URL + '/notifications/delete-all', { method: 'POST', body: fd });
-            }
+            const fd = new FormData();
+            fd.append('csrf_token', window._csrfToken || document.querySelector('input[name="csrf_token"]')?.value || '');
+            const data = await fetchWithCsrfRetry(window.BASE_URL + '/notifications/delete-all', { method: 'POST', body: fd });
             if (data.success) {
                 allNotifs = [];
                 if (cfg.badge) cfg.badge.style.display = 'none';
@@ -277,23 +221,12 @@
 
     if (cfg.markAllBtn) {
         cfg.markAllBtn.addEventListener('click', async () => {
-            let data;
-            if (isAdmin) {
-                const fd = new FormData();
-                fd.append('csrf_token', window._csrfToken || '');
-                data = await fetchWithCsrfRetry(
-                    window.BASE_URL + cfg.endpoint + '/mark-all-read',
-                    { method: 'POST', body: fd }
-                );
-            } else {
-                // المستخدم: Route الجديد
-                const fd = new FormData();
-                fd.append('csrf_token', window._csrfToken || '');
-                data = await fetchWithCsrfRetry(
-                    window.BASE_URL + '/notifications/mark-all-read',
-                    { method: 'POST', body: fd }
-                );
-            }
+            const fd = new FormData();
+            fd.append('csrf_token', window._csrfToken || '');
+            const data = await fetchWithCsrfRetry(
+                window.BASE_URL + '/notifications/mark-all-read',
+                { method: 'POST', body: fd }
+            );
             if (data.csrf_token && typeof updateCsrfToken === 'function') updateCsrfToken(data.csrf_token);
             allNotifs.forEach(n => n.is_read = 1);
             if (cfg.badge) cfg.badge.style.display = 'none';
@@ -301,7 +234,7 @@
         });
     }
 
-    // ── Backdrop element (shared by user & admin sidebars) ──
+    // ── Backdrop element ────────────────────────────────────
     let backdropEl = document.querySelector('.notif-backdrop');
     if (!backdropEl) {
         backdropEl = document.createElement('div');
