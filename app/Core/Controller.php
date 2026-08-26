@@ -134,9 +134,9 @@ abstract class Controller
      * بـredirect عند الفشل (مثل AdminBrandingController::save) لها
      * معالجتها الخاصة ولا تستعمل هذه.
      *
-     * ⚠️ نصّ رسالة فشل CSRF عقد لا تجميل: js/core/csrf.js يكتشف الفشل
-     * بـmessage.startsWith('Invalid CSRF token') ليُعيد المحاولة بتوكن
-     * جديد. أي صياغة لا تبدأ بهذه البادئة تُعطّل إعادة المحاولة بصمت.
+     * فشل CSRF يحمل error_code صريحاً (ERR_CSRF_INVALID). js/core/csrf.js
+     * يكتشفه به ليجلب توكناً جديداً ويُعيد المحاولة مرة واحدة — والرسالة
+     * صارت للعرض وحدها.
      *
      * @param bool $requireCsrf مرّر false للنقاط العامة التي لا تملك
      *                          توكناً بعد (مثل جلب التوكن نفسه).
@@ -150,8 +150,38 @@ abstract class Controller
         }
 
         if ($requireCsrf && !verifyCsrfToken($this->requestData()['csrf_token'] ?? '')) {
-            $this->respond(false, 'Invalid CSRF token, please refresh and try again.');
+            $this->respondCsrfFailure();
         }
+    }
+
+    /**
+     * رمز فشل CSRF — عقد بين الخادم و js/core/csrf.js.
+     *
+     * لماذا رمز لا نصّ؟ كان الغلاف يكتشف الفشل بـ
+     *     message.startsWith('Invalid CSRF token')
+     * فكانت أي نقطة تصوغ رسالتها بشكل آخر تفقد إعادة المحاولة **بصمت**.
+     * حدث ذلك فعلاً ثلاث مرات: WishlistController::notify
+     * ('Invalid session…') و ContactController::send ('Invalid request…')
+     * وست نقاط نجت بالصدفة لأن صياغتها بدأت بالبادئة نفسها.
+     *
+     * الرمز يفصل ما تقرأه الآلة عمّا يقرأه المستخدم: النصّ حرّ يتغيّر
+     * بحرية، والرمز ثابت.
+     */
+    public const ERR_CSRF_INVALID = 'csrf_invalid';
+
+    /**
+     * استجابة فشل CSRF الموحّدة. تُستدعى من beginJsonPost ومن النقاط
+     * القليلة التي لا تمرّ بها لكنها تُرجع JSON.
+     *
+     * @param array $extra بيانات إضافية — reauth مثلاً تُعيد توكناً جديداً
+     */
+    protected function respondCsrfFailure(array $extra = []): never
+    {
+        $this->respond(
+            false,
+            'Invalid CSRF token, please refresh and try again.',
+            array_merge(['error_code' => self::ERR_CSRF_INVALID], $extra)
+        );
     }
 
     /**

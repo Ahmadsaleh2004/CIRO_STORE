@@ -192,6 +192,7 @@ async function fetchSuggestions(q) {
 
     const fd = new FormData();
     fd.append('q', q);
+    fd.append('csrf_token', window._csrfToken || '');
 
     try {
         const data = await fetchWithCsrfRetry(window.URLROOT + '/admin/products/categories/suggest', { method: 'POST', body: fd });
@@ -231,15 +232,14 @@ function openDeleteConfirm(id, name) {
 
     // أعد ترتيب الـ select بحيث الأقرب بالمعنى أولاً
     //
-    // fetch عارٍ عن قصد — لا fetchWithCsrfRetry: هذه النقطة استعلام قراءة
-    // (اقتراح تصنيفات مشابهة) و AdminProductsController::suggestCategory
-    // **لا تتحقق من توكن CSRF** أصلاً، تفحص الصلاحية فقط. فلا يمكن أن
-    // تُرجع «Invalid CSRF token»، ولا شيء لشبكة الأمان لتفعله هنا.
+    // صار هذا النداء يمرّ بشبكة الأمان: suggestCategory كانت النقطة
+    // الوحيدة التي تقبل POST بلا فحص CSRF، فأصبحت تمرّ بـbeginJsonPost.
+    // ولأن csrf.js لم يعد يكتشف الفشل بنصّ الرسالة بل بـerror_code، فأي
+    // نقطة خارج الشبكة تفقد التعافي من توكن منتهٍ.
     const fd = new FormData();
     fd.append('q', name);
-    // nosemgrep: cairo-bare-fetch-post
-    fetch(window.URLROOT + '/admin/products/categories/suggest', { method: 'POST', body: fd })
-        .then(r => r.json())
+    fd.append('csrf_token', window._csrfToken || '');
+    fetchWithCsrfRetry(window.URLROOT + '/admin/products/categories/suggest', { method: 'POST', body: fd })
         .then(data => {
             if (!data.success || !select) return;
             const order = data.suggestions.map(s => String(s.id));

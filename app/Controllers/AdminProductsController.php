@@ -586,7 +586,12 @@ class AdminProductsController extends AdminController
     )]
     public function suggestCategory(): void
     {
-        header('Content-Type: application/json; charset=utf-8');
+        // كانت تفحص الصلاحية وحدها بلا توكن CSRF. النقطة قراءة محضة
+        // (اقتراح تصنيفات مشابهة) فأثر استغلالها محدود، لكن
+        // js/admin/category-picker.js يمرّ عليها بشبكة الأمان، وترك نقطة
+        // POST واحدة بلا فحص يعني أن حذف مطابقة نصّ الرسالة من csrf.js
+        // كان سيتركها بلا مسار تعافٍ. التوحيد يغلق الاثنين معاً.
+        $this->beginJsonPost();
         Middleware::requirePermission('can_manage_products');
 
         $q = trim($_POST['q'] ?? '');

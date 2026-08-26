@@ -122,7 +122,7 @@ class AdminAuthController extends Controller
         if (!verifyCsrfToken($token)) {
             unset($_SESSION['csrf_token']);
             generateCsrfToken();
-            $this->respond(false, 'Invalid CSRF token, please refresh and try again.');
+            $this->respondCsrfFailure();
         }
 
         $email = trim(strtolower($_POST['email']    ?? ''));
@@ -282,7 +282,7 @@ class AdminAuthController extends Controller
         if (!verifyCsrfToken($token)) {
             unset($_SESSION['csrf_token']);
             generateCsrfToken();
-            $this->respond(false, 'Invalid CSRF token, please refresh and try again.');
+            $this->respondCsrfFailure();
         }
 
         $pendingId = (int)($_SESSION['pending_2fa_admin_id'] ?? 0);
@@ -426,7 +426,7 @@ class AdminAuthController extends Controller
         if (!verifyCsrfToken($token)) {
             unset($_SESSION['csrf_token']);
             generateCsrfToken();
-            $this->respond(false, 'Invalid CSRF token, please refresh and try again.');
+            $this->respondCsrfFailure();
         }
 
         $email = trim(strtolower($_POST['email'] ?? ''));
@@ -614,9 +614,11 @@ class AdminAuthController extends Controller
         if (!verifyCsrfToken($token)) {
             unset($_SESSION['csrf_token']);
             generateCsrfToken();
-            $this->respond(false, 'Invalid CSRF token, please try again.', [
-                'csrf_token' => $_SESSION['csrf_token'],
-            ]);
+            // التوكن الجديد يُعاد في الاستجابة كي يواصل store-reauth.js
+            // بلا جلب إضافي — وهذه النقطة تمرّ بـfetchWithCsrfRetry فعلاً،
+            // فبلا error_code كانت ستفقد إعادة المحاولة بعد حذف مطابقة
+            // نصّ الرسالة من csrf.js.
+            $this->respondCsrfFailure(['csrf_token' => $_SESSION['csrf_token']]);
         }
 
         $adminId = (int)($_SESSION['admin_id'] ?? 0);

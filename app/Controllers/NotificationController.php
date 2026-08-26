@@ -27,6 +27,16 @@ class NotificationController extends Controller
     )]
     public function list(): void
     {
+        // لا beginJsonPost هنا: هذه قراءة على GET ولا تعدّل حالة، فلا
+        // معنى لفحص POST ولا لتوكن CSRF.
+        //
+        // ⚠️ ملاحظة تاريخية تخصّ بقية هذا الملف: النقاط الأربع المعدِّلة
+        // للحالة (markRead · markAllRead · dismiss · deleteAll) كانت
+        // تستدعي requireAuth + requirePost **بلا أي فحص CSRF إطلاقاً**،
+        // رغم أن js/features/notifications.js يرسل التوكن في كل منها.
+        // أي أن `/notifications/delete-all` — حذف كل إشعارات المستخدم —
+        // كان قابلاً للتنفيذ من أي موقع خارجي. أُثبت ذلك بطلب بلا توكن
+        // رجع {"success":true} قبل الإصلاح. الأربع تمرّ الآن بالبوابة.
         header('Content-Type: application/json; charset=utf-8');
         $this->requireAuth();
 
@@ -65,9 +75,8 @@ class NotificationController extends Controller
     )]
     public function markRead(): void
     {
-        header('Content-Type: application/json; charset=utf-8');
+        $this->beginJsonPost();
         $this->requireAuth();
-        $this->requirePost();
 
         $notifId = (int)($_POST['notification_id'] ?? 0);
         $userId  = (int)$_SESSION['user_id'];
@@ -94,9 +103,8 @@ class NotificationController extends Controller
     )]
     public function markAllRead(): void
     {
-        header('Content-Type: application/json; charset=utf-8');
+        $this->beginJsonPost();
         $this->requireAuth();
-        $this->requirePost();
 
         $userId = (int)$_SESSION['user_id'];
         NotificationModel::markAllRead($userId);
@@ -128,9 +136,8 @@ class NotificationController extends Controller
     )]
     public function dismiss(): void
     {
-        header('Content-Type: application/json; charset=utf-8');
+        $this->beginJsonPost();
         $this->requireAuth();
-        $this->requirePost();
 
         $notifId = (int)($_POST['notification_id'] ?? 0);
         $userId  = (int)$_SESSION['user_id'];
@@ -157,9 +164,8 @@ class NotificationController extends Controller
     )]
     public function deleteAll(): void
     {
-        header('Content-Type: application/json; charset=utf-8');
+        $this->beginJsonPost();
         $this->requireAuth();
-        $this->requirePost();
 
         $userId = (int)$_SESSION['user_id'];
         NotificationModel::deleteAll($userId);
@@ -178,11 +184,8 @@ class NotificationController extends Controller
         }
     }
 
-    /** التحقق من POST */
-    private function requirePost(): void
-    {
-        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            $this->respond(false, 'Method not allowed.');
-        }
-    }
+    // حُذفت requirePost(): كانت تفحص الطريقة وحدها، وهذا ما تفعله
+    // beginJsonPost() ضمن ثلاثة فحوص. وجودها بجانبها كان يوحي بأن
+    // النقاط محميّة بينما كان **فحص CSRF غائباً تماماً** عن هذا الملف —
+    // انظر تعليق list() أدناه.
 }

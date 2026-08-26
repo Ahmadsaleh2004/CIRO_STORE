@@ -116,9 +116,17 @@ async function fetchWithCsrfRetry(url, options = {}, _retried = false) {
         updateCsrfToken(data.csrf_token);
     }
 
-    // الصياغتان مستخدمتان بالمشروع: 'Invalid CSRF token.' و'Invalid CSRF token, please refresh and try again.'
-    if (!data.success && typeof data.message === 'string'
-        && data.message.startsWith('Invalid CSRF token') && !_retried) {
+    // الاكتشاف برمز صريح لا بنصّ رسالة.
+    //
+    // كان الشرط هنا message.startsWith('Invalid CSRF token')، فكانت أي
+    // نقطة تصوغ رسالتها بشكل آخر تفقد إعادة المحاولة **بصمت**. حدث ذلك
+    // ثلاث مرات فعلاً: زر «نبّهني عند التوفّر» ونموذج «اتصل بنا» كانا
+    // يردّان بـ'Invalid session…' و'Invalid request…'، وست نقاط أخرى نجت
+    // بالصدفة لأن صياغتها بدأت بالبادئة نفسها.
+    //
+    // ERR_CSRF_INVALID معرَّف في App\Core\Controller ويُرسَل من
+    // respondCsrfFailure(). الرسالة صارت للعرض وحدها وتتغيّر بحرية.
+    if (!data.success && data.error_code === 'csrf_invalid' && !_retried) {
         try {
             // مسار مختلف حسب السياق — الأدمن يستخدم /admin/csrf، المستخدم العادي /auth/csrf
             const csrfEndpoint = (typeof window.URLROOT !== 'undefined')
