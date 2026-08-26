@@ -72,6 +72,8 @@ class AdminBrandingController extends AdminController
     {
         Middleware::requirePermission('can_manage_branding');
 
+        // استُثني من beginJsonPost: يفشل بـredirectWithError لا بـJSON.
+        // هذه صفحة فورم لا نقطة API — التحويل يقلبها إلى استجابة JSON.
         if (!verifyCsrfToken($_POST['csrf_token'] ?? '')) {
             $this->redirectWithError('Invalid CSRF token, please refresh and try again.');
             return;

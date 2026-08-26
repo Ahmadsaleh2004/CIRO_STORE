@@ -34,6 +34,8 @@ class ContactController extends Controller
 
             $token = $_POST['csrf_token'] ?? '';
 
+            // استُثني من beginJsonPost: لا يفشل أصلاً — يضع النص في
+            // $errorMsg ويُكمل عرض الصفحة. الدالة تخدم GET وPOST معاً.
             if (!verifyCsrfToken($token)) {
                 $errorMsg = 'Invalid request, please refresh the page and try again.';
             } else {
@@ -106,18 +108,12 @@ class ContactController extends Controller
     )]
     public function send(): void
     {
-        header('Content-Type: application/json; charset=utf-8');
-
-        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            echo json_encode(['success' => false, 'message' => 'Method not allowed.']);
-            exit;
-        }
-
-        $token = $_POST['csrf_token'] ?? '';
-        if (!verifyCsrfToken($token)) {
-            echo json_encode(['success' => false, 'message' => 'Invalid request, please refresh the page and try again.']);
-            exit;
-        }
+        // كانت ترد عند فشل التوكن بـ'Invalid request, please refresh the
+        // page and try again.' — ولا تبدأ بالبادئة التي يفحصها
+        // js/core/csrf.js (startsWith('Invalid CSRF token'))، فكانت إعادة
+        // المحاولة معطّلة لنموذج «اتصل بنا» رغم أن contact.js يستدعي
+        // fetchWithCsrfRetry. نفس عطل WishlistController::notify.
+        $this->beginJsonPost();
 
         $userId = getCurrentUserId();
         if (!$userId) {

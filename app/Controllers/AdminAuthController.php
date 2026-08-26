@@ -115,6 +115,10 @@ class AdminAuthController extends Controller
 
         // CSRF
         $token = $_POST['csrf_token'] ?? '';
+        // استُثني من beginJsonPost: يدوّر توكن CSRF عند كل فشل
+        // (unset + generateCsrfToken) قبل الردّ. البوابة الموحّدة ترد
+        // مباشرةً بلا تدوير، فالتحويل يُسقط التدوير على أحسّ مسار
+        // في المشروع — دخول الأدمن.
         if (!verifyCsrfToken($token)) {
             unset($_SESSION['csrf_token']);
             generateCsrfToken();
@@ -274,6 +278,7 @@ class AdminAuthController extends Controller
         }
 
         $token = $_POST['csrf_token'] ?? '';
+        // استُثني من beginJsonPost: يدوّر التوكن عند الفشل مثل login().
         if (!verifyCsrfToken($token)) {
             unset($_SESSION['csrf_token']);
             generateCsrfToken();
@@ -417,6 +422,7 @@ class AdminAuthController extends Controller
         }
 
         $token = $_POST['csrf_token'] ?? '';
+        // استُثني من beginJsonPost: يدوّر التوكن عند الفشل مثل login().
         if (!verifyCsrfToken($token)) {
             unset($_SESSION['csrf_token']);
             generateCsrfToken();
@@ -487,6 +493,8 @@ class AdminAuthController extends Controller
         }
 
         $token = $_POST['csrf_token'] ?? '';
+        // استُثني من beginJsonPost: يفشل بـheader(Location) لا بـJSON.
+        // البوابة تطبع رأس JSON ثم respond، فتقلب تحويلاً إلى استجابة.
         if (!verifyCsrfToken($token)) {
             header('Location: ' . URLROOT . '/admin/home');
             exit;
@@ -600,6 +608,9 @@ class AdminAuthController extends Controller
         }
 
         $token = $_POST['csrf_token'] ?? '';
+        // استُثني من beginJsonPost: يدوّر التوكن **ويُعيده في الاستجابة**
+        // ($extra['csrf_token']) كي يواصل admin-auth.js بلا جلب إضافي.
+        // سلوك خاص لا تملكه البوابة الموحّدة.
         if (!verifyCsrfToken($token)) {
             unset($_SESSION['csrf_token']);
             generateCsrfToken();

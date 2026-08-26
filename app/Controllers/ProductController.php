@@ -140,6 +140,8 @@ class ProductController extends Controller
             && isUser()
             && empty($_SESSION['admin_in_store_mode'] ?? false)
         ) {
+            // استُثني من beginJsonPost: لا يفشل أصلاً — يضع النص في
+            // $reviewErr ويُكمل عرض صفحة المنتج. تخدم GET وPOST معاً.
             if (!verifyCsrfToken($_POST['csrf_token'] ?? '')) {
                 $reviewErr = 'Invalid session, please refresh the page and try again.';
             } else {

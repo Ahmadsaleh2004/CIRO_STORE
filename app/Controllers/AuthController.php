@@ -417,12 +417,7 @@ class AuthController extends Controller
     public function resetSubmit(): void
     {
         if (session_status() === PHP_SESSION_NONE) session_start();
-        header('Content-Type: application/json; charset=utf-8');
-
-        $csrf = $_POST['csrf_token'] ?? '';
-        if (!verifyCsrfToken($csrf)) {
-            $this->respond(false, 'Invalid CSRF token.');
-        }
+        $this->beginJsonPost();
 
         $email = trim(strtolower($_POST['email'] ?? ''));
         $token = $_POST['token'] ?? '';

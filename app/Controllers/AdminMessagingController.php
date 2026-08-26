@@ -124,19 +124,17 @@ class AdminMessagingController extends AdminController
     )]
     public function broadcast(): void
     {
-        header('Content-Type: application/json; charset=utf-8');
+        // التحقق أولاً ثم الصلاحية — والترتيب مقصود وكان معكوساً.
+        // الصلاحية المطلوبة هنا تُحسب من $_POST['target_type']، أي من
+        // مُدخَل لم يُتحقَّق منه بعد. لم يكن ذلك مستغَلاً (الطلب يفشل عند
+        // CSRF على أي حال)، لكن اشتقاق قرار صلاحية من بيانات غير موثوقة
+        // قبل التحقق منها ترتيب لا يُبنى عليه.
+        $this->beginJsonPost();
 
         $targetType = $_POST['target_type'] ?? 'admin';
 
         // فحص صلاحية ديناميكي حسب target_type — كان مثبّت على can_manage_admins فقط
         Middleware::requirePermission($targetType === 'user' ? 'can_manage_users' : 'can_manage_admins');
-
-        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            $this->respond(false, 'Method not allowed.');
-        }
-        if (!verifyCsrfToken($_POST['csrf_token'] ?? '')) {
-            $this->respond(false, 'Invalid CSRF token, please refresh and try again.');
-        }
 
         $senderId = getCurrentAdminId();
         $title    = trim($_POST['title'] ?? '');
