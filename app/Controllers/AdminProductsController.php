@@ -382,11 +382,18 @@ class AdminProductsController extends AdminController
         }
 
         $adminId = getCurrentAdminId();
+        // ثلاث حالات متمايزة كما في delete(): null فشل تقني · false لم
+        // يوجد · true حُدِّث. والصور المرفوعة تُنظَّف في الحالتين
+        // الفاشلتين كي لا تتراكم ملفات لا يشير إليها صفّ.
         $ok = AdminProductModel::update($productId, $postData, $parsedVariants, array_values($categoryIds), $adminId);
 
-        if (!$ok) {
+        if ($ok === null) {
             ProductVariantUploader::cleanup($parsedVariants, $uploadDir);
             $this->jsonError('Failed to update product.');
+        }
+        if ($ok === false) {
+            ProductVariantUploader::cleanup($parsedVariants, $uploadDir);
+            $this->jsonError('Product not found.');
         }
 
         // إذا كان نافذًا وعاد للتوفر، أخبر المستخدمين
