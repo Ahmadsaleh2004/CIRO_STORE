@@ -1,0 +1,104 @@
+# ══════════════════════════════════════════════════════════════
+# قواعد gitleaks — Cairo Store
+# ══════════════════════════════════════════════════════════════
+#
+# القواعد الافتراضية ممتازة لتوكنات المزوّدين: اختُبرت هنا على ستة
+# أنواع (AWS · مفتاح RSA خاص · GitHub · Google API · Slack · Stripe)
+# فأمسكتها كلها. لكنها **لا تمسك**:
+#
+#   1. كلمة سر مكتوبة حرفياً في الكود
+#   2. سلسلة اتصال قاعدة بيانات تحمل كلمة السر داخلها
+#
+# وهذا بالضبط ما يخصّ هذا المشروع: ملف .env يحمل DB_PASSWORD، وأي نسخة
+# منه تتسرّب إلى ملف متتبَّع تمرّ بلا اعتراض.
+#
+# ⚠️ لا تحذف `useDefault = true` — بدونه تُستبدل القواعد المئة الافتراضية
+# بالقاعدتين أدناه وحدهما، فتفقد تغطية التوكنات كلها.
+
+title = "Cairo Store — قواعد موسَّعة"
+
+[extend]
+useDefault = true
+
+# ══════════════════════════════════════════════════════════════
+# 1. كلمة سر أو سرّ مكتوب حرفياً
+# ══════════════════════════════════════════════════════════════
+#
+# التصميم مبنيّ على مسح المستودع الحقيقي قبل كتابة القاعدة. الإنذارات
+# المحتملة كلها كانت **تسلسل متغيّرات** لا قيماً حرفية:
+#
+#     '/auth/reset?token=' . $resetToken . '&email='
+#     'csrf_token=' + encodeURIComponent(window._csrfToken || '')
+#     'password=' . $q(DB_PASS) . "\n"
+#
+# ولاحظ أن ما بعد علامة المساواة في كلٍّ منها **يحوي مسافات** — لأنه
+# كود لا قيمة. فالقيمة في القاعدة تُشترط بلا أي مسافة، وهذا وحده يُسقط
+# الثلاثة. والـentropy تُسقط ما تبقّى من نصوص مقروءة مثل "changeme".
+[[rules]]
+id = "cairo-hardcoded-password"
+description = "كلمة سر أو سرّ مكتوب حرفياً في الكود"
+regex = '''(?i)["']?\b(password|passwd|pwd|secret|api[_-]?key|access[_-]?token|auth[_-]?token|private[_-]?key)\b["']?\s*(?::|=>|=)\s*["']([^"'\s]{8,})["']'''
+secretGroup = 2
+entropy = 3.0
+keywords = ["password", "passwd", "pwd", "secret", "api_key", "apikey", "access_token", "auth_token", "private_key"]
+
+[rules.allowlist]
+# ملفات القوالب تحمل قيماً وهمية بحكم وظيفتها
+paths = [
+    '''\.env\.example$''',
+    '''(^|/)SECURITY-TOOLING\.md$''',
+    '''(^|/)CLEANUP-REPORT.*\.md$''',
+    '''(^|/)CLEANUP-PLAN.*\.md$''',
+]
+# قيم نائبة معروفة — وجودها إعلان صريح أنها ليست سرّاً
+regexes = [
+    '''(?i)^(your|my|the)?[_-]?(password|secret|api[_-]?key|token|key)[_-]?(here|value|goes[_-]?here)?$''',
+    '''(?i)^(changeme|change[_-]?me|placeholder|example|sample|dummy|test|xxx+|\*+|\.\.\.)$''',
+    '''(?i)^(true|false|null|none|undefined)$''',
+    '''^\$\{?[A-Za-z_][A-Za-z0-9_]*\}?$''',   # ${VAR} أو $VAR
+    '''^<[^>]+>$''',                          # <your-key>
+]
+
+# ══════════════════════════════════════════════════════════════
+# 2. سلسلة اتصال تحمل كلمة السر
+# ══════════════════════════════════════════════════════════════
+#
+# mysql://user:PASS@host — الصيغة الأكثر شيوعاً لتسريب بيانات قاعدة
+# البيانات، ولا تمسكها القواعد الافتراضية لأنها ليست توكن مزوّد.
+#
+# المجموعة الثانية (كلمة السر) هي السرّ لا السلسلة كلها، كي لا يُطبع
+# اسم المضيف والمستخدم في السجل بلا داعٍ.
+[[rules]]
+id = "cairo-db-connection-string"
+description = "سلسلة اتصال قاعدة بيانات تحمل كلمة السر"
+regex = '''(?i)\b(?:mysqli?|postgres(?:ql)?|mongodb(?:\+srv)?|redis|amqps?|mssql|sqlserver|ftp)://[^:@\s/]+:([^@\s/]{3,})@'''
+secretGroup = 1
+keywords = ["mysql://", "mysqli://", "postgres://", "postgresql://", "mongodb://", "mongodb+srv://", "redis://", "amqp://", "amqps://", "mssql://", "sqlserver://", "ftp://"]
+
+[rules.allowlist]
+paths = [
+    '''\.env\.example$''',
+    '''(^|/)SECURITY-TOOLING\.md$''',
+    '''(^|/)CLEANUP-REPORT.*\.md$''',
+]
+regexes = [
+    '''(?i)^(password|pass|pwd|secret|changeme|placeholder|example|user|username|root|xxx+)$''',
+    '''^\$\{?[A-Za-z_][A-Za-z0-9_]*\}?$''',
+    '''^<[^>]+>$''',
+]
+
+# ══════════════════════════════════════════════════════════════
+# استثناءات عامة
+# ══════════════════════════════════════════════════════════════
+#
+# vendor/ متجاهَل في git أصلاً فلا يصل الفحص إليه، لكن ذكره هنا يحمي
+# لو تغيّرت .gitignore يوماً. والصور تُفحص بلا فائدة وتبطئ.
+[allowlist]
+description = "مسارات لا يُفحص محتواها"
+paths = [
+    '''(^|/)vendor/''',
+    '''(^|/)node_modules/''',
+    '''(^|/)public/images/''',
+    '''(^|/)storage/backups/''',
+    '''\.(png|jpe?g|gif|webp|ico|svg|woff2?|ttf|eot|pdf|zip|sql)$''',
+]
