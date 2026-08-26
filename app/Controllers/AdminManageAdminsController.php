@@ -4,6 +4,7 @@ namespace App\Controllers;
 
 use App\Core\AdminController;
 use App\Core\Middleware;
+use App\Core\ErrorPage;
 use App\Models\AdminModel;
 use App\Models\OrderModel;
 use OpenApi\Attributes as OA;
@@ -423,9 +424,14 @@ class AdminManageAdminsController extends AdminController
     {
         Middleware::requirePermission('can_manage_admins');
 
+        // GET يُنزّل ملفاً — أي أن الفشل يظهر للأدمن كصفحة. كان نصّاً
+        // خاماً بلا لايوت ولا رجوع، ويكشف قاعدة الصلاحية لمن لا يملكها.
         if (!isRoleA()) {
-            http_response_code(403);
-            die('Unauthorized — Role A only');
+            ErrorPage::forbidden(
+                'admins/export-csv: محاولة من أدمن #' . (getCurrentAdminId() ?? 0),
+                URLROOT . '/admin/admins',
+                'العودة إلى إدارة الأدمنية'
+            );
         }
 
         $data = AdminModel::getAllForCsvExport();

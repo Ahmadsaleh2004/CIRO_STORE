@@ -24,9 +24,14 @@ class BackupController extends AdminController
     )]
     public function index(): void
     {
+        // صفحة كاملة: صفحة 403 حقيقية بدل نصّ خام بلا لايوت ولا رجوع.
+        // والرسالة المعروضة عامة — قاعدة الصلاحية إلى السجل وحده.
         if (getCurrentAdminId() !== 1) {
-            http_response_code(403);
-            die('Unauthorized — Root admin only (ID=1)');
+            ErrorPage::forbidden(
+                'backup/index: محاولة من أدمن #' . (getCurrentAdminId() ?? 0),
+                URLROOT . '/admin/home',
+                'العودة للوحة التحكم'
+            );
         }
 
         $this->adminView('backup', [
@@ -68,11 +73,16 @@ class BackupController extends AdminController
     )]
     public function create(): void
     {
+        // beginJsonPost أولاً عن قصد: هي التي تضبط ترويسة JSON، وبدونها
+        // كان رفض الصلاحية يخرج نصّاً خاماً إلى backup.js فيراه «Network
+        // error» بدل السبب الحقيقي. وفحص الـCSVF قبل الصلاحية لا يضعف
+        // شيئاً — كلاهما شرط لازم.
+        $this->beginJsonPost();
+
         if (getCurrentAdminId() !== 1) {
             http_response_code(403);
-            die('Unauthorized — Root admin only (ID=1)');
+            $this->respond(false, 'Access denied. You do not have permission for this action.');
         }
-        $this->beginJsonPost();
 
         $adminId = getCurrentAdminId();
         $result  = BackupModel::createBackup();
@@ -116,7 +126,7 @@ class BackupController extends AdminController
         if (getCurrentAdminId() !== 1) {
             ErrorPage::forbidden(
                 'backup/download: محاولة من أدمن #' . (getCurrentAdminId() ?? 0),
-                URLROOT . '/admin',
+                URLROOT . '/admin/home',
                 'العودة للوحة التحكم'
             );
         }
@@ -171,11 +181,13 @@ class BackupController extends AdminController
     )]
     public function delete(): void
     {
+        // كسابقتها: ترويسة JSON قبل أي ردّ، فلا يصل backup.js نصّ خام.
+        $this->beginJsonPost();
+
         if (getCurrentAdminId() !== 1) {
             http_response_code(403);
-            die('Unauthorized — Root admin only (ID=1)');
+            $this->respond(false, 'Access denied. You do not have permission for this action.');
         }
-        $this->beginJsonPost();
 
         $filename = $_POST['file'] ?? '';
         if (!BackupModel::deleteBackup($filename)) {
