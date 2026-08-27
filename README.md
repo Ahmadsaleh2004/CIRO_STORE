@@ -85,14 +85,42 @@ composer migrate:baseline
 ## التشغيل اليومي
 
 ```bash
-composer test            # كل الاختبارات
-composer test:unit       # الوحدة فقط — بلا قاعدة بيانات، أجزاء من الثانية
-composer analyse         # PHPStan
-composer lint            # PSR-12
-composer lint:fix        # إصلاح آلي لمخالفات التنسيق
-composer check           # الأربعة معاً — شغّله قبل أي push
-composer docs:generate   # إعادة توليد public/docs/openapi.yaml
+composer check           # ← البوّابة الكاملة. شغّله قبل أي push
 ```
+
+`check` يشغّل `validate` و`analyse` و`lint` و`test` معاً. وكلٌّ منها متاح وحده:
+
+| الأمر | ماذا يفعل |
+|---|---|
+| `composer test` | كل اختبارات PHP (وحدة + تكامل) |
+| `composer test:unit` | الوحدة فقط — بلا قاعدة بيانات، أجزاء من الثانية |
+| `composer test:coverage` | مع تقرير تغطية HTML في `coverage/` |
+| `composer analyse` | PHPStan — أخطاء منطقية |
+| `composer lint` · `lint:fix` | PSR-12 — فحص وإصلاح آلي |
+| `composer smoke` | يطلب **كل راوت GET** ويتحقّق من سلامة الاستجابة |
+| `composer docs:generate` | يعيد توليد `openapi.yaml` من سمات الكود |
+
+### الواجهة
+
+```bash
+npm run build      # يدمج 55 ملف CSS في حزمتين مضغوطتين مبصومتين
+npm test           # اختبارات JS (Vitest + jsdom)
+npm run lint       # ESLint + Stylelint
+npm run format     # Prettier
+```
+
+### أدوات القياس
+
+تُشغَّل عند الحاجة، لا في كل دورة:
+
+| الأمر | ماذا يقيس |
+|---|---|
+| `composer audit:code` | حالة الكود — أسطر وتكرار وأطول الدوال |
+| `composer audit:escaping` | يصنّف كل `<?= ?>` في الـviews حسب حاجتها للهروب |
+| `composer audit:imports` | يكشف الكلاسات المستعملة بلا استيراد وبلا تأهيل |
+| `composer images:webp` | يولّد نسخ WebP لصور المنتجات — **`<picture>` تعتمد عليها** |
+
+> `composer run-script --list` يعرض الثمانية عشر أمراً مع وصف كلٍّ منها.
 
 ### الاختبارات وقاعدة البيانات
 

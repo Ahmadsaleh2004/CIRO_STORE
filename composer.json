@@ -41,6 +41,11 @@
         "analyse": "phpstan analyse --no-progress",
         "lint": "phpcs",
         "lint:fix": "phpcbf",
+        "smoke": "php scripts/smoke-test.php",
+        "audit:code": "php scripts/audit.php",
+        "audit:escaping": "php scripts/audit-escaping.php",
+        "audit:imports": "php scripts/audit-imports.php",
+        "images:webp": "php scripts/convert_images_to_webp.php",
         "check": [
             "@composer validate --strict",
             "@analyse",
@@ -60,5 +65,25 @@
         "phpunit/phpunit": "^11",
         "phpstan/phpstan": "^2.2",
         "squizlabs/php_codesniffer": "^4.0"
+    },
+    "scripts-descriptions": {
+        "docs:generate": "يعيد توليد public/docs/openapi.yaml من سمات OA في الكنترولرز",
+        "test": "كل اختبارات PHP (وحدة + تكامل)",
+        "test:unit": "اختبارات الوحدة فقط — بلا قاعدة بيانات، أجزاء من الثانية",
+        "test:integration": "اختبارات التكامل — تبني قاعدة <DB>_test منفصلة",
+        "test:coverage": "الاختبارات مع تقرير تغطية HTML في coverage/",
+        "test:schema": "يعيد توليد tests/fixtures/schema.sql من قاعدة التطوير",
+        "migrate": "تطبيق الهجرات المعلّقة",
+        "migrate:status": "ما طُبِّق من الهجرات وما هو معلّق",
+        "migrate:baseline": "تسجيل الهجرات الموجودة كمطبَّقة بلا تنفيذها (أول تركيب)",
+        "analyse": "PHPStan — تحليل ثابت بحثاً عن أخطاء منطقية",
+        "lint": "PSR-12 — فحص التنسيق",
+        "lint:fix": "إصلاح آلي لمخالفات التنسيق",
+        "smoke": "فحص دخان: يطلب كل راوت GET ويتحقّق من سلامة الاستجابة",
+        "audit:code": "تقرير قياس لحالة الكود — أسطر وتكرار وأطول الدوال",
+        "audit:escaping": "يصنّف كل <?= ?> في الـviews حسب حاجتها للهروب",
+        "audit:imports": "يكشف الكلاسات المستعملة بلا استيراد وبلا تأهيل",
+        "images:webp": "يولّد نسخ WebP لصور المنتجات (يعتمد عليها <picture>)",
+        "check": "البوّابة الكاملة: validate + analyse + lint + test — شغّله قبل أي push"
     }
 }
