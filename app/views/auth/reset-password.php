@@ -79,10 +79,7 @@ require APPROOT . '/views/inc/head-bare.php';
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" defer></script>
 <script src="<?= URLROOT ?>/js/core/csrf.js" defer></script>
 <!-- تمرير بيانات فقط — المنطق في js/features/reset-password.js -->
-<script>
-window.BASE_URL = <?= json_encode(URLROOT) ?>;
-window.URLROOT  = <?= json_encode(URLROOT) ?>;
-</script>
+<?= pageData(['BASE_URL' => URLROOT, 'URLROOT' => URLROOT]) ?>
 <script src="<?= URLROOT ?>/js/features/reset-password.js" defer></script>
 
 <?php require APPROOT . '/views/inc/footer-bare.php'; ?>

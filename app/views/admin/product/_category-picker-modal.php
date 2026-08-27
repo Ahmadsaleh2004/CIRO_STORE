@@ -11,17 +11,14 @@
 ?>
 
 <!-- بيانات الكاتوجريز محقونة لـ category-picker.js -->
-<script>
-window._categoriesData = <?= json_encode(
-    array_map(fn($c) => [
-        'id'            => (int)$c['id'],
+<?= pageData([
+    '_categoriesData' => array_map(fn($c) => [
+        'id'            => (int) $c['id'],
         'name'          => $c['name'],
-        'is_core'       => (bool)$c['is_core'],
-        'product_count' => (int)$c['product_count'],
+        'is_core'       => (bool) $c['is_core'],
+        'product_count' => (int) $c['product_count'],
     ], $categories ?? []),
-    JSON_UNESCAPED_UNICODE
-) ?>;
-</script>
+]) ?>
 
 <!-- ═══════════════════════════════════════════════════════
      Modal الرئيسي: اختيار + إضافة + حذف الكاتوجريز

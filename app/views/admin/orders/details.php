@@ -223,14 +223,21 @@ if ($order['status'] === 'completed' && !empty($order['handler_admin_name'])) {
 </div>
 
 <?php
-// حقن بيانات الصفحة للـ JS (يُخرجها footer.php عبر $extraScripts)
-$extraScripts = '<script>
-window.ADMIN_ORDER_DETAILS = {
-    orderId: ' . (int)$order['order_id'] . ',
-    productNames: ' . json_encode($productNames) . ',
-    orderDate: ' . json_encode(date('d M Y', strtotime($order['created_at']))) . ',
-    userId: ' . (int)$order['user_id'] . ',
-    remSeconds: ' . (int)$remSeconds . '
-};
-</script>';
+// بيانات الصفحة للـ JS (يُخرجها footer.php عبر $extraScripts).
+//
+// ⚠️ كانت تُبنى بضمّ نصوص داخل <script>:
+//     'orderId: ' . (int)$order['order_id'] . ','
+// وهو بناء JS بالسلاسل — يعمل هنا لأن كل قيمة مُحوَّلة أو مُرمَّزة،
+// لكنه شكلٌ يكفي فيه سهوٌ واحد (قيمة نصّية تُضمّ بلا json_encode)
+// ليصير حقن سكربت. والآن البيانات بيانات، وjson_encode في pageData
+// يتولّى الترميز كلّه — بما فيه </script> عبر JSON_HEX_TAG.
+$extraScripts = pageData([
+    'ADMIN_ORDER_DETAILS' => [
+        'orderId'      => (int) $order['order_id'],
+        'productNames' => $productNames,
+        'orderDate'    => date('d M Y', strtotime($order['created_at'])),
+        'userId'       => (int) $order['user_id'],
+        'remSeconds'   => (int) $remSeconds,
+    ],
+]);
 ?>

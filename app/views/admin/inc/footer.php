@@ -6,33 +6,37 @@
     (Role <?= htmlspecialchars($_SESSION['admin_role'] ?? '') ?>)
 </div>
 
+<?php // ⚠️ أوّلاً وبلا defer: ينسخ جزيرة بيانات الصفحة إلى window،
+     // وكل ما تحته يقرأ منها. نقله لاحقاً يكسر كل صفحة تمرّر بيانات. ?>
+<?= jsTag('js/core/page-data.js', false) ?>
+
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-<script src="<?= URLROOT ?>/js/core/utils.js"></script>
-<script src="<?= URLROOT ?>/js/core/csrf.js"></script>
-<script src="<?= URLROOT ?>/js/core/ui.js"></script>
-<script src="<?= URLROOT ?>/js/core/flash-toast.js"></script>
-<script src="<?= URLROOT ?>/js/core/theme.js"></script>
-<script src="<?= URLROOT ?>/js/features/auth.js"></script>
-<script src="<?= URLROOT ?>/js/admin/products.js"></script>
-<script src="<?= URLROOT ?>/js/admin/branding.js"></script>
-<script src="<?= URLROOT ?>/js/admin/category-picker.js"></script>
-<script src="<?= URLROOT ?>/js/admin/orders.js"></script>
-<script src="<?= URLROOT ?>/js/admin/users.js"></script>
-<script src="<?= URLROOT ?>/js/admin/admins.js"></script>
-<script src="<?= URLROOT ?>/js/admin/manage-admins.js"></script>
-<script src="<?= URLROOT ?>/js/admin/admin-notifications.js"></script>
-<script src="<?= URLROOT ?>/js/admin/backup.js"></script>
-<script src="<?= URLROOT ?>/js/admin/support.js"></script>
-<script src="<?= URLROOT ?>/js/admin/site-settings.js"></script>
+<?= jsTag('js/core/utils.js', false) ?>
+<?= jsTag('js/core/csrf.js', false) ?>
+<?= jsTag('js/core/ui.js', false) ?>
+<?= jsTag('js/core/flash-toast.js', false) ?>
+<?= jsTag('js/core/theme.js', false) ?>
+<?= jsTag('js/features/auth.js', false) ?>
+<?= jsTag('js/admin/products.js', false) ?>
+<?= jsTag('js/admin/branding.js', false) ?>
+<?= jsTag('js/admin/category-picker.js', false) ?>
+<?= jsTag('js/admin/orders.js', false) ?>
+<?= jsTag('js/admin/users.js', false) ?>
+<?= jsTag('js/admin/admins.js', false) ?>
+<?= jsTag('js/admin/manage-admins.js', false) ?>
+<?= jsTag('js/admin/admin-notifications.js', false) ?>
+<?= jsTag('js/admin/backup.js', false) ?>
+<?= jsTag('js/admin/support.js', false) ?>
+<?= jsTag('js/admin/site-settings.js', false) ?>
 <!-- Shared JS — زر إلغاء/حذف الطلب المشترك (admin order details + my-info) -->
-<script src="<?= URLROOT ?>/js/shared/order-cancel.js"></script>
-<script src="<?= URLROOT ?>/js/admin/admin-layout/admin-navbar.js"></script>
+<?= jsTag('js/shared/order-cancel.js', false) ?>
+<?= jsTag('js/admin/admin-layout/admin-navbar.js', false) ?>
 <!-- حُذف admin-layout/admin-footer.js: كان يربط أزرار الإشعارات الثلاثة
      التي يربطها admin-notifications.js فعلاً — زرّان منه كعبان فارغان لا
      يفعلان إلا console.log، وزر الإغلاق نسخة ناقصة لا تُخفي الـbackdrop. -->
-<script src="<?= URLROOT ?>/js/main.js"></script>
+<?= jsTag('js/main.js', false) ?>
 <?php if (isset($extraScripts)) echo $extraScripts; ?>
 
 <!-- سايدبار إشعارات الأدمن — HTML ثابت، يربطه بالباك اند admin-notifications.js -->

@@ -90,7 +90,5 @@ $showLoginAlert = !$userLoggedIn;
 </section>
 </main>
 
-<script>
-window.__userLoggedIn = <?= $userLoggedIn ? 'true' : 'false' ?>;
-</script>
+<?= pageData(['__userLoggedIn' => (bool) $userLoggedIn]) ?>
 <script src="<?= URLROOT ?>/js/features/contact.js" defer></script>

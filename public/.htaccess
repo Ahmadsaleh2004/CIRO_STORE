@@ -55,23 +55,43 @@
     # إخفاء نسخة PHP من الترويسات.
     Header always unset X-Powered-By
 
-    # ── CSP: وضع الإبلاغ فقط، مؤقتاً ──────────────────────────
+    # ── CSP: سياستان معاً ─────────────────────────────────────
     #
-    # ⚠️ `-Report-Only` مقصود ولا يجوز نزعه اليوم. السياسة أدناه تمنع
-    # السكربت المضمّن، و**16 ملف view يحوي `<script>` مضمّناً** (مفحوص:
-    # home.php و inc/navbar.php و product.php وthirteen غيرها). تفعيلها
-    # الآن يكسر المتجر كله في لحظة.
+    # **مفروضة** لكل شيء عدا السكربتات، و**بوضع الإبلاغ** للهدف الكامل.
+    # وهذا ليس تردّداً بل وصفٌ دقيق لما يمكن فرضه اليوم.
     #
-    # وضع الإبلاغ يعطي القيمة بلا الكسر: المخالفات تظهر في وحدة تحكّم
-    # المتصفح فتُرى وتُعدّ، ولا شيء يُمنع. المرحلة 12 من الخطة تُخرج
-    # الـ16 سكربتاً إلى ملفات، وعندها يصير التفعيل حذفَ كلمة واحدة من
-    # اسم الترويسة.
+    # ما صار مفروضاً فعلاً — وكلّه مكسب حقيقي فوري:
+    #   object-src 'none'    يقطع <object> و<embed> — ناقلا هجوم قديمان
+    #   base-uri 'self'      يمنع حقن <base> الذي يحوّل كل رابط نسبي
+    #   form-action 'self'   يمنع تحويل وجهة أي نموذج إلى خادم آخر
+    #   frame-ancestors      clickjacking
+    #   img/connect/frame    حصر الوجهات
     #
-    # النطاقات الخارجية مقيسة لا مفترضة:
-    #   cdn.jsdelivr.net  → Bootstrap و Swagger UI (13 موضعاً)
-    #   code.jquery.com   → jQuery (موضعان)
-    #   js.hcaptcha.com   → كابتشا دخول الأدمن
-    #   hcaptcha.com      → إطار التحدّي واتصالاته
-    Header always set Content-Security-Policy-Report-Only "default-src 'self'; script-src 'self' https://cdn.jsdelivr.net https://code.jquery.com https://js.hcaptcha.com https://*.hcaptcha.com; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://*.hcaptcha.com; img-src 'self' data: https:; font-src 'self' data: https://cdn.jsdelivr.net; connect-src 'self' https://*.hcaptcha.com; frame-src https://*.hcaptcha.com; form-action 'self'; frame-ancestors 'self'; base-uri 'self'; object-src 'none'"
+    # ولماذا script-src فيها 'unsafe-inline'؟
+    #
+    # أُخرجت **أربع عشرة** كتلة <script> مضمّنة من الـviews إلى جزر
+    # JSON (راجع pageData في assets_helper.php) — وهو ما كان يمنع أي
+    # سياسة أصلاً. بقي عائقان:
+    #
+    #   1. اثنان وثلاثون معالجاً مضمّناً (onclick/onchange) في الوسوم.
+    #   2. سكربت تهيئة الثيم في <head>، ويجب أن يعمل **قبل الرسم** وإلا
+    #      ومض المستخدم بالثيم الخطأ.
+    #
+    # والثاني محلول ببصمته أدناه. أما الأول فيحتاج تحويل كل معالج إلى
+    # addEventListener — عمل ميكانيكي لكن كل زرّ فيه يحتاج نقرة فعلية
+    # للتحقّق، وشحنه بلا ذلك أسوأ من تركه.
+    #
+    # ⚠️ ولماذا لا تُخلط البصمة مع 'unsafe-inline' في سياسة واحدة؟
+    # لأن المعيار (CSP3 §6.6.2.4) يقول إن وجود بصمة أو nonce **يُلغي**
+    # 'unsafe-inline' تماماً. فالخلط يكسر المعالجات الاثنين والثلاثين
+    # بدل أن يشدّد شيئاً. ولهذا سياستان: واحدة تفرض ما تستطيع، وأخرى
+    # تُبلغ عن الهدف.
+    Header always set Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://code.jquery.com https://js.hcaptcha.com https://*.hcaptcha.com; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://*.hcaptcha.com; img-src 'self' data: https:; font-src 'self' data: https://cdn.jsdelivr.net; connect-src 'self' https://*.hcaptcha.com; frame-src https://*.hcaptcha.com; form-action 'self'; frame-ancestors 'self'; base-uri 'self'; object-src 'none'"
+
+    # الهدف: بلا 'unsafe-inline' إطلاقاً، وسكربت الثيم مسموح ببصمته
+    # وحدها. حين تُحوَّل المعالجات الاثنان والثلاثون، تحلّ هذه محلّ
+    # التي فوقها بحذف اللاحقة -Report-Only.
+    Header always set Content-Security-Policy-Report-Only "default-src 'self'; script-src 'self' 'sha256-n33GJ973YEUTpbG1xOj611JYTc5wI4V+8xmEtfPaLjk=' https://cdn.jsdelivr.net https://code.jquery.com https://js.hcaptcha.com https://*.hcaptcha.com; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://*.hcaptcha.com; img-src 'self' data: https:; font-src 'self' data: https://cdn.jsdelivr.net; connect-src 'self' https://*.hcaptcha.com; frame-src https://*.hcaptcha.com; form-action 'self'; frame-ancestors 'self'; base-uri 'self'; object-src 'none'"
+
 
 </IfModule>

@@ -126,8 +126,6 @@
 </nav>
 
 <!-- تمرير بيانات فقط — logoutAdmin() في js/admin/admin-layout/admin-navbar.js -->
-<script>
-window._csrfToken = <?= json_encode($csrf) ?>;
-</script>
+<?= pageData(['_csrfToken' => $csrf]) ?>
 
 <main id="main-content" class="container-fluid py-4 px-4">
