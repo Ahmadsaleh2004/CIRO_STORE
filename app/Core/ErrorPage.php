@@ -117,6 +117,42 @@ final class ErrorPage
     }
 
     /**
+     * يرسل 405 «الطريقة غير مسموحة» ويوقف التنفيذ.
+     *
+     * وُجدت لأن الراوتر كان يردّ **404** على طلب POST إلى مسار مسجَّل
+     * لـGET وحده. وهي كذبة تُضلّل: الصفحة موجودة، والطريقة هي الخاطئة.
+     * 404 يقول للمطوّر «راجع تهجئة المسار» فيبحث في المكان الخطأ، بينما
+     * 405 يشير إلى العلّة مباشرة.
+     *
+     * ترويسة Allow ليست تزيّناً: المعيار (RFC 9110 §15.5.6) يوجبها مع
+     * كل 405، وأدوات الـAPI تقرأها لتعرف ما هو المسموح.
+     *
+     * @param list<string> $allowed الطرق المسجَّلة فعلاً لهذا المسار.
+     */
+    public static function methodNotAllowed(array $allowed, ?string $logDetail = null): never
+    {
+        if ($logDetail !== null && $logDetail !== '') {
+            error_log('[Cairo Store] 405: ' . $logDetail . ' — allowed: ' . implode(', ', $allowed));
+        }
+
+        if (!headers_sent()) {
+            http_response_code(405);
+            header('Allow: ' . implode(', ', $allowed));
+            header('Content-Type: text/html; charset=utf-8');
+        }
+
+        echo '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">'
+           . '<meta name="viewport" content="width=device-width,initial-scale=1">'
+           . '<title>405 — Method Not Allowed</title></head>'
+           . '<body style="font-family:system-ui,sans-serif;text-align:center;padding:60px">'
+           . '<h1>405</h1><p>The request method is not supported for this resource.</p>'
+           . '<p><a href="' . htmlspecialchars(URLROOT) . '/">Back to home</a></p>'
+           . '</body></html>';
+
+        exit;
+    }
+
+    /**
      * يرسل صفحة 500 كاملة ويوقف التنفيذ.
      *
      * وُجدت لسبب notFound() نفسه. كان فشل الاتصال بقاعدة البيانات يُعالج

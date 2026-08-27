@@ -97,19 +97,48 @@ final class CsrfContractHttpTest extends TestCase
     }
 
     /**
+     * المسارات المحروسة بـauth في جدول المسارات.
+     *
+     * تُقرأ من public/index.php لا من قائمة يدوية: نقل الحراسة إلى
+     * تعريف المسار جعل الحارس يسبق الكنترولر، فتغيّر ما تردّه هذه
+     * النقاط على طلب غير مصادَق — والاختبار يجب أن يتبع المصدر لا أن
+     * يحمل صورة قديمة عنه.
+     *
+     * @return list<string>
+     */
+    private static function authGuardedPaths(): array
+    {
+        $src = (string) file_get_contents(dirname(__DIR__, 2) . '/public/index.php');
+
+        preg_match_all(
+            "/->post\(\s*'([^']+)'[^;]*?->middleware\('auth'\)/s",
+            $src,
+            $m
+        );
+
+        return array_values(array_unique($m[1]));
+    }
+
+    /**
      * كل نقطة JSON عامة ترفض الطلب بلا توكن، وترفضه **بالرمز الصريح**
      * لا بنصّ رسالة. الرمز هو ما يقرأه csrf.js.
+     *
+     * تُستثنى النقاط المحروسة بـauth: عندها المصادقة تسبق CSRF، وهذا
+     * هو الترتيب الصحيح — فحص توكن يحمي جلسةً لا وجود لها بلا معنى،
+     * ورسالة «توكن غير صالح» لزائر غير مسجّل تصف عرضاً لا سبباً.
+     * تُغطّى في الاختبار التالي.
      */
     public function testEveryPublicJsonPostEndpointRejectsWithTheExplicitErrorCode(): void
     {
+        $authGuarded = self::authGuardedPaths();
         $failures = [];
         $checked  = 0;
 
         foreach (self::postRoutes() as $path) {
             if (str_starts_with($path, '/admin/')) {
-                continue; // تُغطّى في الاختبار التالي — حارس الجلسة يسبق حارس CSRF
+                continue; // تُغطّى أدناه — حارس الجلسة يسبق حارس CSRF
             }
-            if (isset(self::DOCUMENTED_EXEMPTIONS[$path])) {
+            if (isset(self::DOCUMENTED_EXEMPTIONS[$path]) || in_array($path, $authGuarded, true)) {
                 continue;
             }
 
@@ -132,12 +161,58 @@ final class CsrfContractHttpTest extends TestCase
             }
         }
 
-        $this->assertGreaterThan(10, $checked, 'المسح لم يجد نقاطاً كافية — تحقّق من قارئ الراوتر.');
+        $this->assertGreaterThan(8, $checked, 'المسح لم يجد نقاطاً كافية — تحقّق من قارئ الراوتر.');
         $this->assertSame(
             [],
             $failures,
-            "نقاط لا تحترم عقد error_code (وهو ما يقرأه js/core/csrf.js):\n  "
-            . implode("\n  ", $failures)
+            "نقاط لا تحترم عقد error_code (وهو ما يقرأه js/core/csrf.js):
+  "
+            . implode("
+  ", $failures)
+        );
+    }
+
+    /**
+     * النقاط المحروسة بـauth تردّ **JSON بكود 401** لا تحويلاً إلى HTML.
+     *
+     * هذا ما كان عطلاً كامناً قبل نقل الحراسة إلى المسار:
+     * Middleware::requireLogin كانت تحوّل بـ302 دائماً، بلا تفريق بين
+     * صفحة كاملة ونقطة JSON. لم يظهر العطل لأنها كانت تُستدعى من داخل
+     * جسم الفعل — أي بعد أن تكون beginJsonPost قد أنهت الطلب.
+     *
+     * ولحظة صار الحارس يسبق الكنترولر بدأ fetch في المتصفح يتلقّى صفحة
+     * HTML كاملة ويحاول قراءتها JSON. أمسك ذلك هذا الاختبار.
+     */
+    public function testAuthGuardedJsonEndpointsAnswerWithJsonNotARedirect(): void
+    {
+        $failures = [];
+        $checked  = 0;
+
+        foreach (self::authGuardedPaths() as $path) {
+            $checked++;
+            $response = self::request($path);
+            $json     = json_decode($response['body'] ?? '', true);
+
+            if (!is_array($json)) {
+                $failures[] = "{$path} — ردّت بغير JSON (كود {$response['status']})";
+                continue;
+            }
+            if (($json['success'] ?? null) !== false) {
+                $failures[] = "{$path} — success ليست false لطلب غير مصادَق";
+                continue;
+            }
+            if ($response['status'] !== 401) {
+                $failures[] = "{$path} — الكود {$response['status']} (متوقّع 401)";
+            }
+        }
+
+        $this->assertGreaterThan(3, $checked, 'لم يُعثر على مسارات محروسة بـauth.');
+        $this->assertSame(
+            [],
+            $failures,
+            "نقاط محروسة بـauth لا تردّ JSON/401 على طلب غير مصادَق:
+  " . implode("
+  ", $failures)
         );
     }
 
