@@ -231,6 +231,12 @@ jobs:
       - name: Stylelint
         run: npx stylelint "public/css/**/*.css"
 
+      # اختبارات الواجهة تحمّل ملفات public/js في jsdom على النطاق
+      # العام — كما يفعل المتصفح. فما يُختبَر هو الكود العامل نفسه، لا
+      # نسخة معدَّلة منه صُنعت لتكون قابلة للاختبار.
+      - name: Vitest
+        run: npx vitest run
+
       # حزم CSS متتبَّعة في git ومولَّدة معاً، فقد تتخلّف: يعدّل أحدهم
       # ملف CSS وينسى `npm run build`، فيبقى المرفوع يخدم النسخة
       # القديمة — وهي الأسوأ من كل الحالات: الكود صحيح والمعروض قديم.
@@ -246,6 +252,71 @@ jobs:
             exit 1
           fi
           echo "الحزم مطابقة للمصدر."
+
+  # ── ميزانية الأداء وإمكانية الوصول ───────────────────────────
+  #
+  # الحدود مبنيّة على ما يحقّقه المشروع اليوم لا على أمنيات: بوّابة
+  # تفشل من أول يوم تُطفأ بعد أسبوع. الأداء وSEO تحذيران، وإمكانية
+  # الوصول وأفضل الممارسات خطأ — لأنهما لا يتذبذبان مع الشبكة.
+  #
+  # مسارات ثابتة عمداً: الصفحة الرئيسية (سلايدر وبطاقات)، وقائمة
+  # المنتجات (أثقل صفحة)، وصفحة ثابتة كضبط مرجعي.
+  lighthouse:
+    name: Lighthouse
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ALLOW_EMPTY_PASSWORD: 'yes'
+          MYSQL_DATABASE: ciro_db
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1"
+          --health-interval=10s --health-timeout=5s --health-retries=10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: pdo_mysql, mbstring, curl, json
+          coverage: none
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - run: composer install --prefer-dist --no-interaction --no-progress
+      - run: npm ci
+
+      - name: بناء الحزم
+        run: npm run build
+
+      - name: بناء .env وتحميل المخطّط
+        run: |
+          cat > .env <<'ENVEOF'
+          APP_ENV=production
+          APP_DEBUG=false
+          APP_URL=http://127.0.0.1:8080
+          DB_HOST=127.0.0.1
+          DB_PORT=3306
+          DB_DATABASE=ciro_db
+          DB_USERNAME=root
+          DB_PASSWORD=
+          ENVEOF
+          for i in $(seq 1 30); do mysqladmin ping -h 127.0.0.1 -u root --silent && break; sleep 2; done
+          mysql -h 127.0.0.1 -u root ciro_db < tests/fixtures/schema.sql
+
+      - name: تشغيل الخادم
+        run: |
+          php -S 127.0.0.1:8080 -t public public/index.php > /tmp/lh-server.log 2>&1 &
+          for i in $(seq 1 20); do curl -sf http://127.0.0.1:8080/ > /dev/null && exit 0; sleep 1; done
+          cat /tmp/lh-server.log; exit 1
+
+      - name: Lighthouse CI
+        run: npx --yes @lhci/cli@0.14.x autorun
 
   # ── أمن ──────────────────────────────────────────────────────
   # الأدوات الثلاث نفسها التي تعمل في .pre-commit-config.yaml.
