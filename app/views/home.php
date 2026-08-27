@@ -79,9 +79,12 @@
 
 </main>
 
-<script>
-// استقبال بيانات المنتجات التي تم تجهيزها داخل HomeController وتمريرها لـ JS
-window.dbProducts = <?= json_encode($data['productsJS'] ?? [], JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES) ?>;
-window.dbHomeSliders = <?= json_encode($data['homeSliders'] ?? [], JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES) ?>;
-// العرض يتولّاه js/features/products-catalog.js
-</script>
+<?php
+// بيانات المنتجات والسلايدر — جُهّزت في HomeController، والعرض يتولّاه
+// js/features/products-catalog.js الذي يقرأ window.dbProducts و
+// window.dbHomeSliders. الأسماء لم تتغيّر؛ تغيّر طريق وصولها فقط.
+?>
+<?= pageData([
+    'dbProducts'    => $data['productsJS']  ?? [],
+    'dbHomeSliders' => $data['homeSliders'] ?? [],
+]) ?>

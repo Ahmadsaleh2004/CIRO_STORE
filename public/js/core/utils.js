@@ -59,13 +59,68 @@ window.formatRelativeTime = formatRelativeTime;
  * buildProductPicture — بناء <picture> مع WebP fallback
  */
 window.buildProductPicture = function (imagePath, altText, cssClass = '') {
-    const webp = imagePath.replace(/\.(jpe?g|png)$/i, '.webp');
+    const webp = encodeImagePath(imagePath.replace(/\.(jpe?g|png)$/i, '.webp'));
+    const src  = encodeImagePath(imagePath);
     const cls  = cssClass ? ` class="${cssClass}"` : '';
     return `<picture>
         <source srcset="${webp}" type="image/webp">
-        <img src="${imagePath}" alt="${altText}"${cls} loading="lazy">
+        <img src="${src}" alt="${altText}"${cls} loading="lazy">
     </picture>`;
 };
+
+/**
+ * encodeImagePath — يُرمّز مقاطع المسار مع إبقاء الشرطات المائلة.
+ *
+ * ⚠️ **المسافة في srcset فاصل بين مرشّحين لا محرفاً عادياً.**
+ *
+ * أسماء صور هذا المشروع تحوي مسافات: «apple watch.webp» و
+ * «ps4 controller.jpg» و«nintendo switch lite.jpg». فكان المتصفح يقرأ
+ *
+ *     <source srcset="…/images/apple watch.webp">
+ *
+ * مرشّحَين — «…/images/apple» و«watch.webp» — ويرفض الاثنين. أكّده
+ * حرفياً في وحدة التحكّم:
+ *     Dropped srcset candidate "…/images/apple"
+ * عشر مرّات في تحميل واحد لصفحة المنتجات.
+ *
+ * النتيجة أن نسخة WebP — وهي كل الغرض من <picture> — لم تكن تعمل
+ * لأي صورة اسمها يحوي مسافة. والصفحة تبدو سليمة تماماً لأن <img>
+ * الاحتياطية تعمل، فيمرّ العطل صامتاً وتُخدَّم jpg الأثقل دائماً.
+ *
+ * هذه مرآة للترميز نفسه في fixImagePath() بـPHP — الطرف المخدوم على
+ * الخادم أُصلح هناك، وهذا يخدم البطاقات التي يبنيها المتصفح.
+ *
+ * encodeURIComponent لكل مقطع لا للمسار كلّه: الأخير يحوّل الشرطات
+ * المائلة نفسها إلى %2F فيتحطّم المسار. والمقاطع المرمَّزة سلفاً
+ * تُترك كما هي كي لا يُرمَّز % مرّتين.
+ */
+function encodeImagePath(path) {
+    if (!path) return path;
+
+    const [head, ...rest] = String(path).split('?');
+    const query = rest.length ? '?' + rest.join('?') : '';
+
+    // ⚠️ المخطّط والمضيف يُفصلان قبل الترميز.
+    //
+    // المسارات هنا تصل بشكلين: نسبي («images/x.jpg») ومطلق
+    // («http://localhost/STORE/public/images/x.jpg») — والأخير هو ما
+    // تُخرجه fixImagePath في PHP.
+    //
+    // وترميز المقاطع بلا هذا الفصل يحوّل «http:» إلى «http%3A» فيتحطّم
+    // الرابط تماماً. وقع ذلك في أول نسخة من هذه الدالة، وأمسكه فحص
+    // مباشر بمسار مطلق قبل أن يصل المتصفح.
+    const schemeMatch = head.match(/^([a-z][a-z0-9+.-]*:\/\/[^/]+)(\/.*)?$/i);
+    const origin = schemeMatch ? schemeMatch[1] : '';
+    const pathPart = schemeMatch ? schemeMatch[2] || '' : head;
+
+    const encoded = pathPart
+        .split('/')
+        .map((segment) => (/%[0-9A-Fa-f]{2}/.test(segment) ? segment : encodeURIComponent(segment)))
+        .join('/');
+
+    return origin + encoded + query;
+}
+window.encodeImagePath = encodeImagePath;
 
 /**
  * stockBadge — بادج حالة المخزون. **مرآة لـgetStockBadge() في

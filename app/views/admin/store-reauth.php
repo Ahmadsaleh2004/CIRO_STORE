@@ -17,7 +17,7 @@ require APPROOT . '/views/inc/head-bare.php';
 ?>
 
 <!-- URLROOT يُعرَّف هنا لأن هذه الصفحة مستقلة عن layout الأدمن (لا head.php) -->
-<script>window.URLROOT = "<?= URLROOT ?>";</script>
+<?= pageData(['URLROOT' => URLROOT]) ?>
 
 <div class="login-wrapper">
     <div class="login-card">

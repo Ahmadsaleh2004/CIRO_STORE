@@ -13,5 +13,5 @@
     <?= $extraHead ?? '' ?>
 </head>
 <body class="page-transitioning admin-layout">
-<script>window.URLROOT = "<?= URLROOT ?>";</script>
+<?= pageData(['URLROOT' => URLROOT]) ?>
 <a href="#main-content" class="skip-nav">Skip to main content</a>

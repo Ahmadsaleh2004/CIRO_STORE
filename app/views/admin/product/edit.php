@@ -360,12 +360,9 @@ $variants = $p['variants'] ?? [];
 </div>
 
 <!-- بيانات الكاتوجريز الحالية للمنتج — تُقرأ من category-picker.js -->
-<script>
-window._currentCategoryIds = <?= json_encode(
-    array_map('intval', $p['category_ids'] ?? []),
-    JSON_UNESCAPED_UNICODE
-) ?>;
-</script>
+<?= pageData([
+    '_currentCategoryIds' => array_map('intval', $p['category_ids'] ?? []),
+]) ?>
 
 <!-- ── Category Picker Modal ─────────────────────────────── -->
 <?php include __DIR__ . '/_category-picker-modal.php'; ?>

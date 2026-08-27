@@ -60,33 +60,37 @@ $csrfToken = generateCsrfToken();
 
 
     <!-- ══ Scripts ═════════════════════════════════════════════ -->
+    <?php // ⚠️ أوّلاً وبلا defer: ينسخ جزيرة بيانات الصفحة إلى window،
+         // وكل ما تحته يقرأ منها. نقله لاحقاً يكسر كل صفحة تمرّر بيانات. ?>
+    <?= jsTag('js/core/page-data.js', false) ?>
+
     <script src="https://code.jquery.com/jquery-3.7.1.min.js" defer></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11" defer></script>
 
     <!-- Core JS -->
-    <script src="<?= URLROOT ?>/js/core/utils.js" defer></script>
-    <script src="<?= URLROOT ?>/js/core/csrf.js" defer></script>
-    <script src="<?= URLROOT ?>/js/core/ui.js" defer></script>
-    <script src="<?= URLROOT ?>/js/core/flash-toast.js" defer></script>
-    <script src="<?= URLROOT ?>/js/core/theme.js" defer></script>
+    <?= jsTag('js/core/utils.js') ?>
+    <?= jsTag('js/core/csrf.js') ?>
+    <?= jsTag('js/core/ui.js') ?>
+    <?= jsTag('js/core/flash-toast.js') ?>
+    <?= jsTag('js/core/theme.js') ?>
     <!-- فرض ألوان حقول النوافذ المنبثقة — كان كتلة مضمّنة هنا -->
-    <script src="<?= URLROOT ?>/js/core/modal-input-colors.js" defer></script>
+    <?= jsTag('js/core/modal-input-colors.js') ?>
 
     <!-- Features JS — محمّلة دائماً -->
-    <script src="<?= URLROOT ?>/js/features/cart.js" defer></script>
-    <script src="<?= URLROOT ?>/js/features/products-catalog.js" defer></script>
-    <script src="<?= URLROOT ?>/js/features/auth.js" defer></script>
-    <script src="<?= URLROOT ?>/js/features/wishlist.js" defer></script>
-    <script src="<?= URLROOT ?>/js/main.js" defer></script>
+    <?= jsTag('js/features/cart.js') ?>
+    <?= jsTag('js/features/products-catalog.js') ?>
+    <?= jsTag('js/features/auth.js') ?>
+    <?= jsTag('js/features/wishlist.js') ?>
+    <?= jsTag('js/main.js') ?>
 
     <!-- Notifications JS — فقط للمستخدم المسجّل -->
     <?php if (isset($userLoggedIn) && $userLoggedIn): ?>
-    <script src="<?= URLROOT ?>/js/features/notifications.js" defer></script>
+    <?= jsTag('js/features/notifications.js') ?>
     <?php endif; ?>
 
     <!-- Shared JS — زر إلغاء/حذف الطلب المشترك (my-info + admin order details) -->
-    <script src="<?= URLROOT ?>/js/shared/order-cancel.js" defer></script>
+    <?= jsTag('js/shared/order-cancel.js') ?>
 
     <!-- Extra Scripts من الـ Controller (مثلاً صفحة Checkout / My Info) -->
     <?php if (isset($extraScripts)) echo $extraScripts; elseif (isset($data['extraScripts'])) echo $data['extraScripts']; ?>

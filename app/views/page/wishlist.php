@@ -21,7 +21,7 @@
 </section>
 </main>
 
-<script>
-    window.__isRegularUser        = <?= $isRegularUser ? 'true' : 'false' ?>;
-    window.__csrfTokenForWishlist = "<?= htmlspecialchars($csrf, ENT_QUOTES) ?>";
-</script>
+<?= pageData([
+    '__isRegularUser'        => (bool) $isRegularUser,
+    '__csrfTokenForWishlist' => $csrf,
+]) ?>

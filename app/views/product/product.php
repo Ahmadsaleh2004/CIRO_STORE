@@ -228,20 +228,25 @@ $pageDescription = 'Browse all products at Cairo Store.';
 </section>
 </main>
 
-<script>
-window.dbProducts = <?= json_encode(array_values(array_map(function($p) {
-    $d = $p['_display'];
-    return [
-        'id'         => (int)$p['id'],
-        'variant_id' => $d['id'] ?? null,
-        'color_name' => $d['color_name'] ?? null,
-        'name'       => $p['name'],
-        'price'      => (float)(($d['discount_percentage'] ?? 0) > 0 ? $d['price_after_discount'] : $d['price']),
-        'image'      => fixImagePath($d['image_path'] ?? $p['image_path']),
-        'image_path' => fixImagePath($d['image_path'] ?? $p['image_path']),
-        'tag'        => productTag($p),
-        'categories' => $p['categories'] ?? '',
-    ];
-}, $products)), JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES) ?>;
-// ربط أزرار المفضّلة في js/features/products-catalog.js
-</script>
+<?php
+// بيانات المنتجات لبطاقات المفضّلة — يقرأها js/features/products-catalog.js
+// من window.dbProducts. الاسم والشكل لم يتغيّرا.
+?>
+<?= pageData([
+    'dbProducts' => array_values(array_map(function ($p) {
+        $d = $p['_display'];
+        return [
+            'id'         => (int) $p['id'],
+            'variant_id' => $d['id'] ?? null,
+            'color_name' => $d['color_name'] ?? null,
+            'name'       => $p['name'],
+            'price'      => (float) (($d['discount_percentage'] ?? 0) > 0
+                ? $d['price_after_discount']
+                : $d['price']),
+            'image'      => fixImagePath($d['image_path'] ?? $p['image_path']),
+            'image_path' => fixImagePath($d['image_path'] ?? $p['image_path']),
+            'tag'        => productTag($p),
+            'categories' => $p['categories'] ?? '',
+        ];
+    }, $products)),
+]) ?>

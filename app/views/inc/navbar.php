@@ -6,7 +6,7 @@
  */
 ?>
 <!-- نقل Skip to content و BASE_URL لداية الـ body لتنظيف ملف الـ head -->
-<script>window.BASE_URL = "<?= URLROOT ?>";</script>
+<?= pageData(['BASE_URL' => URLROOT]) ?>
 <a href="#main-content" class="skip-nav">Skip to main content</a>
 
 <?php

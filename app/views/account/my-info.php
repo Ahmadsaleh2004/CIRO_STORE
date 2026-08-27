@@ -255,9 +255,13 @@
     </div><!-- /tab-content -->
 </main>
 
-<script>
-const URLROOT_INFO  = "<?= URLROOT ?>";
-const CSRF_INFO     = "<?= htmlspecialchars($csrf) ?>";
-// متاح لـ shared/order-cancel.js — يقرأ window.CSRF_INFO من السياقين المتطابقين
-window.CSRF_INFO    = CSRF_INFO;
-</script>
+<?php
+// كانت هنا كتلة <script> تعرّف ثابتين ثم تنسخ أحدهما إلى window.
+// الثابتان كانا في النطاق العام أصلاً (كتلة غير مغلَّفة)، فالنتيجة
+// واحدة — و js/features/account.js يقرأ window.URLROOT_INFO و
+// window.CSRF_INFO، لا الثابتين.
+?>
+<?= pageData([
+    'URLROOT_INFO' => URLROOT,
+    'CSRF_INFO'    => $csrf,
+]) ?>
