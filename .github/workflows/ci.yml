@@ -157,6 +157,45 @@ jobs:
       - name: PSR-12
         run: vendor/bin/phpcs --report=full
 
+  # ── مواصفة الـAPI ────────────────────────────────────────────
+  #
+  # المواصفة مولَّدة من سمات PHP، فالخطأ فيها لا يظهر إلا لمن يفتح
+  # صفحة /docs — وقد لا يفعل أحد لأشهر. الفحص يجعل مواصفة مكسورة تُفشل
+  # البناء بدل أن تنتظر مكتشفاً.
+  #
+  # وبوّابة التغطية (كل راوت موثّق، ولا عملية بلا راوت) في
+  # tests/Integration/OpenApiCoverageTest.php ضمن وظيفة الاختبارات.
+  openapi:
+    name: مواصفة OpenAPI
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          coverage: none
+
+      - name: تثبيت الاعتماديات
+        run: composer install --prefer-dist --no-interaction --no-progress
+
+      # المواصفة متتبَّعة في git ومولَّدة معاً، فقد تتخلّف عن الشيفرة:
+      # يعدّل أحدهم سمة OA وينسى docs:generate. إعادة التوليد ثم مقارنة
+      # الناتج بالمُلتزَم تمسك ذلك مباشرةً.
+      - name: التحقّق أن المواصفة محدَّثة
+        run: |
+          cp public/docs/openapi.yaml /tmp/committed.yaml
+          composer docs:generate
+          if ! diff -q /tmp/committed.yaml public/docs/openapi.yaml > /dev/null; then
+            echo "::error::openapi.yaml متخلّف عن سمات OA — شغّل 'composer docs:generate' والتزم الناتج."
+            diff /tmp/committed.yaml public/docs/openapi.yaml | head -40
+            exit 1
+          fi
+          echo "المواصفة مطابقة للشيفرة."
+
+      - name: spectral — فحص المواصفة
+        run: npx --yes @stoplight/spectral-cli lint public/docs/openapi.yaml --ruleset .spectral.yaml
+
   # ── أمن ──────────────────────────────────────────────────────
   # الأدوات الثلاث نفسها التي تعمل في .pre-commit-config.yaml.
   security:

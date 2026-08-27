@@ -17,7 +17,61 @@ class ContactController extends Controller
         path: '/contact',
         summary: 'صفحة "اتصل بنا"',
         tags: ['Store - Pages'],
-        responses: [new OA\Response(response: 200, description: 'صفحة HTML')]
+        responses: [
+            new OA\Response(response: 200, ref: '#/components/responses/HtmlPage'),
+            new OA\Response(response: 404, ref: '#/components/responses/NotFoundPage'),
+            new OA\Response(response: 503, ref: '#/components/responses/ServiceUnavailable'),
+        ]
+    )]
+    #[OA\Post(
+        path: '/contact',
+        summary: 'إرسال نموذج "اتصل بنا" من الصفحة نفسها',
+        description: <<<'TXT'
+        النقطة الوحيدة التي كانت مسجَّلة في الراوتر وغائبة عن المواصفة
+        (103 من 104). وُثّقت هنا كما تعمل فعلاً.
+
+        تختلف عن POST /contact/send اختلافاً جوهرياً: هذه **لا تُرجع
+        JSON**. الدالة تخدم GET وPOST معاً، وتعيد عرض الصفحة كاملةً مع
+        رسالة نجاح أو خطأ في متن HTML. ولهذا استُثنيت من beginJsonPost
+        صراحةً — الفشل هنا لا يوقف التنفيذ بل يملأ $errorMsg ويُكمل.
+
+        وفشل CSRF لا يُرجع error_code لأن لا عميل JS يقرأ هذه الاستجابة:
+        الصفحة تُعرض والرسالة داخلها.
+
+        شرطان للإرسال: مستخدم مسجّل الدخول (الزائر يُرفض)، ورسالة لا تقلّ
+        عن عشرة محارف. والاسم والبريد يُقرآن من قاعدة البيانات لا من
+        الطلب — تمريرهما في الجسم لا أثر له.
+        TXT,
+        tags: ['Store - Pages'],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\MediaType(
+                mediaType: 'application/x-www-form-urlencoded',
+                schema: new OA\Schema(
+                    required: ['send_message', 'message', 'csrf_token'],
+                    properties: [
+                        new OA\Property(
+                            property: 'send_message',
+                            type: 'string',
+                            description: 'علامة وجود النموذج. بلا هذا المفتاح تُعرض الصفحة بلا معالجة.',
+                            example: '1'
+                        ),
+                        new OA\Property(
+                            property: 'message',
+                            type: 'string',
+                            minLength: 10,
+                            example: 'أرغب بالاستفسار عن توفّر المنتج باللون الأسود.'
+                        ),
+                        new OA\Property(property: 'csrf_token', ref: '#/components/schemas/CsrfToken'),
+                    ],
+                    type: 'object'
+                )
+            )
+        ),
+        responses: [
+            new OA\Response(response: 200, ref: '#/components/responses/HtmlPage'),
+            new OA\Response(response: 503, ref: '#/components/responses/ServiceUnavailable'),
+        ]
     )]
     public function contact(): void
     {
@@ -103,7 +157,16 @@ class ContactController extends Controller
                 )
             )
         ),
-        responses: [new OA\Response(response: 200, description: 'JSON — {success, message}')]
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'نتيجة العملية. الحقل success يفصل النجاح عن الفشل — كود HTTP يبقى 200 في الحالتين. وعند فشل CSRF يحمل الجسم error_code=csrf_invalid.',
+                content: new OA\JsonContent(oneOf: [
+                    new OA\Schema(ref: '#/components/schemas/ApiResponse'),
+                    new OA\Schema(ref: '#/components/schemas/ApiError'),
+                ])
+            ),
+        ]
     )]
     public function send(): void
     {

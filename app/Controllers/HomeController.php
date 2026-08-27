@@ -15,12 +15,20 @@ class HomeController extends Controller
         summary: "الصفحة الرئيسية — السلايدر والأقسام والمنتجات المرئية",
         description: "الراوت /home يشير إلى نفس الدالة.",
         tags: ["Store - Pages"],
-        responses: [new OA\Response(response: 200, description: "صفحة HTML")]
+        responses: [
+            new OA\Response(response: 200, ref: '#/components/responses/HtmlPage'),
+            new OA\Response(response: 404, ref: '#/components/responses/NotFoundPage'),
+            new OA\Response(response: 503, ref: '#/components/responses/ServiceUnavailable'),
+        ]
     )]    #[OA\Get(
         path: '/home',
         summary: 'مسار بديل للصفحة الرئيسية — نفس الدالة تماماً',
         tags: ['Store - Pages'],
-        responses: [new OA\Response(response: 200, description: 'صفحة HTML')]
+        responses: [
+            new OA\Response(response: 200, ref: '#/components/responses/HtmlPage'),
+            new OA\Response(response: 404, ref: '#/components/responses/NotFoundPage'),
+            new OA\Response(response: 503, ref: '#/components/responses/ServiceUnavailable'),
+        ]
     )]
     public function index(): void
     {

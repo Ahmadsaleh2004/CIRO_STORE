@@ -1,7 +1,7 @@
 openapi: 3.0.0
 info:
   title: 'Cairo Store API'
-  description: "كل نقاط المتجر ولوحة التحكم.\n\nملاحظة عامة على الأخطاء: نقاط JSON في هذا المشروع تُرجع 200 حتى عند\nفشل التحقق، والنتيجة تُقرأ من الحقل success في الجسم لا من كود HTTP.\nالاستثناءات الوحيدة هي 302 (تحويل لتسجيل الدخول) و403 (صلاحية ناقصة)\nو404 (راوت غير موجود). هذا سلوك قائم يعتمد عليه الـfrontend، ووُثّق\nهنا كما هو لا كما ينبغي أن يكون."
+  description: "كل نقاط المتجر ولوحة التحكم.\r\n\r\nملاحظة عامة على الأخطاء: نقاط JSON في هذا المشروع تُرجع 200 حتى عند\r\nفشل التحقق، والنتيجة تُقرأ من الحقل success في الجسم لا من كود HTTP.\r\nالاستثناءات الوحيدة هي 302 (تحويل لتسجيل الدخول) و403 (صلاحية ناقصة)\r\nو404 (راوت غير موجود). هذا سلوك قائم يعتمد عليه الـfrontend، ووُثّق\r\nهنا كما هو لا كما ينبغي أن يكون."
   version: 1.1.0
 servers:
   -
@@ -11,7 +11,7 @@ paths:
   /admin/settings:
     get:
       tags:
-        - 'Admin Site Settings'
+        - 'Admin - Site Settings'
       summary: 'عرض صفحة إعدادات الموقع الحالية'
       operationId: 634d1801e5ae45f856fbfc627b8bcd25
       responses:
@@ -26,7 +26,7 @@ paths:
           adminSessionAuth: []
     post:
       tags:
-        - 'Admin Site Settings'
+        - 'Admin - Site Settings'
       summary: 'حفظ إعدادات الموقع (AJAX) — الحقول المالية/العملة تُقبل فقط لصاحب can_manage_checkout_settings'
       description: "AdminSiteSettingsController — صفحة إعدادات الموقع للأدمن.\nيرث من AdminController الذي يتحقق من تسجيل دخول الأدمن تلقائياً."
       operationId: 3e053842fbd06f520e821e6726b6fe5f
@@ -100,11 +100,15 @@ paths:
       operationId: 6da6392c8a0f7198065416a7e1062f26
       responses:
         '200':
-          description: 'صفحة HTML'
+          $ref: '#/components/responses/HtmlPage'
+        '404':
+          $ref: '#/components/responses/NotFoundPage'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
   /admin/login:
     get:
       tags:
-        - 'Admin Auth'
+        - 'Admin - Auth'
       summary: 'عرض صفحة تسجيل دخول الأدمن'
       operationId: d3b445322ac83354e1501b04eeea68b7
       responses:
@@ -112,7 +116,7 @@ paths:
           description: 'صفحة HTML لتسجيل الدخول'
     post:
       tags:
-        - 'Admin Auth'
+        - 'Admin - Auth'
       summary: 'تسجيل دخول الأدمن'
       operationId: f605c43a8e23a8d3a236178d7f5cf925
       requestBody:
@@ -156,7 +160,7 @@ paths:
   /admin/login/2fa:
     post:
       tags:
-        - 'Admin Auth'
+        - 'Admin - Auth'
       summary: 'الخطوة الثانية من دخول الأدمن — التحقق من رمز TOTP'
       description: 'تُستدعى بعد أن يُرجع /admin/login الحقل requires_2fa. الرمز من تطبيق مصادقة (Google Authenticator أو ما يماثله).'
       operationId: e7030ff592552764ee24f00281a3823c
@@ -177,11 +181,21 @@ paths:
               type: object
       responses:
         '200':
-          description: 'JSON — {success, message, redirect?}'
+          description: 'نتيجة العملية. الحقل success يفصل النجاح عن الفشل — كود HTTP يبقى 200 في الحالتين. وعند فشل CSRF يحمل الجسم error_code=csrf_invalid.'
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - { $ref: '#/components/schemas/ApiResponse' }
+                  - { $ref: '#/components/schemas/ApiError' }
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/PermissionDenied'
   /admin/logout:
     post:
       tags:
-        - 'Admin Auth'
+        - 'Admin - Auth'
       summary: 'تسجيل خروج الأدمن'
       operationId: 5bc6c0aaaefe4ef3e155d33f1085c096
       responses:
@@ -190,7 +204,7 @@ paths:
   /admin/forgot:
     post:
       tags:
-        - 'Admin Auth'
+        - 'Admin - Auth'
       summary: 'طلب رابط إعادة تعيين كلمة مرور الأدمن'
       description: 'الرسالة المُرجَعة واحدة سواء وُجد البريد أم لا — كي لا تكشف النقطة أي البُرد مسجَّلة كأدمن.'
       operationId: 130cea99c5909844a7e4be7451bce9a8
@@ -211,11 +225,21 @@ paths:
               type: object
       responses:
         '200':
-          description: 'JSON — {success, message}'
+          description: 'نتيجة العملية. الحقل success يفصل النجاح عن الفشل — كود HTTP يبقى 200 في الحالتين. وعند فشل CSRF يحمل الجسم error_code=csrf_invalid.'
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - { $ref: '#/components/schemas/ApiResponse' }
+                  - { $ref: '#/components/schemas/ApiError' }
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/PermissionDenied'
   /admin/store-mode/enter:
     post:
       tags:
-        - 'Admin Auth'
+        - 'Admin - Auth'
       summary: 'دخول الأدمن لوضع تصفح المتجر كزائر (Store Mode)'
       operationId: 6f56f79b4b92334c5dbcae224315b3f5
       requestBody:
@@ -238,7 +262,7 @@ paths:
   /admin/store-mode/reauth:
     get:
       tags:
-        - 'Admin Auth'
+        - 'Admin - Auth'
       summary: 'عرض صفحة إعادة التحقق بكلمة السر قبل الرجوع للوحة'
       operationId: 1e62213c6d5d92b4fdce0e924902f5aa
       responses:
@@ -248,7 +272,7 @@ paths:
           description: 'إعادة توجيه لـ /admin/home إن لم يكن الأدمن في وضع المتجر'
     post:
       tags:
-        - 'Admin Auth'
+        - 'Admin - Auth'
       summary: 'إعادة تحقق الأدمن بكلمة السر قبل الرجوع للوحة (JSON)'
       operationId: 64d4315e901132618b9471c6aeb5ec11
       requestBody:
@@ -285,7 +309,7 @@ paths:
   /admin/csrf:
     get:
       tags:
-        - 'Admin Auth'
+        - 'Admin - Auth'
       summary: 'توليد CSRF token جديد لفورم الأدمن'
       operationId: 023c6f87e86c774e5c00533c18b0b90a
       responses:
@@ -306,7 +330,13 @@ paths:
       operationId: 04da49ab824daf342dfe454feda55cdb
       responses:
         '200':
-          description: 'صفحة HTML'
+          $ref: '#/components/responses/HtmlPage'
+        '302':
+          $ref: '#/components/responses/RedirectToLogin'
+        '403':
+          $ref: '#/components/responses/PermissionDenied'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
       security:
         -
           adminSessionAuth: []
@@ -324,7 +354,17 @@ paths:
             type: string
       responses:
         '200':
-          description: 'JSON: {success, products}'
+          description: 'نتيجة العملية. الحقل success يفصل النجاح عن الفشل — كود HTTP يبقى 200 في الحالتين. وعند فشل CSRF يحمل الجسم error_code=csrf_invalid.'
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - { $ref: '#/components/schemas/ApiResponse' }
+                  - { $ref: '#/components/schemas/ApiError' }
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/PermissionDenied'
       security:
         -
           adminSessionAuth: []
@@ -340,14 +380,16 @@ paths:
           multipart/form-data: {  }
       responses:
         '302':
-          description: 'إعادة توجيه مع flash message'
+          $ref: '#/components/responses/RedirectWithFlash'
+        '403':
+          $ref: '#/components/responses/PermissionDenied'
       security:
         -
           adminSessionAuth: []
   /admin/dashboard:
     get:
       tags:
-        - 'Admin Dashboard'
+        - 'Admin - Dashboard'
       summary: 'صفحة إحصائيات لوحة تحكم الأدمن (مبيعات، طلبات، مستخدمون، أفضل المنتجات مبيعًا)'
       operationId: 5a10c70d52102afac94342c298f09cad
       parameters:
@@ -371,7 +413,7 @@ paths:
   /admin/home:
     get:
       tags:
-        - 'Admin Home'
+        - 'Admin - Home'
       summary: 'صفحة لوحة التحكم الرئيسية'
       operationId: 5f2b0324a493fd085fc513c017fc963f
       responses:
@@ -404,7 +446,13 @@ paths:
       operationId: 9eb0ffcb6b3931118276117fa7237887
       responses:
         '200':
-          description: 'صفحة HTML للفورم'
+          $ref: '#/components/responses/HtmlPage'
+        '302':
+          $ref: '#/components/responses/RedirectToLogin'
+        '403':
+          $ref: '#/components/responses/PermissionDenied'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
       security:
         -
           adminSessionAuth: []
@@ -469,7 +517,9 @@ paths:
               type: object
       responses:
         '302':
-          description: 'إعادة توجيه لصفحة القائمة مع رسالة flash'
+          $ref: '#/components/responses/RedirectWithFlash'
+        '403':
+          $ref: '#/components/responses/PermissionDenied'
       security:
         -
           adminSessionAuth: []
@@ -481,7 +531,9 @@ paths:
       operationId: 23326486824d40055b9d9ed454b088d1
       responses:
         '302':
-          description: 'إعادة توجيه مع رسالة flash'
+          $ref: '#/components/responses/RedirectWithFlash'
+        '403':
+          $ref: '#/components/responses/PermissionDenied'
       security:
         -
           adminSessionAuth: []
@@ -540,7 +592,13 @@ paths:
             type: integer
       responses:
         '200':
-          description: 'صفحة HTML'
+          $ref: '#/components/responses/HtmlPage'
+        '302':
+          $ref: '#/components/responses/RedirectToLogin'
+        '403':
+          $ref: '#/components/responses/PermissionDenied'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
       security:
         -
           adminSessionAuth: []
@@ -552,7 +610,11 @@ paths:
       operationId: 407baf53eac765c467db8fcdff2e886a
       responses:
         '200':
-          description: 'ملف CSV للتحميل'
+          $ref: '#/components/responses/CsvDownload'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/PermissionDenied'
       security:
         -
           adminSessionAuth: []
@@ -654,7 +716,7 @@ paths:
   /admin/my-info:
     get:
       tags:
-        - 'Admin My Info'
+        - 'Admin - My Info'
       summary: 'عرض صفحة معلوماتي الخاصة بالأدمن'
       operationId: 15738aa88d77264ebe6bd5f675809a65
       responses:
@@ -667,7 +729,7 @@ paths:
           adminSessionAuth: []
     post:
       tags:
-        - 'Admin My Info'
+        - 'Admin - My Info'
       summary: 'تحديث بيانات حساب الأدمن (الاسم / الهاتف / كلمة المرور)'
       operationId: 2700a423dbe09207ba93b4bc4af11330
       requestBody:
@@ -756,7 +818,17 @@ paths:
               type: object
       responses:
         '200':
-          description: 'JSON — {success, message}'
+          description: 'نتيجة العملية. الحقل success يفصل النجاح عن الفشل — كود HTTP يبقى 200 في الحالتين. وعند فشل CSRF يحمل الجسم error_code=csrf_invalid.'
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - { $ref: '#/components/schemas/ApiResponse' }
+                  - { $ref: '#/components/schemas/ApiError' }
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/PermissionDenied'
       security:
         -
           adminSessionAuth: []
@@ -784,7 +856,17 @@ paths:
               type: object
       responses:
         '200':
-          description: 'JSON — {success, message}'
+          description: 'نتيجة العملية. الحقل success يفصل النجاح عن الفشل — كود HTTP يبقى 200 في الحالتين. وعند فشل CSRF يحمل الجسم error_code=csrf_invalid.'
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - { $ref: '#/components/schemas/ApiResponse' }
+                  - { $ref: '#/components/schemas/ApiError' }
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/PermissionDenied'
       security:
         -
           adminSessionAuth: []
@@ -1236,7 +1318,11 @@ paths:
             type: string
       responses:
         '200':
-          description: 'ملف CSV للتحميل'
+          $ref: '#/components/responses/CsvDownload'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/PermissionDenied'
       security:
         -
           adminSessionAuth: []
@@ -1290,7 +1376,13 @@ paths:
       operationId: 92eace0359de6f629ea1e199625bbe25
       responses:
         '200':
-          description: 'صفحة HTML للفورم'
+          $ref: '#/components/responses/HtmlPage'
+        '302':
+          $ref: '#/components/responses/RedirectToLogin'
+        '403':
+          $ref: '#/components/responses/PermissionDenied'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
       security:
         -
           adminSessionAuth: []
@@ -1558,14 +1650,18 @@ paths:
             type: integer
       responses:
         '200':
-          description: 'ملف CSV للتحميل'
+          $ref: '#/components/responses/CsvDownload'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/PermissionDenied'
       security:
         -
           adminSessionAuth: []
   /admin/support/reply:
     post:
       tags:
-        - 'Admin Support'
+        - 'Admin - Support'
       summary: 'إرسال رد على رسالة دعم كإشعار للمستخدم صاحب الرسالة'
       description: "AdminSupportController — صفحة رسائل الدعم الفني للأدمن.\nيرث من AdminController الذي يتحقق من تسجيل دخول الأدمن تلقائياً."
       operationId: 1352770916a2a4c08bb0492de4740ed7
@@ -1602,7 +1698,7 @@ paths:
   /admin/support/delete:
     post:
       tags:
-        - 'Admin Support'
+        - 'Admin - Support'
       summary: 'حذف رسالة دعم فني نهائياً'
       operationId: ff32f904c4a196d8bea9075d40a781bf
       requestBody:
@@ -1635,7 +1731,7 @@ paths:
   /admin/support:
     get:
       tags:
-        - 'Admin Support'
+        - 'Admin - Support'
       summary: 'قائمة رسائل الدعم الفني (بحث + Pagination)، تُحدّد كل الرسائل كمقروءة تلقائياً عند الفتح'
       operationId: 505ebd03f2ff82b6f81567650b77e89c
       parameters:
@@ -1720,7 +1816,13 @@ paths:
             type: integer
       responses:
         '200':
-          description: 'صفحة HTML'
+          $ref: '#/components/responses/HtmlPage'
+        '302':
+          $ref: '#/components/responses/RedirectToLogin'
+        '403':
+          $ref: '#/components/responses/PermissionDenied'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
       security:
         -
           adminSessionAuth: []
@@ -1841,7 +1943,11 @@ paths:
       operationId: 9bfb41fd828517aa7dc9aeb9a39ef7fb
       responses:
         '200':
-          description: 'ملف CSV للتحميل'
+          $ref: '#/components/responses/CsvDownload'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/PermissionDenied'
       security:
         -
           adminSessionAuth: []
@@ -1929,7 +2035,13 @@ paths:
               type: object
       responses:
         '200':
-          description: 'JSON — {success, message}'
+          description: 'نتيجة العملية. الحقل success يفصل النجاح عن الفشل — كود HTTP يبقى 200 في الحالتين. وعند فشل CSRF يحمل الجسم error_code=csrf_invalid.'
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - { $ref: '#/components/schemas/ApiResponse' }
+                  - { $ref: '#/components/schemas/ApiError' }
   /auth/logout:
     post:
       tags:
@@ -1938,7 +2050,13 @@ paths:
       operationId: e39ef4c513f6d25e947a67cab73e4b5b
       responses:
         '200':
-          description: 'JSON — {success, message, redirect?}'
+          description: 'نتيجة العملية. الحقل success يفصل النجاح عن الفشل — كود HTTP يبقى 200 في الحالتين. وعند فشل CSRF يحمل الجسم error_code=csrf_invalid.'
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - { $ref: '#/components/schemas/ApiResponse' }
+                  - { $ref: '#/components/schemas/ApiError' }
       security:
         -
           userSessionAuth: []
@@ -1966,7 +2084,13 @@ paths:
               type: object
       responses:
         '200':
-          description: 'JSON — {success, message}'
+          description: 'نتيجة العملية. الحقل success يفصل النجاح عن الفشل — كود HTTP يبقى 200 في الحالتين. وعند فشل CSRF يحمل الجسم error_code=csrf_invalid.'
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - { $ref: '#/components/schemas/ApiResponse' }
+                  - { $ref: '#/components/schemas/ApiError' }
   /auth/reset:
     get:
       tags:
@@ -1983,7 +2107,11 @@ paths:
             type: string
       responses:
         '200':
-          description: 'صفحة HTML'
+          $ref: '#/components/responses/HtmlPage'
+        '404':
+          $ref: '#/components/responses/NotFoundPage'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
     post:
       tags:
         - 'Store - Auth'
@@ -2013,7 +2141,13 @@ paths:
               type: object
       responses:
         '200':
-          description: 'JSON — {success, message}'
+          description: 'نتيجة العملية. الحقل success يفصل النجاح عن الفشل — كود HTTP يبقى 200 في الحالتين. وعند فشل CSRF يحمل الجسم error_code=csrf_invalid.'
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - { $ref: '#/components/schemas/ApiResponse' }
+                  - { $ref: '#/components/schemas/ApiError' }
   /auth/verify:
     get:
       tags:
@@ -2039,7 +2173,13 @@ paths:
       operationId: dfb82574a38b02fc29d2a04de30bc763
       responses:
         '200':
-          description: 'JSON — {success, message, token}'
+          description: 'نتيجة العملية. الحقل success يفصل النجاح عن الفشل — كود HTTP يبقى 200 في الحالتين. وعند فشل CSRF يحمل الجسم error_code=csrf_invalid.'
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - { $ref: '#/components/schemas/ApiResponse' }
+                  - { $ref: '#/components/schemas/ApiError' }
   /auth/google:
     get:
       tags:
@@ -2078,7 +2218,13 @@ paths:
       operationId: 0b8a457d21fd62e658d0a5b9b8f8a396
       responses:
         '200':
-          description: 'صفحة HTML بالقائمة وزر إنشاء نسخة'
+          $ref: '#/components/responses/HtmlPage'
+        '302':
+          $ref: '#/components/responses/RedirectToLogin'
+        '403':
+          $ref: '#/components/responses/PermissionDenied'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
       security:
         -
           adminSessionAuth: []
@@ -2129,7 +2275,11 @@ paths:
             type: string
       responses:
         '200':
-          description: 'ملف SQL للتحميل'
+          $ref: '#/components/responses/CsvDownload'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/PermissionDenied'
       security:
         -
           adminSessionAuth: []
@@ -2188,7 +2338,13 @@ paths:
               type: object
       responses:
         '200':
-          description: 'JSON — {success, message, items[]}. كل عنصر يحمل variant_id و product_name و price و stock_quantity وغيرها.'
+          description: "المخزون الحيّ للنسخ المطلوبة.\n\nالسلّة محفوظة في متصفّح الزائر، فقد تحمل أسعاراً ومخزوناً\nقديمين. هذه النقطة تُرجع الحقيقة من القاعدة قبل الدفع."
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - { $ref: '#/components/schemas/ApiResponse' }
+                  - { properties: { items: { description: 'نسخة لكل variant_id مطلوب. النسخ المحذوفة تسقط من الناتج.', type: array, items: { $ref: '#/components/schemas/ProductVariant' } } }, type: object }
   /checkout:
     get:
       tags:
@@ -2255,7 +2411,13 @@ paths:
               type: object
       responses:
         '200':
-          description: 'JSON — {success, message}'
+          description: 'نتيجة العملية. الحقل success يفصل النجاح عن الفشل — كود HTTP يبقى 200 في الحالتين. وعند فشل CSRF يحمل الجسم error_code=csrf_invalid.'
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - { $ref: '#/components/schemas/ApiResponse' }
+                  - { $ref: '#/components/schemas/ApiError' }
       security:
         -
           userSessionAuth: []
@@ -2273,7 +2435,11 @@ paths:
             type: integer
       responses:
         '200':
-          description: 'صفحة HTML'
+          $ref: '#/components/responses/HtmlPage'
+        '404':
+          $ref: '#/components/responses/NotFoundPage'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
       security:
         -
           userSessionAuth: []
@@ -2285,7 +2451,43 @@ paths:
       operationId: 2d03ed858c3066693769a44051ce6a34
       responses:
         '200':
-          description: 'صفحة HTML'
+          $ref: '#/components/responses/HtmlPage'
+        '404':
+          $ref: '#/components/responses/NotFoundPage'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+    post:
+      tags:
+        - 'Store - Pages'
+      summary: 'إرسال نموذج "اتصل بنا" من الصفحة نفسها'
+      description: "النقطة الوحيدة التي كانت مسجَّلة في الراوتر وغائبة عن المواصفة\n(103 من 104). وُثّقت هنا كما تعمل فعلاً.\n\nتختلف عن POST /contact/send اختلافاً جوهرياً: هذه **لا تُرجع\nJSON**. الدالة تخدم GET وPOST معاً، وتعيد عرض الصفحة كاملةً مع\nرسالة نجاح أو خطأ في متن HTML. ولهذا استُثنيت من beginJsonPost\nصراحةً — الفشل هنا لا يوقف التنفيذ بل يملأ $errorMsg ويُكمل.\n\nوفشل CSRF لا يُرجع error_code لأن لا عميل JS يقرأ هذه الاستجابة:\nالصفحة تُعرض والرسالة داخلها.\n\nشرطان للإرسال: مستخدم مسجّل الدخول (الزائر يُرفض)، ورسالة لا تقلّ\nعن عشرة محارف. والاسم والبريد يُقرآن من قاعدة البيانات لا من\nالطلب — تمريرهما في الجسم لا أثر له."
+      operationId: f519ff2180ddfa32f78b30a2e4b9648c
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              required:
+                - send_message
+                - message
+                - csrf_token
+              properties:
+                send_message:
+                  description: 'علامة وجود النموذج. بلا هذا المفتاح تُعرض الصفحة بلا معالجة.'
+                  type: string
+                  example: '1'
+                message:
+                  type: string
+                  example: 'أرغب بالاستفسار عن توفّر المنتج باللون الأسود.'
+                  minLength: 10
+                csrf_token:
+                  $ref: '#/components/schemas/CsrfToken'
+              type: object
+      responses:
+        '200':
+          $ref: '#/components/responses/HtmlPage'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
   /contact/send:
     post:
       tags:
@@ -2315,7 +2517,13 @@ paths:
               type: object
       responses:
         '200':
-          description: 'JSON — {success, message}'
+          description: 'نتيجة العملية. الحقل success يفصل النجاح عن الفشل — كود HTTP يبقى 200 في الحالتين. وعند فشل CSRF يحمل الجسم error_code=csrf_invalid.'
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - { $ref: '#/components/schemas/ApiResponse' }
+                  - { $ref: '#/components/schemas/ApiError' }
   /:
     get:
       tags:
@@ -2325,7 +2533,11 @@ paths:
       operationId: 5aeb21eb14626d47415174baf0626d95
       responses:
         '200':
-          description: 'صفحة HTML'
+          $ref: '#/components/responses/HtmlPage'
+        '404':
+          $ref: '#/components/responses/NotFoundPage'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
   /home:
     get:
       tags:
@@ -2334,7 +2546,11 @@ paths:
       operationId: d5422bafc41cad3a4f7437fdc549bbd3
       responses:
         '200':
-          description: 'صفحة HTML'
+          $ref: '#/components/responses/HtmlPage'
+        '404':
+          $ref: '#/components/responses/NotFoundPage'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
   /user/info:
     get:
       tags:
@@ -2383,7 +2599,13 @@ paths:
               type: object
       responses:
         '200':
-          description: 'JSON — {success, message}'
+          description: 'نتيجة العملية. الحقل success يفصل النجاح عن الفشل — كود HTTP يبقى 200 في الحالتين. وعند فشل CSRF يحمل الجسم error_code=csrf_invalid.'
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - { $ref: '#/components/schemas/ApiResponse' }
+                  - { $ref: '#/components/schemas/ApiError' }
       security:
         -
           userSessionAuth: []
@@ -2420,7 +2642,13 @@ paths:
               type: object
       responses:
         '200':
-          description: 'JSON — {success, message}'
+          description: 'نتيجة العملية. الحقل success يفصل النجاح عن الفشل — كود HTTP يبقى 200 في الحالتين. وعند فشل CSRF يحمل الجسم error_code=csrf_invalid.'
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - { $ref: '#/components/schemas/ApiResponse' }
+                  - { $ref: '#/components/schemas/ApiError' }
       security:
         -
           userSessionAuth: []
@@ -2446,7 +2674,13 @@ paths:
               type: object
       responses:
         '200':
-          description: 'JSON — {success, message}'
+          description: 'نتيجة العملية. الحقل success يفصل النجاح عن الفشل — كود HTTP يبقى 200 في الحالتين. وعند فشل CSRF يحمل الجسم error_code=csrf_invalid.'
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - { $ref: '#/components/schemas/ApiResponse' }
+                  - { $ref: '#/components/schemas/ApiError' }
       security:
         -
           userSessionAuth: []
@@ -2458,7 +2692,13 @@ paths:
       operationId: d321c32ce96e2ef4958565db94181aa5
       responses:
         '200':
-          description: 'JSON — {success, message, notifications[], unread}'
+          description: 'قائمة إشعارات المستخدم وعدد غير المقروء منها.'
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - { $ref: '#/components/schemas/ApiResponse' }
+                  - { properties: { notifications: { type: array, items: { $ref: '#/components/schemas/Notification' } }, unread: { description: 'عدد غير المقروء — يُستعمل لشارة الجرس.', type: integer, example: 3 } }, type: object }
       security:
         -
           userSessionAuth: []
@@ -2484,7 +2724,13 @@ paths:
               type: object
       responses:
         '200':
-          description: 'JSON — {success, message}'
+          description: 'نتيجة العملية. الحقل success يفصل النجاح عن الفشل — كود HTTP يبقى 200 في الحالتين. وعند فشل CSRF يحمل الجسم error_code=csrf_invalid.'
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - { $ref: '#/components/schemas/ApiResponse' }
+                  - { $ref: '#/components/schemas/ApiError' }
       security:
         -
           userSessionAuth: []
@@ -2496,7 +2742,13 @@ paths:
       operationId: 9bb6f79b33bd8a231f6ad74c5642cb76
       responses:
         '200':
-          description: 'JSON — {success, message}'
+          description: 'نتيجة العملية. الحقل success يفصل النجاح عن الفشل — كود HTTP يبقى 200 في الحالتين. وعند فشل CSRF يحمل الجسم error_code=csrf_invalid.'
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - { $ref: '#/components/schemas/ApiResponse' }
+                  - { $ref: '#/components/schemas/ApiError' }
       security:
         -
           userSessionAuth: []
@@ -2522,7 +2774,13 @@ paths:
               type: object
       responses:
         '200':
-          description: 'JSON — {success, message}'
+          description: 'نتيجة العملية. الحقل success يفصل النجاح عن الفشل — كود HTTP يبقى 200 في الحالتين. وعند فشل CSRF يحمل الجسم error_code=csrf_invalid.'
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - { $ref: '#/components/schemas/ApiResponse' }
+                  - { $ref: '#/components/schemas/ApiError' }
       security:
         -
           userSessionAuth: []
@@ -2534,7 +2792,13 @@ paths:
       operationId: 568ead104f2687ae3aacf0cd675f60f2
       responses:
         '200':
-          description: 'JSON — {success, message}'
+          description: 'نتيجة العملية. الحقل success يفصل النجاح عن الفشل — كود HTTP يبقى 200 في الحالتين. وعند فشل CSRF يحمل الجسم error_code=csrf_invalid.'
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - { $ref: '#/components/schemas/ApiResponse' }
+                  - { $ref: '#/components/schemas/ApiError' }
       security:
         -
           userSessionAuth: []
@@ -2554,7 +2818,11 @@ paths:
             default: 1
       responses:
         '200':
-          description: 'صفحة HTML'
+          $ref: '#/components/responses/HtmlPage'
+        '404':
+          $ref: '#/components/responses/NotFoundPage'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
   /product:
     get:
       tags:
@@ -2602,7 +2870,11 @@ paths:
               type: object
       responses:
         '200':
-          description: 'صفحة HTML مع رسالة نجاح أو خطأ'
+          $ref: '#/components/responses/HtmlPage'
+        '404':
+          $ref: '#/components/responses/NotFoundPage'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
       security:
         -
           userSessionAuth: []
@@ -2615,7 +2887,11 @@ paths:
       operationId: b8e542e88f9a484f66f3c6e4a2f21a1d
       responses:
         '200':
-          description: 'صفحة HTML'
+          $ref: '#/components/responses/HtmlPage'
+        '404':
+          $ref: '#/components/responses/NotFoundPage'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
   /handlers/product_stock_handler.php:
     get:
       tags:
@@ -2659,11 +2935,480 @@ paths:
               type: object
       responses:
         '200':
-          description: 'JSON — {success, message}'
+          description: 'نتيجة العملية. الحقل success يفصل النجاح عن الفشل — كود HTTP يبقى 200 في الحالتين. وعند فشل CSRF يحمل الجسم error_code=csrf_invalid.'
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - { $ref: '#/components/schemas/ApiResponse' }
+                  - { $ref: '#/components/schemas/ApiError' }
       security:
         -
           userSessionAuth: []
 components:
+  schemas:
+    ApiResponse:
+      title: 'غلاف استجابة JSON الموحّد'
+      description: "الشكل الذي تُرجعه كل نقطة JSON في المشروع، من Controller::respond().\n\nكود HTTP يبقى 200 حتى عند الفشل. النتيجة تُقرأ من الحقل success لا\nمن كود الحالة. هذا سلوك قائم يعتمد عليه الـfrontend في 34 ملف JS."
+      required:
+        - success
+        - message
+      properties:
+        success:
+          description: 'مصدر الحقيقة الوحيد لنجاح العملية أو فشلها.'
+          type: boolean
+          example: true
+        message:
+          description: 'نصّ للعرض على المستخدم. لا تعتمد عليه برمجياً — راجع error_code.'
+          type: string
+          example: 'تمت العملية بنجاح.'
+      type: object
+    ApiError:
+      title: 'استجابة فشل تحمل رمزاً صريحاً'
+      description: "مثل ApiResponse لكن success=false ومعها error_code اختياري.\n\nالرمز عقد بين الخادم والمتصفح، والنصّ للعرض وحده. الفصل بينهما ليس\nتفضيلاً أسلوبياً: كان js/core/csrf.js يكتشف فشل CSRF بمطابقة بداية\nنصّ الرسالة، فأي نقطة تصوغ رسالتها بشكل آخر تفقد إعادة المحاولة\nالتلقائية بصمت. حدث ذلك ثلاث مرّات قبل أن يُستبدل النصّ برمز."
+      required:
+        - success
+        - message
+      properties:
+        success:
+          type: boolean
+          example: false
+        message:
+          type: string
+          example: 'Invalid CSRF token, please refresh and try again.'
+        error_code:
+          description: 'رمز ثابت تقرأه الآلة. يُضاف حين يحتاج العميل التصرّف لا العرض فقط.'
+          type: string
+          example: csrf_invalid
+          enum:
+            - csrf_invalid
+      type: object
+    Product:
+      title: منتج
+      description: 'صفّ من جدول products. الأسعار decimal(10,2) وتصل كنصوص من PDO.'
+      properties:
+        id:
+          type: integer
+          example: 42
+        name:
+          type: string
+          example: 'iPhone 16 Pro'
+        name_ar:
+          type: string
+          nullable: true
+        description:
+          type: string
+          nullable: true
+        description_ar:
+          type: string
+          nullable: true
+        country_of_origin:
+          type: string
+          example: USA
+          nullable: true
+        manufacturer:
+          type: string
+          example: Apple
+          nullable: true
+        price:
+          type: string
+          format: decimal
+          example: '54999.00'
+        discount_percentage:
+          type: string
+          format: decimal
+          example: '10.00'
+        price_after_discount:
+          type: string
+          format: decimal
+          example: '49499.10'
+          nullable: true
+        gender_category:
+          type: string
+          enum:
+            - male
+            - female
+            - both
+        image_path:
+          type: string
+          nullable: true
+        stock_quantity:
+          description: 'العمود unsigned فلا قيمة سالبة ممكنة. العتبة 50 تحوّل الشارة إلى «محدود».'
+          type: integer
+          example: 12
+        sales_count:
+          type: integer
+          example: 130
+        is_visible:
+          type: boolean
+          example: true
+        date_added:
+          type: string
+          format: date
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+      type: object
+    ProductVariant:
+      title: 'نسخة لونية من منتج'
+      description: 'صفّ من product_variants. لكل منتج variant افتراضي واحد (is_default).'
+      properties:
+        id:
+          type: integer
+          example: 7
+        product_id:
+          type: integer
+          example: 42
+        color_name:
+          type: string
+          example: 'Black Titanium'
+        color_hex:
+          type: string
+          example: '#2f2f31'
+          nullable: true
+        price:
+          type: string
+          format: decimal
+          example: '54999.00'
+        discount_percentage:
+          type: string
+          format: decimal
+          example: '0.00'
+        price_after_discount:
+          type: string
+          format: decimal
+          nullable: true
+        stock_quantity:
+          type: integer
+          example: 5
+        gender_category:
+          type: string
+          enum:
+            - male
+            - female
+            - both
+        image_path:
+          type: string
+          nullable: true
+        is_default:
+          type: boolean
+          example: true
+        sort_order:
+          type: integer
+          example: 0
+      type: object
+    Category:
+      title: تصنيف
+      properties:
+        id:
+          type: integer
+          example: 3
+        name:
+          type: string
+          example: Smartphones
+      type: object
+    StockBadge:
+      title: 'شارة المخزون'
+      description: "ناتج getStockBadge() في app/helpers/stock_badge_helper.php.\n\nللدالة مرآة في JS (stockBadge في js/core/utils.js) تخدم البطاقات التي\nيبنيها المتصفح. العتبة 50 والنصوص مكرّرة بين اللغتين عمداً في مشروع\nبلا خطوة بناء. القيمة null تعني «لا شارة» — مخزون وفير في سياق لا\nيطلب شارة خضراء."
+      properties:
+        label:
+          type: string
+          example: 'Limited (7 left)'
+        class:
+          type: string
+          example: 'bg-warning text-dark'
+      type: object
+      nullable: true
+    OrderItem:
+      title: 'سطر في طلب'
+      description: 'السعر مخزَّن وقت الشراء لا مقروءاً من المنتج — تغيير سعر المنتج لاحقاً لا يمسّ طلباً منجزاً.'
+      properties:
+        id:
+          type: integer
+        order_id:
+          type: integer
+        product_id:
+          type: integer
+          nullable: true
+        variant_id:
+          type: integer
+          nullable: true
+        quantity:
+          type: integer
+          example: 2
+        unit_price:
+          type: string
+          format: decimal
+          example: '54999.00'
+      type: object
+    Order:
+      title: طلب
+      properties:
+        id:
+          type: integer
+          example: 1024
+        user_id:
+          type: integer
+          nullable: true
+        status:
+          description: 'حالة الطلب. الانتقالات محكومة في OrderModel داخل معاملات.'
+          type: string
+          example: pending
+        total_price:
+          type: string
+          format: decimal
+          example: '109998.00'
+        taken_by_admin_id:
+          description: 'الأدمن المستلم. يُفرَج عنه تلقائياً بعد المهلة (order_expiry_log).'
+          type: integer
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+      type: object
+    Address:
+      title: 'عنوان مستخدم'
+      properties:
+        id:
+          type: integer
+        user_id:
+          type: integer
+        address_line:
+          type: string
+        city:
+          type: string
+          nullable: true
+        phone:
+          type: string
+          example: '+201234567890'
+          nullable: true
+      type: object
+    User:
+      title: 'مستخدم متجر'
+      description: 'حقل password لا يظهر في أي استجابة إطلاقاً.'
+      properties:
+        id:
+          type: integer
+          example: 88
+        full_name:
+          type: string
+        email:
+          type: string
+          format: email
+          example: user@example.com
+        phone_number:
+          type: string
+          nullable: true
+        is_blocked:
+          type: boolean
+          example: false
+        created_at:
+          type: string
+          format: date-time
+      type: object
+    Admin:
+      title: 'حساب أدمن'
+      description: "الرتب مرتّبة تماماً: A=4 أعلى من B=3 أعلى من C=2 أعلى من D=1.\n\nالقاعدة الحاكمة في AdminModel::canManageTarget هي «أكبر تماماً» لا\n«أكبر أو يساوي» — فلا يدير أدمنٌ رتبتَه. لو كانت الثانية لاستطاع كل\nأدمن حذف أقرانه، ومنهم من أضاف حسابه. ورتبة A تتجاوز كل الصلاحيات."
+      properties:
+        id:
+          type: integer
+          example: 1
+        full_name:
+          type: string
+          example: 'Root Admin'
+        email:
+          type: string
+          format: email
+        role:
+          type: string
+          example: B
+          enum:
+            - A
+            - B
+            - C
+            - D
+        totp_enabled:
+          type: boolean
+          example: true
+        phone_number:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+      type: object
+    AdminPermissions:
+      title: 'صلاحيات أدمن'
+      description: 'صفّ من admin_permissions. رتبة A تتجاوزها كلها في hasPermission().'
+      properties:
+        can_manage_admins:
+          type: boolean
+        can_manage_products:
+          type: boolean
+        can_manage_users:
+          type: boolean
+        can_view_dashboard:
+          type: boolean
+        can_manage_support:
+          type: boolean
+        can_edit_site_content:
+          type: boolean
+        can_manage_checkout_settings:
+          type: boolean
+        can_manage_orders:
+          type: boolean
+        can_manage_branding:
+          type: boolean
+      type: object
+    Notification:
+      title: إشعار
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+          example: 'Order Taken'
+        message:
+          type: string
+        is_read:
+          type: boolean
+          example: false
+        related_type:
+          type: string
+          example: order
+          nullable: true
+        related_id:
+          type: integer
+          example: 1024
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+      type: object
+    SupportMessage:
+      title: 'رسالة دعم'
+      properties:
+        id:
+          type: integer
+        user_id:
+          type: integer
+          nullable: true
+        full_name:
+          type: string
+        email:
+          type: string
+          format: email
+        message:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+      type: object
+    SliderItem:
+      title: 'شريحة في السلايدر'
+      properties:
+        id:
+          type: integer
+        slider_id:
+          type: integer
+        product_id:
+          type: integer
+          nullable: true
+        image_path:
+          type: string
+          nullable: true
+        sort_order:
+          type: integer
+      type: object
+    CsrfToken:
+      title: 'توكن CSRF'
+      description: "مطلوب في كل نقطة POST عدا ثلاث موثّقة الاستثناء.\n\nيُقرأ من $_POST أو من جسم JSON معاً (Controller::requestData)، فيصحّ\nإرساله بأيّ من الشكلين. عند الفشل تُرجع النقطة error_code بقيمة\ncsrf_invalid، فيجلب js/core/csrf.js توكناً جديداً ويعيد المحاولة\nمرّة واحدة تلقائياً."
+      type: string
+      example: 3f2a9c1e8b7d6f5a4c3b2a190e8d7c6b5a4f3e2d1c0b9a8f7e6d5c4b3a291807
+  responses:
+    JsonSuccess:
+      description: 'نجاح — success=true.'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiResponse'
+    HtmlPage:
+      description: 'صفحة HTML كاملة.'
+      content:
+        text/html: {  }
+    CsvDownload:
+      description: 'ملف CSV للتحميل (Content-Disposition: attachment).'
+      content:
+        text/csv: {  }
+    CsrfFailure:
+      description: "فشل التحقق من توكن CSRF.\n\nكود HTTP يبقى 200 — الفشل يُقرأ من success=false ومن error_code.\nالعميل (js/core/csrf.js) يكتشف الرمز، يجلب توكناً جديداً، ويعيد\nالمحاولة مرّة واحدة تلقائياً. لذلك لا يرى المستخدم هذا الخطأ عادةً."
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+          example:
+            success: false
+            message: 'Invalid CSRF token, please refresh and try again.'
+            error_code: csrf_invalid
+    ValidationFailure:
+      description: "مدخلات غير صالحة (حقل ناقص، بريد غير صحيح، رسالة أقصر من الحدّ…).\n\nكود HTTP يبقى 200 كبقية نقاط JSON؛ التمييز من success=false."
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+          example:
+            success: false
+            message: 'Message is too short (at least 10 characters).'
+    MethodNotAllowed:
+      description: 'الطلب لم يصل بـPOST. يُرفض في Controller::beginJsonPost قبل أي منطق.'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+          example:
+            success: false
+            message: 'Method not allowed.'
+    SessionExpired:
+      description: "لا جلسة صالحة. يُرجعها Middleware::requireAdmin لطلبات AJAX/POST\nبكود 401؛ أما طلبات الصفحات الكاملة فتُحوَّل بـ302 إلى صفحة الدخول."
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+          example:
+            success: false
+            message: 'Session expired. Please log in again.'
+    PermissionDenied:
+      description: "الجلسة صالحة لكن الصلاحية ناقصة (Middleware::requirePermission).\n\nرتبة A تتجاوز كل الصلاحيات، فلا تصل إلى هنا أبداً. والرسالة عامة\nعمداً: كشف اسم الصلاحية الناقصة للزائر يرسم له خريطة النظام."
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+          example:
+            success: false
+            message: 'Access denied. You do not have permission for this action.'
+    NotFoundPage:
+      description: 'راوت غير مسجَّل أو مورد غير موجود. صفحة HTML من ErrorPage::notFound.'
+      content:
+        text/html: {  }
+    ServiceUnavailable:
+      description: "عطل تقني يمنع إكمال الطلب — أبرزه فشل الاتصال بقاعدة البيانات.\n\n503 لا 500 عمداً: الخدمة غير متاحة مؤقتاً لا «خطأ في الخادم»،\nوالفرق يهمّ محرّكات البحث وأدوات المراقبة. التفاصيل تذهب إلى سجلّ\nالأخطاء ولا تُطبع للزائر أبداً — رسالة PDO تحمل اسم المضيف واسم\nالقاعدة واسم المستخدم."
+      content:
+        text/html: {  }
+    RedirectToLogin:
+      description: 'تحويل 302 إلى صفحة الدخول مع حفظ الوجهة الأصلية في الجلسة.'
+      headers:
+        Location:
+          description: 'وجهة التحويل.'
+          schema:
+            type: string
+    RedirectWithFlash:
+      description: 'تحويل 302 مع رسالة flash في الجلسة تُعرَض في الصفحة التالية.'
+      headers:
+        Location:
+          description: 'وجهة التحويل.'
+          schema:
+            type: string
   securitySchemes:
     adminSessionAuth:
       type: apiKey
@@ -2672,76 +3417,73 @@ components:
       in: cookie
     userSessionAuth:
       type: apiKey
-      description: "جلسة المستخدم العادي — منفصلة تماماً عن admin_session بالاسم\nوالمحتوى، فلا يمكن الوصول لبيانات الأدمن من جلسة مستخدم ولا العكس\n(راجع isUser/isAdmin في auth_helper.php)."
+      description: "جلسة المستخدم العادي — منفصلة تماماً عن admin_session بالاسم\r\nوالمحتوى، فلا يمكن الوصول لبيانات الأدمن من جلسة مستخدم ولا العكس\r\n(راجع isUser/isAdmin في auth_helper.php)."
       name: PHPSESSID
       in: cookie
 tags:
   -
     name: 'Store - Pages'
-    description: 'Store - Pages'
-  -
-    name: 'Admin Auth'
-    description: 'Admin Auth'
-  -
-    name: 'Admin - Branding'
-    description: 'Admin - Branding'
-  -
-    name: 'Admin Dashboard'
-    description: 'Admin Dashboard'
-  -
-    name: 'Admin Home'
-    description: 'Admin Home'
-  -
-    name: 'Admin - Manage Admins'
-    description: 'Admin - Manage Admins'
-  -
-    name: 'Admin - Messaging'
-    description: 'Admin - Messaging'
-  -
-    name: 'Admin My Info'
-    description: 'Admin My Info'
-  -
-    name: 'Admin - My Info'
-    description: 'Admin - My Info'
-  -
-    name: 'Admin - Notifications'
-    description: 'Admin - Notifications'
-  -
-    name: 'Admin - Manage Orders'
-    description: 'Admin - Manage Orders'
-  -
-    name: 'Admin - Manage Products'
-    description: 'Admin - Manage Products'
-  -
-    name: 'Admin Site Settings'
-    description: 'Admin Site Settings'
-  -
-    name: 'Admin Support'
-    description: 'Admin Support'
-  -
-    name: 'Admin - Manage Users'
-    description: 'Admin - Manage Users'
-  -
-    name: 'Store - Auth'
-    description: 'Store - Auth'
-  -
-    name: 'Admin - Backup'
-    description: 'Admin - Backup'
-  -
-    name: 'Store - Cart'
-    description: 'Store - Cart'
-  -
-    name: 'Store - Checkout'
-    description: 'Store - Checkout'
-  -
-    name: 'Store - Account'
-    description: 'Store - Account'
-  -
-    name: 'Store - Notifications'
-    description: 'Store - Notifications'
+    description: 'صفحات المتجر الثابتة: الرئيسية، من نحن، اتصل بنا.'
   -
     name: 'Store - Products'
-    description: 'Store - Products'
+    description: 'تصفّح المنتجات وتفاصيلها والنسخ اللونية.'
+  -
+    name: 'Store - Auth'
+    description: 'تسجيل الدخول والحساب الجديد، واستعادة كلمة السر، ودخول Google.'
+  -
+    name: 'Store - Cart'
+    description: 'السلّة — محفوظة في المتصفح ويُتحقّق من مخزونها عند الخروج.'
+  -
+    name: 'Store - Checkout'
+    description: 'إتمام الطلب وإلغاؤه، وعناوين الشحن.'
+  -
+    name: 'Store - Account'
+    description: 'بيانات المستخدم وعناوينه وكلمة سرّه.'
   -
     name: 'Store - Wishlist'
-    description: 'Store - Wishlist'
+    description: 'المفضّلة، وتنبيه توفّر المخزون.'
+  -
+    name: 'Store - Notifications'
+    description: 'إشعارات المستخدم — القائمة والتعليم كمقروء والحذف.'
+  -
+    name: 'Admin - Auth'
+    description: "دخول لوحة التحكم: كلمة السر، ثم TOTP إن كان مفعّلاً، وhCaptcha.\r\n\r\nجلسة الأدمن اسمها admin_session ومنفصلة تماماً عن جلسة المتجر.\r\nو«وضع المتجر» يسمح للأدمن بتصفّح الواجهة العامة، والخروج منه يتطلّب\r\nإعادة إدخال كلمة السر."
+  -
+    name: 'Admin - Home'
+    description: 'الصفحة الرئيسية للوحة — بطاقات الوصول السريع.'
+  -
+    name: 'Admin - Dashboard'
+    description: 'الإحصاءات: المبيعات والطلبات المعلّقة والمستخدمون الجدد.'
+  -
+    name: 'Admin - Manage Products'
+    description: 'إضافة المنتجات وتعديلها وحذفها، والنسخ اللونية والتصنيفات.'
+  -
+    name: 'Admin - Manage Orders'
+    description: "الطلبات: الاستلام والتسليم والإفراج والإلغاء.\r\n\r\nالطلب المستلَم يُفرَج عنه تلقائياً بعد انتهاء المهلة، ويُسجَّل ذلك في\r\norder_expiry_log. وكل انتقال حالة يجري داخل معاملة."
+  -
+    name: 'Admin - Manage Users'
+    description: 'المستخدمون: العرض والحظر والضربات والحذف.'
+  -
+    name: 'Admin - Manage Admins'
+    description: "حسابات الأدمنية وصلاحياتهم.\r\n\r\nمحكومة بقاعدة الرتب: A أعلى من B أعلى من C أعلى من D، ولا يدير أدمنٌ\r\nرتبتَه — المقارنة «أكبر تماماً» لا «أكبر أو يساوي»."
+  -
+    name: 'Admin - Support'
+    description: 'رسائل الدعم الواردة من نموذج «اتصل بنا».'
+  -
+    name: 'Admin - Messaging'
+    description: 'إشعار مستخدم بعينه، أو بثّ رسالة لمجموعة.'
+  -
+    name: 'Admin - Notifications'
+    description: 'إشعارات الأدمن — تصل من أفعال أدمنية أدنى رتبة.'
+  -
+    name: 'Admin - Branding'
+    description: 'سلايدر الصفحة الرئيسية والهوية البصرية.'
+  -
+    name: 'Admin - Site Settings'
+    description: 'إعدادات المتجر العامة.'
+  -
+    name: 'Admin - My Info'
+    description: 'ملف الأدمن الشخصي وكلمة سرّه وتفعيل TOTP.'
+  -
+    name: 'Admin - Backup'
+    description: 'النسخ الاحتياطي لقاعدة البيانات — رتبة A وحدها. كلمة السر تُمرَّر عبر ملف خيارات لا سطر أوامر.'
