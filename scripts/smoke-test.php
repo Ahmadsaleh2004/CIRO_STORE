@@ -42,20 +42,6 @@ $SKIPHTTP = isset($opts['skip-http']);
 $LINTALL  = isset($opts['lint-all']);
 $TIMEOUT  = 15;
 
-/** راوتات تُعيد ملفاً للتحميل أو JSON، فلا تُفحص كصفحة HTML. */
-const NON_HTML_ROUTES = [
-    '/admin/admins/export-csv',
-    '/admin/users/export-csv',
-    '/admin/orders/export-csv',
-    '/admin/products/export-csv',
-    '/admin/backup/download',
-    '/auth/csrf',
-    '/admin/csrf',
-    '/notifications/list',
-    '/admin/notifications/list',
-    '/handlers/product_stock_handler.php',
-    '/admin/branding/products/search',
-];
 
 /**
  * راوتات تعتمد على خدمة خارجية (OAuth) أو على توكن في الرابط.
@@ -116,15 +102,21 @@ function fetch(string $url, int $timeout): array
     ]);
     $body = curl_exec($ch);
     $code = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $type = (string)curl_getinfo($ch, CURLINFO_CONTENT_TYPE);
     $err  = curl_error($ch);
     curl_close($ch);
 
-    return ['body' => $body === false ? '' : $body, 'code' => $code, 'error' => $err];
+    return [
+        'body'  => $body === false ? '' : $body,
+        'code'  => $code,
+        'type'  => $type,
+        'error' => $err,
+    ];
 }
 
 // ── 3. فحص جسم الاستجابة ───────────────────────────────────────────
 /** @return string[] قائمة المشاكل المكتشفة (فارغة = سليم) */
-function inspectBody(string $body, string $route, int $code): array
+function inspectBody(string $body, string $route, int $code, string $contentType = ''): array
 {
     $problems = [];
 
@@ -150,11 +142,21 @@ function inspectBody(string $body, string $route, int $code): array
         $problems[] = 'صفحة فارغة';
     }
 
-    if (
-        $code === 200
-        && !in_array($route, NON_HTML_ROUTES, true)
-        && !str_contains($body, '</html>')
-    ) {
+    // فحص اكتمال HTML يُطبَّق على استجابات HTML وحدها.
+    //
+    // ⚠️ التمييز من ترويسة Content-Type لا من قائمة يدوية.
+    //
+    // كانت هنا NON_HTML_ROUTES: قائمة مكتوبة بأسماء ثمانية مسارات
+    // تُرجع JSON أو ملفاً. وهي تتقادم بالضرورة — أول نقطة JSON تُضاف
+    // بعدها تفشل بـ«HTML غير مكتمل»، وهي رسالة تصف الفاحص لا المفحوص.
+    // وقع ذلك فعلاً عند إضافة /health.
+    //
+    // والاشتقاق من الترويسة يجعل القائمة غير لازمة: النقطة تعلن نوعها
+    // بنفسها، والفاحص يقرأ ما أعلنته.
+    $looksHtml = $contentType === ''
+        || str_contains(strtolower($contentType), 'text/html');
+
+    if ($code === 200 && $looksHtml && !str_contains($body, '</html>')) {
         $problems[] = 'HTML غير مكتمل (لا </html>)';
     }
 
@@ -178,7 +180,7 @@ function runHttpChecks(array $routes, string $base, int $timeout, bool $verbose)
             // 302 مقبول: صفحات الأدمن تحوّل لتسجيل الدخول بدون جلسة
             $problems[] = 'HTTP ' . $r['code'];
         } else {
-            $problems = inspectBody($r['body'], $route, $r['code']);
+            $problems = inspectBody($r['body'], $route, $r['code'], $r['type'] ?? '');
         }
 
         // الراوتات الخارجية: التحويل متوقّع، لا نعدّه عطلاً

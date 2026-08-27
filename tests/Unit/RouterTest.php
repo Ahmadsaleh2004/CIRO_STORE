@@ -98,6 +98,41 @@ final class RouterTest extends TestCase
         $this->assertNull($this->findRoute($r, 'POST', '/only-get'));
     }
 
+    /**
+     * HEAD يُعامَل كـGET.
+     *
+     * المعيار (RFC 9110 §9.3.2) يوجب أن كل مورد يدعم GET يدعم HEAD.
+     * وبلا ذلك كان **كل مسار في المشروع** يردّ على HEAD بـ404 — وأدوات
+     * المراقبة وفاحصات الصحّة ودوّارات الحمل تستعمله لأنه أرخص، فكانت
+     * كلها ستقرأ الموقع ميّتاً وهو حيّ.
+     *
+     * والدليل كان في سجلّ المشروع نفسه: «[Cairo Store] 404: HEAD /».
+     */
+    public function testHeadIsTreatedAsGet(): void
+    {
+        $r = $this->router();
+        $r->get('/health', static function (): void {
+        });
+
+        $normalize = new \ReflectionMethod(Router::class, 'normalizePath');
+        $normalize->setAccessible(true);
+
+        // dispatch يوقف التنفيذ، فيُفحص التطبيع والمطابقة معاً بدلاً منه.
+        $this->assertNotNull($this->findRoute($r, 'GET', '/health'));
+        $this->assertNull(
+            $this->findRoute($r, 'HEAD', '/health'),
+            'المطابقة نفسها لا تعرف HEAD — التحويل يقع في dispatch.'
+        );
+
+        // ما يهمّ فعلاً: أن dispatch يحوّل HEAD إلى GET قبل المطابقة.
+        $source = file_get_contents((new \ReflectionClass(Router::class))->getFileName());
+        $this->assertStringContainsString(
+            "if (\$requestMethod === 'HEAD')",
+            (string) $source,
+            'تحويل HEAD إلى GET اختفى من dispatch.'
+        );
+    }
+
     public function testMethodMatchingIsCaseInsensitive(): void
     {
         $r = $this->router();
