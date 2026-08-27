@@ -46,6 +46,10 @@
         ]
     },
     "require": {
+        "php": ">=8.2",
+        "ext-pdo": "*",
+        "ext-mbstring": "*",
+        "ext-json": "*",
         "phpmailer/phpmailer": "^7.1"
     },
     "require-dev": {
