@@ -23,13 +23,23 @@
             "app/views/"
         ]
     },
+    "autoload-dev": {
+        "psr-4": {
+            "Tests\\": "tests/"
+        }
+    },
     "scripts": {
-        "docs:generate": "vendor/bin/openapi app/Controllers app/config -o public/docs/openapi.yaml"
+        "docs:generate": "vendor/bin/openapi app/Controllers app/config -o public/docs/openapi.yaml",
+        "test": "phpunit",
+        "test:unit": "phpunit --testsuite Unit",
+        "test:integration": "phpunit --testsuite Integration",
+        "test:coverage": "phpunit --coverage-text --coverage-html coverage"
     },
     "require": {
         "phpmailer/phpmailer": "^7.1"
     },
     "require-dev": {
-        "zircote/swagger-php": "^6.7"
+        "zircote/swagger-php": "^6.7",
+        "phpunit/phpunit": "^11"
     }
 }

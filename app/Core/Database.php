@@ -11,6 +11,21 @@ class Database
     private static ?Database $instance = null;
     private PDO $connection;
 
+    /**
+     * اتصال محقون يتقدّم على الاتصال الحقيقي — للاختبارات وحدها.
+     *
+     * هذا هو **كل** ما احتاجه المشروع ليصير قابلاً للاختبار. المودلز
+     * كلها static وتنادي Database::connect() — مئة وثمانية وخمسون
+     * موضعاً — فنقطة الاختناق واحدة، ويكفي أن تُرجع اتصالاً آخر لتصير
+     * 4,827 سطر مودل قابلة للاختبار بلا لمس سطر واحد فيها.
+     *
+     * وهذا مقصود: CLEANUP-PLAN قرّر «المودلز تبقى static»، والقرار
+     * صحيح ولم يُنقض. البديل — تحويل كل مودل إلى كائن يستقبل PDO في
+     * الباني — كان سيغيّر مئة وثمانية وخمسين نداءً وكل مستدعيها لمكسب
+     * لا يزيد على ما يعطيه هذان السطران.
+     */
+    private static ?PDO $injected = null;
+
     private function __construct()
     {
         // الثوابت مضمونة: config.php يعرّفها كلها من .env، وهو يُحمَّل
@@ -73,9 +88,46 @@ class Database
 
     /**
      * اختصار استدعاء سريع للحصول على PDO مباشرة: Database::connect()
+     *
+     * يفحص الاتصال المحقون أولاً. في الإنتاج يكون null دائماً
+     * (setConnection ترفض العمل خارج CLI)، فالمسار كما كان تماماً.
      */
     public static function connect(): PDO
     {
-        return self::getInstance()->getConnection();
+        return self::$injected ?? self::getInstance()->getConnection();
+    }
+
+    /**
+     * يحقن اتصالاً بديلاً — **للاختبارات وحدها**.
+     *
+     * ⚠️ محصورة في CLI عمداً وترمي خارجها. الحصر ليس تزيّناً: بدونه
+     * يكفي أن يستدعيها مسار طلب واحد — عن سهو أو عبر ثغرة تنفيذ —
+     * ليُحوّل كل استعلامات التطبيق إلى قاعدة يسيطر عليها المهاجم.
+     * PHPUnit يعمل على CLI دائماً، فالحصر لا يكلّف الاختبارات شيئاً.
+     *
+     * @throws \LogicException إن استُدعيت من سياق ويب.
+     */
+    public static function setConnection(PDO $pdo): void
+    {
+        if (PHP_SAPI !== 'cli') {
+            throw new \LogicException(
+                'Database::setConnection() is a test-only seam and must never run outside CLI.'
+            );
+        }
+
+        self::$injected = $pdo;
+    }
+
+    /**
+     * يمسح الاتصال المحقون ونسخة الـsingleton معاً.
+     *
+     * تُستدعى في tearDown كي لا يتسرّب اتصال اختبار إلى الاختبار التالي.
+     * مسح $instance أيضاً مقصود: اختبار يريد اتصالاً حقيقياً بعد اختبار
+     * حقن يجب أن يبنيه من جديد لا أن يرث نسخة قديمة.
+     */
+    public static function reset(): void
+    {
+        self::$injected = null;
+        self::$instance = null;
     }
 }

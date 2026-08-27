@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:noNamespaceSchemaLocation="vendor/phpunit/phpunit/phpunit.xsd"
+         bootstrap="tests/bootstrap.php"
+         colors="true"
+         cacheDirectory=".phpunit.cache"
+         failOnWarning="true"
+         failOnRisky="true"
+         beStrictAboutOutputDuringTests="true"
+         displayDetailsOnTestsThatTriggerWarnings="true"
+         displayDetailsOnTestsThatTriggerErrors="true">
+
+    <testsuites>
+        <!-- وحدة: بلا قاعدة بيانات إطلاقاً. تعمل في أي مكان وفي أجزاء من الثانية. -->
+        <testsuite name="Unit">
+            <directory>tests/Unit</directory>
+        </testsuite>
+
+        <!-- تكامل: تحتاج قاعدة الاختبار. تُتخطّى بذاتها إن غابت. -->
+        <testsuite name="Integration">
+            <directory>tests/Integration</directory>
+        </testsuite>
+    </testsuites>
+
+    <source>
+        <include>
+            <directory>app</directory>
+        </include>
+        <exclude>
+            <!-- الـviews قوالب إخراج، وتغطيتها بلا معنى. -->
+            <directory>app/views</directory>
+        </exclude>
+    </source>
+
+    <php>
+        <!-- ⚠️ لا تُوضع أسرار هنا. القيم الحقيقية تأتي من .env.testing
+             أو من متغيّرات البيئة، وهذا الملف متتبَّع في git. -->
+        <env name="APP_ENV" value="testing"/>
+        <env name="APP_DEBUG" value="true"/>
+    </php>
+</phpunit>
