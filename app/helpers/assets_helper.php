@@ -31,20 +31,67 @@ function cssBundleFiles(string $bundle): array
 }
 
 /**
+ * البيان الذي ينتجه `npm run build` — اسم الملف المبصوم لكل حزمة.
+ *
+ * يُقرأ مرّة واحدة لكل طلب. غيابه ليس خطأً بل يعني «لم يُبنَ بعد»،
+ * فتعود cssBundle إلى سلسلة @import.
+ *
+ * @return array<string, string>
+ */
+function cssManifest(): array
+{
+    static $manifest = null;
+    if ($manifest !== null) {
+        return $manifest;
+    }
+
+    $path = ROOTPATH . '/public/css/dist/manifest.json';
+    if (!is_file($path)) {
+        return $manifest = [];
+    }
+
+    $decoded = json_decode((string) file_get_contents($path), true);
+
+    return $manifest = is_array($decoded) ? $decoded : [];
+}
+
+/**
  * يطبع وسوم <link> الخاصة بحزمة.
  *
- * ملاحظة حول الأداء: الحزمة ملف @import، أي طلب HTTP لكل ملف داخلي
- * بشكل متسلسل. هذا مقبول تماماً على localhost ومناسب للتطوير لأن كل
- * ملف يظهر منفصلاً في DevTools. إن احتجنا لاحقاً طلباً واحداً فقط،
- * الترقية هي دمج الملفات في public/css/dist/<bundle>.css وإرجاع
- * وسم واحد من هنا — بلا أي تغيير في الـ Views.
+ * ── مساران، والاختيار بينهما آليّ ────────────────────────────
+ *
+ * **مبنيّ** (البيان موجود): وسم واحد لكل حزمة يشير إلى ملف مدموج
+ * مضغوط مبصوم. store.css كانت 36 استيراداً و admin.css 19، والمتصفح
+ * لا يعرف بوجود أيٍّ منها حتى ينزّل الملف الأب ويحلّله — فالتنزيل
+ * متسلسل بطبعه لا متوازٍ.
+ * القياس: 55 طلباً و112 كيلوبايت → طلبان و59 كيلوبايت.
+ *
+ * **غير مبنيّ** (لا بيان): سلسلة @import كما كانت. وهذا هو وضع
+ * التطوير المفضَّل — كل ملف يظهر منفصلاً في DevTools، وتعديل واحد
+ * منها يظهر فوراً بلا إعادة بناء.
+ *
+ * ولهذا لا يوجد مفتاح إعداد يختار بينهما: **وجود البيان هو الاختيار**.
+ * مفتاح منفصل كان سيسمح بحالتين لا معنى لهما — مبنيّ ومعطَّل، وغير
+ * مبنيّ ومفعَّل (وهذه الأخيرة صفحة بلا أي تنسيق).
+ *
+ * البصمة في اسم الملف تُبطل التخزين المؤقّت من تلقائها: تغيّر المحتوى
+ * يغيّر الاسم، وثباته يُبقيه فيستفيد الزائر من ذاكرته.
+ *
+ * ⚠️ حزمة admin تُحمِّل store أولاً (راجع cssBundleFiles)، والترتيب
+ * محفوظ في المسارين.
  */
 function cssBundle(string $bundle = 'store'): string
 {
+    $manifest = cssManifest();
+
     $out = '';
     foreach (cssBundleFiles($bundle) as $file) {
-        $out .= '    <link rel="stylesheet" href="' . URLROOT . '/' . $file . '">' . "\n";
+        // 'css/store.css' → 'store'
+        $key  = basename($file, '.css');
+        $href = $manifest[$key] ?? $file;
+        $out .= '    <link rel="stylesheet" href="' . URLROOT . '/' . $href . '">' . "\n";
     }
+
     return $out;
 }
 

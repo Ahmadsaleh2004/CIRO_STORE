@@ -18,7 +18,7 @@
    follows the theme. Replaces an inline style on admin/my-info.php.
    ================================================== */
 .twofa-qr {
-    background: #ffffff;
+    background: #fff;
     border: 1px solid var(--section-border);
     border-radius: 8px;
     padding: 4px;

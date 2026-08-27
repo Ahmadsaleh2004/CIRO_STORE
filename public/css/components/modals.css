@@ -102,7 +102,7 @@
 .modal-header-login  .modal-title,
 .modal-header-register .modal-title,
 .modal-header-forgot .modal-title {
-    color: #ffffff !important;
+    color: #fff !important;
     font-size: 1.3rem !important;
     font-weight: 700 !important;
 }

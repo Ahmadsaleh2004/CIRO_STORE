@@ -19,6 +19,11 @@
 // التوكن يُرسَل ويُتحقَّق منه على الخادم منذ إصلاح CSRF الخروج. توكن
 // منتهٍ يعني بقاء الأدمن داخلاً وتحويله إلى /admin/home — وهو فشل مرئي
 // لا صامت، فلا حاجة لإعادة محاولة تلقائية هنا.
+// تُستدعى من HTML لا من JS: app/views/admin/inc/navbar.php:120 فيها
+// onclick="logoutAdmin()". وESLint لا يرى الـviews فيقرأها دالةً بلا
+// مستدعٍ. الاستثناء موضعي لا في الإعداد العام، كي يبقى الفحص عاملاً
+// على كل دالة أخرى في المشروع.
+// eslint-disable-next-line no-unused-vars
 function logoutAdmin() {
     // nosemgrep: cairo-bare-fetch-post
     fetch(window.URLROOT + '/admin/logout', {

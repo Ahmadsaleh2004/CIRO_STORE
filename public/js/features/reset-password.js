@@ -63,7 +63,7 @@
                         window.location.href = window.BASE_URL;
                     }, 1200);
                 }
-            } catch (err) {
+            } catch {
                 showResetMsg(msgEl, 'Something went wrong. Please try again.', 'danger');
             } finally {
                 if (btn) btn.disabled = false;

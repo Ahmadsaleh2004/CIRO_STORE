@@ -78,7 +78,7 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 if (typeof showToast === 'function') showToast(data.message || 'Error', 'error');
             }
-        } catch (err) {
+        } catch {
             if (typeof showToast === 'function') showToast('Network error.', 'error');
         }
     });
@@ -134,7 +134,7 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 if (typeof showToast === 'function') showToast(data.message || 'Error', 'error');
             }
-        } catch (err) {
+        } catch {
             if (typeof showToast === 'function') showToast('Network error.', 'error');
         }
     });

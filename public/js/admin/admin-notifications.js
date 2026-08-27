@@ -18,6 +18,19 @@ document.addEventListener('DOMContentLoaded', () => {
     const markAllBtn = document.getElementById('adminNotifMarkAll');
     const deleteAllBtn = document.getElementById('adminNotifDeleteAll');
 
+    // ⚠️ كانت هذه بلا تعريف إطلاقاً — لا let ولا const ولا var.
+    //
+    // فكان أول إسناد (`allNotifs = data.notifications` في fetchList)
+    // يُنشئها متغيّراً عاماً ضمنياً، والكود يعمل ما دام ذلك الإسناد
+    // يسبق أي قراءة. لكنه لا يسبقها دائماً: إن فشل طلب /list — انقطاع
+    // شبكة أو خطأ خادم — لا يقع الإسناد، ثم تقرأها renderList أو
+    // dismiss فترمي ReferenceError ويتوقّف جرس الإشعارات كلّياً.
+    //
+    // وأسوأ من العطل أن مصدره غير ظاهر: المتغيّر يبدو معرَّفاً في مكان
+    // ما لأن ملفاً آخر (features/notifications.js) يحمل اسماً مطابقاً —
+    // لكنه محبوس في IIFE هناك ولا علاقة له بهذا.
+    let allNotifs = [];
+
     if (!bell || !badge || !sidebar) return;
 
     // ── Backdrop element (shared) ──
@@ -116,7 +129,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 body: 'notification_id=' + encodeURIComponent(id)
                     + '&csrf_token=' + encodeURIComponent(window._csrfToken || ''),
             });
-        } catch (e) {}
+        } catch {}
     };
 
     async function markRead(id) {
@@ -133,7 +146,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 setBadge(data.unread_count !== undefined ? data.unread_count : allNotifs.filter(x => x.is_read == 0).length);
                 renderList();
             }
-        } catch (e) {}
+        } catch {}
     }
 
     // ── أزرار الـ sidebar ────────────────────────────────────────
@@ -150,7 +163,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     setBadge(0);
                     renderList();
                 }
-            } catch (e) {}
+            } catch {}
         });
     }
 
@@ -167,7 +180,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     setBadge(0);
                     renderList();
                 }
-            } catch (e) {}
+            } catch {}
         });
     }
 

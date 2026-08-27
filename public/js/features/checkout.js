@@ -197,7 +197,7 @@
                 document.getElementById('placeOrderBtn').textContent = '✅ Place Order';
                 Swal.fire({ icon: 'error', title: 'Error', text: res.message });
             }
-        } catch (e) {
+        } catch {
             document.getElementById('placeOrderBtn').disabled = false;
             document.getElementById('placeOrderBtn').textContent = '✅ Place Order';
             Swal.fire({ icon: 'error', text: 'Network error. Please try again.' });

@@ -17,6 +17,17 @@
  */
 
 (function () {
+
+    // مؤقّت العدّ التنازلي. **التعريف هنا لا بعد أول استعمال.**
+    //
+    // كان مكتوباً أسفل الملف، بعد renderSidebar التي تقرأه بنحو ستّين
+    // سطراً. لم يكن ينفجر لأن التعريف يُنفَّذ عند تحميل الملف بينما
+    // renderSidebar تُستدعى لاحقاً — لكنه بالضبط شكل عطل TDZ الذي وقع
+    // في account.js: يكفي أن يُستدعى القارئ مرّة واحدة أثناء تنفيذ جسم
+    // الـIIFE ليُرمى ReferenceError.
+    //
+    // النقل إلى الأعلى يزيل صنف الخطر كله بلا تغيير سلوك.
+    let notifCountdownInterval = null;
     'use strict';
 
     const userBell = document.getElementById('notifBell');
@@ -91,8 +102,6 @@
         const deadlineMs = new Date(notif.created_at.replace(' ', 'T')).getTime() + (4 * 60 * 60 * 1000);
         return `<span class="notif-countdown" data-deadline="${deadlineMs}">--:--:--</span>`;
     }
-
-    let notifCountdownInterval = null;
 
     function tickNotifCountdowns() {
         const els = cfg.sidebarList ? cfg.sidebarList.querySelectorAll('.notif-countdown') : [];
@@ -179,7 +188,7 @@
                 cfg.badge.style.display = unread > 0 ? '' : 'none';
             }
             renderSidebar();
-        } catch (e) {}
+        } catch {}
     }
 
     const dismissFn = async function(event, id) {

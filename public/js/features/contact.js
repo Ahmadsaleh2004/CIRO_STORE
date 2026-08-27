@@ -44,7 +44,7 @@
                     msgArea.value = '';
                     checkContact();
                 }
-            } catch (err) {
+            } catch {
                 if (typeof showToast === 'function') showToast('Network error, please try again.', 'error');
             } finally {
                 sendBtn.disabled = false;
