@@ -1,0 +1,40 @@
+# ══════════════════════════════════════════════════════════════
+# إعدادات المحرّر — Cairo Store
+# ══════════════════════════════════════════════════════════════
+#
+# يكمّل .gitattributes لا يعارضه: ذاك يحكم ما يُخزَّن في git، وهذا
+# يحكم ما يكتبه المحرّر قبل أن يصل إليه.
+#
+# end_of_line = lf مقصود ومتّسق مع `* text=auto`: git يخزّن LF دائماً،
+# ويُخرج CRLF على Windows وحده. الكتابة بـLF تعني ألّا يحمل أي ملف
+# نهايات مختلطة.
+
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 4
+
+# PSR-12 يوجب أربع مسافات — راجع phpcs.xml
+[*.php]
+indent_size = 4
+
+[*.{js,css,html}]
+indent_size = 4
+
+[*.{yml,yaml}]
+indent_size = 2
+
+[*.md]
+# المسافات في آخر السطر في Markdown تعني فاصل سطر مقصوداً.
+trim_trailing_whitespace = false
+
+[*.{sql,sh}]
+indent_size = 4
+
+[Makefile]
+indent_style = tab
