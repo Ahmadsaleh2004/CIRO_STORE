@@ -13,31 +13,34 @@
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-<?= jsTag('js/core/inline-actions.js', false) ?>
-<?= jsTag('js/core/utils.js', false) ?>
-<?= jsTag('js/core/csrf.js', false) ?>
-<?= jsTag('js/core/ui.js', false) ?>
-<?= jsTag('js/core/flash-toast.js', false) ?>
-<?= jsTag('js/core/theme.js', false) ?>
-<?= jsTag('js/features/auth.js', false) ?>
-<?= jsTag('js/admin/products.js', false) ?>
-<?= jsTag('js/admin/branding.js', false) ?>
-<?= jsTag('js/admin/category-picker.js', false) ?>
-<?= jsTag('js/admin/orders.js', false) ?>
-<?= jsTag('js/admin/users.js', false) ?>
-<?= jsTag('js/admin/admins.js', false) ?>
-<?= jsTag('js/admin/manage-admins.js', false) ?>
-<?= jsTag('js/admin/admin-notifications.js', false) ?>
-<?= jsTag('js/admin/backup.js', false) ?>
-<?= jsTag('js/admin/support.js', false) ?>
-<?= jsTag('js/admin/site-settings.js', false) ?>
-<!-- Shared JS — زر إلغاء/حذف الطلب المشترك (admin order details + my-info) -->
-<?= jsTag('js/shared/order-cancel.js', false) ?>
-<?= jsTag('js/admin/admin-layout/admin-navbar.js', false) ?>
-<!-- حُذف admin-layout/admin-footer.js: كان يربط أزرار الإشعارات الثلاثة
-     التي يربطها admin-notifications.js فعلاً — زرّان منه كعبان فارغان لا
-     يفعلان إلا console.log، وزر الإغلاق نسخة ناقصة لا تُخفي الـbackdrop. -->
-<?= jsTag('js/main.js', false) ?>
+<?php
+// حزمة واحدة بدل واحد وعشرين وسماً. القائمة هي الارتداد عند غياب
+// البناء، وترتيبها هو العقد — راجع jsBundle في assets_helper.php.
+?>
+<?= jsBundle('admin', [
+    'js/core/inline-actions.js',
+    'js/core/utils.js',
+    'js/core/csrf.js',
+    'js/core/ui.js',
+    'js/core/flash-toast.js',
+    'js/core/theme.js',
+    'js/features/auth.js',
+    'js/admin/products.js',
+    'js/admin/branding.js',
+    'js/admin/category-picker.js',
+    'js/admin/orders.js',
+    'js/admin/users.js',
+    'js/admin/admins.js',
+    'js/admin/manage-admins.js',
+    'js/admin/admin-notifications.js',
+    'js/admin/backup.js',
+    'js/admin/support.js',
+    'js/admin/site-settings.js',
+    'js/shared/order-cancel.js',
+    'js/admin/admin-layout/admin-navbar.js',
+    'js/main.js',
+], false) ?>
+
 <?php if (isset($extraScripts)) echo $extraScripts; ?>
 
 <!-- سايدبار إشعارات الأدمن — HTML ثابت، يربطه بالباك اند admin-notifications.js -->

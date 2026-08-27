@@ -9,9 +9,64 @@
 <main id="main-content" role="main">
 
 <!-- Slider -->
-<section>
+<?php
+// ⚠️ السلايدر يُصيَّر **على الخادم**، لا في المتصفح.
+//
+// كان #slider-inner فارغاً تماماً في HTML، ويملؤه
+// js/features/products-catalog.js من window.dbHomeSliders. والنتيجة
+// مقيسة: الملف كان الرابع عشر في طابور ثمانية عشر ملفاً، فيبقى مكان
+// السلايدر فارغاً **أكثر من ثانية** بعد ظهور بقية الصفحة.
+//
+// وهذا أسوأ ما يمكن أن يُؤجَّل: السلايدر أول ما تقع عليه العين، وهو
+// أكبر عنصر مرئي في الصفحة (LCP).
+//
+// البنية أدناه تطابق ما كان ينتجه renderSlider حرفاً بحرف — نفس
+// الأصناف ونفس التداخل — كي لا يتغيّر شيء في home-slider.css.
+// و renderSlider تبقى للتحديث الحيّ من لوحة التحكّم، لكنها لم تعد
+// المصدر الوحيد للعرض الأول.
+$homeSliders = $data['homeSliders'] ?? [];
+?>
+<section<?= $homeSliders === [] ? ' style="display:none"' : '' ?>>
     <div id="mainSlider" class="carousel slide" data-bs-ride="carousel">
-        <div class="carousel-inner" id="slider-inner"></div>
+        <div class="carousel-inner" id="slider-inner">
+            <?php foreach ($homeSliders as $index => $slide): ?>
+                <?php
+                $items = $slide['items'] ?? [];
+                $count = count($items);
+                // نفس قاعدة الصنف في renderSlider — راجع home-slider.css
+                $countClass = $count >= 5 ? 'compact-count' : 'count-' . $count;
+                ?>
+                <div class="carousel-item<?= $index === 0 ? ' active' : '' ?>">
+                    <div class="slide-items-row <?= $countClass ?>">
+                        <?php foreach ($items as $i => $item): ?>
+                            <?php
+                            $desc = (string) ($item['description'] ?? '');
+                            $img  = fixImagePath($item['image_path'] ?? '');
+                            // ⚠️ الشريحة الأولى **ليست** lazy: هي أكبر
+                            // عنصر مرئي في الصفحة، وتأجيلها يؤجّل ما
+                            // يقيسه المتصفح كـLCP. الباقي lazy عن حقّ.
+                            $eager = $index === 0 && $i === 0;
+                            ?>
+                            <?php if (!empty($item['link_url'])): ?>
+                            <a href="<?= htmlspecialchars($item['link_url'], ENT_QUOTES) ?>" class="slide-item-link">
+                            <?php endif; ?>
+                                <div class="slide-item">
+                                    <img src="<?= htmlspecialchars($img, ENT_QUOTES) ?>"
+                                         alt="<?= htmlspecialchars($desc, ENT_QUOTES) ?>"
+                                         class="slide-item-img"
+                                         <?= $eager ? 'fetchpriority="high" decoding="async"' : 'loading="lazy"' ?>>
+                                    <?php if ($desc !== ''): ?>
+                                    <div class="slide-item-caption"><?= htmlspecialchars($desc) ?></div>
+                                    <?php endif; ?>
+                                </div>
+                            <?php if (!empty($item['link_url'])): ?>
+                            </a>
+                            <?php endif; ?>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+            <?php endforeach; ?>
+        </div>
         <button class="carousel-control-prev" type="button" data-bs-target="#mainSlider" data-bs-slide="prev">
             <span class="carousel-control-prev-icon"></span>
         </button>

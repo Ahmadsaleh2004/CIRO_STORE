@@ -69,31 +69,32 @@ $csrfToken = generateCsrfToken();
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11" defer></script>
 
     <!-- Core JS -->
-    <?= jsTag('js/core/inline-actions.js') ?>
-    <?= jsTag('js/core/utils.js') ?>
-    <?= jsTag('js/core/csrf.js') ?>
-    <?= jsTag('js/core/ui.js') ?>
-    <?= jsTag('js/core/flash-toast.js') ?>
-    <?= jsTag('js/core/theme.js') ?>
-    <!-- فرض ألوان حقول النوافذ المنبثقة — كان كتلة مضمّنة هنا -->
-    <?= jsTag('js/core/modal-input-colors.js') ?>
+    <?php
+    // حزمة واحدة بدل ثلاثة عشر وسماً. راجع jsBundle في
+    // assets_helper.php — القائمة هنا هي الارتداد عند غياب البناء،
+    // وترتيبها هو العقد: الملفات تتشارك النطاق العام.
+    ?>
+    <?= jsBundle('store', [
+        'js/core/inline-actions.js',
+        'js/core/utils.js',
+        'js/core/csrf.js',
+        'js/core/ui.js',
+        'js/core/flash-toast.js',
+        'js/core/theme.js',
+        'js/core/modal-input-colors.js',
+        'js/features/cart.js',
+        'js/features/products-catalog.js',
+        'js/features/auth.js',
+        'js/features/wishlist.js',
+        'js/main.js',
+        'js/shared/order-cancel.js',
+    ]) ?>
 
-    <!-- Features JS — محمّلة دائماً -->
-    <?= jsTag('js/features/cart.js') ?>
-    <?= jsTag('js/features/products-catalog.js') ?>
-    <?= jsTag('js/features/auth.js') ?>
-    <?= jsTag('js/features/wishlist.js') ?>
-    <?= jsTag('js/main.js') ?>
-
-    <!-- Notifications JS — فقط للمستخدم المسجّل -->
+    <?php // إشعارات المستخدم المسجّل — حزمة منفصلة كي لا يحمّلها الزائر. ?>
     <?php if (isset($userLoggedIn) && $userLoggedIn): ?>
-    <?= jsTag('js/features/notifications.js') ?>
+    <?= jsBundle('store-auth', ['js/features/notifications.js']) ?>
     <?php endif; ?>
 
-    <!-- Shared JS — زر إلغاء/حذف الطلب المشترك (my-info + admin order details) -->
-    <?= jsTag('js/shared/order-cancel.js') ?>
-
-    <!-- Extra Scripts من الـ Controller (مثلاً صفحة Checkout / My Info) -->
     <?php if (isset($extraScripts)) echo $extraScripts; elseif (isset($data['extraScripts'])) echo $data['extraScripts']; ?>
 </footer>
 
