@@ -119,6 +119,7 @@ npm run format     # Prettier
 | `composer audit:escaping` | يصنّف كل `<?= ?>` في الـviews حسب حاجتها للهروب |
 | `composer audit:imports` | يكشف الكلاسات المستعملة بلا استيراد وبلا تأهيل |
 | `composer images:webp` | يولّد نسخ WebP لصور المنتجات — **`<picture>` تعتمد عليها** |
+| `composer fix:blocked-orders` | إصلاح لمرّة واحدة: يلغي الطلبات المعلّقة لمستخدمين حُظروا قبل تفعيل الإلغاء التلقائي. لا يلزم تركيباً جديداً |
 
 > `composer run-script --list` يعرض الثمانية عشر أمراً مع وصف كلٍّ منها.
 
