@@ -30,7 +30,7 @@ use OpenApi\Attributes as OA;
                 required: ['csrf_token', 'user_id', 'reply_text'],
                 properties: [
                     new OA\Property(property: 'csrf_token', type: 'string'),
-                    new OA\Property(property: 'user_id',    type: 'integer'),
+                    new OA\Property(property: 'user_id', type: 'integer'),
                     new OA\Property(property: 'reply_text', type: 'string'),
                 ]
             )
@@ -61,8 +61,8 @@ use OpenApi\Attributes as OA;
             schema: new OA\Schema(
                 required: ['csrf_token', 'message_id'],
                 properties: [
-                    new OA\Property(property: 'csrf_token',  type: 'string'),
-                    new OA\Property(property: 'message_id',  type: 'integer'),
+                    new OA\Property(property: 'csrf_token', type: 'string'),
+                    new OA\Property(property: 'message_id', type: 'integer'),
                 ]
             )
         )
@@ -169,13 +169,21 @@ class AdminSupportController extends AdminController
             $recipients = AdminModel::findByPermsAndRanks(['can_manage_support'], $higherRanks);
             foreach ($recipients as $recipientId) {
                 $recipientId = (int)$recipientId;
-                if ($recipientId === $adminId) continue;
-                if ($rootId !== null && $recipientId === $rootId) continue;
+                if ($recipientId === $adminId) {
+                    continue;
+                }
+                if ($rootId !== null && $recipientId === $rootId) {
+                    continue;
+                }
 
                 AdminModel::sendNotification(
-                    $recipientId, 'Support Message Replied',
+                    $recipientId,
+                    'Support Message Replied',
                     "A support message was replied to. Reply: {$replyText}",
-                    'support_replied', 'user', $targetUserId, $adminId
+                    'support_replied',
+                    'user',
+                    $targetUserId,
+                    $adminId
                 );
             }
         }
@@ -214,13 +222,21 @@ class AdminSupportController extends AdminController
             $recipients = AdminModel::findByPermsAndRanks(['can_manage_support'], $higherRanks);
             foreach ($recipients as $recipientId) {
                 $recipientId = (int)$recipientId;
-                if ($recipientId === $adminId) continue;
-                if ($rootId !== null && $recipientId === $rootId) continue;
+                if ($recipientId === $adminId) {
+                    continue;
+                }
+                if ($rootId !== null && $recipientId === $rootId) {
+                    continue;
+                }
 
                 AdminModel::sendNotification(
-                    $recipientId, 'Support Message Deleted',
+                    $recipientId,
+                    'Support Message Deleted',
                     "A support message was deleted. Content: {$msgText}",
-                    'support_deleted', 'contact_messages', $msgId, $adminId
+                    'support_deleted',
+                    'contact_messages',
+                    $msgId,
+                    $adminId
                 );
             }
         }

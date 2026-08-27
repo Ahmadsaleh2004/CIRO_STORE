@@ -25,16 +25,18 @@ class AdminNotificationController extends AdminController
                 description: 'JSON',
                 content: new OA\JsonContent(
                     properties: [
-                        new OA\Property(property: 'success',       type: 'boolean'),
-                        new OA\Property(property: 'message',       type: 'string'),
-                        new OA\Property(property: 'notifications', type: 'array',
+                        new OA\Property(property: 'success', type: 'boolean'),
+                        new OA\Property(property: 'message', type: 'string'),
+                        new OA\Property(
+                            property: 'notifications',
+                            type: 'array',
                             items: new OA\Items(properties: [
-                                new OA\Property(property: 'id',           type: 'integer'),
-                                new OA\Property(property: 'title',        type: 'string'),
-                                new OA\Property(property: 'message',      type: 'string'),
-                                new OA\Property(property: 'type',         type: 'string'),
-                                new OA\Property(property: 'is_read',      type: 'integer'),
-                                new OA\Property(property: 'created_at',   type: 'string'),
+                                new OA\Property(property: 'id', type: 'integer'),
+                                new OA\Property(property: 'title', type: 'string'),
+                                new OA\Property(property: 'message', type: 'string'),
+                                new OA\Property(property: 'type', type: 'string'),
+                                new OA\Property(property: 'is_read', type: 'integer'),
+                                new OA\Property(property: 'created_at', type: 'string'),
                             ])
                         ),
                         new OA\Property(property: 'unread_count', type: 'integer'),
@@ -70,7 +72,7 @@ class AdminNotificationController extends AdminController
                     required: ['notification_id', 'csrf_token'],
                     properties: [
                         new OA\Property(property: 'notification_id', type: 'integer'),
-                        new OA\Property(property: 'csrf_token',      type: 'string'),
+                        new OA\Property(property: 'csrf_token', type: 'string'),
                     ]
                 )
             )
@@ -81,8 +83,8 @@ class AdminNotificationController extends AdminController
                 description: 'JSON',
                 content: new OA\JsonContent(
                     properties: [
-                        new OA\Property(property: 'success',      type: 'boolean'),
-                        new OA\Property(property: 'message',      type: 'string'),
+                        new OA\Property(property: 'success', type: 'boolean'),
+                        new OA\Property(property: 'message', type: 'string'),
                         new OA\Property(property: 'unread_count', type: 'integer'),
                     ]
                 )
@@ -197,7 +199,7 @@ class AdminNotificationController extends AdminController
                     required: ['notification_id', 'csrf_token'],
                     properties: [
                         new OA\Property(property: 'notification_id', type: 'integer'),
-                        new OA\Property(property: 'csrf_token',      type: 'string'),
+                        new OA\Property(property: 'csrf_token', type: 'string'),
                     ]
                 )
             )
@@ -208,8 +210,8 @@ class AdminNotificationController extends AdminController
                 description: 'JSON',
                 content: new OA\JsonContent(
                     properties: [
-                        new OA\Property(property: 'success',      type: 'boolean'),
-                        new OA\Property(property: 'message',      type: 'string'),
+                        new OA\Property(property: 'success', type: 'boolean'),
+                        new OA\Property(property: 'message', type: 'string'),
                         new OA\Property(property: 'unread_count', type: 'integer'),
                     ]
                 )

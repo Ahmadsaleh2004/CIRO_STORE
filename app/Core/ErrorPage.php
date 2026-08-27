@@ -74,7 +74,7 @@ final class ErrorPage
      */
     public static function forbidden(
         ?string $logDetail = null,
-        ?string $backUrl   = null,
+        ?string $backUrl = null,
         ?string $backLabel = null
     ): never {
         if ($logDetail !== null && $logDetail !== '') {

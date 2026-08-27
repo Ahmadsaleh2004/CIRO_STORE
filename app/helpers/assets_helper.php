@@ -1,4 +1,5 @@
 <?php
+
 /**
  * app/helpers/assets_helper.php
  * وسوم الأصول (CSS) + سكربت تهيئة الثيم.

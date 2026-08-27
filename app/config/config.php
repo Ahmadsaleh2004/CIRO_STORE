@@ -37,12 +37,12 @@ loadEnv(ROOTPATH . '/.env');
 // دائم: المطوّر يرى الخطأ على شاشته، والخادم يكتبه في سجلّه، والزائر
 // لا يرى إلا صفحة خطأ نظيفة.
 
-define('APP_ENV',   env('APP_ENV', 'production'));
+define('APP_ENV', env('APP_ENV', 'production'));
 define('APP_DEBUG', envBool('APP_DEBUG', APP_ENV !== 'production'));
 
 // الافتراضي الآمن مقصود: غياب APP_ENV يعني **إنتاج** لا تطوير. نسيان
 // ضبط المتغيّر يجب أن يُخفي الأخطاء لا أن يكشفها.
-ini_set('display_errors',         APP_DEBUG ? '1' : '0');
+ini_set('display_errors', APP_DEBUG ? '1' : '0');
 ini_set('display_startup_errors', APP_DEBUG ? '1' : '0');
 error_reporting(E_ALL);
 
@@ -83,12 +83,12 @@ define('SITENAME', env('APP_NAME', 'Cairo Store'));
 // كثوابت لا كقراءة مباشرة لأن BackupModel::createDump يستعملها في ملف
 // خيارات mysqldump؛ تحويلها إلى $_ENV هناك كان تغييراً بلا داعٍ في
 // مسار يتعامل مع كلمة السر.
-define('DB_HOST',    env('DB_HOST',     '127.0.0.1'));
-define('DB_PORT',    env('DB_PORT',     '3306'));
-define('DB_NAME',    env('DB_DATABASE', 'store_db'));
-define('DB_USER',    env('DB_USERNAME', 'root'));
-define('DB_PASS',    $_ENV['DB_PASSWORD'] ?? '');  // ← لا env(): كلمة السر الفارغة قيمة صالحة هنا
-define('DB_CHARSET', env('DB_CHARSET',  'utf8mb4'));
+define('DB_HOST', env('DB_HOST', '127.0.0.1'));
+define('DB_PORT', env('DB_PORT', '3306'));
+define('DB_NAME', env('DB_DATABASE', 'store_db'));
+define('DB_USER', env('DB_USERNAME', 'root'));
+define('DB_PASS', $_ENV['DB_PASSWORD'] ?? '');  // ← لا env(): كلمة السر الفارغة قيمة صالحة هنا
+define('DB_CHARSET', env('DB_CHARSET', 'utf8mb4'));
 
 // ==========================================
 // 6. تصليب الجلسة (Session Hardening)

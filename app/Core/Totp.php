@@ -27,11 +27,16 @@ class Totp
     public static function verifyCode(string $secret, string $code): bool
     {
         $code = trim($code);
-        if (!preg_match('/^\d{6}$/', $code)) return false;
+        if (!preg_match('/^\d{6}$/', $code)) {
+            return false;
+        }
 
         // نسمح بفارق دقيقة واحدة قبل/بعد (لفروقات الساعة البسيطة)
         for ($offset = -1; $offset <= 1; $offset++) {
-            $timeSlice = floor(time() / 30) + $offset;
+            // (int) صريحة: floor تُرجع float، وgenerateCode تطلب int.
+            // كان التحويل يحدث ضمنياً بحكم الوضع غير الصارم — يعمل
+            // اليوم ويتوقّف عن العمل لحظة إضافة declare(strict_types=1).
+            $timeSlice = (int) floor(time() / 30) + $offset;
             if (self::generateCode($secret, $timeSlice) === $code) {
                 return true;
             }
@@ -61,7 +66,9 @@ class Totp
         $binaryString = '';
         foreach (str_split($secret) as $char) {
             $pos = strpos($chars, $char);
-            if ($pos === false) continue;
+            if ($pos === false) {
+                continue;
+            }
             $binaryString .= str_pad(decbin($pos), 5, '0', STR_PAD_LEFT);
         }
         $bytes = '';

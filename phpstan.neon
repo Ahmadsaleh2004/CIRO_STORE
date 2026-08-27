@@ -1,0 +1,34 @@
+parameters:
+    # المستوى 5 نقطة بداية مقيسة لا اعتباطية: أدنى منه لا يمسك شيئاً
+    # ذا قيمة في مشروع بهذا الحجم، وأعلى منه ينتج خطّ أساس ضخماً يُخفي
+    # الأخطاء الجديدة بين آلاف القديمة. يُرفع درجةً بعد كل تنظيف.
+    level: 5
+
+    paths:
+        - app
+        - scripts
+        - tests
+
+    # الـviews قوالب إخراج تعتمد على متغيّرات يحقنها Controller::view()
+    # عبر extract() — لا يستطيع أي محلّل ثابت تتبّعها، فكل سطر فيها
+    # سيصير إنذاراً كاذباً.
+    excludePaths:
+        - app/views/*
+
+    # الثوابت التي يعرّفها config.php وقت التشغيل. بلا إعلانها هنا يرى
+    # المحلّل كل استعمال لها خطأً — وهي مستعملة في 63 ملفاً.
+    bootstrapFiles:
+        - tests/phpstan-bootstrap.php
+
+    # دوال الهيلبرز تُحمَّل عبر composer autoload.files، فالمحلّل يراها.
+    scanFiles:
+        - app/helpers/functions.php
+        - app/helpers/assets_helper.php
+        - app/helpers/auth_helper.php
+        - app/helpers/csrf_helper.php
+        - app/helpers/product_tag_helper.php
+        - app/helpers/product_variant_helper.php
+        - app/helpers/stock_badge_helper.php
+        - app/config/env_loader.php
+
+    treatPhpDocTypesAsCertain: false

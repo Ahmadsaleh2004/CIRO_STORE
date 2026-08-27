@@ -33,10 +33,14 @@ function fixImagePath(?string $path): string
  */
 function getWebpPath(?string $path): ?string
 {
-    if (empty(trim((string)$path))) return null;
+    if (empty(trim((string)$path))) {
+        return null;
+    }
     $original = fixImagePath($path);
     $webpPath = preg_replace('/\.(jpe?g|png)$/i', '.webp', $original);
-    if ($webpPath === $original) return null; // الامتداد مش jpg/png أصلاً
+    if ($webpPath === $original) {
+        return null; // الامتداد مش jpg/png أصلاً
+    }
 
     // تحويل الرابط الكامل لمسار فعلي على القرص للتأكد من وجود الملف
     $relative = str_replace(URLROOT, '', $webpPath);

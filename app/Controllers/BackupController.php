@@ -166,8 +166,8 @@ class BackupController extends AdminController
                 schema: new OA\Schema(
                     required: ['file', 'csrf_token'],
                     properties: [
-                        new OA\Property(property: 'file',       type: 'string'),
-                        new OA\Property(property: 'csrf_token',  type: 'string'),
+                        new OA\Property(property: 'file', type: 'string'),
+                        new OA\Property(property: 'csrf_token', type: 'string'),
                     ]
                 )
             )

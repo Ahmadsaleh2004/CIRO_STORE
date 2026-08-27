@@ -51,12 +51,12 @@ class MyInfoController extends Controller
             'activePage'  => '',
             'robots'      => 'noindex, nofollow',
             'extraHead'   => '<link rel="stylesheet" href="' . URLROOT . '/css/store/pages/my-info.css">',
-            'extraScripts'=> '<script src="' . URLROOT . '/js/features/account.js" defer></script>',
+            'extraScripts' => '<script src="' . URLROOT . '/js/features/account.js" defer></script>',
             'user'        => $user,
             'orders'      => $orders,
             'addresses'   => $addresses,
             'csrf'        => generateCsrfToken(),
-            'userLoggedIn'=> true,
+            'userLoggedIn' => true,
             'userName'    => $user['full_name'],
         ]);
     }

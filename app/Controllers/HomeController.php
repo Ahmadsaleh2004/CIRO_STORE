@@ -40,7 +40,7 @@ class HomeController extends Controller
 
             // 3. تحديد أحدث 7 بتاريخ الإضافة → new (مستثنيًا Best Sellers)
             $productsSortedByDate = $products;
-            usort($productsSortedByDate, function($a, $b) {
+            usort($productsSortedByDate, function ($a, $b) {
                 return strtotime($b['date_added'] ?? '2000-01-01') - strtotime($a['date_added'] ?? '2000-01-01');
             });
 
@@ -54,15 +54,21 @@ class HomeController extends Controller
             );
 
             // 4. دالة تحديد التاغ
-            $getProductTag = function(array $p) use ($bestSellerIds, $newArrivalIds): string {
-                if (in_array((int)($p['id'] ?? 0), $bestSellerIds)) return 'best-seller';
-                if (in_array((int)($p['id'] ?? 0), $newArrivalIds)) return 'new';
-                if ((int)($p['stock_quantity'] ?? 0) > 0 && (int)($p['stock_quantity'] ?? 0) <= 5) return 'limited';
+            $getProductTag = function (array $p) use ($bestSellerIds, $newArrivalIds): string {
+                if (in_array((int)($p['id'] ?? 0), $bestSellerIds)) {
+                    return 'best-seller';
+                }
+                if (in_array((int)($p['id'] ?? 0), $newArrivalIds)) {
+                    return 'new';
+                }
+                if ((int)($p['stock_quantity'] ?? 0) > 0 && (int)($p['stock_quantity'] ?? 0) <= 5) {
+                    return 'limited';
+                }
                 return 'regular';
             };
 
             // 5. تجهيز مصفوفة الـ JS
-            $productsJS = array_values(array_map(function($p) use ($getProductTag) {
+            $productsJS = array_values(array_map(function ($p) use ($getProductTag) {
                 $price = (float)($p['price'] ?? 0);
                 $discount = (float)($p['discount_percentage'] ?? 0);
                 $priceAfterDiscount = (float)($p['price_after_discount'] ?? 0);

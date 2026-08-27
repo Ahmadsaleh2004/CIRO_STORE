@@ -25,25 +25,25 @@ use OpenApi\Attributes as OA;
             schema: new OA\Schema(
                 required: ['csrf_token'],
                 properties: [
-                    new OA\Property(property: 'csrf_token',           type: 'string'),
-                    new OA\Property(property: 'footer_text',          type: 'string'),
-                    new OA\Property(property: 'facebook_url',         type: 'string'),
-                    new OA\Property(property: 'instagram_url',        type: 'string'),
-                    new OA\Property(property: 'snapchat_url',         type: 'string'),
-                    new OA\Property(property: 'whatsapp_number',      type: 'string'),
-                    new OA\Property(property: 'tiktok_url',           type: 'string'),
-                    new OA\Property(property: 'twitter_x_url',        type: 'string'),
-                    new OA\Property(property: 'google_maps_url',      type: 'string'),
-                    new OA\Property(property: 'copyright_text',       type: 'string'),
-                    new OA\Property(property: 'phone_number',         type: 'string'),
-                    new OA\Property(property: 'working_hours',        type: 'string'),
-                    new OA\Property(property: 'employees_count',      type: 'integer'),
-                    new OA\Property(property: 'site_url',             type: 'string'),
-                    new OA\Property(property: 'return_policy',        type: 'string'),
-                    new OA\Property(property: 'privacy_policy',       type: 'string'),
+                    new OA\Property(property: 'csrf_token', type: 'string'),
+                    new OA\Property(property: 'footer_text', type: 'string'),
+                    new OA\Property(property: 'facebook_url', type: 'string'),
+                    new OA\Property(property: 'instagram_url', type: 'string'),
+                    new OA\Property(property: 'snapchat_url', type: 'string'),
+                    new OA\Property(property: 'whatsapp_number', type: 'string'),
+                    new OA\Property(property: 'tiktok_url', type: 'string'),
+                    new OA\Property(property: 'twitter_x_url', type: 'string'),
+                    new OA\Property(property: 'google_maps_url', type: 'string'),
+                    new OA\Property(property: 'copyright_text', type: 'string'),
+                    new OA\Property(property: 'phone_number', type: 'string'),
+                    new OA\Property(property: 'working_hours', type: 'string'),
+                    new OA\Property(property: 'employees_count', type: 'integer'),
+                    new OA\Property(property: 'site_url', type: 'string'),
+                    new OA\Property(property: 'return_policy', type: 'string'),
+                    new OA\Property(property: 'privacy_policy', type: 'string'),
                     new OA\Property(property: 'terms_and_conditions', type: 'string'),
                     new OA\Property(property: 'default_currency', type: 'string', description: 'فقط لصاحب can_manage_checkout_settings'),
-                    new OA\Property(property: 'default_language',  type: 'string', description: 'فقط لصاحب can_manage_checkout_settings'),
+                    new OA\Property(property: 'default_language', type: 'string', description: 'فقط لصاحب can_manage_checkout_settings'),
                 ]
             )
         )
@@ -140,13 +140,21 @@ class AdminSiteSettingsController extends AdminController
             $recipients = AdminModel::findByPermsAndRanks(['can_edit_site_content'], $higherRanks);
             foreach ($recipients as $recipientId) {
                 $recipientId = (int)$recipientId;
-                if ($recipientId === $adminId) continue;
-                if ($rootId !== null && $recipientId === $rootId) continue;
+                if ($recipientId === $adminId) {
+                    continue;
+                }
+                if ($rootId !== null && $recipientId === $rootId) {
+                    continue;
+                }
 
                 AdminModel::sendNotification(
-                    $recipientId, 'Site Settings Updated',
+                    $recipientId,
+                    'Site Settings Updated',
                     "Site configuration was updated. {$detailsText}",
-                    'settings_updated', 'website_settings', 1, $adminId
+                    'settings_updated',
+                    'website_settings',
+                    1,
+                    $adminId
                 );
             }
         }

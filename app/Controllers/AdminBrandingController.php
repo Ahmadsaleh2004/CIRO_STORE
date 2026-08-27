@@ -194,7 +194,9 @@ class AdminBrandingController extends AdminController
             // قاعدة البيانات إلى unlink ولا يرى أثر basename.
             $disk = rtrim($uploadDir, '/\\') . DIRECTORY_SEPARATOR . basename($orphanPath);
             // nosemgrep: php.lang.security.unlink-use.unlink-use
-            if (file_exists($disk)) @unlink($disk);
+            if (file_exists($disk)) {
+                @unlink($disk);
+            }
         }
 
         AdminModel::logAction($adminId, 'update_branding_slider', 'branding', 0, 'Saved home slider content.');
@@ -242,7 +244,9 @@ class AdminBrandingController extends AdminController
             // كسابقتها: basename تحصر الاسم داخل $uploadDir بالبناء.
             $disk = rtrim($uploadDir, '/\\') . DIRECTORY_SEPARATOR . basename($p);
             // nosemgrep: php.lang.security.unlink-use.unlink-use
-            if (file_exists($disk)) @unlink($disk);
+            if (file_exists($disk)) {
+                @unlink($disk);
+            }
         }
     }
 

@@ -90,13 +90,15 @@ class OrderModel
      * @return int|null  order_id في حال النجاح
      */
     public static function placeOrder(
-        int    $userId,
-        int    $addressId,
-        array  $items,
+        int $userId,
+        int $addressId,
+        array $items,
         string $paymentMethod,
         string $idempotencyKey
     ): ?int {
-        if (empty($items)) return null;
+        if (empty($items)) {
+            return null;
+        }
 
         $db = Database::connect();
 
@@ -105,7 +107,9 @@ class OrderModel
             $dup = $db->prepare("SELECT order_id FROM orders WHERE idempotency_key=? LIMIT 1");
             $dup->execute([$idempotencyKey]);
             $existing = $dup->fetchColumn();
-            if ($existing) return (int)$existing;
+            if ($existing) {
+                return (int)$existing;
+            }
 
             $db->beginTransaction();
 
@@ -159,9 +163,10 @@ class OrderModel
 
             $db->commit();
             return $orderId;
-
         } catch (Exception $e) {
-            if ($db->inTransaction()) $db->rollBack();
+            if ($db->inTransaction()) {
+                $db->rollBack();
+            }
             error_log("OrderModel::placeOrder Error: " . $e->getMessage());
             return null;
         }
@@ -219,9 +224,10 @@ class OrderModel
 
             $db->commit();
             return true;
-
         } catch (Exception $e) {
-            if ($db->inTransaction()) $db->rollBack();
+            if ($db->inTransaction()) {
+                $db->rollBack();
+            }
             error_log("OrderModel::cancelOrder Error: " . $e->getMessage());
             return false;
         }
@@ -334,7 +340,9 @@ class OrderModel
 
             $db->commit();
         } catch (Exception $e) {
-            if ($db->inTransaction()) $db->rollBack();
+            if ($db->inTransaction()) {
+                $db->rollBack();
+            }
             error_log("OrderModel::cancelAllPendingForUser Error: " . $e->getMessage());
         }
     }
@@ -399,7 +407,9 @@ class OrderModel
 
             $db->commit();
         } catch (Exception $e) {
-            if ($db->inTransaction()) $db->rollBack();
+            if ($db->inTransaction()) {
+                $db->rollBack();
+            }
             error_log("OrderModel::releaseExpiredTakenOrders Error: " . $e->getMessage());
             return [];
         }
@@ -564,7 +574,9 @@ class OrderModel
 
             return ['success' => true, 'message' => 'Order taken successfully.', 'targetUserId' => (int)$order['user_id']];
         } catch (Exception $e) {
-            if ($db->inTransaction()) $db->rollBack();
+            if ($db->inTransaction()) {
+                $db->rollBack();
+            }
             error_log("OrderModel::adminTakeOrder Error: " . $e->getMessage());
             return ['success' => false, 'message' => 'Something went wrong.', 'targetUserId' => null];
         }
@@ -594,7 +606,9 @@ class OrderModel
 
             return ['success' => true, 'message' => 'Order marked as delivered.', 'targetUserId' => (int)$order['user_id']];
         } catch (Exception $e) {
-            if ($db->inTransaction()) $db->rollBack();
+            if ($db->inTransaction()) {
+                $db->rollBack();
+            }
             error_log("OrderModel::adminMarkDelivered Error: " . $e->getMessage());
             return ['success' => false, 'message' => 'Something went wrong.', 'targetUserId' => null];
         }
@@ -641,7 +655,9 @@ class OrderModel
             $db->commit();
             return ['success' => true, 'message' => 'Delivery cancelled.', 'targetUserId' => (int)$order['user_id']];
         } catch (Exception $e) {
-            if ($db->inTransaction()) $db->rollBack();
+            if ($db->inTransaction()) {
+                $db->rollBack();
+            }
             error_log("OrderModel::adminCancelDelivery Error: " . $e->getMessage());
             return ['success' => false, 'message' => 'Something went wrong while cancelling.', 'targetUserId' => null];
         }
@@ -682,7 +698,9 @@ class OrderModel
             $db->commit();
             return ['success' => true, 'message' => "Order #{$orderId} has been permanently deleted."];
         } catch (Exception $e) {
-            if ($db->inTransaction()) $db->rollBack();
+            if ($db->inTransaction()) {
+                $db->rollBack();
+            }
             error_log("OrderModel::adminDeleteOrder Error: " . $e->getMessage());
             return ['success' => false, 'message' => 'Something went wrong.'];
         }
@@ -728,7 +746,9 @@ class OrderModel
             $db->commit();
             return ['success' => true, 'message' => "Order #{$orderId} has been released back to Not Taken.", 'targetUserId' => (int)$row['user_id']];
         } catch (Exception $e) {
-            if ($db->inTransaction()) $db->rollBack();
+            if ($db->inTransaction()) {
+                $db->rollBack();
+            }
             error_log("OrderModel::adminReleaseOrder Error: " . $e->getMessage());
             return ['success' => false, 'message' => 'Something went wrong.', 'targetUserId' => null];
         }

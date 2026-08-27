@@ -176,5 +176,4 @@ class WishlistController extends Controller
         echo json_encode(['success' => true, 'message' => 'ok']);
         exit;
     }
-
 }

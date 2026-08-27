@@ -27,10 +27,10 @@ class AdminMessagingController extends AdminController
                     required: ['target_type', 'target_id', 'title', 'message', 'csrf_token'],
                     properties: [
                         new OA\Property(property: 'target_type', type: 'string', description: "'admin' أو 'user'"),
-                        new OA\Property(property: 'target_id',   type: 'integer'),
-                        new OA\Property(property: 'title',       type: 'string'),
-                        new OA\Property(property: 'message',     type: 'string'),
-                        new OA\Property(property: 'csrf_token',  type: 'string'),
+                        new OA\Property(property: 'target_id', type: 'integer'),
+                        new OA\Property(property: 'title', type: 'string'),
+                        new OA\Property(property: 'message', type: 'string'),
+                        new OA\Property(property: 'csrf_token', type: 'string'),
                     ]
                 )
             )
@@ -99,12 +99,12 @@ class AdminMessagingController extends AdminController
                     required: ['title', 'body', 'csrf_token'],
                     properties: [
                         new OA\Property(property: 'target_type', type: 'string', enum: ['admin', 'user'], description: "'admin' (صلاحيات + رتب) أو 'user' (حالات)"),
-                        new OA\Property(property: 'title',       type: 'string'),
-                        new OA\Property(property: 'body',        type: 'string'),
-                        new OA\Property(property: 'perms',       type: 'array', items: new OA\Items(type: 'string'), description: 'للأدمنية فقط'),
-                        new OA\Property(property: 'ranks',       type: 'array', items: new OA\Items(type: 'string'), description: 'للأدمنية فقط'),
-                        new OA\Property(property: 'statuses',    type: 'array', items: new OA\Items(type: 'string', enum: ['active', 'not_active', 'blocked']), description: 'لليوزرز فقط'),
-                        new OA\Property(property: 'csrf_token',  type: 'string'),
+                        new OA\Property(property: 'title', type: 'string'),
+                        new OA\Property(property: 'body', type: 'string'),
+                        new OA\Property(property: 'perms', type: 'array', items: new OA\Items(type: 'string'), description: 'للأدمنية فقط'),
+                        new OA\Property(property: 'ranks', type: 'array', items: new OA\Items(type: 'string'), description: 'للأدمنية فقط'),
+                        new OA\Property(property: 'statuses', type: 'array', items: new OA\Items(type: 'string', enum: ['active', 'not_active', 'blocked']), description: 'لليوزرز فقط'),
+                        new OA\Property(property: 'csrf_token', type: 'string'),
                     ]
                 )
             )
@@ -157,7 +157,10 @@ class AdminMessagingController extends AdminController
             }
 
             AdminModel::logAction(
-                $senderId, 'broadcast_user_notification', 'system', 0,
+                $senderId,
+                'broadcast_user_notification',
+                'system',
+                0,
                 "Broadcast: {$title} (statuses: " . implode(',', $statuses) . ")"
             );
 
@@ -178,7 +181,10 @@ class AdminMessagingController extends AdminController
         }
 
         AdminModel::logAction(
-            $senderId, 'broadcast_admin_notification', 'system', 0,
+            $senderId,
+            'broadcast_admin_notification',
+            'system',
+            0,
             "Broadcast: {$title} (perms: " . implode(',', $perms) . "; ranks: " . implode(',', $ranks) . ")"
         );
 

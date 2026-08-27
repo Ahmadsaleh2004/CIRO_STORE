@@ -31,7 +31,6 @@ class ContactController extends Controller
 
         // معالجة إرسال الفورم (POST)
         if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['send_message'])) {
-
             $token = $_POST['csrf_token'] ?? '';
 
             // استُثني من beginJsonPost: لا يفشل أصلاً — يضع النص في

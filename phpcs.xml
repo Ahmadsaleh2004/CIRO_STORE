@@ -1,0 +1,49 @@
+<?xml version="1.0"?>
+<ruleset name="Cairo Store">
+    <description>PSR-12 — المعيار الذي يفترضه أي مطوّر PHP يفتح المشروع.</description>
+
+    <file>app</file>
+    <file>scripts</file>
+    <file>tests</file>
+
+    <exclude-pattern>app/views/*</exclude-pattern>
+    <exclude-pattern>vendor/*</exclude-pattern>
+
+    <arg name="colors"/>
+    <arg value="p"/>
+    <arg name="extensions" value="php"/>
+
+    <rule ref="PSR12">
+        <!-- الحدّ 120 محرفاً لا 80: تعليقات هذا المشروع عربية، والمحرف
+             العربي يشغل خانتين في العدّ بينما يشغل واحدة على الشاشة —
+             فحدّ 80 كان سيرفض تعليقات مقروءة تماماً. -->
+        <exclude name="Generic.Files.LineLength"/>
+
+        <!-- نهايات الأسطر يملكها .gitattributes لا هذا الملف.
+             `* text=auto` يخزّن LF في git ويُخرج CRLF على Windows،
+             فهذا الفحص يستحيل أن ينجح على النظامين معاً: يمرّ في CI
+             (لينكس، LF) ويفشل على جهاز التطوير (CRLF) للملف نفسه
+             وبمحتوى واحد. فحص نتيجته تتبع نظام التشغيل لا الكود ليس
+             فحصاً. -->
+        <exclude name="Generic.Files.LineEndings"/>
+    </rule>
+
+    <!-- ملفات التهيئة تُعرّف رموزاً وتُنفّذ أثراً معاً بحكم وظيفتها:
+         config.php يعرّف ثوابت ويضبط الجلسة، وtests/bootstrap.php
+         يعرّف دوال ويبني قاعدة الاختبار. هذا هو تعريف ملف التهيئة، لا
+         مخالفة فيه. -->
+    <rule ref="PSR1.Files.SideEffects">
+        <exclude-pattern>app/config/*</exclude-pattern>
+        <exclude-pattern>tests/bootstrap.php</exclude-pattern>
+        <exclude-pattern>tests/phpstan-bootstrap.php</exclude-pattern>
+        <exclude-pattern>scripts/*</exclude-pattern>
+        <exclude-pattern>public/index.php</exclude-pattern>
+    </rule>
+
+    <rule ref="Generic.Files.LineLength">
+        <properties>
+            <property name="lineLimit" value="120"/>
+            <property name="absoluteLineLimit" value="0"/>
+        </properties>
+    </rule>
+</ruleset>

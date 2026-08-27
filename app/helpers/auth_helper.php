@@ -1,4 +1,5 @@
 <?php
+
 /**
  * app/helpers/auth_helper.php
  * دوال المصادقة الأساسية المستخدمة عبر الـ Views والـ Controllers.
@@ -177,15 +178,21 @@ const USER_ACTIVITY_THROTTLE_SECONDS = 900;
  */
 function touchUserActivity(): void
 {
-    if (!isUser()) return;
+    if (!isUser()) {
+        return;
+    }
 
     $now  = time();
     $last = (int)($_SESSION['last_activity_write'] ?? 0);
 
-    if ($now - $last < USER_ACTIVITY_THROTTLE_SECONDS) return;
+    if ($now - $last < USER_ACTIVITY_THROTTLE_SECONDS) {
+        return;
+    }
 
     $userId = getCurrentUserId();
-    if ($userId === null) return;
+    if ($userId === null) {
+        return;
+    }
 
     \App\Models\UserModel::updateActivity($userId);
     $_SESSION['last_activity_write'] = $now;
