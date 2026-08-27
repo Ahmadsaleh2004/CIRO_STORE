@@ -1,3 +1,15 @@
+-- ══════════════════════════════════════════════════════════════
+-- 0005_order_expiry_log
+-- ══════════════════════════════════════════════════════════════
+--
+-- الترتيب في اسم الملف لا في تعليق. كان الاعتماد مكتوباً نصّاً
+-- («يعتمد على admin_auth.sql») ولا شيء يفرضه — فترتيب التنفيذ
+-- كان يتبع ترتيب نظام الملفات، وهو يختلف بين جهاز وآخر.
+--
+-- يُشغَّل بـ`php scripts/migrate.php up`. والملف يبقى SQL صالحاً
+-- يمكن لصقه في أي عميل كما هو — القسمان تعليقان لا صيغة خاصة.
+
+-- @UP
 -- ════════════════════════════════════════════════════════════════════════
 -- Migration: Order Expiry Log — سجل الطلبات التي رجعت تلقائياً لـ not_taken
 -- بعد انتهاء مهلة الـ 3 ساعات دون تسليم (يُستخدم من OrderModel::releaseExpiredTakenOrders())
@@ -15,3 +27,6 @@ CREATE TABLE IF NOT EXISTS `order_expiry_log` (
     CONSTRAINT `fk_expirylog_order`  FOREIGN KEY (`order_id`)          REFERENCES `orders`(`order_id`) ON DELETE CASCADE,
     CONSTRAINT `fk_expirylog_admin`  FOREIGN KEY (`previous_admin_id`) REFERENCES `admins`(`id`)      ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- @DOWN
+DROP TABLE IF EXISTS `order_expiry_log`;
