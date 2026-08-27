@@ -16,7 +16,7 @@ use OpenApi\Attributes as OA;
 #[OA\Post(
     path: '/admin/settings',
     summary: 'حفظ إعدادات الموقع (AJAX) — الحقول المالية/العملة تُقبل فقط لصاحب can_manage_checkout_settings',
-    tags: ['Admin Site Settings'],
+    tags: ['Admin - Site Settings'],
     security: [['adminSessionAuth' => []]],
     requestBody: new OA\RequestBody(
         required: true,
@@ -66,7 +66,7 @@ class AdminSiteSettingsController extends AdminController
     #[OA\Get(
         path: '/admin/settings',
         summary: 'عرض صفحة إعدادات الموقع الحالية',
-        tags: ['Admin Site Settings'],
+        tags: ['Admin - Site Settings'],
         security: [['adminSessionAuth' => []]],
         responses: [
             new OA\Response(response: 200, description: 'صفحة HTML — يتطلب صلاحية can_edit_site_content'),

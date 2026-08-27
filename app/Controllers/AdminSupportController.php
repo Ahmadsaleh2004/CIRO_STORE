@@ -20,7 +20,7 @@ use OpenApi\Attributes as OA;
 #[OA\Post(
     path: '/admin/support/reply',
     summary: 'إرسال رد على رسالة دعم كإشعار للمستخدم صاحب الرسالة',
-    tags: ['Admin Support'],
+    tags: ['Admin - Support'],
     security: [['adminSessionAuth' => []]],
     requestBody: new OA\RequestBody(
         required: true,
@@ -52,7 +52,7 @@ use OpenApi\Attributes as OA;
 #[OA\Post(
     path: '/admin/support/delete',
     summary: 'حذف رسالة دعم فني نهائياً',
-    tags: ['Admin Support'],
+    tags: ['Admin - Support'],
     security: [['adminSessionAuth' => []]],
     requestBody: new OA\RequestBody(
         required: true,
@@ -85,7 +85,7 @@ class AdminSupportController extends AdminController
     #[OA\Get(
         path: '/admin/support',
         summary: 'قائمة رسائل الدعم الفني (بحث + Pagination)، تُحدّد كل الرسائل كمقروءة تلقائياً عند الفتح',
-        tags: ['Admin Support'],
+        tags: ['Admin - Support'],
         security: [['adminSessionAuth' => []]],
         parameters: [
             new OA\Parameter(

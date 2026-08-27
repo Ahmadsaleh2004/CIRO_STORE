@@ -29,7 +29,7 @@
         }
     },
     "scripts": {
-        "docs:generate": "vendor/bin/openapi app/Controllers app/config -o public/docs/openapi.yaml",
+        "docs:generate": "vendor/bin/openapi app/Controllers app/config -o public/docs/openapi.yaml --format yaml",
         "test": "phpunit",
         "test:unit": "phpunit --testsuite Unit",
         "test:integration": "phpunit --testsuite Integration",

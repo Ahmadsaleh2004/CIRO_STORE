@@ -40,7 +40,7 @@ class AdminAuthController extends Controller
     #[OA\Get(
         path: '/admin/login',
         summary: 'عرض صفحة تسجيل دخول الأدمن',
-        tags: ['Admin Auth'],
+        tags: ['Admin - Auth'],
         responses: [
             new OA\Response(response: 200, description: 'صفحة HTML لتسجيل الدخول')
         ]
@@ -69,7 +69,7 @@ class AdminAuthController extends Controller
     #[OA\Post(
         path: '/admin/login',
         summary: 'تسجيل دخول الأدمن',
-        tags: ['Admin Auth'],
+        tags: ['Admin - Auth'],
         requestBody: new OA\RequestBody(
             required: true,
             content: new OA\MediaType(
@@ -250,7 +250,7 @@ class AdminAuthController extends Controller
         summary: 'الخطوة الثانية من دخول الأدمن — التحقق من رمز TOTP',
         description: 'تُستدعى بعد أن يُرجع /admin/login الحقل requires_2fa. '
                    . 'الرمز من تطبيق مصادقة (Google Authenticator أو ما يماثله).',
-        tags: ['Admin Auth'],
+        tags: ['Admin - Auth'],
         requestBody: new OA\RequestBody(
             required: true,
             content: new OA\MediaType(
@@ -264,7 +264,18 @@ class AdminAuthController extends Controller
                 )
             )
         ),
-        responses: [new OA\Response(response: 200, description: 'JSON — {success, message, redirect?}')]
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'نتيجة العملية. الحقل success يفصل النجاح عن الفشل — كود HTTP يبقى 200 في الحالتين. وعند فشل CSRF يحمل الجسم error_code=csrf_invalid.',
+                content: new OA\JsonContent(oneOf: [
+                    new OA\Schema(ref: '#/components/schemas/ApiResponse'),
+                    new OA\Schema(ref: '#/components/schemas/ApiError'),
+                ])
+            ),
+            new OA\Response(response: 401, ref: '#/components/responses/SessionExpired'),
+            new OA\Response(response: 403, ref: '#/components/responses/PermissionDenied'),
+        ]
     )]
     public function verify2FALogin(): void
     {
@@ -347,7 +358,7 @@ class AdminAuthController extends Controller
     #[OA\Post(
         path: '/admin/logout',
         summary: 'تسجيل خروج الأدمن',
-        tags: ['Admin Auth'],
+        tags: ['Admin - Auth'],
         responses: [
             new OA\Response(response: 302, description: 'إعادة توجيه لـ /admin/login بعد تدمير الجلسة')
         ]
@@ -399,7 +410,7 @@ class AdminAuthController extends Controller
         summary: 'طلب رابط إعادة تعيين كلمة مرور الأدمن',
         description: 'الرسالة المُرجَعة واحدة سواء وُجد البريد أم لا — كي لا تكشف النقطة '
                    . 'أي البُرد مسجَّلة كأدمن.',
-        tags: ['Admin Auth'],
+        tags: ['Admin - Auth'],
         requestBody: new OA\RequestBody(
             required: true,
             content: new OA\MediaType(
@@ -413,7 +424,18 @@ class AdminAuthController extends Controller
                 )
             )
         ),
-        responses: [new OA\Response(response: 200, description: 'JSON — {success, message}')]
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'نتيجة العملية. الحقل success يفصل النجاح عن الفشل — كود HTTP يبقى 200 في الحالتين. وعند فشل CSRF يحمل الجسم error_code=csrf_invalid.',
+                content: new OA\JsonContent(oneOf: [
+                    new OA\Schema(ref: '#/components/schemas/ApiResponse'),
+                    new OA\Schema(ref: '#/components/schemas/ApiError'),
+                ])
+            ),
+            new OA\Response(response: 401, ref: '#/components/responses/SessionExpired'),
+            new OA\Response(response: 403, ref: '#/components/responses/PermissionDenied'),
+        ]
     )]
     public function forgotPassword(): void
     {
@@ -464,7 +486,7 @@ class AdminAuthController extends Controller
     #[OA\Post(
         path: '/admin/store-mode/enter',
         summary: 'دخول الأدمن لوضع تصفح المتجر كزائر (Store Mode)',
-        tags: ['Admin Auth'],
+        tags: ['Admin - Auth'],
         requestBody: new OA\RequestBody(
             required: true,
             content: new OA\MediaType(
@@ -531,7 +553,7 @@ class AdminAuthController extends Controller
     #[OA\Get(
         path: '/admin/store-mode/reauth',
         summary: 'عرض صفحة إعادة التحقق بكلمة السر قبل الرجوع للوحة',
-        tags: ['Admin Auth'],
+        tags: ['Admin - Auth'],
         responses: [
             new OA\Response(response: 200, description: 'صفحة HTML مستقلة لإعادة التحقق'),
             new OA\Response(response: 302, description: 'إعادة توجيه لـ /admin/home إن لم يكن الأدمن في وضع المتجر')
@@ -567,7 +589,7 @@ class AdminAuthController extends Controller
     #[OA\Post(
         path: '/admin/store-mode/reauth',
         summary: 'إعادة تحقق الأدمن بكلمة السر قبل الرجوع للوحة (JSON)',
-        tags: ['Admin Auth'],
+        tags: ['Admin - Auth'],
         requestBody: new OA\RequestBody(
             required: true,
             content: new OA\MediaType(
@@ -672,7 +694,7 @@ class AdminAuthController extends Controller
     #[OA\Get(
         path: '/admin/csrf',
         summary: 'توليد CSRF token جديد لفورم الأدمن',
-        tags: ['Admin Auth'],
+        tags: ['Admin - Auth'],
         responses: [
             new OA\Response(
                 response: 200,

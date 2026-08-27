@@ -106,7 +106,12 @@ class AdminProductsController extends AdminController
         summary: 'عرض فورم إضافة منتج جديد',
         tags: ['Admin - Manage Products'],
         security: [['adminSessionAuth' => []]],
-        responses: [new OA\Response(response: 200, description: 'صفحة HTML للفورم')]
+        responses: [
+            new OA\Response(response: 200, ref: '#/components/responses/HtmlPage'),
+            new OA\Response(response: 302, ref: '#/components/responses/RedirectToLogin'),
+            new OA\Response(response: 403, ref: '#/components/responses/PermissionDenied'),
+            new OA\Response(response: 503, ref: '#/components/responses/ServiceUnavailable'),
+        ]
     )]
     public function showAdd(): void
     {
@@ -732,7 +737,11 @@ class AdminProductsController extends AdminController
             new OA\Parameter(name: 'q', in: 'query', schema: new OA\Schema(type: 'string')),
             new OA\Parameter(name: 'cat', in: 'query', schema: new OA\Schema(type: 'integer')),
         ],
-        responses: [new OA\Response(response: 200, description: 'ملف CSV للتحميل')]
+        responses: [
+            new OA\Response(response: 200, ref: '#/components/responses/CsvDownload'),
+            new OA\Response(response: 401, ref: '#/components/responses/SessionExpired'),
+            new OA\Response(response: 403, ref: '#/components/responses/PermissionDenied'),
+        ]
     )]
     public function exportCsv(): void
     {

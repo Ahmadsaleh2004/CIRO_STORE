@@ -189,7 +189,16 @@ class CheckoutController extends Controller
                 )
             )
         ),
-        responses: [new OA\Response(response: 200, description: 'JSON — {success, message}')]
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'نتيجة العملية. الحقل success يفصل النجاح عن الفشل — كود HTTP يبقى 200 في الحالتين. وعند فشل CSRF يحمل الجسم error_code=csrf_invalid.',
+                content: new OA\JsonContent(oneOf: [
+                    new OA\Schema(ref: '#/components/schemas/ApiResponse'),
+                    new OA\Schema(ref: '#/components/schemas/ApiError'),
+                ])
+            ),
+        ]
     )]
     public function cancelOrder(): void
     {
@@ -234,7 +243,11 @@ class CheckoutController extends Controller
         parameters: [
             new OA\Parameter(name: 'id', in: 'query', schema: new OA\Schema(type: 'integer')),
         ],
-        responses: [new OA\Response(response: 200, description: 'صفحة HTML')]
+        responses: [
+            new OA\Response(response: 200, ref: '#/components/responses/HtmlPage'),
+            new OA\Response(response: 404, ref: '#/components/responses/NotFoundPage'),
+            new OA\Response(response: 503, ref: '#/components/responses/ServiceUnavailable'),
+        ]
     )]
     public function confirmation(): void
     {

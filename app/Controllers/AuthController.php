@@ -157,7 +157,16 @@ class AuthController extends Controller
                 )
             )
         ),
-        responses: [new OA\Response(response: 200, description: 'JSON — {success, message}')]
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'نتيجة العملية. الحقل success يفصل النجاح عن الفشل — كود HTTP يبقى 200 في الحالتين. وعند فشل CSRF يحمل الجسم error_code=csrf_invalid.',
+                content: new OA\JsonContent(oneOf: [
+                    new OA\Schema(ref: '#/components/schemas/ApiResponse'),
+                    new OA\Schema(ref: '#/components/schemas/ApiError'),
+                ])
+            ),
+        ]
     )]
     public function register(): void
     {
@@ -278,7 +287,16 @@ class AuthController extends Controller
         summary: 'تسجيل خروج المستخدم وإنهاء الجلسة',
         tags: ['Store - Auth'],
         security: [['userSessionAuth' => []]],
-        responses: [new OA\Response(response: 200, description: 'JSON — {success, message, redirect?}')]
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'نتيجة العملية. الحقل success يفصل النجاح عن الفشل — كود HTTP يبقى 200 في الحالتين. وعند فشل CSRF يحمل الجسم error_code=csrf_invalid.',
+                content: new OA\JsonContent(oneOf: [
+                    new OA\Schema(ref: '#/components/schemas/ApiResponse'),
+                    new OA\Schema(ref: '#/components/schemas/ApiError'),
+                ])
+            ),
+        ]
     )]
     public function logout(): void
     {
@@ -336,7 +354,16 @@ class AuthController extends Controller
                 )
             )
         ),
-        responses: [new OA\Response(response: 200, description: 'JSON — {success, message}')]
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'نتيجة العملية. الحقل success يفصل النجاح عن الفشل — كود HTTP يبقى 200 في الحالتين. وعند فشل CSRF يحمل الجسم error_code=csrf_invalid.',
+                content: new OA\JsonContent(oneOf: [
+                    new OA\Schema(ref: '#/components/schemas/ApiResponse'),
+                    new OA\Schema(ref: '#/components/schemas/ApiError'),
+                ])
+            ),
+        ]
     )]
     public function forgot(): void
     {
@@ -386,7 +413,11 @@ class AuthController extends Controller
         parameters: [
             new OA\Parameter(name: 'token', in: 'query', required: true, schema: new OA\Schema(type: 'string')),
         ],
-        responses: [new OA\Response(response: 200, description: 'صفحة HTML')]
+        responses: [
+            new OA\Response(response: 200, ref: '#/components/responses/HtmlPage'),
+            new OA\Response(response: 404, ref: '#/components/responses/NotFoundPage'),
+            new OA\Response(response: 503, ref: '#/components/responses/ServiceUnavailable'),
+        ]
     )]
     public function resetForm(): void
     {
@@ -428,7 +459,16 @@ class AuthController extends Controller
                 )
             )
         ),
-        responses: [new OA\Response(response: 200, description: 'JSON — {success, message}')]
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'نتيجة العملية. الحقل success يفصل النجاح عن الفشل — كود HTTP يبقى 200 في الحالتين. وعند فشل CSRF يحمل الجسم error_code=csrf_invalid.',
+                content: new OA\JsonContent(oneOf: [
+                    new OA\Schema(ref: '#/components/schemas/ApiResponse'),
+                    new OA\Schema(ref: '#/components/schemas/ApiError'),
+                ])
+            ),
+        ]
     )]
     public function resetSubmit(): void
     {
@@ -513,7 +553,16 @@ class AuthController extends Controller
         summary: 'جلب توكن CSRF جديد لنماذج المتجر',
         description: 'النقطة الوحيدة التي لا تتطلّب توكناً — منها يُجلب.',
         tags: ['Store - Auth'],
-        responses: [new OA\Response(response: 200, description: 'JSON — {success, message, token}')]
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'نتيجة العملية. الحقل success يفصل النجاح عن الفشل — كود HTTP يبقى 200 في الحالتين. وعند فشل CSRF يحمل الجسم error_code=csrf_invalid.',
+                content: new OA\JsonContent(oneOf: [
+                    new OA\Schema(ref: '#/components/schemas/ApiResponse'),
+                    new OA\Schema(ref: '#/components/schemas/ApiError'),
+                ])
+            ),
+        ]
     )]
     public function getCsrf(): void
     {

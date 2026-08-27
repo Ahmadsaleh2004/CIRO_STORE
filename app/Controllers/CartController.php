@@ -44,8 +44,28 @@ class CartController extends Controller
         responses: [
             new OA\Response(
                 response: 200,
-                description: 'JSON — {success, message, items[]}. كل عنصر يحمل variant_id '
-                           . 'و product_name و price و stock_quantity وغيرها.'
+                description: <<<'TXT'
+                المخزون الحيّ للنسخ المطلوبة.
+
+                السلّة محفوظة في متصفّح الزائر، فقد تحمل أسعاراً ومخزوناً
+                قديمين. هذه النقطة تُرجع الحقيقة من القاعدة قبل الدفع.
+                TXT,
+                content: new OA\JsonContent(
+                    allOf: [
+                        new OA\Schema(ref: '#/components/schemas/ApiResponse'),
+                        new OA\Schema(
+                            properties: [
+                                new OA\Property(
+                                    property: 'items',
+                                    type: 'array',
+                                    description: 'نسخة لكل variant_id مطلوب. النسخ المحذوفة تسقط من الناتج.',
+                                    items: new OA\Items(ref: '#/components/schemas/ProductVariant')
+                                ),
+                            ],
+                            type: 'object'
+                        ),
+                    ]
+                )
             ),
         ]
     )]

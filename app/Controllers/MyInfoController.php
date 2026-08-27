@@ -89,7 +89,16 @@ class MyInfoController extends Controller
                 )
             )
         ),
-        responses: [new OA\Response(response: 200, description: 'JSON — {success, message}')]
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'نتيجة العملية. الحقل success يفصل النجاح عن الفشل — كود HTTP يبقى 200 في الحالتين. وعند فشل CSRF يحمل الجسم error_code=csrf_invalid.',
+                content: new OA\JsonContent(oneOf: [
+                    new OA\Schema(ref: '#/components/schemas/ApiResponse'),
+                    new OA\Schema(ref: '#/components/schemas/ApiError'),
+                ])
+            ),
+        ]
     )]
     public function updateProfile(): void
     {
@@ -183,7 +192,16 @@ class MyInfoController extends Controller
                 )
             )
         ),
-        responses: [new OA\Response(response: 200, description: 'JSON — {success, message}')]
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'نتيجة العملية. الحقل success يفصل النجاح عن الفشل — كود HTTP يبقى 200 في الحالتين. وعند فشل CSRF يحمل الجسم error_code=csrf_invalid.',
+                content: new OA\JsonContent(oneOf: [
+                    new OA\Schema(ref: '#/components/schemas/ApiResponse'),
+                    new OA\Schema(ref: '#/components/schemas/ApiError'),
+                ])
+            ),
+        ]
     )]
     public function addAddress(): void
     {
@@ -236,7 +254,16 @@ class MyInfoController extends Controller
                 )
             )
         ),
-        responses: [new OA\Response(response: 200, description: 'JSON — {success, message}')]
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'نتيجة العملية. الحقل success يفصل النجاح عن الفشل — كود HTTP يبقى 200 في الحالتين. وعند فشل CSRF يحمل الجسم error_code=csrf_invalid.',
+                content: new OA\JsonContent(oneOf: [
+                    new OA\Schema(ref: '#/components/schemas/ApiResponse'),
+                    new OA\Schema(ref: '#/components/schemas/ApiError'),
+                ])
+            ),
+        ]
     )]
     public function deleteAddress(): void
     {

@@ -18,7 +18,7 @@ class AdminHomeController extends AdminController
     #[OA\Get(
         path: '/admin/home',
         summary: 'صفحة لوحة التحكم الرئيسية',
-        tags: ['Admin Home'],
+        tags: ['Admin - Home'],
         security: [['adminSessionAuth' => []]],
         responses: [
             new OA\Response(response: 200, description: 'صفحة HTML للوحة التحكم — يتطلب جلسة admin_session صالحة'),

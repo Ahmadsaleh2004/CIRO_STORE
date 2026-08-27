@@ -48,7 +48,12 @@ class AdminManageAdminsController extends AdminController
         summary: 'عرض فورم إضافة أدمن جديد',
         tags: ['Admin - Manage Admins'],
         security: [['adminSessionAuth' => []]],
-        responses: [new OA\Response(response: 200, description: 'صفحة HTML للفورم')]
+        responses: [
+            new OA\Response(response: 200, ref: '#/components/responses/HtmlPage'),
+            new OA\Response(response: 302, ref: '#/components/responses/RedirectToLogin'),
+            new OA\Response(response: 403, ref: '#/components/responses/PermissionDenied'),
+            new OA\Response(response: 503, ref: '#/components/responses/ServiceUnavailable'),
+        ]
     )]
     public function showAdd(): void
     {
@@ -90,7 +95,10 @@ class AdminManageAdminsController extends AdminController
                 )
             )]
         ),
-        responses: [new OA\Response(response: 302, description: 'إعادة توجيه لصفحة القائمة مع رسالة flash')]
+        responses: [
+            new OA\Response(response: 302, ref: '#/components/responses/RedirectWithFlash'),
+            new OA\Response(response: 403, ref: '#/components/responses/PermissionDenied'),
+        ]
     )]
     public function storeAdd(): void
     {
@@ -202,7 +210,10 @@ class AdminManageAdminsController extends AdminController
         summary: 'حفظ تعديل رتبة/صلاحيات أدمن (يتطلب سبب + كلمة مرور الأدمن الحالي)',
         tags: ['Admin - Manage Admins'],
         security: [['adminSessionAuth' => []]],
-        responses: [new OA\Response(response: 302, description: 'إعادة توجيه مع رسالة flash')]
+        responses: [
+            new OA\Response(response: 302, ref: '#/components/responses/RedirectWithFlash'),
+            new OA\Response(response: 403, ref: '#/components/responses/PermissionDenied'),
+        ]
     )]
     public function storeEdit(): void
     {
@@ -400,7 +411,12 @@ class AdminManageAdminsController extends AdminController
         parameters: [
             new OA\Parameter(name: 'id', in: 'query', required: true, schema: new OA\Schema(type: 'integer')),
         ],
-        responses: [new OA\Response(response: 200, description: 'صفحة HTML')]
+        responses: [
+            new OA\Response(response: 200, ref: '#/components/responses/HtmlPage'),
+            new OA\Response(response: 302, ref: '#/components/responses/RedirectToLogin'),
+            new OA\Response(response: 403, ref: '#/components/responses/PermissionDenied'),
+            new OA\Response(response: 503, ref: '#/components/responses/ServiceUnavailable'),
+        ]
     )]
     public function details(): void
     {
@@ -450,7 +466,11 @@ class AdminManageAdminsController extends AdminController
         summary: 'تصدير قائمة الأدمنية كملف CSV — رتبة A فقط',
         tags: ['Admin - Manage Admins'],
         security: [['adminSessionAuth' => []]],
-        responses: [new OA\Response(response: 200, description: 'ملف CSV للتحميل')]
+        responses: [
+            new OA\Response(response: 200, ref: '#/components/responses/CsvDownload'),
+            new OA\Response(response: 401, ref: '#/components/responses/SessionExpired'),
+            new OA\Response(response: 403, ref: '#/components/responses/PermissionDenied'),
+        ]
     )]
     public function exportCsv(): void
     {

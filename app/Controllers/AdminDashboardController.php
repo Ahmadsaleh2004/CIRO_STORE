@@ -16,7 +16,7 @@ class AdminDashboardController extends AdminController
     #[OA\Get(
         path: '/admin/dashboard',
         summary: 'صفحة إحصائيات لوحة تحكم الأدمن (مبيعات، طلبات، مستخدمون، أفضل المنتجات مبيعًا)',
-        tags: ['Admin Dashboard'],
+        tags: ['Admin - Dashboard'],
         security: [['adminSessionAuth' => []]],
         parameters: [
             new OA\Parameter(
