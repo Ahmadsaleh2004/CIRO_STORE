@@ -9,15 +9,64 @@ class Middleware
 {
     /**
      * يتحقق من أن المستخدم مسجّل دخوله.
-     * إذا لم يكن مسجّلاً، يحفظ الرابط المطلوب ويوجّهه لصفحة Login.
+     *
+     * يرجع JSON لطلبات AJAX/POST، أو يحوّل لصفحة الدخول لطلبات الصفحات
+     * الكاملة — تماماً كما تفعل requireAdmin منذ البداية.
+     *
+     * ⚠️ التفريق بين الشكلين لم يكن موجوداً، وكان عطلاً كامناً لا يظهر:
+     * الدالة كانت تُستدعى من **داخل** أجسام الأفعال، أي بعد أن تكون
+     * beginJsonPost قد ضبطت رأس JSON وردّت على فشل CSRF وأنهت الطلب.
+     * فلم يكن أحد يبلغ سطر التحويل من نقطة JSON أصلاً.
+     *
+     * ولحظة نقل الحراسة إلى تعريف المسار ظهر العطل فوراً: صار الحارس
+     * يسبق الكنترولر، فبدأت خمس نقاط JSON (/checkout و/user/info
+     * وأخواتها) تردّ على مستخدم غير مسجّل بتحويل 302 إلى صفحة HTML —
+     * وfetch في المتصفح يتبعه ويحاول قراءة صفحة كاملة كـJSON.
+     *
+     * أمسك الانحدارَ اختبارُ عقد CSRF، وهو ما كُتب له.
+     *
+     * والنتيجة أصحّ ممّا كان قبل النقل أيضاً: مستخدم غير مسجّل كان
+     * يتلقّى «توكن CSRF غير صالح» — رسالة تصف عرضاً لا سبباً. الآن
+     * يتلقّى 401 تقول له إن عليه تسجيل الدخول.
      */
     public static function requireLogin(): void
     {
-        if (!isUserLoggedIn()) {
-            $_SESSION['redirect_after_login'] = $_SERVER['REQUEST_URI'] ?? URLROOT;
-            header('Location: ' . URLROOT . '/?openLogin=1');
+        if (isUserLoggedIn()) {
+            return;
+        }
+
+        if (self::expectsJson()) {
+            http_response_code(401);
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode([
+                'success' => false,
+                'message' => 'Please log in to continue.',
+            ], JSON_UNESCAPED_UNICODE);
             exit;
         }
+
+        $_SESSION['redirect_after_login'] = $_SERVER['REQUEST_URI'] ?? URLROOT;
+        header('Location: ' . URLROOT . '/?openLogin=1');
+        exit;
+    }
+
+    /**
+     * هل يتوقّع هذا الطلب استجابة JSON؟
+     *
+     * كان هذا الفحص منسوخاً حرفياً في requireAdmin و denyAccess بصياغتين
+     * مختلفتين قليلاً — إحداهما تفحص Accept والأخرى لا. توحيده هنا يمنع
+     * أن يتصرّف حارسان بشكلين مختلفين أمام الطلب نفسه.
+     */
+    private static function expectsJson(): bool
+    {
+        $requestedWith = $_SERVER['HTTP_X_REQUESTED_WITH'] ?? '';
+        $accept        = $_SERVER['HTTP_ACCEPT'] ?? '';
+        $contentType   = $_SERVER['CONTENT_TYPE'] ?? '';
+
+        return strtolower($requestedWith) === 'xmlhttprequest'
+            || str_contains($accept, 'application/json')
+            || str_contains($contentType, 'application/json')
+            || ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST';
     }
 
     /**
@@ -26,6 +75,24 @@ class Middleware
      */
     public static function requireAdmin(): void
     {
+        // ⚠️ بدء الجلسة هنا **لازم**، وليس احتياطاً.
+        //
+        // isAdmin() تُرجع false ما لم تكن جلسة admin_session نشطة
+        // بالاسم — لا يكفي وجود admin_id. وكانت هذه الدالة تفترض أن
+        // أحداً بدأها قبلها، والفاعل الوحيد هو
+        // AdminController::__construct.
+        //
+        // ذلك كان يعمل ما دام الحارس يُستدعى من **داخل** جسم الفعل، أي
+        // بعد بناء الكنترولر. ولحظة نقل الحراسة إلى تعريف المسار — وهي
+        // النقلة الصحيحة، إذ يصير الحارس قبل الباني لا بعده — كان
+        // الترتيب سينقلب: يُسأل isAdmin() قبل أن توجد الجلسة، فتُرجع
+        // false دائماً، فتتحوّل **كل** صفحات لوحة التحكم إلى إعادة
+        // توجيه أبدية إلى صفحة الدخول.
+        //
+        // startAdminSession() تحرس نفسها بـsession_status()، فاستدعاؤها
+        // هنا ثم في الباني لا يفعل شيئاً مرّتين.
+        startAdminSession();
+
         if (!isAdmin()) {
             $isAjax = (
                 (!empty($_SERVER['HTTP_X_REQUESTED_WITH'])
