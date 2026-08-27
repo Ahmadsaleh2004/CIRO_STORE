@@ -6,7 +6,9 @@
   "license": "MIT",
   "type": "module",
   "scripts": {
-    "build": "node build/build-css.mjs",
+    "build": "npm run build:css && npm run build:js",
+    "build:css": "node build/build-css.mjs",
+    "build:js": "node build/build-js.mjs",
     "lint": "npm run lint:js && npm run lint:css",
     "lint:js": "eslint public/js",
     "lint:css": "stylelint \"public/css/**/*.css\"",
@@ -17,6 +19,7 @@
     "test:watch": "vitest"
   },
   "devDependencies": {
+    "esbuild": "^0.24.2",
     "eslint": "^9.16.0",
     "globals": "^15.13.0",
     "jsdom": "^25.0.1",

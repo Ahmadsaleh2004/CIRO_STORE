@@ -148,6 +148,79 @@ function jsTag(string $path, bool $defer = true): string
 }
 
 /**
+ * بيان حزم JS الذي ينتجه `npm run build`.
+ *
+ * @return array<string, string>
+ */
+function jsManifest(): array
+{
+    static $manifest = null;
+    if ($manifest !== null) {
+        return $manifest;
+    }
+
+    $path = ROOTPATH . '/public/js/dist/manifest.json';
+    if (!is_file($path)) {
+        return $manifest = [];
+    }
+
+    $decoded = json_decode((string) file_get_contents($path), true);
+
+    return $manifest = is_array($decoded) ? $decoded : [];
+}
+
+/**
+ * يطبع وسم <script> لحزمة مدموجة — أو وسوم الملفات المفردة إن لم تُبنَ.
+ *
+ * ── لماذا ───────────────────────────────────────────────────
+ *
+ * الصفحة الرئيسية كانت تطلب **ثمانية عشر ملف JS**. والمتصفح يسمح بستّ
+ * اتصالات متزامنة لكل نطاق على HTTP/1.1، فتقف في طابور. مقيس:
+ *
+ *     أول ملف يبدأ:      467 ms
+ *     آخر ملف ينتهي:     999 ms
+ *     DOMContentLoaded: 1051 ms
+ *
+ * والسلايدر لا وجود له في HTML: يبنيه products-catalog.js — الرابع عشر
+ * في الطابور. فيبقى مكانه فارغاً أكثر من ثانية بعد ظهور الصفحة.
+ *
+ * ── المساران ───────────────────────────────────────────────
+ *
+ * **مبنيّ**: وسم واحد. و**غير مبنيّ**: الملفات مفردة كما كانت — وهو
+ * وضع التطوير المفضَّل، إذ يظهر كل ملف منفصلاً في DevTools ويظهر
+ * تعديله فوراً بلا إعادة بناء.
+ *
+ * ووجود البيان هو الاختيار، تماماً كما في cssBundle.
+ *
+ * ⚠️ الترتيب داخل الحزمة هو ترتيب هذه القوائم في build/build-js.mjs،
+ * وهو ترتيب الـfooter حرفاً بحرف. الملفات تتشارك النطاق العام ويعتمد
+ * اللاحق على ما عرّفه السابق — فأي إعادة ترتيب تكسره بصمت.
+ *
+ * @param string       $bundle اسم الحزمة: store | admin | store-auth
+ * @param list<string> $fallback مسارات الملفات المفردة عند غياب البناء
+ * @param bool         $defer
+ */
+function jsBundle(string $bundle, array $fallback, bool $defer = true): string
+{
+    $manifest = jsManifest();
+
+    if (isset($manifest[$bundle])) {
+        $path = $manifest[$bundle];
+        // البصمة في الاسم تُبطل التخزين المؤقّت، فلا حاجة لـ?v=
+        return '<script src="' . URLROOT . '/' . $path . '"'
+            . ($defer ? ' defer' : '') . '></script>' . "
+";
+    }
+
+    $out = '';
+    foreach ($fallback as $file) {
+        $out .= jsTag($file, $defer);
+    }
+
+    return $out;
+}
+
+/**
  * يطبع جزيرة بيانات JSON تُنقَل إلى النطاق العام.
  *
  * ── لماذا ────────────────────────────────────────────────────
