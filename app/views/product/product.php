@@ -103,7 +103,7 @@ $pageDescription = 'Browse all products at Cairo Store.';
                     <input type="hidden" name="product_id"    value="<?= (int)$p['id'] ?>">
                     <input type="hidden" name="csrf_token"    value="<?= htmlspecialchars($csrf) ?>">
                     <button type="submit" class="delete-product-btn"
-                        onclick="return confirm('Delete «<?= htmlspecialchars(addslashes($p['name'])) ?>»?')"
+                        data-confirm="Delete «<?= htmlspecialchars($p['name'], ENT_QUOTES) ?>»?"
                         title="Delete">✕</button>
                 </form>
                 <?php else: ?>
@@ -154,24 +154,28 @@ $pageDescription = 'Browse all products at Cairo Store.';
                     <div>
                         <div class="quantity-box mb-2 d-flex justify-content-center gap-2">
                             <button class="btn btn-outline-secondary btn-sm"
-                                    onclick="changeQtyDB('<?= (int)$p['id'] ?>',-1)">−</button>
+                                    data-action="change-qty" data-product-id="<?= (int)$p['id'] ?>" data-delta="-1">−</button>
                             <input type="number" value="1" id="qty-<?= (int)$p['id'] ?>"
                                    class="form-control quantity-input qty-input-sm"
                                    min="1" max="<?= $stock ?>">
                             <button class="btn btn-outline-secondary btn-sm"
-                                    onclick="changeQtyDB('<?= (int)$p['id'] ?>',1)">+</button>
+                                    data-action="change-qty" data-product-id="<?= (int)$p['id'] ?>" data-delta="1">+</button>
                         </div>
                         <?php if ($stock > 0): ?>
                         <?php if (isUser() && empty($_SESSION['admin_in_store_mode'])): ?>
                         <button class="btn btn-success w-100"
-                                onclick="addToCartDB(<?= (int)$p['id'] ?>, <?= (int)$variantId ?>, <?= $finalPrice ?>, <?= $stock ?>)">
+                                data-action="add-to-cart"
+                                    data-product-id="<?= (int)$p['id'] ?>"
+                                    data-variant-id="<?= (int)$variantId ?>"
+                                    data-price="<?= $finalPrice ?>"
+                                    data-stock="<?= $stock ?>">
                             🛒 Add to Cart
                         </button>
                         <?php else: ?>
                         <button class="btn btn-success w-100 btn-disabled-faded"
                                 disabled
                                 data-bs-toggle="modal" data-bs-target="#loginModal"
-                                onclick="this.removeAttribute('disabled')">
+                                data-action="self-enable">
                             🛒 Add to Cart
                         </button>
                         <?php endif; ?>

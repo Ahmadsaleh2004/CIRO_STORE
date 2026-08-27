@@ -37,14 +37,14 @@
                                    placeholder=" " required autocomplete="current-password"
                                    style="background-color:var(--input-bg);color:var(--input-text);">
                             <span class="input-group-text"
-                                  onclick="togglePassword('loginPass','eyeLogin')"
+                                  data-action="toggle-password" data-input="loginPass" data-eye="eyeLogin"
                                   id="eyeLogin" style="cursor:pointer;">👁️</span>
                         </div>
                         <label>Password</label>
                     </div>
                     <div class="d-flex justify-content-end mb-3">
                         <a href="#" class="small"
-                           onclick="switchAuthModal(this, 'forgotModal'); return false;">Forgot Password?</a>
+                           data-action="switch-modal" data-modal-target="forgotModal">Forgot Password?</a>
                     </div>
                     <div id="loginError" class="alert alert-danger py-2 small mb-3" style="display:none;"></div>
                     <button type="submit" class="btn btn-dark w-100 mb-3 py-2" id="loginBtn">Sign In</button>
@@ -67,7 +67,7 @@
                     <p class="text-center small mb-0">
                         Don't have an account?
                         <a href="#" class="fw-bold"
-                           onclick="switchAuthModal(this, 'registerModal'); return false;">Create one</a>
+                           data-action="switch-modal" data-modal-target="registerModal">Create one</a>
                     </p>
                 </form>
             </div>

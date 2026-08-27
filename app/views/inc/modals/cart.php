@@ -21,7 +21,7 @@
                 <span id="cart-total" class="fw-bold">$0.00</span>
             </div>
             <button class="btn btn-warning w-100 fw-bold"
-                onclick="window.location.href='<?= URLROOT ?>/checkout'">
+                data-action="navigate" data-href="<?= URLROOT ?>/checkout">
                 Proceed To Checkout
             </button>
         </div>

@@ -55,43 +55,31 @@
     # إخفاء نسخة PHP من الترويسات.
     Header always unset X-Powered-By
 
-    # ── CSP: سياستان معاً ─────────────────────────────────────
+    # ── CSP: مفروضة بالكامل ───────────────────────────────────
     #
-    # **مفروضة** لكل شيء عدا السكربتات، و**بوضع الإبلاغ** للهدف الكامل.
-    # وهذا ليس تردّداً بل وصفٌ دقيق لما يمكن فرضه اليوم.
+    # **بلا 'unsafe-inline' في script-src.** لم تكن هذه ممكنة قبل
+    # اليوم: كانت الـviews تحوي أربع عشرة كتلة <script> مضمّنة وثلاثة
+    # وثلاثين معالج onclick/onchange — وكلّها كتل تنفيذ تحجبها أي
+    # سياسة جادّة.
     #
-    # ما صار مفروضاً فعلاً — وكلّه مكسب حقيقي فوري:
-    #   object-src 'none'    يقطع <object> و<embed> — ناقلا هجوم قديمان
-    #   base-uri 'self'      يمنع حقن <base> الذي يحوّل كل رابط نسبي
-    #   form-action 'self'   يمنع تحويل وجهة أي نموذج إلى خادم آخر
-    #   frame-ancestors      clickjacking
-    #   img/connect/frame    حصر الوجهات
+    # ما تغيّر ليصير هذا ممكناً:
+    #   · البيانات → جزر <script type="application/json"> (pageData)
+    #     وهي ليست كتل تنفيذ فلا يعنيها script-src أصلاً.
+    #   · المعالجات → data-action وسمات data-*، يفوّضها مستمع واحد
+    #     في js/core/inline-actions.js.
+    #   · سكربت تهيئة الثيم → مسموح **ببصمته وحدها**. لا يمكن نقله إلى
+    #     ملف: يجب أن يعمل قبل الرسم وإلا ومض المستخدم بالثيم الخطأ.
     #
-    # ولماذا script-src فيها 'unsafe-inline'؟
+    # ⚠️ البصمة مرتبطة بمحتوى themeBootScript() حرفاً بحرف. أي تعديل
+    # عليه — ولو مسافة — يُبطلها فيتوقّف السكربت ويومض الثيم. أعد
+    # حسابها عند أي تغيير:
+    #     php -r "require 'app/config/config.php'; require 'vendor/autoload.php';
+    #             preg_match('#<script>(.*?)</script>#s', themeBootScript(), \$m);
+    #             echo 'sha256-'.base64_encode(hash('sha256', \$m[1], true));"
     #
-    # أُخرجت **أربع عشرة** كتلة <script> مضمّنة من الـviews إلى جزر
-    # JSON (راجع pageData في assets_helper.php) — وهو ما كان يمنع أي
-    # سياسة أصلاً. بقي عائقان:
-    #
-    #   1. اثنان وثلاثون معالجاً مضمّناً (onclick/onchange) في الوسوم.
-    #   2. سكربت تهيئة الثيم في <head>، ويجب أن يعمل **قبل الرسم** وإلا
-    #      ومض المستخدم بالثيم الخطأ.
-    #
-    # والثاني محلول ببصمته أدناه. أما الأول فيحتاج تحويل كل معالج إلى
-    # addEventListener — عمل ميكانيكي لكن كل زرّ فيه يحتاج نقرة فعلية
-    # للتحقّق، وشحنه بلا ذلك أسوأ من تركه.
-    #
-    # ⚠️ ولماذا لا تُخلط البصمة مع 'unsafe-inline' في سياسة واحدة؟
-    # لأن المعيار (CSP3 §6.6.2.4) يقول إن وجود بصمة أو nonce **يُلغي**
-    # 'unsafe-inline' تماماً. فالخلط يكسر المعالجات الاثنين والثلاثين
-    # بدل أن يشدّد شيئاً. ولهذا سياستان: واحدة تفرض ما تستطيع، وأخرى
-    # تُبلغ عن الهدف.
-    Header always set Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://code.jquery.com https://js.hcaptcha.com https://*.hcaptcha.com; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://*.hcaptcha.com; img-src 'self' data: https:; font-src 'self' data: https://cdn.jsdelivr.net; connect-src 'self' https://*.hcaptcha.com; frame-src https://*.hcaptcha.com; form-action 'self'; frame-ancestors 'self'; base-uri 'self'; object-src 'none'"
-
-    # الهدف: بلا 'unsafe-inline' إطلاقاً، وسكربت الثيم مسموح ببصمته
-    # وحدها. حين تُحوَّل المعالجات الاثنان والثلاثون، تحلّ هذه محلّ
-    # التي فوقها بحذف اللاحقة -Report-Only.
-    Header always set Content-Security-Policy-Report-Only "default-src 'self'; script-src 'self' 'sha256-n33GJ973YEUTpbG1xOj611JYTc5wI4V+8xmEtfPaLjk=' https://cdn.jsdelivr.net https://code.jquery.com https://js.hcaptcha.com https://*.hcaptcha.com; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://*.hcaptcha.com; img-src 'self' data: https:; font-src 'self' data: https://cdn.jsdelivr.net; connect-src 'self' https://*.hcaptcha.com; frame-src https://*.hcaptcha.com; form-action 'self'; frame-ancestors 'self'; base-uri 'self'; object-src 'none'"
+    # style-src فيها 'unsafe-inline' بعد: 239 سمة style= في الـviews.
+    # وهي الخطوة التالية، وأثرها الأمني أقلّ بكثير من السكربتات.
+    Header always set Content-Security-Policy "default-src 'self'; script-src 'self' 'sha256-n33GJ973YEUTpbG1xOj611JYTc5wI4V+8xmEtfPaLjk=' https://cdn.jsdelivr.net https://code.jquery.com https://js.hcaptcha.com https://*.hcaptcha.com; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://*.hcaptcha.com; img-src 'self' data: https:; font-src 'self' data: https://cdn.jsdelivr.net; connect-src 'self' https://*.hcaptcha.com; frame-src https://*.hcaptcha.com; form-action 'self'; frame-ancestors 'self'; base-uri 'self'; object-src 'none'"
 
 
 </IfModule>

@@ -108,26 +108,39 @@ use App\Models\AdminModel;
                             <span style="color:var(--muted-text);">—</span>
                         <?php endif; ?>
                     </td>
-                    <!-- onclick="event.stopPropagation()" إلزامي — يمنع تفعيل clickable-row -->
-                    <td onclick="event.stopPropagation()">
+                    <!-- data-action="stop-propagation" إلزامي — يمنع تفعيل clickable-row -->
+                    <td data-action="stop-propagation">
                         <?php if (AdminModel::canManageTarget($adminRole, $adm['role'])): ?>
                         <button class="btn btn-sm btn-outline-primary me-1"
-                                onclick="openPermModal(
-                                    <?= (int)$adm['id'] ?>,
-                                    '<?= htmlspecialchars(addslashes($adm['full_name'])) ?>',
-                                    '<?= htmlspecialchars($adm['role']) ?>',
-                                    <?= (int)($adm['can_manage_admins']            ?? 0) ?>,
-                                    <?= (int)($adm['can_manage_products']          ?? 0) ?>,
-                                    <?= (int)($adm['can_manage_users']             ?? 0) ?>,
-                                    <?= (int)($adm['can_view_dashboard']           ?? 0) ?>,
-                                    <?= (int)($adm['can_manage_support']           ?? 0) ?>,
-                                    <?= (int)($adm['can_edit_site_content']        ?? 0) ?>,
-                                    <?= (int)($adm['can_manage_checkout_settings'] ?? 0) ?>,
-                                    <?= (int)($adm['can_manage_orders']            ?? 0) ?>,
-                                    <?= (int)($adm['can_manage_branding']          ?? 0) ?>
-                                )"
+                                data-action="perm-modal"
+                                data-admin-id="<?= (int)$adm['id'] ?>"
+                                data-admin-name="<?= htmlspecialchars($adm['full_name'], ENT_QUOTES) ?>"
+                                data-admin-role="<?= htmlspecialchars($adm['role'], ENT_QUOTES) ?>"
+                                <?php
+                                // الصلاحيات التسع بترتيبها الذي يتوقّعه
+                                // openPermModal. الترتيب هو العقد، وكان
+                                // كذلك حين كانت وسائط استدعاء مضمّن.
+                                $permFlags = [
+                                    'can_manage_admins',
+                                    'can_manage_products',
+                                    'can_manage_users',
+                                    'can_view_dashboard',
+                                    'can_manage_support',
+                                    'can_edit_site_content',
+                                    'can_manage_checkout_settings',
+                                    'can_manage_orders',
+                                    'can_manage_branding',
+                                ];
+                                $permValues = array_map(
+                                    fn (string $k): int => (int) ($adm[$k] ?? 0),
+                                    $permFlags
+                                );
+                                ?>
+                                data-perms="<?= implode(',', $permValues) ?>"
                                 title="Edit permissions">✏️</button>                        <button class="btn btn-sm btn-outline-info me-1"
-                                onclick="openNotifyModal('admin', <?= (int)$adm['id'] ?>, '<?= htmlspecialchars(addslashes($adm['full_name'])) ?>')"
+                                data-action="notify-modal" data-notify-type="admin"
+                                data-notify-id="<?= (int)$adm['id'] ?>"
+                                data-notify-name="<?= htmlspecialchars($adm['full_name'], ENT_QUOTES) ?>"
                                 title="Send message">🔔</button>
                         <button class="btn btn-sm btn-outline-danger del-admin-btn"
                                 data-id="<?= (int)$adm['id'] ?>"

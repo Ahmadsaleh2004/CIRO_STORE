@@ -117,7 +117,7 @@
                                style="color:var(--text-color);">💾 Backup DB</a></li>
                         <?php endif; ?>
                         <li><hr class="dropdown-divider" style="border-color:var(--section-border);"></li>
-                        <li><a class="dropdown-item text-danger" href="#" onclick="logoutAdmin()">🚪 Log Out</a></li>
+                        <li><a class="dropdown-item text-danger" href="#" data-action="logout-admin">🚪 Log Out</a></li>
                     </ul>
                 </div>
             </div>
