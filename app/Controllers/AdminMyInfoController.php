@@ -17,7 +17,7 @@ class AdminMyInfoController extends AdminController
     #[OA\Get(
         path: '/admin/my-info',
         summary: 'عرض صفحة معلوماتي الخاصة بالأدمن',
-        tags: ['Admin My Info'],
+        tags: ['Admin - My Info'],
         security: [['adminSessionAuth' => []]],
         responses: [
             new OA\Response(response: 200, description: 'صفحة HTML لمعلومات الأدمن — يتطلب جلسة admin_session صالحة'),
@@ -48,7 +48,7 @@ class AdminMyInfoController extends AdminController
     #[OA\Post(
         path: '/admin/my-info',
         summary: 'تحديث بيانات حساب الأدمن (الاسم / الهاتف / كلمة المرور)',
-        tags: ['Admin My Info'],
+        tags: ['Admin - My Info'],
         security: [['adminSessionAuth' => []]],
         requestBody: new OA\RequestBody(
             required: true,
@@ -57,10 +57,10 @@ class AdminMyInfoController extends AdminController
                 schema: new OA\Schema(
                     required: ['csrf_token', 'full_name', 'current_password'],
                     properties: [
-                        new OA\Property(property: 'csrf_token',       type: 'string'),
-                        new OA\Property(property: 'full_name',        type: 'string'),
-                        new OA\Property(property: 'phone_number',     type: 'string'),
-                        new OA\Property(property: 'new_password',     type: 'string', format: 'password', description: 'اختياري — اتركه فارغًا للإبقاء على كلمة المرور الحالية'),
+                        new OA\Property(property: 'csrf_token', type: 'string'),
+                        new OA\Property(property: 'full_name', type: 'string'),
+                        new OA\Property(property: 'phone_number', type: 'string'),
+                        new OA\Property(property: 'new_password', type: 'string', format: 'password', description: 'اختياري — اتركه فارغًا للإبقاء على كلمة المرور الحالية'),
                         new OA\Property(property: 'current_password', type: 'string', format: 'password', description: 'إلزامي دائمًا للتأكيد قبل الحفظ'),
                     ]
                 )
@@ -207,7 +207,18 @@ class AdminMyInfoController extends AdminController
                 )
             )
         ),
-        responses: [new OA\Response(response: 200, description: 'JSON — {success, message}')]
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'نتيجة العملية. الحقل success يفصل النجاح عن الفشل — كود HTTP يبقى 200 في الحالتين. وعند فشل CSRF يحمل الجسم error_code=csrf_invalid.',
+                content: new OA\JsonContent(oneOf: [
+                    new OA\Schema(ref: '#/components/schemas/ApiResponse'),
+                    new OA\Schema(ref: '#/components/schemas/ApiError'),
+                ])
+            ),
+            new OA\Response(response: 401, ref: '#/components/responses/SessionExpired'),
+            new OA\Response(response: 403, ref: '#/components/responses/PermissionDenied'),
+        ]
     )]
     public function confirm2FA(): void
     {
@@ -263,7 +274,18 @@ class AdminMyInfoController extends AdminController
                 )
             )
         ),
-        responses: [new OA\Response(response: 200, description: 'JSON — {success, message}')]
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'نتيجة العملية. الحقل success يفصل النجاح عن الفشل — كود HTTP يبقى 200 في الحالتين. وعند فشل CSRF يحمل الجسم error_code=csrf_invalid.',
+                content: new OA\JsonContent(oneOf: [
+                    new OA\Schema(ref: '#/components/schemas/ApiResponse'),
+                    new OA\Schema(ref: '#/components/schemas/ApiError'),
+                ])
+            ),
+            new OA\Response(response: 401, ref: '#/components/responses/SessionExpired'),
+            new OA\Response(response: 403, ref: '#/components/responses/PermissionDenied'),
+        ]
     )]
     public function disable2FA(): void
     {

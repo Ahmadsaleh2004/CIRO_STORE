@@ -20,7 +20,12 @@ class BackupController extends AdminController
         summary: 'صفحة إدارة النسخ الاحتياطي (Root admin ID=1 فقط)',
         tags: ['Admin - Backup'],
         security: [['adminSessionAuth' => []]],
-        responses: [new OA\Response(response: 200, description: 'صفحة HTML بالقائمة وزر إنشاء نسخة')]
+        responses: [
+            new OA\Response(response: 200, ref: '#/components/responses/HtmlPage'),
+            new OA\Response(response: 302, ref: '#/components/responses/RedirectToLogin'),
+            new OA\Response(response: 403, ref: '#/components/responses/PermissionDenied'),
+            new OA\Response(response: 503, ref: '#/components/responses/ServiceUnavailable'),
+        ]
     )]
     public function index(): void
     {
@@ -116,7 +121,11 @@ class BackupController extends AdminController
         parameters: [
             new OA\Parameter(name: 'file', in: 'query', required: true, schema: new OA\Schema(type: 'string'), description: 'اسم الملف فقط — يُرفض أي مسار خارج مجلد النسخ'),
         ],
-        responses: [new OA\Response(response: 200, description: 'ملف SQL للتحميل')]
+        responses: [
+            new OA\Response(response: 200, ref: '#/components/responses/CsvDownload'),
+            new OA\Response(response: 401, ref: '#/components/responses/SessionExpired'),
+            new OA\Response(response: 403, ref: '#/components/responses/PermissionDenied'),
+        ]
     )]
     public function download(): void
     {
@@ -166,8 +175,8 @@ class BackupController extends AdminController
                 schema: new OA\Schema(
                     required: ['file', 'csrf_token'],
                     properties: [
-                        new OA\Property(property: 'file',       type: 'string'),
-                        new OA\Property(property: 'csrf_token',  type: 'string'),
+                        new OA\Property(property: 'file', type: 'string'),
+                        new OA\Property(property: 'csrf_token', type: 'string'),
                     ]
                 )
             )

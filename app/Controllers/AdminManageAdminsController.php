@@ -48,7 +48,12 @@ class AdminManageAdminsController extends AdminController
         summary: 'عرض فورم إضافة أدمن جديد',
         tags: ['Admin - Manage Admins'],
         security: [['adminSessionAuth' => []]],
-        responses: [new OA\Response(response: 200, description: 'صفحة HTML للفورم')]
+        responses: [
+            new OA\Response(response: 200, ref: '#/components/responses/HtmlPage'),
+            new OA\Response(response: 302, ref: '#/components/responses/RedirectToLogin'),
+            new OA\Response(response: 403, ref: '#/components/responses/PermissionDenied'),
+            new OA\Response(response: 503, ref: '#/components/responses/ServiceUnavailable'),
+        ]
     )]
     public function showAdd(): void
     {
@@ -69,28 +74,31 @@ class AdminManageAdminsController extends AdminController
                 schema: new OA\Schema(
                     required: ['new_name','new_email','new_password','new_role','add_reason','confirm_current_pass','csrf_token'],
                     properties: [
-                        new OA\Property(property: 'new_name',             type: 'string'),
-                        new OA\Property(property: 'new_email',            type: 'string', format: 'email', description: 'يجب أن ينتهي بـ @gmail.com'),
-                        new OA\Property(property: 'new_phone',            type: 'string'),
-                        new OA\Property(property: 'new_password',         type: 'string', format: 'password'),
-                        new OA\Property(property: 'new_role',             type: 'string', description: 'A|B|C|D — يجب أن تكون أقل صراحة من رتبتك'),
-                        new OA\Property(property: 'perm_admins',          type: 'boolean'),
-                        new OA\Property(property: 'perm_products',        type: 'boolean'),
-                        new OA\Property(property: 'perm_users',           type: 'boolean'),
-                        new OA\Property(property: 'perm_dashboard',       type: 'boolean'),
-                        new OA\Property(property: 'perm_support',         type: 'boolean'),
-                        new OA\Property(property: 'perm_content',         type: 'boolean'),
-                        new OA\Property(property: 'perm_branding',        type: 'boolean'),
-                        new OA\Property(property: 'perm_checkout',        type: 'boolean'),
-                        new OA\Property(property: 'perm_orders',          type: 'boolean'),
-                        new OA\Property(property: 'add_reason',           type: 'string'),
+                        new OA\Property(property: 'new_name', type: 'string'),
+                        new OA\Property(property: 'new_email', type: 'string', format: 'email', description: 'يجب أن ينتهي بـ @gmail.com'),
+                        new OA\Property(property: 'new_phone', type: 'string'),
+                        new OA\Property(property: 'new_password', type: 'string', format: 'password'),
+                        new OA\Property(property: 'new_role', type: 'string', description: 'A|B|C|D — يجب أن تكون أقل صراحة من رتبتك'),
+                        new OA\Property(property: 'perm_admins', type: 'boolean'),
+                        new OA\Property(property: 'perm_products', type: 'boolean'),
+                        new OA\Property(property: 'perm_users', type: 'boolean'),
+                        new OA\Property(property: 'perm_dashboard', type: 'boolean'),
+                        new OA\Property(property: 'perm_support', type: 'boolean'),
+                        new OA\Property(property: 'perm_content', type: 'boolean'),
+                        new OA\Property(property: 'perm_branding', type: 'boolean'),
+                        new OA\Property(property: 'perm_checkout', type: 'boolean'),
+                        new OA\Property(property: 'perm_orders', type: 'boolean'),
+                        new OA\Property(property: 'add_reason', type: 'string'),
                         new OA\Property(property: 'confirm_current_pass', type: 'string', format: 'password'),
-                        new OA\Property(property: 'csrf_token',           type: 'string'),
+                        new OA\Property(property: 'csrf_token', type: 'string'),
                     ]
                 )
             )]
         ),
-        responses: [new OA\Response(response: 302, description: 'إعادة توجيه لصفحة القائمة مع رسالة flash')]
+        responses: [
+            new OA\Response(response: 302, ref: '#/components/responses/RedirectWithFlash'),
+            new OA\Response(response: 403, ref: '#/components/responses/PermissionDenied'),
+        ]
     )]
     public function storeAdd(): void
     {
@@ -172,14 +180,24 @@ class AdminManageAdminsController extends AdminController
             $recipients = AdminModel::findByPermsAndRanks(['can_manage_admins'], $higherRanks);
             foreach ($recipients as $recipientId) {
                 $recipientId = (int)$recipientId;
-                if ($recipientId === $adminId) continue;
-                if ($recipientId === $newId)   continue;
-                if ($rootId !== null && $recipientId === $rootId) continue;
+                if ($recipientId === $adminId) {
+                    continue;
+                }
+                if ($recipientId === $newId) {
+                    continue;
+                }
+                if ($rootId !== null && $recipientId === $rootId) {
+                    continue;
+                }
 
                 AdminModel::sendNotification(
-                    $recipientId, 'Admin Added',
+                    $recipientId,
+                    'Admin Added',
                     "Admin {$email} (role {$newRole}) was added by another admin. Reason: {$reason}",
-                    'admin_added', 'admin', $newId, $adminId
+                    'admin_added',
+                    'admin',
+                    $newId,
+                    $adminId
                 );
             }
         }
@@ -192,7 +210,10 @@ class AdminManageAdminsController extends AdminController
         summary: 'حفظ تعديل رتبة/صلاحيات أدمن (يتطلب سبب + كلمة مرور الأدمن الحالي)',
         tags: ['Admin - Manage Admins'],
         security: [['adminSessionAuth' => []]],
-        responses: [new OA\Response(response: 302, description: 'إعادة توجيه مع رسالة flash')]
+        responses: [
+            new OA\Response(response: 302, ref: '#/components/responses/RedirectWithFlash'),
+            new OA\Response(response: 403, ref: '#/components/responses/PermissionDenied'),
+        ]
     )]
     public function storeEdit(): void
     {
@@ -246,14 +267,24 @@ class AdminManageAdminsController extends AdminController
             $recipients = AdminModel::findByPermsAndRanks(['can_manage_admins'], $higherRanks);
             foreach ($recipients as $recipientId) {
                 $recipientId = (int)$recipientId;
-                if ($recipientId === $adminId)  continue;
-                if ($recipientId === $targetId) continue;
-                if ($rootId !== null && $recipientId === $rootId) continue;
+                if ($recipientId === $adminId) {
+                    continue;
+                }
+                if ($recipientId === $targetId) {
+                    continue;
+                }
+                if ($rootId !== null && $recipientId === $rootId) {
+                    continue;
+                }
 
                 AdminModel::sendNotification(
-                    $recipientId, 'Admin Edited',
+                    $recipientId,
+                    'Admin Edited',
                     "Admin {$target['email']} (role {$target['role']}) permissions/role were edited by another admin. Reason: {$reason}",
-                    'admin_edited', 'admin', $targetId, $adminId
+                    'admin_edited',
+                    'admin',
+                    $targetId,
+                    $adminId
                 );
             }
         }
@@ -273,10 +304,10 @@ class AdminManageAdminsController extends AdminController
                 schema: new OA\Schema(
                     required: ['target_id', 'delete_reason', 'confirm_del_pass', 'csrf_token'],
                     properties: [
-                        new OA\Property(property: 'target_id',        type: 'integer'),
-                        new OA\Property(property: 'delete_reason',    type: 'string'),
+                        new OA\Property(property: 'target_id', type: 'integer'),
+                        new OA\Property(property: 'delete_reason', type: 'string'),
                         new OA\Property(property: 'confirm_del_pass', type: 'string', format: 'password'),
-                        new OA\Property(property: 'csrf_token',       type: 'string'),
+                        new OA\Property(property: 'csrf_token', type: 'string'),
                     ]
                 )
             )]
@@ -330,9 +361,13 @@ class AdminManageAdminsController extends AdminController
         AdminModel::deleteAdmin($targetId);
         AdminModel::logAction($adminId, 'delete_admin', 'admin', $targetId, "Deleted: {$target['email']}. Reason: {$reason}");
         AdminModel::sendNotification(
-            $adminId, 'Admin Deleted',
+            $adminId,
+            'Admin Deleted',
             "You deleted admin {$target['email']}. Reason: {$reason}",
-            'admin_deleted', 'admin', $targetId, $adminId
+            'admin_deleted',
+            'admin',
+            $targetId,
+            $adminId
         );
 
         $rootId    = AdminModel::getRootAdminId();
@@ -346,13 +381,21 @@ class AdminManageAdminsController extends AdminController
             $recipients = AdminModel::findByPermsAndRanks(['can_manage_admins'], $higherRanks);
             foreach ($recipients as $recipientId) {
                 $recipientId = (int)$recipientId;
-                if ($recipientId === $adminId) continue;
-                if ($rootId !== null && $recipientId === $rootId) continue;
+                if ($recipientId === $adminId) {
+                    continue;
+                }
+                if ($rootId !== null && $recipientId === $rootId) {
+                    continue;
+                }
 
                 AdminModel::sendNotification(
-                    $recipientId, 'Admin Deleted',
+                    $recipientId,
+                    'Admin Deleted',
                     "Admin {$target['email']} (role {$target['role']}) was deleted by another admin. Reason: {$reason}",
-                    'admin_deleted', 'admin', $targetId, $adminId
+                    'admin_deleted',
+                    'admin',
+                    $targetId,
+                    $adminId
                 );
             }
         }
@@ -366,9 +409,14 @@ class AdminManageAdminsController extends AdminController
         tags: ['Admin - Manage Admins'],
         security: [['adminSessionAuth' => []]],
         parameters: [
-            new OA\Parameter(name: 'id', in: 'query', required: true,  schema: new OA\Schema(type: 'integer')),
+            new OA\Parameter(name: 'id', in: 'query', required: true, schema: new OA\Schema(type: 'integer')),
         ],
-        responses: [new OA\Response(response: 200, description: 'صفحة HTML')]
+        responses: [
+            new OA\Response(response: 200, ref: '#/components/responses/HtmlPage'),
+            new OA\Response(response: 302, ref: '#/components/responses/RedirectToLogin'),
+            new OA\Response(response: 403, ref: '#/components/responses/PermissionDenied'),
+            new OA\Response(response: 503, ref: '#/components/responses/ServiceUnavailable'),
+        ]
     )]
     public function details(): void
     {
@@ -418,7 +466,11 @@ class AdminManageAdminsController extends AdminController
         summary: 'تصدير قائمة الأدمنية كملف CSV — رتبة A فقط',
         tags: ['Admin - Manage Admins'],
         security: [['adminSessionAuth' => []]],
-        responses: [new OA\Response(response: 200, description: 'ملف CSV للتحميل')]
+        responses: [
+            new OA\Response(response: 200, ref: '#/components/responses/CsvDownload'),
+            new OA\Response(response: 401, ref: '#/components/responses/SessionExpired'),
+            new OA\Response(response: 403, ref: '#/components/responses/PermissionDenied'),
+        ]
     )]
     public function exportCsv(): void
     {
@@ -456,12 +508,8 @@ class AdminManageAdminsController extends AdminController
         $this->sendCsv('admins_' . date('Ymd_His') . '.csv', $headers, $rows);
     }
 
-    // ── Helpers خاصة داخلية ───────────────────────────────────────
-
-    private function redirectWithError(string $msg, string $path): void
-    {
-        $_SESSION['flash_err'] = $msg;
-        header('Location: ' . URLROOT . $path);
-        exit;
-    }
+    // ملاحظة: كان هنا redirectWithError() خاصة بلا مستدعٍ واحد. النسخة
+    // العاملة منها في AdminBrandingController، وهذه بقيت بعد نقل منطقٍ
+    // ما ولم يحذفها أحد. كود ميّت في كنترولر صلاحيات يُقرأ كأنه مسار
+    // قائم فيُضلّل من يراجع الأمان.
 }

@@ -6,33 +6,41 @@
     (Role <?= htmlspecialchars($_SESSION['admin_role'] ?? '') ?>)
 </div>
 
+<?php // ⚠️ أوّلاً وبلا defer: ينسخ جزيرة بيانات الصفحة إلى window،
+     // وكل ما تحته يقرأ منها. نقله لاحقاً يكسر كل صفحة تمرّر بيانات. ?>
+<?= jsTag('js/core/page-data.js', false) ?>
+
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-<script src="<?= URLROOT ?>/js/core/utils.js"></script>
-<script src="<?= URLROOT ?>/js/core/csrf.js"></script>
-<script src="<?= URLROOT ?>/js/core/ui.js"></script>
-<script src="<?= URLROOT ?>/js/core/flash-toast.js"></script>
-<script src="<?= URLROOT ?>/js/core/theme.js"></script>
-<script src="<?= URLROOT ?>/js/features/auth.js"></script>
-<script src="<?= URLROOT ?>/js/admin/products.js"></script>
-<script src="<?= URLROOT ?>/js/admin/branding.js"></script>
-<script src="<?= URLROOT ?>/js/admin/category-picker.js"></script>
-<script src="<?= URLROOT ?>/js/admin/orders.js"></script>
-<script src="<?= URLROOT ?>/js/admin/users.js"></script>
-<script src="<?= URLROOT ?>/js/admin/admins.js"></script>
-<script src="<?= URLROOT ?>/js/admin/manage-admins.js"></script>
-<script src="<?= URLROOT ?>/js/admin/admin-notifications.js"></script>
-<script src="<?= URLROOT ?>/js/admin/backup.js"></script>
-<script src="<?= URLROOT ?>/js/admin/support.js"></script>
-<script src="<?= URLROOT ?>/js/admin/site-settings.js"></script>
-<!-- Shared JS — زر إلغاء/حذف الطلب المشترك (admin order details + my-info) -->
-<script src="<?= URLROOT ?>/js/shared/order-cancel.js"></script>
-<script src="<?= URLROOT ?>/js/admin/admin-layout/admin-navbar.js"></script>
-<!-- حُذف admin-layout/admin-footer.js: كان يربط أزرار الإشعارات الثلاثة
-     التي يربطها admin-notifications.js فعلاً — زرّان منه كعبان فارغان لا
-     يفعلان إلا console.log، وزر الإغلاق نسخة ناقصة لا تُخفي الـbackdrop. -->
-<script src="<?= URLROOT ?>/js/main.js"></script>
+<?php
+// حزمة واحدة بدل واحد وعشرين وسماً. القائمة هي الارتداد عند غياب
+// البناء، وترتيبها هو العقد — راجع jsBundle في assets_helper.php.
+?>
+<?= jsBundle('admin', [
+    'js/core/inline-actions.js',
+    'js/core/utils.js',
+    'js/core/csrf.js',
+    'js/core/ui.js',
+    'js/core/flash-toast.js',
+    'js/core/theme.js',
+    'js/features/auth.js',
+    'js/admin/products.js',
+    'js/admin/branding.js',
+    'js/admin/category-picker.js',
+    'js/admin/orders.js',
+    'js/admin/users.js',
+    'js/admin/admins.js',
+    'js/admin/manage-admins.js',
+    'js/admin/admin-notifications.js',
+    'js/admin/backup.js',
+    'js/admin/support.js',
+    'js/admin/site-settings.js',
+    'js/shared/order-cancel.js',
+    'js/admin/admin-layout/admin-navbar.js',
+    'js/main.js',
+], false) ?>
+
 <?php if (isset($extraScripts)) echo $extraScripts; ?>
 
 <!-- سايدبار إشعارات الأدمن — HTML ثابت، يربطه بالباك اند admin-notifications.js -->

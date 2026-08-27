@@ -1,0 +1,353 @@
+# ══════════════════════════════════════════════════════════════
+# CI — Cairo Store
+# ══════════════════════════════════════════════════════════════
+#
+# المبدأ: **كل أداة تعمل في خطّافات pre-commit تعمل هنا أيضاً.**
+#
+# قبل هذا الملف كانت الحماية كلها معلّقة على جهاز واحد: من يستنسخ
+# المستودع بلا `pre-commit install` يمرّر كل شيء — لا فحص أسرار ولا
+# semgrep ولا اختبار. الخطّاف المحلي يحمي من ينصّبه؛ وCI يحمي المستودع.
+#
+# ما يزيده CI على الخطّافات: اختبارات على قاعدة بيانات حقيقية، وقياس
+# التغطية (لا xdebug ولا pcov على جهاز التطوير)، ومصفوفة نسختي PHP.
+
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  # ── اختبارات على قاعدة حقيقية ────────────────────────────────
+  tests:
+    name: اختبارات · PHP ${{ matrix.php }}
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ['8.2', '8.3']
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ALLOW_EMPTY_PASSWORD: 'yes'
+          MYSQL_DATABASE: ciro_db
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: تهيئة PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: pdo_mysql, mbstring, curl, json
+          # pcov لا xdebug: أسرع بكثير لقياس التغطية وحده، وهذا كل ما نريده.
+          coverage: pcov
+
+      - name: ذاكرة composer المؤقتة
+        uses: actions/cache@v4
+        with:
+          path: ~/.composer/cache
+          key: composer-${{ matrix.php }}-${{ hashFiles('composer.lock') }}
+
+      - name: التحقّق من composer.json
+        run: composer validate --strict
+
+      - name: تثبيت الاعتماديات
+        run: composer install --prefer-dist --no-interaction --no-progress
+
+      # الاختبارات تقرأ إعداداتها من .env مثل التطبيق تماماً. كتابته هنا
+      # لا نسخ .env.example: الأخير يحمل قيماً فارغة عمداً.
+      - name: بناء .env لبيئة CI
+        run: |
+          cat > .env <<'EOF'
+          APP_ENV=testing
+          APP_DEBUG=true
+          APP_URL=http://127.0.0.1:8080
+          APP_NAME=Cairo Store
+          DB_HOST=127.0.0.1
+          DB_PORT=3306
+          DB_DATABASE=ciro_db
+          DB_USERNAME=root
+          DB_PASSWORD=
+          EOF
+
+      - name: انتظار MySQL
+        run: |
+          for i in $(seq 1 30); do
+            mysqladmin ping -h 127.0.0.1 -u root --silent && exit 0
+            sleep 2
+          done
+          echo "MySQL لم يستجب"; exit 1
+
+      # المخطّط يُحمَّل في قاعدة التطوير أيضاً كي تعمل صفحات التطبيق التي
+      # يفحصها اختبار HTTP. أما قاعدة الاختبار (ciro_db_test) فيبنيها
+      # tests/bootstrap.php بنفسه.
+      - name: تحميل المخطّط
+        run: mysql -h 127.0.0.1 -u root ciro_db < tests/fixtures/schema.sql
+
+      # المخطّط المرجعي يحوي أثر الهجرات السبع، فتُسجَّل كمطبَّقة بلا
+      # تنفيذ. ثم يجب ألّا يبقى شيء معلّق: هجرة أُضيفت بلا تحديث
+      # tests/fixtures/schema.sql تعني أن الاختبارات ستعمل على بنية
+      # لا تطابق ما ستراه الإنتاج.
+      - name: الهجرات محدَّثة مقابل المخطّط
+        run: |
+          php scripts/migrate.php baseline
+          PENDING=$(php scripts/migrate.php status | grep -c 'معلّقة$' || true)
+          if [ "$PENDING" != "0" ]; then
+            echo "::error::هجرات معلّقة بعد baseline — شغّل 'composer test:schema' والتزم الناتج."
+            php scripts/migrate.php status
+            exit 1
+          fi
+          echo "لا هجرات معلّقة."
+
+      # اختبار عقد CSRF يفحص نقاط HTTP حيّة. بلا خادم يتخطّى نفسه —
+      # أي يصير حارساً لا يحرس. الخادم المدمج يكفي: يخدم الملفات
+      # الموجودة ويحوّل الباقي إلى index.php تماماً كقاعدة mod_rewrite.
+      - name: تشغيل خادم التطبيق
+        run: |
+          php -S 127.0.0.1:8080 -t public public/index.php > /tmp/server.log 2>&1 &
+          for i in $(seq 1 20); do
+            curl -sf http://127.0.0.1:8080/ > /dev/null && exit 0
+            sleep 1
+          done
+          echo "الخادم لم يستجب:"; cat /tmp/server.log; exit 1
+
+      - name: الاختبارات مع التغطية
+        env:
+          TEST_BASE_URL: http://127.0.0.1:8080
+        run: vendor/bin/phpunit --coverage-clover=coverage.xml --coverage-text
+
+      # ⚠️ البوّابة عند 25% مؤقتاً — وهي النسبة الفعلية اليوم لا الهدف.
+      # هدف الخطة 70%. وضعها عند 70 الآن يجعل CI أحمر دائماً فيُتجاهَل،
+      # ووضعها عند 0 يجعلها بلا معنى. تُرفع مع كل دفعة اختبارات جديدة.
+      - name: بوّابة التغطية
+        if: matrix.php == '8.3'
+        run: |
+          PCT=$(php -r '
+            $x = simplexml_load_file("coverage.xml");
+            $m = $x->project->metrics;
+            printf("%.1f", (int)$m["statements"] ? (int)$m["coveredstatements"] / (int)$m["statements"] * 100 : 0);
+          ')
+          echo "تغطية الأسطر: ${PCT}%"
+          php -r "exit((float)'$PCT' >= 25.0 ? 0 : 1);" \
+            || { echo "::error::التغطية ${PCT}% دون الحدّ الأدنى 25%"; exit 1; }
+
+  # ── جودة الكود ───────────────────────────────────────────────
+  static-analysis:
+    name: تحليل ثابت
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: pdo_mysql, mbstring, curl, json
+          coverage: none
+
+      - name: تثبيت الاعتماديات
+        run: composer install --prefer-dist --no-interaction --no-progress
+
+      - name: PHPStan
+        run: vendor/bin/phpstan analyse --no-progress --error-format=github
+
+      - name: PSR-12
+        run: vendor/bin/phpcs --report=full
+
+  # ── مواصفة الـAPI ────────────────────────────────────────────
+  #
+  # المواصفة مولَّدة من سمات PHP، فالخطأ فيها لا يظهر إلا لمن يفتح
+  # صفحة /docs — وقد لا يفعل أحد لأشهر. الفحص يجعل مواصفة مكسورة تُفشل
+  # البناء بدل أن تنتظر مكتشفاً.
+  #
+  # وبوّابة التغطية (كل راوت موثّق، ولا عملية بلا راوت) في
+  # tests/Integration/OpenApiCoverageTest.php ضمن وظيفة الاختبارات.
+  openapi:
+    name: مواصفة OpenAPI
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          coverage: none
+
+      - name: تثبيت الاعتماديات
+        run: composer install --prefer-dist --no-interaction --no-progress
+
+      # المواصفة متتبَّعة في git ومولَّدة معاً، فقد تتخلّف عن الشيفرة:
+      # يعدّل أحدهم سمة OA وينسى docs:generate. إعادة التوليد ثم مقارنة
+      # الناتج بالمُلتزَم تمسك ذلك مباشرةً.
+      - name: التحقّق أن المواصفة محدَّثة
+        run: |
+          cp public/docs/openapi.yaml /tmp/committed.yaml
+          composer docs:generate
+          if ! diff -q /tmp/committed.yaml public/docs/openapi.yaml > /dev/null; then
+            echo "::error::openapi.yaml متخلّف عن سمات OA — شغّل 'composer docs:generate' والتزم الناتج."
+            diff /tmp/committed.yaml public/docs/openapi.yaml | head -40
+            exit 1
+          fi
+          echo "المواصفة مطابقة للشيفرة."
+
+      - name: spectral — فحص المواصفة
+        run: npx --yes @stoplight/spectral-cli lint public/docs/openapi.yaml --ruleset .spectral.yaml
+
+  # ── الواجهة ──────────────────────────────────────────────────
+  frontend:
+    name: الواجهة
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - run: npm ci
+
+      - name: ESLint
+        run: npx eslint public/js --max-warnings 60
+
+      - name: Stylelint
+        run: npx stylelint "public/css/**/*.css"
+
+      # اختبارات الواجهة تحمّل ملفات public/js في jsdom على النطاق
+      # العام — كما يفعل المتصفح. فما يُختبَر هو الكود العامل نفسه، لا
+      # نسخة معدَّلة منه صُنعت لتكون قابلة للاختبار.
+      - name: Vitest
+        run: npx vitest run
+
+      # حزم CSS متتبَّعة في git ومولَّدة معاً، فقد تتخلّف: يعدّل أحدهم
+      # ملف CSS وينسى `npm run build`، فيبقى المرفوع يخدم النسخة
+      # القديمة — وهي الأسوأ من كل الحالات: الكود صحيح والمعروض قديم.
+      # إعادة البناء ومقارنة البصمة تمسك ذلك مباشرةً.
+      - name: حزم CSS محدَّثة
+        run: |
+          cp public/css/dist/manifest.json /tmp/committed.json
+          npm run build
+          if ! diff -q /tmp/committed.json public/css/dist/manifest.json > /dev/null; then
+            echo "::error::حزم CSS متخلّفة — شغّل 'npm run build' والتزم public/css/dist/."
+            echo "المُلتزَم:"; cat /tmp/committed.json
+            echo "المتوقّع:"; cat public/css/dist/manifest.json
+            exit 1
+          fi
+          echo "الحزم مطابقة للمصدر."
+
+  # ── ميزانية الأداء وإمكانية الوصول ───────────────────────────
+  #
+  # الحدود مبنيّة على ما يحقّقه المشروع اليوم لا على أمنيات: بوّابة
+  # تفشل من أول يوم تُطفأ بعد أسبوع. الأداء وSEO تحذيران، وإمكانية
+  # الوصول وأفضل الممارسات خطأ — لأنهما لا يتذبذبان مع الشبكة.
+  #
+  # مسارات ثابتة عمداً: الصفحة الرئيسية (سلايدر وبطاقات)، وقائمة
+  # المنتجات (أثقل صفحة)، وصفحة ثابتة كضبط مرجعي.
+  lighthouse:
+    name: Lighthouse
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ALLOW_EMPTY_PASSWORD: 'yes'
+          MYSQL_DATABASE: ciro_db
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1"
+          --health-interval=10s --health-timeout=5s --health-retries=10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: pdo_mysql, mbstring, curl, json
+          coverage: none
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - run: composer install --prefer-dist --no-interaction --no-progress
+      - run: npm ci
+
+      - name: بناء الحزم
+        run: npm run build
+
+      - name: بناء .env وتحميل المخطّط
+        run: |
+          cat > .env <<'ENVEOF'
+          APP_ENV=production
+          APP_DEBUG=false
+          APP_URL=http://127.0.0.1:8080
+          DB_HOST=127.0.0.1
+          DB_PORT=3306
+          DB_DATABASE=ciro_db
+          DB_USERNAME=root
+          DB_PASSWORD=
+          ENVEOF
+          for i in $(seq 1 30); do mysqladmin ping -h 127.0.0.1 -u root --silent && break; sleep 2; done
+          mysql -h 127.0.0.1 -u root ciro_db < tests/fixtures/schema.sql
+
+      - name: تشغيل الخادم
+        run: |
+          php -S 127.0.0.1:8080 -t public public/index.php > /tmp/lh-server.log 2>&1 &
+          for i in $(seq 1 20); do curl -sf http://127.0.0.1:8080/ > /dev/null && exit 0; sleep 1; done
+          cat /tmp/lh-server.log; exit 1
+
+      - name: Lighthouse CI
+        run: npx --yes @lhci/cli@0.14.x autorun
+
+  # ── أمن ──────────────────────────────────────────────────────
+  # الأدوات الثلاث نفسها التي تعمل في .pre-commit-config.yaml.
+  security:
+    name: فحص أمني
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # gitleaks يحتاج التاريخ كاملاً: سرّ حُذف في آخر commit يبقى
+          # في التاريخ، وفحص اللقطة الأخيرة وحدها لا يراه.
+          fetch-depth: 0
+
+      - name: gitleaks — أسرار في التاريخ كله
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_CONFIG: .gitleaks.toml
+
+      - name: semgrep — ثغرات كود
+        uses: returntocorp/semgrep-action@v1
+        with:
+          config: >-
+            p/php
+            .semgrep/
+
+      - name: trivy — ثغرات الاعتماديات
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: fs
+          scan-ref: .
+          severity: HIGH,CRITICAL
+          exit-code: '1'
+          ignore-unfixed: true

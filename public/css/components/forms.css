@@ -45,7 +45,7 @@ textarea:-webkit-autofill:focus,
 select:-webkit-autofill,
 select:-webkit-autofill:hover,
 select:-webkit-autofill:focus {
-    -webkit-box-shadow: 0 0 0px 1000px var(--input-bg) inset !important;
+    -webkit-box-shadow: 0 0 0 1000px var(--input-bg) inset !important;
     -webkit-text-fill-color: var(--input-text) !important;
     transition: background-color 5000s ease-in-out 0s;
     caret-color: var(--input-text);
@@ -81,7 +81,7 @@ select:-webkit-autofill:focus {
 #registerModal input:-webkit-autofill:focus,
 #forgotModal   input:-webkit-autofill,
 #forgotModal   input:-webkit-autofill:focus {
-    -webkit-box-shadow: 0 0 0px 1000px var(--input-bg) inset !important;
+    -webkit-box-shadow: 0 0 0 1000px var(--input-bg) inset !important;
     -webkit-text-fill-color: var(--input-text) !important;
     caret-color: var(--input-text) !important;
 }
@@ -122,7 +122,7 @@ body.dark-mode #forgotModal   input:-webkit-autofill,
 html[data-bs-theme="dark"] body #forgotModal   input:-webkit-autofill,
 body.dark-mode #forgotModal   input:-webkit-autofill:focus,
 html[data-bs-theme="dark"] body #forgotModal   input:-webkit-autofill:focus {
-    -webkit-box-shadow: 0 0 0px 1000px #21262d inset !important;
+    -webkit-box-shadow: 0 0 0 1000px #21262d inset !important;
     -webkit-text-fill-color: #e6edf3 !important;
     caret-color: #e6edf3 !important;
 }
@@ -170,7 +170,7 @@ body.dark-mode select:-webkit-autofill,
 html[data-bs-theme="dark"] body select:-webkit-autofill,
 body.dark-mode select:-webkit-autofill:focus,
 html[data-bs-theme="dark"] body select:-webkit-autofill:focus {
-    -webkit-box-shadow: 0 0 0px 1000px #21262d inset !important;
+    -webkit-box-shadow: 0 0 0 1000px #21262d inset !important;
     -webkit-text-fill-color: #e6edf3 !important;
     caret-color: #e6edf3 !important;
 }

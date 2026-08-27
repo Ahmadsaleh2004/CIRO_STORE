@@ -22,9 +22,9 @@ class AdminUsersController extends AdminController
         tags: ['Admin - Manage Users'],
         security: [['adminSessionAuth' => []]],
         parameters: [
-            new OA\Parameter(name: 'q',      in: 'query', required: false, schema: new OA\Schema(type: 'string'),  description: 'بحث بالاسم أو الإيميل'),
+            new OA\Parameter(name: 'q', in: 'query', required: false, schema: new OA\Schema(type: 'string'), description: 'بحث بالاسم أو الإيميل'),
             new OA\Parameter(name: 'status', in: 'query', required: false, schema: new OA\Schema(type: 'string', enum: ['all','active','not_active','blocked']), description: 'فلترة الحالة'),
-            new OA\Parameter(name: 'page',   in: 'query', required: false, schema: new OA\Schema(type: 'integer'), description: 'رقم الصفحة'),
+            new OA\Parameter(name: 'page', in: 'query', required: false, schema: new OA\Schema(type: 'integer'), description: 'رقم الصفحة'),
         ],
         responses: [
             new OA\Response(response: 200, description: 'صفحة HTML بالجدول — يتطلب صلاحية can_manage_users'),
@@ -65,9 +65,14 @@ class AdminUsersController extends AdminController
         tags: ['Admin - Manage Users'],
         security: [['adminSessionAuth' => []]],
         parameters: [
-            new OA\Parameter(name: 'id', in: 'query', required: true,  schema: new OA\Schema(type: 'integer')),
+            new OA\Parameter(name: 'id', in: 'query', required: true, schema: new OA\Schema(type: 'integer')),
         ],
-        responses: [new OA\Response(response: 200, description: 'صفحة HTML')]
+        responses: [
+            new OA\Response(response: 200, ref: '#/components/responses/HtmlPage'),
+            new OA\Response(response: 302, ref: '#/components/responses/RedirectToLogin'),
+            new OA\Response(response: 403, ref: '#/components/responses/PermissionDenied'),
+            new OA\Response(response: 503, ref: '#/components/responses/ServiceUnavailable'),
+        ]
     )]
     public function details(): void
     {
@@ -89,7 +94,7 @@ class AdminUsersController extends AdminController
             'strikes'     => UserModel::getStrikes($targetId),
             'auditLog'    => AdminModel::getAuditLogForUser($targetId),
             'messages'    => SupportModel::getMessagesForUser($targetId, $target['email']),
-            'strikesCount'=> (int)$target['strikes_count'],
+            'strikesCount' => (int)$target['strikes_count'],
         ]);
     }
 
@@ -105,9 +110,9 @@ class AdminUsersController extends AdminController
                 schema: new OA\Schema(
                     required: ['user_id', 'reason', 'csrf_token'],
                     properties: [
-                        new OA\Property(property: 'user_id',     type: 'integer'),
-                        new OA\Property(property: 'reason',      type: 'string'),
-                        new OA\Property(property: 'csrf_token',  type: 'string'),
+                        new OA\Property(property: 'user_id', type: 'integer'),
+                        new OA\Property(property: 'reason', type: 'string'),
+                        new OA\Property(property: 'csrf_token', type: 'string'),
                     ]
                 )
             )]
@@ -186,8 +191,8 @@ class AdminUsersController extends AdminController
                 schema: new OA\Schema(
                     required: ['user_id', 'reason', 'csrf_token'],
                     properties: [
-                        new OA\Property(property: 'user_id',    type: 'integer'),
-                        new OA\Property(property: 'reason',     type: 'string'),
+                        new OA\Property(property: 'user_id', type: 'integer'),
+                        new OA\Property(property: 'reason', type: 'string'),
                         new OA\Property(property: 'csrf_token', type: 'string'),
                     ]
                 )
@@ -262,8 +267,8 @@ class AdminUsersController extends AdminController
                 schema: new OA\Schema(
                     required: ['strike_id', 'user_id', 'csrf_token'],
                     properties: [
-                        new OA\Property(property: 'strike_id',  type: 'integer'),
-                        new OA\Property(property: 'user_id',    type: 'integer'),
+                        new OA\Property(property: 'strike_id', type: 'integer'),
+                        new OA\Property(property: 'user_id', type: 'integer'),
                         new OA\Property(property: 'csrf_token', type: 'string'),
                     ]
                 )
@@ -316,7 +321,11 @@ class AdminUsersController extends AdminController
         summary: 'تصدير قائمة اليوزرز كملف CSV',
         tags: ['Admin - Manage Users'],
         security: [['adminSessionAuth' => []]],
-        responses: [new OA\Response(response: 200, description: 'ملف CSV للتحميل')]
+        responses: [
+            new OA\Response(response: 200, ref: '#/components/responses/CsvDownload'),
+            new OA\Response(response: 401, ref: '#/components/responses/SessionExpired'),
+            new OA\Response(response: 403, ref: '#/components/responses/PermissionDenied'),
+        ]
     )]
     public function exportCsv(): void
     {
@@ -367,7 +376,13 @@ class AdminUsersController extends AdminController
                 continue;
             }
             AdminModel::sendNotification(
-                $targetAdminId, $title, $message, $type, 'user', $targetUserId, $actorAdminId
+                $targetAdminId,
+                $title,
+                $message,
+                $type,
+                'user',
+                $targetUserId,
+                $actorAdminId
             );
         }
     }

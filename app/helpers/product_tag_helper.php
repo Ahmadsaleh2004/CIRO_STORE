@@ -1,4 +1,5 @@
 <?php
+
 /**
  * app/helpers/product_tag_helper.php
  * وسم المنتج التسويقي: best-seller | new | limited | regular.

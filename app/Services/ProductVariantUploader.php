@@ -97,11 +97,15 @@ class ProductVariantUploader
         foreach ((array)$filesVariants['tmp_name'] as $tmpName) {
             if (is_array($tmpName)) {
                 foreach ($tmpName as $t) {
-                    if (!empty($t)) return true;
+                    if (!empty($t)) {
+                        return true;
+                    }
                 }
                 continue;
             }
-            if (!empty($tmpName)) return true;
+            if (!empty($tmpName)) {
+                return true;
+            }
         }
 
         return false;

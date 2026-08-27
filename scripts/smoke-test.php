@@ -1,4 +1,5 @@
 <?php
+
 /**
  * scripts/smoke-test.php
  * فحص دخان (smoke test) لكل راوتات GET في المشروع.
@@ -41,20 +42,6 @@ $SKIPHTTP = isset($opts['skip-http']);
 $LINTALL  = isset($opts['lint-all']);
 $TIMEOUT  = 15;
 
-/** راوتات تُعيد ملفاً للتحميل أو JSON، فلا تُفحص كصفحة HTML. */
-const NON_HTML_ROUTES = [
-    '/admin/admins/export-csv',
-    '/admin/users/export-csv',
-    '/admin/orders/export-csv',
-    '/admin/products/export-csv',
-    '/admin/backup/download',
-    '/auth/csrf',
-    '/admin/csrf',
-    '/notifications/list',
-    '/admin/notifications/list',
-    '/handlers/product_stock_handler.php',
-    '/admin/branding/products/search',
-];
 
 /**
  * راوتات تعتمد على خدمة خارجية (OAuth) أو على توكن في الرابط.
@@ -81,7 +68,9 @@ $isTty = function_exists('stream_isatty') && @stream_isatty(STDOUT);
 function paint(string $s, string $color): string
 {
     global $isTty;
-    if (!$isTty) return $s;
+    if (!$isTty) {
+        return $s;
+    }
     $codes = ['red' => 31, 'green' => 32, 'yellow' => 33, 'grey' => 90, 'bold' => 1];
     return "\033[" . ($codes[$color] ?? 0) . "m{$s}\033[0m";
 }
@@ -95,7 +84,9 @@ function extractGetRoutes(string $indexFile): array
         exit(1);
     }
     preg_match_all("/\\\$r->get\(\s*'([^']+)'/", $src, $m);
-    return array_values(array_unique($m[1] ?? []));
+    // preg_match_all تملأ $m[1] دائماً (ولو مصفوفة فارغة)، فـ?? هنا
+    // كانت تعد بحماية لا تحتاجها.
+    return array_values(array_unique($m[1]));
 }
 
 // ── 2. طلب HTTP واحد ───────────────────────────────────────────────
@@ -111,15 +102,21 @@ function fetch(string $url, int $timeout): array
     ]);
     $body = curl_exec($ch);
     $code = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $type = (string)curl_getinfo($ch, CURLINFO_CONTENT_TYPE);
     $err  = curl_error($ch);
     curl_close($ch);
 
-    return ['body' => $body === false ? '' : $body, 'code' => $code, 'error' => $err];
+    return [
+        'body'  => $body === false ? '' : $body,
+        'code'  => $code,
+        'type'  => $type,
+        'error' => $err,
+    ];
 }
 
 // ── 3. فحص جسم الاستجابة ───────────────────────────────────────────
 /** @return string[] قائمة المشاكل المكتشفة (فارغة = سليم) */
-function inspectBody(string $body, string $route, int $code): array
+function inspectBody(string $body, string $route, int $code, string $contentType = ''): array
 {
     $problems = [];
 
@@ -145,10 +142,21 @@ function inspectBody(string $body, string $route, int $code): array
         $problems[] = 'صفحة فارغة';
     }
 
-    if ($code === 200
-        && !in_array($route, NON_HTML_ROUTES, true)
-        && !str_contains($body, '</html>')
-    ) {
+    // فحص اكتمال HTML يُطبَّق على استجابات HTML وحدها.
+    //
+    // ⚠️ التمييز من ترويسة Content-Type لا من قائمة يدوية.
+    //
+    // كانت هنا NON_HTML_ROUTES: قائمة مكتوبة بأسماء ثمانية مسارات
+    // تُرجع JSON أو ملفاً. وهي تتقادم بالضرورة — أول نقطة JSON تُضاف
+    // بعدها تفشل بـ«HTML غير مكتمل»، وهي رسالة تصف الفاحص لا المفحوص.
+    // وقع ذلك فعلاً عند إضافة /health.
+    //
+    // والاشتقاق من الترويسة يجعل القائمة غير لازمة: النقطة تعلن نوعها
+    // بنفسها، والفاحص يقرأ ما أعلنته.
+    $looksHtml = $contentType === ''
+        || str_contains(strtolower($contentType), 'text/html');
+
+    if ($code === 200 && $looksHtml && !str_contains($body, '</html>')) {
         $problems[] = 'HTML غير مكتمل (لا </html>)';
     }
 
@@ -172,7 +180,7 @@ function runHttpChecks(array $routes, string $base, int $timeout, bool $verbose)
             // 302 مقبول: صفحات الأدمن تحوّل لتسجيل الدخول بدون جلسة
             $problems[] = 'HTTP ' . $r['code'];
         } else {
-            $problems = inspectBody($r['body'], $route, $r['code']);
+            $problems = inspectBody($r['body'], $route, $r['code'], $r['type'] ?? '');
         }
 
         // الراوتات الخارجية: التحويل متوقّع، لا نعدّه عطلاً
@@ -206,7 +214,9 @@ function allPhpFiles(string $root): array
         new RecursiveCallbackFilterIterator(
             new RecursiveDirectoryIterator($root, FilesystemIterator::SKIP_DOTS),
             function (SplFileInfo $f) use ($skipDirs) {
-                if ($f->isDir()) return !in_array($f->getFilename(), $skipDirs, true);
+                if ($f->isDir()) {
+                    return !in_array($f->getFilename(), $skipDirs, true);
+                }
                 return $f->getExtension() === 'php';
             }
         )
@@ -235,7 +245,9 @@ function changedPhpFiles(string $root): ?array
     // وبقية الأمر حرفية في هذا الملف — لا مدخل مستخدم في أي موضع.
     // nosemgrep: php.lang.security.exec-use.exec-use
     exec('git -C ' . escapeshellarg($root) . ' rev-parse --is-inside-work-tree 2>&1', $out, $rc);
-    if ($rc !== 0) return null;
+    if ($rc !== 0) {
+        return null;
+    }
 
     $files = [];
     foreach (['diff --name-only HEAD', 'ls-files --others --exclude-standard'] as $cmd) {
@@ -245,9 +257,13 @@ function changedPhpFiles(string $root): ?array
         exec('git -C ' . escapeshellarg($root) . ' ' . $cmd . ' 2>&1', $lines);
         foreach ($lines as $line) {
             $line = trim($line);
-            if ($line === '' || !str_ends_with($line, '.php')) continue;
+            if ($line === '' || !str_ends_with($line, '.php')) {
+                continue;
+            }
             $path = $root . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $line);
-            if (is_file($path)) $files[$path] = true;
+            if (is_file($path)) {
+                $files[$path] = true;
+            }
         }
     }
 
@@ -287,7 +303,9 @@ if (!$SKIPHTTP) {
 
     foreach ($results as $r) {
         $ok = empty($r['problems']);
-        if (!$ok) $failed++;
+        if (!$ok) {
+            $failed++;
+        }
 
         if (!$ok || $VERBOSE) {
             printf(
@@ -306,7 +324,9 @@ if (!$SKIPHTTP) {
         ? paint("  ✓ نجح {$passed}/" . count($results) . "\n\n", 'green')
         : paint("  ✗ فشل {$failed} من " . count($results) . "\n\n", 'red');
 
-    if ($failed > 0) $exitCode = 1;
+    if ($failed > 0) {
+        $exitCode = 1;
+    }
 }
 
 if (!$SKIPLINT) {
@@ -339,7 +359,9 @@ if (!$SKIPLINT) {
             ? paint("  ✓ {$lint['checked']} ملف سليم\n\n", 'green')
             : paint('  ✗ ' . count($lint['failures']) . " ملف فيه خطأ صياغة\n\n", 'red');
 
-        if (!empty($lint['failures'])) $exitCode = 1;
+        if (!empty($lint['failures'])) {
+            $exitCode = 1;
+        }
     }
 }
 

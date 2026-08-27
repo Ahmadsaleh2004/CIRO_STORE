@@ -167,7 +167,7 @@ usort($sortedByStock, fn($a, $b) => (int)$a['stock_quantity'] <=> (int)$b['stock
                             class="btn btn-success btn-lg px-5 btn-disabled-faded"
                             disabled
                             data-bs-toggle="modal" data-bs-target="#loginModal"
-                            onclick="this.removeAttribute('disabled')">
+                            data-action="self-enable">
                         🛒 Add To Cart
                     </button>
                     <?php endif; ?>
@@ -295,19 +295,26 @@ usort($sortedByStock, fn($a, $b) => (int)$a['stock_quantity'] <=> (int)$b['stock
 
 </main>
 
-<script>
-window.PRODUCT_ID          = <?= (int)$p['id'] ?>;
-window.PRODUCT_NAME        = <?= json_encode($p['name'], JSON_UNESCAPED_UNICODE) ?>;
-window.PRODUCT_VARIANTS    = <?= json_encode(array_map(function ($v) {
-    return [
-        'id'          => (int)$v['id'],
-        'color_name'  => $v['color_name'],
-        'price'       => (float)$v['price'],
-        'discount'    => (float)$v['discount_percentage'],
-        'final_price' => (float)($v['discount_percentage'] > 0 ? $v['price_after_discount'] : $v['price']),
-        'stock'       => (int)$v['stock_quantity'],
-        'image'       => fixImagePath($v['image_path'] ?? ''),
-    ];
-}, $variants), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
-window.SELECTED_VARIANT_ID = <?= (int)$selectedVariant['id'] ?>;
-</script>
+<?php
+// بيانات المنتج ونسخه اللونية — يقرأها js/features/product-details.js
+// من window.PRODUCT_ID و PRODUCT_NAME و PRODUCT_VARIANTS و
+// SELECTED_VARIANT_ID. الأسماء لم تتغيّر.
+?>
+<?= pageData([
+    'PRODUCT_ID'          => (int) $p['id'],
+    'PRODUCT_NAME'        => $p['name'],
+    'PRODUCT_VARIANTS'    => array_map(function ($v) {
+        return [
+            'id'          => (int) $v['id'],
+            'color_name'  => $v['color_name'],
+            'price'       => (float) $v['price'],
+            'discount'    => (float) $v['discount_percentage'],
+            'final_price' => (float) ($v['discount_percentage'] > 0
+                ? $v['price_after_discount']
+                : $v['price']),
+            'stock'       => (int) $v['stock_quantity'],
+            'image'       => fixImagePath($v['image_path'] ?? ''),
+        ];
+    }, $variants),
+    'SELECTED_VARIANT_ID' => (int) $selectedVariant['id'],
+]) ?>

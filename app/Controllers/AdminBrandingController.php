@@ -18,7 +18,12 @@ class AdminBrandingController extends AdminController
         summary: 'عرض صفحة إدارة السلايدر',
         tags: ['Admin - Branding'],
         security: [['adminSessionAuth' => []]],
-        responses: [new OA\Response(response: 200, description: 'صفحة HTML')]
+        responses: [
+            new OA\Response(response: 200, ref: '#/components/responses/HtmlPage'),
+            new OA\Response(response: 302, ref: '#/components/responses/RedirectToLogin'),
+            new OA\Response(response: 403, ref: '#/components/responses/PermissionDenied'),
+            new OA\Response(response: 503, ref: '#/components/responses/ServiceUnavailable'),
+        ]
     )]
     public function index(): void
     {
@@ -43,7 +48,18 @@ class AdminBrandingController extends AdminController
         tags: ['Admin - Branding'],
         security: [['adminSessionAuth' => []]],
         parameters: [new OA\Parameter(name: 'q', in: 'query', schema: new OA\Schema(type: 'string'))],
-        responses: [new OA\Response(response: 200, description: 'JSON: {success, products}')]
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'نتيجة العملية. الحقل success يفصل النجاح عن الفشل — كود HTTP يبقى 200 في الحالتين. وعند فشل CSRF يحمل الجسم error_code=csrf_invalid.',
+                content: new OA\JsonContent(oneOf: [
+                    new OA\Schema(ref: '#/components/schemas/ApiResponse'),
+                    new OA\Schema(ref: '#/components/schemas/ApiError'),
+                ])
+            ),
+            new OA\Response(response: 401, ref: '#/components/responses/SessionExpired'),
+            new OA\Response(response: 403, ref: '#/components/responses/PermissionDenied'),
+        ]
     )]
     public function searchProducts(): void
     {
@@ -66,7 +82,10 @@ class AdminBrandingController extends AdminController
             required: true,
             content: [new OA\MediaType(mediaType: 'multipart/form-data')]
         ),
-        responses: [new OA\Response(response: 302, description: 'إعادة توجيه مع flash message')]
+        responses: [
+            new OA\Response(response: 302, ref: '#/components/responses/RedirectWithFlash'),
+            new OA\Response(response: 403, ref: '#/components/responses/PermissionDenied'),
+        ]
     )]
     public function save(): void
     {
@@ -194,7 +213,9 @@ class AdminBrandingController extends AdminController
             // قاعدة البيانات إلى unlink ولا يرى أثر basename.
             $disk = rtrim($uploadDir, '/\\') . DIRECTORY_SEPARATOR . basename($orphanPath);
             // nosemgrep: php.lang.security.unlink-use.unlink-use
-            if (file_exists($disk)) @unlink($disk);
+            if (file_exists($disk)) {
+                @unlink($disk);
+            }
         }
 
         AdminModel::logAction($adminId, 'update_branding_slider', 'branding', 0, 'Saved home slider content.');
@@ -242,7 +263,9 @@ class AdminBrandingController extends AdminController
             // كسابقتها: basename تحصر الاسم داخل $uploadDir بالبناء.
             $disk = rtrim($uploadDir, '/\\') . DIRECTORY_SEPARATOR . basename($p);
             // nosemgrep: php.lang.security.unlink-use.unlink-use
-            if (file_exists($disk)) @unlink($disk);
+            if (file_exists($disk)) {
+                @unlink($disk);
+            }
         }
     }
 

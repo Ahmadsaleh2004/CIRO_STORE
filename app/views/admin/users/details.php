@@ -22,8 +22,9 @@ $strikesLabel    = $strikesCount >= 3 ? 'Blocked' : ($strikesCount > 0 ? 'Warnin
     <h1>🔍 User Details</h1>
     <div class="d-flex gap-2 flex-wrap">
         <button type="button" class="btn btn-outline-info btn-sm"
-                onclick="openNotifyModal('user', <?= (int)$target['id'] ?>,
-                         '<?= htmlspecialchars(addslashes($target['full_name']), ENT_QUOTES) ?>')">
+                data-action="notify-modal" data-notify-type="user"
+                data-notify-id="<?= (int)$target['id'] ?>"
+                data-notify-name="<?= htmlspecialchars($target['full_name'], ENT_QUOTES) ?>">
             🔔 Send Message
         </button>
     </div>

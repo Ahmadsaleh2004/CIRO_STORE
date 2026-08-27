@@ -109,7 +109,6 @@ async function renderWishlist() {
         const normalizedId = parseInt(p.id, 10);
         const live   = liveStockData[String(normalizedId)];
         const stock  = live ? live.stock_quantity : null;
-        const isVisible = live ? live.is_visible : 1;
         const currentPrice = live ? (live.discount_percentage > 0 ? live.price_after_discount : live.price) : Number(p.price || 0);
 
         const badge = stockBadge(stock);

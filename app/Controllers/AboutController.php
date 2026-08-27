@@ -17,7 +17,11 @@ class AboutController extends Controller
         path: "/about",
         summary: "صفحة \"من نحن\" — بيانات المتجر الثابتة مع عدد المنتجات المرئية",
         tags: ["Store - Pages"],
-        responses: [new OA\Response(response: 200, description: "صفحة HTML")]
+        responses: [
+            new OA\Response(response: 200, ref: '#/components/responses/HtmlPage'),
+            new OA\Response(response: 404, ref: '#/components/responses/NotFoundPage'),
+            new OA\Response(response: 503, ref: '#/components/responses/ServiceUnavailable'),
+        ]
     )]    public function about(): void
     {
         $model = new AboutModel();

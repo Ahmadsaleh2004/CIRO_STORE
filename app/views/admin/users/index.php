@@ -97,11 +97,13 @@ $startNum   = (($page - 1) * $perPage) + 1;
                     <td style="color:var(--muted-text);font-size:.8rem;">
                         <?= htmlspecialchars(date('d M Y', strtotime($u['created_at']))) ?>
                     </td>
-                    <!-- onclick="event.stopPropagation()" إلزامي — يمنع تفعيل user-row -->
+                    <!-- data-action="stop-propagation" إلزامي — يمنع تفعيل user-row -->
                     <td class="text-center">
-                        <div class="d-flex gap-1 justify-content-center" onclick="event.stopPropagation()">
+                        <div class="d-flex gap-1 justify-content-center" data-action="stop-propagation">
                             <button type="button" class="btn btn-sm btn-outline-info"
-                                    onclick="openNotifyModal('user', <?= (int)$u['id'] ?>, '<?= htmlspecialchars(addslashes($u['full_name']), ENT_QUOTES) ?>')"
+                                    data-action="notify-modal" data-notify-type="user"
+                                    data-notify-id="<?= (int)$u['id'] ?>"
+                                    data-notify-name="<?= htmlspecialchars($u['full_name'], ENT_QUOTES) ?>"
                                     title="Send message">🔔</button>
                             <button type="button" class="btn btn-sm btn-outline-danger delete-user-btn"
                                     data-uid="<?= (int)$u['id'] ?>"

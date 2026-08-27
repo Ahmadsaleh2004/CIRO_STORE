@@ -23,6 +23,7 @@ loadEnv(__DIR__ . '/../.env');
 require_once __DIR__ . '/../app/config/config.php';
 
 use App\Core\App;
+use App\Controllers\HealthController;
 use App\Controllers\HomeController;
 use App\Controllers\ProductController;
 use App\Controllers\AboutController;
@@ -48,10 +49,42 @@ use App\Controllers\AdminNotificationController;
 use App\Controllers\AdminBrandingController;
 use App\Controllers\BackupController;
 
+// ══════════════════════════════════════════════════════════════
+// الحراسة مُعلَنة في المسار
+// ══════════════════════════════════════════════════════════════
+//
+// كل مسار محمي يحمل ->middleware() يعلن ما يحتاجه:
+//
+//     'auth'       → مستخدم مسجّل الدخول
+//     'admin'      → أدمن مسجّل الدخول
+//     'perm:<اسم>' → أدمن يملك الصلاحية (رتبة A تتجاوزها دائماً)
+//
+// لماذا هنا لا داخل الأفعال وحدها؟ لسببين:
+//
+//   1. الحارس يعمل **قبل** بناء الكنترولر لا بعده. النداء من داخل جسم
+//      الفعل يعني أن الكنترولر بُني وربما نفّذ عملاً في بانيه قبل أن
+//      يُسأل عن الصلاحية.
+//
+//   2. السياسة تصير مقروءة في مكان واحد. من يراجع أمان المشروع يقرأ
+//      هذا الجدول، لا 24 كنترولراً بحثاً عن سطر Middleware ضائع.
+//
+// ⚠️ الفحوص داخل أجسام الأفعال **لم تُحذف**، والازدواج مقصود ومؤقّت:
+// حذفها في الخطوة نفسها كان سيجعل أي خطأ في النقل ثغرةً صامتة. وبإبقاء
+// الاثنين لا يمكن للحارس الجديد أن يكون أضعف من القديم.
+//
+// و tests/Integration/RouteGuardParityTest.php يقارن الطرفين آلياً:
+// أي انحراف — مسار بلا حارس، أو صلاحية تغيّرت في جانب دون الآخر —
+// يُفشل البناء.
+
+
 $app = new App();
 $r   = $app->getRouter();
 
 // ── الصفحة الرئيسية ──────────────────────────────────────────
+// فحص صحّة — يستدعيه HEALTHCHECK في Dockerfile ودوّار الحمل.
+// بلا حارس بالضرورة: الفاحص لا يملك جلسة.
+$r->get('/health', [HealthController::class, 'index']);
+
 $r->get('/',     [HomeController::class, 'index']);
 $r->get('/home', [HomeController::class, 'index']);
 
@@ -87,16 +120,24 @@ $r->get('/auth/csrf',              [AuthController::class, 'getCsrf']);
 $r->post('/cart/check-stock', [CartController::class, 'checkStock']);
 
 // ── Checkout ─────────────────────────────────────────────────
-$r->get('/checkout',               [CheckoutController::class, 'index']);
-$r->post('/checkout',              [CheckoutController::class, 'placeOrder']);
-$r->post('/checkout/cancel-order', [CheckoutController::class, 'cancelOrder']);
-$r->get('/checkout/confirmation',  [CheckoutController::class, 'confirmation']);
+$r->get('/checkout',               [CheckoutController::class, 'index'])
+    ->middleware('auth');
+$r->post('/checkout',              [CheckoutController::class, 'placeOrder'])
+    ->middleware('auth');
+$r->post('/checkout/cancel-order', [CheckoutController::class, 'cancelOrder'])
+    ->middleware('auth');
+$r->get('/checkout/confirmation',  [CheckoutController::class, 'confirmation'])
+    ->middleware('auth');
 
 // ── My Info ──────────────────────────────────────────────────
-$r->get('/user/info',              [MyInfoController::class, 'index']);
-$r->post('/user/info',             [MyInfoController::class, 'updateProfile']);
-$r->post('/user/addresses',        [MyInfoController::class, 'addAddress']);
-$r->post('/user/addresses/delete', [MyInfoController::class, 'deleteAddress']);
+$r->get('/user/info',              [MyInfoController::class, 'index'])
+    ->middleware('auth');
+$r->post('/user/info',             [MyInfoController::class, 'updateProfile'])
+    ->middleware('auth');
+$r->post('/user/addresses',        [MyInfoController::class, 'addAddress'])
+    ->middleware('auth');
+$r->post('/user/addresses/delete', [MyInfoController::class, 'deleteAddress'])
+    ->middleware('auth');
 
 // ── Notifications ────────────────────────────────────────────
 $r->get('/notifications/list',          [NotificationController::class, 'list']);
@@ -123,66 +164,109 @@ $r->post('/admin/my-info', [AdminMyInfoController::class, 'updateProfile']);
 $r->post('/admin/my-info/2fa/generate', [AdminMyInfoController::class, 'generate2FASecret']);
 $r->post('/admin/my-info/2fa/confirm',  [AdminMyInfoController::class, 'confirm2FA']);
 $r->post('/admin/my-info/2fa/disable',  [AdminMyInfoController::class, 'disable2FA']);
-$r->get('/admin/dashboard', [AdminDashboardController::class, 'index']);
+$r->get('/admin/dashboard', [AdminDashboardController::class, 'index'])
+    ->middleware('perm:can_view_dashboard');
 
 // ── Admin Support ────────────────────────────────────────────
-$r->get('/admin/support',         [AdminSupportController::class, 'index']);
-$r->post('/admin/support/reply',  [AdminSupportController::class, 'reply']);
-$r->post('/admin/support/delete', [AdminSupportController::class, 'delete']);
+$r->get('/admin/support',         [AdminSupportController::class, 'index'])
+    ->middleware('perm:can_manage_support');
+$r->post('/admin/support/reply',  [AdminSupportController::class, 'reply'])
+    ->middleware('perm:can_manage_support');
+$r->post('/admin/support/delete', [AdminSupportController::class, 'delete'])
+    ->middleware('perm:can_manage_support');
 
 // ── Admin Site Settings ──────────────────────────────────────
-$r->get('/admin/settings',  [AdminSiteSettingsController::class, 'index']);
-$r->post('/admin/settings', [AdminSiteSettingsController::class, 'save']);
+$r->get('/admin/settings',  [AdminSiteSettingsController::class, 'index'])
+    ->middleware('perm:can_edit_site_content');
+$r->post('/admin/settings', [AdminSiteSettingsController::class, 'save'])
+    ->middleware('perm:can_edit_site_content');
 
 // ── Manage Admins ─────────────────────────────────────────────
-$r->get('/admin/admins',            [AdminManageAdminsController::class, 'index']);
-$r->get('/admin/admins/add',        [AdminManageAdminsController::class, 'showAdd']);
-$r->post('/admin/admins/add',       [AdminManageAdminsController::class, 'storeAdd']);
-$r->post('/admin/admins/edit',      [AdminManageAdminsController::class, 'storeEdit']);   // id بالـ body
-$r->post('/admin/admins/delete',    [AdminManageAdminsController::class, 'delete']);      // JSON — AJAX
-$r->get('/admin/admins/details',    [AdminManageAdminsController::class, 'details']);     // ?id=123
-$r->get('/admin/admins/export-csv', [AdminManageAdminsController::class, 'exportCsv']);  // تحميل ملف — Role A فقط
+$r->get('/admin/admins',            [AdminManageAdminsController::class, 'index'])
+    ->middleware('perm:can_manage_admins');
+$r->get('/admin/admins/add',        [AdminManageAdminsController::class, 'showAdd'])
+    ->middleware('perm:can_manage_admins');
+$r->post('/admin/admins/add',       [AdminManageAdminsController::class, 'storeAdd'])
+    ->middleware('perm:can_manage_admins');
+$r->post('/admin/admins/edit',      [AdminManageAdminsController::class, 'storeEdit'])
+    ->middleware('perm:can_manage_admins');   // id بالـ body
+$r->post('/admin/admins/delete',    [AdminManageAdminsController::class, 'delete'])
+    ->middleware('perm:can_manage_admins');      // JSON — AJAX
+$r->get('/admin/admins/details',    [AdminManageAdminsController::class, 'details'])
+    ->middleware('perm:can_manage_admins');     // ?id=123
+$r->get('/admin/admins/export-csv', [AdminManageAdminsController::class, 'exportCsv'])
+    ->middleware('perm:can_manage_admins');  // تحميل ملف — Role A فقط
 
 // ── Manage Users ────────────────────────────────────────────
-$r->get('/admin/users',                [AdminUsersController::class, 'index']);
-$r->get('/admin/users/details',        [AdminUsersController::class, 'details']);
-$r->post('/admin/users/delete',        [AdminUsersController::class, 'delete']);
-$r->post('/admin/users/strikes/add',   [AdminUsersController::class, 'addStrike']);
-$r->post('/admin/users/strikes/remove',[AdminUsersController::class, 'removeStrike']);
-$r->get('/admin/users/export-csv',     [AdminUsersController::class, 'exportCsv']);
+$r->get('/admin/users',                [AdminUsersController::class, 'index'])
+    ->middleware('perm:can_manage_users');
+$r->get('/admin/users/details',        [AdminUsersController::class, 'details'])
+    ->middleware('perm:can_manage_users');
+$r->post('/admin/users/delete',        [AdminUsersController::class, 'delete'])
+    ->middleware('perm:can_manage_users');
+$r->post('/admin/users/strikes/add',   [AdminUsersController::class, 'addStrike'])
+    ->middleware('perm:can_manage_users');
+$r->post('/admin/users/strikes/remove',[AdminUsersController::class, 'removeStrike'])
+    ->middleware('perm:can_manage_users');
+$r->get('/admin/users/export-csv',     [AdminUsersController::class, 'exportCsv'])
+    ->middleware('perm:can_manage_users');
 
 // ── Manage Orders ────────────────────────────────────────────
-$r->get('/admin/orders',                  [AdminOrdersController::class, 'index']);
-$r->get('/admin/orders/details',          [AdminOrdersController::class, 'details']);
-$r->post('/admin/orders/take',            [AdminOrdersController::class, 'take']);
-$r->post('/admin/orders/mark-delivered',  [AdminOrdersController::class, 'markDelivered']);
-$r->post('/admin/orders/cancel-delivery', [AdminOrdersController::class, 'cancelDelivery']);
-$r->post('/admin/orders/release',         [AdminOrdersController::class, 'release']);
-$r->post('/admin/orders/delete',          [AdminOrdersController::class, 'delete']);
-$r->post('/admin/orders/report-issue',    [AdminOrdersController::class, 'reportIssue']);
-$r->get('/admin/orders/export-csv',       [AdminOrdersController::class, 'exportCsv']);
+$r->get('/admin/orders',                  [AdminOrdersController::class, 'index'])
+    ->middleware('perm:can_manage_orders');
+$r->get('/admin/orders/details',          [AdminOrdersController::class, 'details'])
+    ->middleware('perm:can_manage_orders');
+$r->post('/admin/orders/take',            [AdminOrdersController::class, 'take'])
+    ->middleware('perm:can_manage_orders');
+$r->post('/admin/orders/mark-delivered',  [AdminOrdersController::class, 'markDelivered'])
+    ->middleware('perm:can_manage_orders');
+$r->post('/admin/orders/cancel-delivery', [AdminOrdersController::class, 'cancelDelivery'])
+    ->middleware('perm:can_manage_orders');
+$r->post('/admin/orders/release',         [AdminOrdersController::class, 'release'])
+    ->middleware('perm:can_manage_orders');
+$r->post('/admin/orders/delete',          [AdminOrdersController::class, 'delete'])
+    ->middleware('perm:can_manage_orders');
+$r->post('/admin/orders/report-issue',    [AdminOrdersController::class, 'reportIssue'])
+    ->middleware('perm:can_manage_orders');
+$r->get('/admin/orders/export-csv',       [AdminOrdersController::class, 'exportCsv'])
+    ->middleware('perm:can_manage_orders');
 
 // ── Messaging مشترك (أدمن الآن، يوزرز لاحقًا بنفس الكنترولر) ──
-$r->post('/admin/messaging/notify',    [AdminMessagingController::class, 'notify']);     // JSON — AJAX
+$r->post('/admin/messaging/notify',    [AdminMessagingController::class, 'notify'])
+    ->middleware('perm:can_manage_admins');     // JSON — AJAX
 $r->post('/admin/messaging/broadcast', [AdminMessagingController::class, 'broadcast']); // JSON — AJAX
 
 // ── Manage Products ───────────────────────────────────────────
-$r->get('/admin/products',                     [AdminProductsController::class, 'index']);
-$r->get('/admin/products/add',                 [AdminProductsController::class, 'showAdd']);
-$r->post('/admin/products/add',                [AdminProductsController::class, 'storeAdd']);
-$r->get('/admin/products/edit',                [AdminProductsController::class, 'showEdit']);
-$r->post('/admin/products/edit',               [AdminProductsController::class, 'storeEdit']);
-$r->post('/admin/products/delete',             [AdminProductsController::class, 'delete']);
-$r->post('/admin/products/toggle-visibility',  [AdminProductsController::class, 'toggleVisibility']);
-$r->get('/admin/products/export-csv',          [AdminProductsController::class, 'exportCsv']);
-$r->post('/admin/products/categories/suggest', [AdminProductsController::class, 'suggestCategory']);
-$r->post('/admin/products/categories/add',     [AdminProductsController::class, 'addCategory']);
-$r->post('/admin/products/categories/delete',  [AdminProductsController::class, 'deleteCategory']);
+$r->get('/admin/products',                     [AdminProductsController::class, 'index'])
+    ->middleware('perm:can_manage_products');
+$r->get('/admin/products/add',                 [AdminProductsController::class, 'showAdd'])
+    ->middleware('perm:can_manage_products');
+$r->post('/admin/products/add',                [AdminProductsController::class, 'storeAdd'])
+    ->middleware('perm:can_manage_products');
+$r->get('/admin/products/edit',                [AdminProductsController::class, 'showEdit'])
+    ->middleware('perm:can_manage_products');
+$r->post('/admin/products/edit',               [AdminProductsController::class, 'storeEdit'])
+    ->middleware('perm:can_manage_products');
+$r->post('/admin/products/delete',             [AdminProductsController::class, 'delete'])
+    ->middleware('perm:can_manage_products');
+$r->post('/admin/products/toggle-visibility',  [AdminProductsController::class, 'toggleVisibility'])
+    ->middleware('perm:can_manage_products');
+$r->get('/admin/products/export-csv',          [AdminProductsController::class, 'exportCsv'])
+    ->middleware('perm:can_manage_products');
+$r->post('/admin/products/categories/suggest', [AdminProductsController::class, 'suggestCategory'])
+    ->middleware('perm:can_manage_products');
+$r->post('/admin/products/categories/add',     [AdminProductsController::class, 'addCategory'])
+    ->middleware('perm:can_manage_products');
+$r->post('/admin/products/categories/delete',  [AdminProductsController::class, 'deleteCategory'])
+    ->middleware('perm:can_manage_products');
 
 // ── Manage Branding / Home Slider ──────────────────────────────
-$r->get('/admin/branding',                  [AdminBrandingController::class, 'index']);
-$r->post('/admin/branding/save',            [AdminBrandingController::class, 'save']);
-$r->get('/admin/branding/products/search',  [AdminBrandingController::class, 'searchProducts']);
+$r->get('/admin/branding',                  [AdminBrandingController::class, 'index'])
+    ->middleware('perm:can_manage_branding');
+$r->post('/admin/branding/save',            [AdminBrandingController::class, 'save'])
+    ->middleware('perm:can_manage_branding');
+$r->get('/admin/branding/products/search',  [AdminBrandingController::class, 'searchProducts'])
+    ->middleware('perm:can_manage_branding');
 
 // ── Admin Backup (Role A فقط) ────────────────────────────────
 $r->get('/admin/backup',          [BackupController::class, 'index']);

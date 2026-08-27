@@ -18,11 +18,11 @@ class AdminHomeController extends AdminController
     #[OA\Get(
         path: '/admin/home',
         summary: 'صفحة لوحة التحكم الرئيسية',
-        tags: ['Admin Home'],
+        tags: ['Admin - Home'],
         security: [['adminSessionAuth' => []]],
         responses: [
-            new OA\Response(response: 200,  description: 'صفحة HTML للوحة التحكم — يتطلب جلسة admin_session صالحة'),
-            new OA\Response(response: 302,  description: 'إعادة توجيه لـ /admin/login إذا لم تكن الجلسة صالحة'),
+            new OA\Response(response: 200, description: 'صفحة HTML للوحة التحكم — يتطلب جلسة admin_session صالحة'),
+            new OA\Response(response: 302, description: 'إعادة توجيه لـ /admin/login إذا لم تكن الجلسة صالحة'),
         ]
     )]
     public function index(): void

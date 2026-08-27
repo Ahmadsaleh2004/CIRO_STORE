@@ -157,7 +157,16 @@ class AuthController extends Controller
                 )
             )
         ),
-        responses: [new OA\Response(response: 200, description: 'JSON — {success, message}')]
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'نتيجة العملية. الحقل success يفصل النجاح عن الفشل — كود HTTP يبقى 200 في الحالتين. وعند فشل CSRF يحمل الجسم error_code=csrf_invalid.',
+                content: new OA\JsonContent(oneOf: [
+                    new OA\Schema(ref: '#/components/schemas/ApiResponse'),
+                    new OA\Schema(ref: '#/components/schemas/ApiError'),
+                ])
+            ),
+        ]
     )]
     public function register(): void
     {
@@ -180,28 +189,36 @@ class AuthController extends Controller
         $ppAccepted  = !empty($_POST['privacy_policy_accepted']);
 
         // Validation
-        if (strlen($fullName) < 2)
+        if (strlen($fullName) < 2) {
             $this->respond(false, 'Full name must be at least 2 characters.');
+        }
 
-        if (!filter_var($email, FILTER_VALIDATE_EMAIL))
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
             $this->respond(false, 'Please enter a valid email address.');
+        }
 
-        if (!str_ends_with($email, '@gmail.com'))
+        if (!str_ends_with($email, '@gmail.com')) {
             $this->respond(false, 'Email must be a @gmail.com address.');
+        }
 
-        if (strlen($pass) < 8 || !preg_match('/[A-Z]/', $pass) || !preg_match('/[a-z]/', $pass) ||
-            !preg_match('/[0-9]/', $pass) || !preg_match('/[\W_]/', $pass)) {
+        if (
+            strlen($pass) < 8 || !preg_match('/[A-Z]/', $pass) || !preg_match('/[a-z]/', $pass) ||
+            !preg_match('/[0-9]/', $pass) || !preg_match('/[\W_]/', $pass)
+        ) {
             $this->respond(false, 'Password must be at least 8 characters with uppercase, lowercase, number, and symbol.');
         }
 
-        if ($pass !== $confirmPass)
+        if ($pass !== $confirmPass) {
             $this->respond(false, 'Passwords do not match.');
+        }
 
-        if (!in_array($gender, ['male', 'female'], true))
+        if (!in_array($gender, ['male', 'female'], true)) {
             $this->respond(false, 'Please select your gender.');
+        }
 
-        if (!$ppAccepted)
+        if (!$ppAccepted) {
             $this->respond(false, 'You must agree to the Privacy Policy.');
+        }
 
         // التحقق من رقم الهاتف
         if (empty($phone)) {
@@ -270,7 +287,16 @@ class AuthController extends Controller
         summary: 'تسجيل خروج المستخدم وإنهاء الجلسة',
         tags: ['Store - Auth'],
         security: [['userSessionAuth' => []]],
-        responses: [new OA\Response(response: 200, description: 'JSON — {success, message, redirect?}')]
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'نتيجة العملية. الحقل success يفصل النجاح عن الفشل — كود HTTP يبقى 200 في الحالتين. وعند فشل CSRF يحمل الجسم error_code=csrf_invalid.',
+                content: new OA\JsonContent(oneOf: [
+                    new OA\Schema(ref: '#/components/schemas/ApiResponse'),
+                    new OA\Schema(ref: '#/components/schemas/ApiError'),
+                ])
+            ),
+        ]
     )]
     public function logout(): void
     {
@@ -291,8 +317,14 @@ class AuthController extends Controller
         $_SESSION = [];
         if (ini_get('session.use_cookies')) {
             $p = session_get_cookie_params();
-            setcookie(session_name(), '', time() - 42000,
-                $p['path'], $p['domain'], $p['secure'], $p['httponly']
+            setcookie(
+                session_name(),
+                '',
+                time() - 42000,
+                $p['path'],
+                $p['domain'],
+                $p['secure'],
+                $p['httponly']
             );
         }
         session_destroy();
@@ -322,11 +354,22 @@ class AuthController extends Controller
                 )
             )
         ),
-        responses: [new OA\Response(response: 200, description: 'JSON — {success, message}')]
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'نتيجة العملية. الحقل success يفصل النجاح عن الفشل — كود HTTP يبقى 200 في الحالتين. وعند فشل CSRF يحمل الجسم error_code=csrf_invalid.',
+                content: new OA\JsonContent(oneOf: [
+                    new OA\Schema(ref: '#/components/schemas/ApiResponse'),
+                    new OA\Schema(ref: '#/components/schemas/ApiError'),
+                ])
+            ),
+        ]
     )]
     public function forgot(): void
     {
-        if (session_status() === PHP_SESSION_NONE) session_start();
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
         header('Content-Type: application/json; charset=utf-8');
 
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -370,7 +413,11 @@ class AuthController extends Controller
         parameters: [
             new OA\Parameter(name: 'token', in: 'query', required: true, schema: new OA\Schema(type: 'string')),
         ],
-        responses: [new OA\Response(response: 200, description: 'صفحة HTML')]
+        responses: [
+            new OA\Response(response: 200, ref: '#/components/responses/HtmlPage'),
+            new OA\Response(response: 404, ref: '#/components/responses/NotFoundPage'),
+            new OA\Response(response: 503, ref: '#/components/responses/ServiceUnavailable'),
+        ]
     )]
     public function resetForm(): void
     {
@@ -412,11 +459,22 @@ class AuthController extends Controller
                 )
             )
         ),
-        responses: [new OA\Response(response: 200, description: 'JSON — {success, message}')]
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'نتيجة العملية. الحقل success يفصل النجاح عن الفشل — كود HTTP يبقى 200 في الحالتين. وعند فشل CSRF يحمل الجسم error_code=csrf_invalid.',
+                content: new OA\JsonContent(oneOf: [
+                    new OA\Schema(ref: '#/components/schemas/ApiResponse'),
+                    new OA\Schema(ref: '#/components/schemas/ApiError'),
+                ])
+            ),
+        ]
     )]
     public function resetSubmit(): void
     {
-        if (session_status() === PHP_SESSION_NONE) session_start();
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
         $this->beginJsonPost();
 
         $email = trim(strtolower($_POST['email'] ?? ''));
@@ -495,7 +553,16 @@ class AuthController extends Controller
         summary: 'جلب توكن CSRF جديد لنماذج المتجر',
         description: 'النقطة الوحيدة التي لا تتطلّب توكناً — منها يُجلب.',
         tags: ['Store - Auth'],
-        responses: [new OA\Response(response: 200, description: 'JSON — {success, message, token}')]
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'نتيجة العملية. الحقل success يفصل النجاح عن الفشل — كود HTTP يبقى 200 في الحالتين. وعند فشل CSRF يحمل الجسم error_code=csrf_invalid.',
+                content: new OA\JsonContent(oneOf: [
+                    new OA\Schema(ref: '#/components/schemas/ApiResponse'),
+                    new OA\Schema(ref: '#/components/schemas/ApiError'),
+                ])
+            ),
+        ]
     )]
     public function getCsrf(): void
     {

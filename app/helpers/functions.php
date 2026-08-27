@@ -25,7 +25,28 @@ function fixImagePath(?string $path): string
         $cleanPath = 'images/' . $cleanPath;
     }
 
-    return URLROOT . '/' . $cleanPath;
+    // ⚠️ ترميز المسار **لازم**، وليس تجميلاً.
+    //
+    // أسماء ملفات الصور في هذا المشروع تحوي مسافات: «apple watch.webp»
+    // و«ps4 controller.jpg» و«nintendo switch lite.jpg». والمسافة في
+    // رابط داخل srcset **فاصل بين مرشّحين** لا محرفاً عادياً:
+    //
+    //     <source srcset="…/images/apple watch.webp">
+    //
+    // يقرأها المتصفح مرشّحَين: «…/images/apple» و«watch.webp»، فيرفض
+    // الاثنين ويُسقط الصورة. أكّده المتصفح حرفياً:
+    //     Dropped srcset candidate "…/images/apple"
+    // اثنتا عشرة مرّة في تحميل واحد للصفحة الرئيسية.
+    //
+    // أي أن نسخ WebP — وهي كل فائدة <picture> — لم تكن تعمل لأي صورة
+    // اسمها يحوي مسافة. والصفحة تبدو سليمة لأن <img> الاحتياطية تعمل،
+    // فيمرّ العطل صامتاً ويُخدَّم jpg أثقل بدل webp.
+    //
+    // rawurlencode لكل مقطع على حدة: تشفير المسار كاملاً كان سيحوّل
+    // الشرطات المائلة نفسها إلى %2F فيتحطّم المسار.
+    $encoded = implode('/', array_map('rawurlencode', explode('/', $cleanPath)));
+
+    return URLROOT . '/' . $encoded;
 }
 
 /**
@@ -33,14 +54,24 @@ function fixImagePath(?string $path): string
  */
 function getWebpPath(?string $path): ?string
 {
-    if (empty(trim((string)$path))) return null;
+    if (empty(trim((string)$path))) {
+        return null;
+    }
     $original = fixImagePath($path);
     $webpPath = preg_replace('/\.(jpe?g|png)$/i', '.webp', $original);
-    if ($webpPath === $original) return null; // الامتداد مش jpg/png أصلاً
+    if ($webpPath === $original) {
+        return null; // الامتداد مش jpg/png أصلاً
+    }
 
-    // تحويل الرابط الكامل لمسار فعلي على القرص للتأكد من وجود الملف
-    $relative = str_replace(URLROOT, '', $webpPath);
+    // تحويل الرابط الكامل لمسار فعلي على القرص للتأكد من وجود الملف.
+    //
+    // ⚠️ rawurldecode لازم: fixImagePath صارت تُرمّز المسار (المسافات
+    // في أسماء الصور تكسر srcset)، و«apple%20watch.webp» لا وجود له
+    // على القرص. بلا الفكّ يفشل file_exists لكل صورة اسمها يحوي مسافة،
+    // فتُرجَع null وتختفي نسخة WebP — أي العطل نفسه من الباب الآخر.
+    $relative = rawurldecode(str_replace(URLROOT, '', $webpPath));
     $diskPath = rtrim(ROOTPATH . '/public', '/') . $relative;
+
     return file_exists($diskPath) ? $webpPath : null;
 }
 

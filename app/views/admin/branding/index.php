@@ -54,8 +54,6 @@ require APPROOT . '/views/shared/flash-toast.php';
 <?php include __DIR__ . '/_templates.php'; ?>
 
 <!-- بيانات السلايدرات الحالية محقونة لـ JS -->
-<script>
-window._existingSlidersData = <?= json_encode($sliders, JSON_UNESCAPED_UNICODE) ?>;
-</script>
+<?= pageData(['_existingSlidersData' => $sliders]) ?>
 
 <?php include __DIR__ . '/_product-picker-modal.php'; ?>

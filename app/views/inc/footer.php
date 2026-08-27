@@ -60,35 +60,41 @@ $csrfToken = generateCsrfToken();
 
 
     <!-- ══ Scripts ═════════════════════════════════════════════ -->
+    <?php // ⚠️ أوّلاً وبلا defer: ينسخ جزيرة بيانات الصفحة إلى window،
+         // وكل ما تحته يقرأ منها. نقله لاحقاً يكسر كل صفحة تمرّر بيانات. ?>
+    <?= jsTag('js/core/page-data.js', false) ?>
+
     <script src="https://code.jquery.com/jquery-3.7.1.min.js" defer></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11" defer></script>
 
     <!-- Core JS -->
-    <script src="<?= URLROOT ?>/js/core/utils.js" defer></script>
-    <script src="<?= URLROOT ?>/js/core/csrf.js" defer></script>
-    <script src="<?= URLROOT ?>/js/core/ui.js" defer></script>
-    <script src="<?= URLROOT ?>/js/core/flash-toast.js" defer></script>
-    <script src="<?= URLROOT ?>/js/core/theme.js" defer></script>
-    <!-- فرض ألوان حقول النوافذ المنبثقة — كان كتلة مضمّنة هنا -->
-    <script src="<?= URLROOT ?>/js/core/modal-input-colors.js" defer></script>
+    <?php
+    // حزمة واحدة بدل ثلاثة عشر وسماً. راجع jsBundle في
+    // assets_helper.php — القائمة هنا هي الارتداد عند غياب البناء،
+    // وترتيبها هو العقد: الملفات تتشارك النطاق العام.
+    ?>
+    <?= jsBundle('store', [
+        'js/core/inline-actions.js',
+        'js/core/utils.js',
+        'js/core/csrf.js',
+        'js/core/ui.js',
+        'js/core/flash-toast.js',
+        'js/core/theme.js',
+        'js/core/modal-input-colors.js',
+        'js/features/cart.js',
+        'js/features/products-catalog.js',
+        'js/features/auth.js',
+        'js/features/wishlist.js',
+        'js/main.js',
+        'js/shared/order-cancel.js',
+    ]) ?>
 
-    <!-- Features JS — محمّلة دائماً -->
-    <script src="<?= URLROOT ?>/js/features/cart.js" defer></script>
-    <script src="<?= URLROOT ?>/js/features/products-catalog.js" defer></script>
-    <script src="<?= URLROOT ?>/js/features/auth.js" defer></script>
-    <script src="<?= URLROOT ?>/js/features/wishlist.js" defer></script>
-    <script src="<?= URLROOT ?>/js/main.js" defer></script>
-
-    <!-- Notifications JS — فقط للمستخدم المسجّل -->
+    <?php // إشعارات المستخدم المسجّل — حزمة منفصلة كي لا يحمّلها الزائر. ?>
     <?php if (isset($userLoggedIn) && $userLoggedIn): ?>
-    <script src="<?= URLROOT ?>/js/features/notifications.js" defer></script>
+    <?= jsBundle('store-auth', ['js/features/notifications.js']) ?>
     <?php endif; ?>
 
-    <!-- Shared JS — زر إلغاء/حذف الطلب المشترك (my-info + admin order details) -->
-    <script src="<?= URLROOT ?>/js/shared/order-cancel.js" defer></script>
-
-    <!-- Extra Scripts من الـ Controller (مثلاً صفحة Checkout / My Info) -->
     <?php if (isset($extraScripts)) echo $extraScripts; elseif (isset($data['extraScripts'])) echo $data['extraScripts']; ?>
 </footer>
 

@@ -10,6 +10,21 @@
     RewriteRule ^ index.php [QSA,L]
 </IfModule>
 
+# ── تخزين مؤقّت للأصول المبصومة ──────────────────────────────
+#
+# ملفات public/css/dist/ تحمل بصمة محتواها في أسمائها
+# (store.f7069eb70046.css)، فتغيّر المحتوى يغيّر الرابط. ولذلك يصحّ
+# تخزينها سنة كاملة بـimmutable: المتصفح لا يسأل عنها إطلاقاً، ولا
+# خطر من قِدَمها لأن النسخة الجديدة تحمل اسماً آخر.
+#
+# ⚠️ محصورة في dist/ عمداً. تطبيقها على css/ أو js/ العاديين — وهي
+# بلا بصمة — يعني أن تعديلاً لن يصل الزائر لسنة.
+<IfModule mod_headers.c>
+    <FilesMatch "\.[0-9a-f]{12}\.(css|js)$">
+        Header set Cache-Control "public, max-age=31536000, immutable"
+    </FilesMatch>
+</IfModule>
+
 # ── ترويسات أمنية ────────────────────────────────────────────
 #
 # لم تكن هنا أي ترويسة أمنية إطلاقاً (مفحوص: صفر موضع في المشروع كله).
@@ -40,23 +55,31 @@
     # إخفاء نسخة PHP من الترويسات.
     Header always unset X-Powered-By
 
-    # ── CSP: وضع الإبلاغ فقط، مؤقتاً ──────────────────────────
+    # ── CSP: مفروضة بالكامل ───────────────────────────────────
     #
-    # ⚠️ `-Report-Only` مقصود ولا يجوز نزعه اليوم. السياسة أدناه تمنع
-    # السكربت المضمّن، و**16 ملف view يحوي `<script>` مضمّناً** (مفحوص:
-    # home.php و inc/navbar.php و product.php وthirteen غيرها). تفعيلها
-    # الآن يكسر المتجر كله في لحظة.
+    # **بلا 'unsafe-inline' في script-src.** لم تكن هذه ممكنة قبل
+    # اليوم: كانت الـviews تحوي أربع عشرة كتلة <script> مضمّنة وثلاثة
+    # وثلاثين معالج onclick/onchange — وكلّها كتل تنفيذ تحجبها أي
+    # سياسة جادّة.
     #
-    # وضع الإبلاغ يعطي القيمة بلا الكسر: المخالفات تظهر في وحدة تحكّم
-    # المتصفح فتُرى وتُعدّ، ولا شيء يُمنع. المرحلة 12 من الخطة تُخرج
-    # الـ16 سكربتاً إلى ملفات، وعندها يصير التفعيل حذفَ كلمة واحدة من
-    # اسم الترويسة.
+    # ما تغيّر ليصير هذا ممكناً:
+    #   · البيانات → جزر <script type="application/json"> (pageData)
+    #     وهي ليست كتل تنفيذ فلا يعنيها script-src أصلاً.
+    #   · المعالجات → data-action وسمات data-*، يفوّضها مستمع واحد
+    #     في js/core/inline-actions.js.
+    #   · سكربت تهيئة الثيم → مسموح **ببصمته وحدها**. لا يمكن نقله إلى
+    #     ملف: يجب أن يعمل قبل الرسم وإلا ومض المستخدم بالثيم الخطأ.
     #
-    # النطاقات الخارجية مقيسة لا مفترضة:
-    #   cdn.jsdelivr.net  → Bootstrap و Swagger UI (13 موضعاً)
-    #   code.jquery.com   → jQuery (موضعان)
-    #   js.hcaptcha.com   → كابتشا دخول الأدمن
-    #   hcaptcha.com      → إطار التحدّي واتصالاته
-    Header always set Content-Security-Policy-Report-Only "default-src 'self'; script-src 'self' https://cdn.jsdelivr.net https://code.jquery.com https://js.hcaptcha.com https://*.hcaptcha.com; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://*.hcaptcha.com; img-src 'self' data: https:; font-src 'self' data: https://cdn.jsdelivr.net; connect-src 'self' https://*.hcaptcha.com; frame-src https://*.hcaptcha.com; form-action 'self'; frame-ancestors 'self'; base-uri 'self'; object-src 'none'"
+    # ⚠️ البصمة مرتبطة بمحتوى themeBootScript() حرفاً بحرف. أي تعديل
+    # عليه — ولو مسافة — يُبطلها فيتوقّف السكربت ويومض الثيم. أعد
+    # حسابها عند أي تغيير:
+    #     php -r "require 'app/config/config.php'; require 'vendor/autoload.php';
+    #             preg_match('#<script>(.*?)</script>#s', themeBootScript(), \$m);
+    #             echo 'sha256-'.base64_encode(hash('sha256', \$m[1], true));"
+    #
+    # style-src فيها 'unsafe-inline' بعد: 239 سمة style= في الـviews.
+    # وهي الخطوة التالية، وأثرها الأمني أقلّ بكثير من السكربتات.
+    Header always set Content-Security-Policy "default-src 'self'; script-src 'self' 'sha256-n33GJ973YEUTpbG1xOj611JYTc5wI4V+8xmEtfPaLjk=' https://cdn.jsdelivr.net https://code.jquery.com https://js.hcaptcha.com https://*.hcaptcha.com; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://*.hcaptcha.com; img-src 'self' data: https:; font-src 'self' data: https://cdn.jsdelivr.net; connect-src 'self' https://*.hcaptcha.com; frame-src https://*.hcaptcha.com; form-action 'self'; frame-ancestors 'self'; base-uri 'self'; object-src 'none'"
+
 
 </IfModule>

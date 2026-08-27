@@ -51,12 +51,12 @@ class MyInfoController extends Controller
             'activePage'  => '',
             'robots'      => 'noindex, nofollow',
             'extraHead'   => '<link rel="stylesheet" href="' . URLROOT . '/css/store/pages/my-info.css">',
-            'extraScripts'=> '<script src="' . URLROOT . '/js/features/account.js" defer></script>',
+            'extraScripts' => '<script src="' . URLROOT . '/js/features/account.js" defer></script>',
             'user'        => $user,
             'orders'      => $orders,
             'addresses'   => $addresses,
             'csrf'        => generateCsrfToken(),
-            'userLoggedIn'=> true,
+            'userLoggedIn' => true,
             'userName'    => $user['full_name'],
         ]);
     }
@@ -89,7 +89,16 @@ class MyInfoController extends Controller
                 )
             )
         ),
-        responses: [new OA\Response(response: 200, description: 'JSON — {success, message}')]
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'نتيجة العملية. الحقل success يفصل النجاح عن الفشل — كود HTTP يبقى 200 في الحالتين. وعند فشل CSRF يحمل الجسم error_code=csrf_invalid.',
+                content: new OA\JsonContent(oneOf: [
+                    new OA\Schema(ref: '#/components/schemas/ApiResponse'),
+                    new OA\Schema(ref: '#/components/schemas/ApiError'),
+                ])
+            ),
+        ]
     )]
     public function updateProfile(): void
     {
@@ -183,29 +192,44 @@ class MyInfoController extends Controller
                 )
             )
         ),
-        responses: [new OA\Response(response: 200, description: 'JSON — {success, message}')]
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'نتيجة العملية. الحقل success يفصل النجاح عن الفشل — كود HTTP يبقى 200 في الحالتين. وعند فشل CSRF يحمل الجسم error_code=csrf_invalid.',
+                content: new OA\JsonContent(oneOf: [
+                    new OA\Schema(ref: '#/components/schemas/ApiResponse'),
+                    new OA\Schema(ref: '#/components/schemas/ApiError'),
+                ])
+            ),
+        ]
     )]
     public function addAddress(): void
     {
         $this->beginJsonPost();
         Middleware::requireLogin();
 
-        $post = $this->requestData();
+        // كان الاستخراج يدوياً هنا: trim على حقل واحد، و`?? null` على
+        // أربعة، و`!empty(...) ? 1 : 0` على الخامس. والقاعدة الوحيدة
+        // المفروضة كانت «العنوان غير فارغ» — بلا حدّ أدنى ولا أقصى،
+        // فكان يُقبل عنوان من محرف واحد ويُقبل نصّ بطول القاعدة.
+        $input = $this->validate([
+            'full_address' => 'required|string|min:5|max:255',
+            'label'        => 'string|max:50|default:Home',
+            'country'      => 'nullable|string|max:80',
+            'city'         => 'nullable|string|max:80',
+            'phone_number' => 'nullable|string|max:30',
+            'is_default'   => 'bool',
+        ]);
 
         $userId = (int)$_SESSION['user_id'];
-        $full   = trim($post['full_address'] ?? '');
-
-        if (!$full) {
-            $this->respond(false, 'Full address is required.');
-        }
 
         $newId = OrderModel::addAddress($userId, [
-            'label'        => $post['label']        ?? 'Home',
-            'country'      => $post['country']      ?? null,
-            'city'         => $post['city']         ?? null,
-            'full_address' => $full,
-            'phone_number' => $post['phone_number'] ?? null,
-            'is_default'   => !empty($post['is_default']) ? 1 : 0,
+            'label'        => $input['label'],
+            'country'      => $input['country'],
+            'city'         => $input['city'],
+            'full_address' => $input['full_address'],
+            'phone_number' => $input['phone_number'],
+            'is_default'   => $input['is_default'] ? 1 : 0,
         ]);
 
         if (!$newId) {
@@ -236,7 +260,16 @@ class MyInfoController extends Controller
                 )
             )
         ),
-        responses: [new OA\Response(response: 200, description: 'JSON — {success, message}')]
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'نتيجة العملية. الحقل success يفصل النجاح عن الفشل — كود HTTP يبقى 200 في الحالتين. وعند فشل CSRF يحمل الجسم error_code=csrf_invalid.',
+                content: new OA\JsonContent(oneOf: [
+                    new OA\Schema(ref: '#/components/schemas/ApiResponse'),
+                    new OA\Schema(ref: '#/components/schemas/ApiError'),
+                ])
+            ),
+        ]
     )]
     public function deleteAddress(): void
     {

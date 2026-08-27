@@ -117,7 +117,7 @@
                                style="color:var(--text-color);">💾 Backup DB</a></li>
                         <?php endif; ?>
                         <li><hr class="dropdown-divider" style="border-color:var(--section-border);"></li>
-                        <li><a class="dropdown-item text-danger" href="#" onclick="logoutAdmin()">🚪 Log Out</a></li>
+                        <li><a class="dropdown-item text-danger" href="#" data-action="logout-admin">🚪 Log Out</a></li>
                     </ul>
                 </div>
             </div>
@@ -126,8 +126,6 @@
 </nav>
 
 <!-- تمرير بيانات فقط — logoutAdmin() في js/admin/admin-layout/admin-navbar.js -->
-<script>
-window._csrfToken = <?= json_encode($csrf) ?>;
-</script>
+<?= pageData(['_csrfToken' => $csrf]) ?>
 
 <main id="main-content" class="container-fluid py-4 px-4">

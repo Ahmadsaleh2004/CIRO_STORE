@@ -52,7 +52,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     } else {
                         if (typeof showToast === 'function') showToast(data.message || 'Error', 'error');
                     }
-                } catch (err) {
+                } catch {
                     if (typeof showToast === 'function') showToast('Network error.', 'error');
                 }
             });
@@ -88,7 +88,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     const data = await fetchWithCsrfRetry(window.URLROOT + '/admin/users/strikes/remove', { method: 'POST', body: fd });
                     if (data.success) { setTimeout(() => window.location.reload(), 500); }
                     else if (typeof showToast === 'function') showToast(data.message || 'Error', 'error');
-                } catch (err) {
+                } catch {
                     if (typeof showToast === 'function') showToast('Network error.', 'error');
                 }
             } else {
@@ -113,7 +113,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     const data = await fetchWithCsrfRetry(window.URLROOT + '/admin/users/strikes/add', { method: 'POST', body: fd });
                     if (data.success) { setTimeout(() => window.location.reload(), 500); }
                     else if (typeof showToast === 'function') showToast(data.message || 'Error', 'error');
-                } catch (err) {
+                } catch {
                     if (typeof showToast === 'function') showToast('Network error.', 'error');
                 }
             }

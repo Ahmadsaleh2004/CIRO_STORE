@@ -1,4 +1,5 @@
 <?php
+
 /**
  * app/helpers/assets_helper.php
  * وسوم الأصول (CSS) + سكربت تهيئة الثيم.
@@ -30,21 +31,249 @@ function cssBundleFiles(string $bundle): array
 }
 
 /**
+ * البيان الذي ينتجه `npm run build` — اسم الملف المبصوم لكل حزمة.
+ *
+ * يُقرأ مرّة واحدة لكل طلب. غيابه ليس خطأً بل يعني «لم يُبنَ بعد»،
+ * فتعود cssBundle إلى سلسلة @import.
+ *
+ * @return array<string, string>
+ */
+function cssManifest(): array
+{
+    static $manifest = null;
+    if ($manifest !== null) {
+        return $manifest;
+    }
+
+    $path = ROOTPATH . '/public/css/dist/manifest.json';
+    if (!is_file($path)) {
+        return $manifest = [];
+    }
+
+    $decoded = json_decode((string) file_get_contents($path), true);
+
+    return $manifest = is_array($decoded) ? $decoded : [];
+}
+
+/**
  * يطبع وسوم <link> الخاصة بحزمة.
  *
- * ملاحظة حول الأداء: الحزمة ملف @import، أي طلب HTTP لكل ملف داخلي
- * بشكل متسلسل. هذا مقبول تماماً على localhost ومناسب للتطوير لأن كل
- * ملف يظهر منفصلاً في DevTools. إن احتجنا لاحقاً طلباً واحداً فقط،
- * الترقية هي دمج الملفات في public/css/dist/<bundle>.css وإرجاع
- * وسم واحد من هنا — بلا أي تغيير في الـ Views.
+ * ── مساران، والاختيار بينهما آليّ ────────────────────────────
+ *
+ * **مبنيّ** (البيان موجود): وسم واحد لكل حزمة يشير إلى ملف مدموج
+ * مضغوط مبصوم. store.css كانت 36 استيراداً و admin.css 19، والمتصفح
+ * لا يعرف بوجود أيٍّ منها حتى ينزّل الملف الأب ويحلّله — فالتنزيل
+ * متسلسل بطبعه لا متوازٍ.
+ * القياس: 55 طلباً و112 كيلوبايت → طلبان و59 كيلوبايت.
+ *
+ * **غير مبنيّ** (لا بيان): سلسلة @import كما كانت. وهذا هو وضع
+ * التطوير المفضَّل — كل ملف يظهر منفصلاً في DevTools، وتعديل واحد
+ * منها يظهر فوراً بلا إعادة بناء.
+ *
+ * ولهذا لا يوجد مفتاح إعداد يختار بينهما: **وجود البيان هو الاختيار**.
+ * مفتاح منفصل كان سيسمح بحالتين لا معنى لهما — مبنيّ ومعطَّل، وغير
+ * مبنيّ ومفعَّل (وهذه الأخيرة صفحة بلا أي تنسيق).
+ *
+ * البصمة في اسم الملف تُبطل التخزين المؤقّت من تلقائها: تغيّر المحتوى
+ * يغيّر الاسم، وثباته يُبقيه فيستفيد الزائر من ذاكرته.
+ *
+ * ⚠️ حزمة admin تُحمِّل store أولاً (راجع cssBundleFiles)، والترتيب
+ * محفوظ في المسارين.
  */
 function cssBundle(string $bundle = 'store'): string
 {
+    $manifest = cssManifest();
+
     $out = '';
     foreach (cssBundleFiles($bundle) as $file) {
-        $out .= '    <link rel="stylesheet" href="' . URLROOT . '/' . $file . '">' . "\n";
+        // 'css/store.css' → 'store'
+        $key  = basename($file, '.css');
+        $href = $manifest[$key] ?? $file;
+        $out .= '    <link rel="stylesheet" href="' . URLROOT . '/' . $href . '">' . "\n";
     }
+
     return $out;
+}
+
+/**
+ * يطبع وسم <script> لملف JS مع إبطال تخزين مؤقّت مبنيّ على المحتوى.
+ *
+ * ── العطل الذي وُجدت له ─────────────────────────────────────
+ *
+ * ملفات js/ كانت تُخدَّم بلا Cache-Control إطلاقاً — بـETag و
+ * Last-Modified وحدهما. وهذا يترك القرار للمتصفح، وكثير منها يخزّن
+ * الملف heuristically ولا يسأل عنه أصلاً.
+ *
+ * والأثر مقيس لا مفترض: بعد إصلاح دالة في js/core/utils.js، كان
+ * الملف المخدوم يحوي الإصلاح بينما window لا تعرفه — أي أن المتصفح
+ * يشغّل نسخة قديمة. تحقّقنا بـfetch(cache:'reload') فظهر الفرق.
+ *
+ * وهذا أخطر ما يمكن أن يحدث لإصلاح أمني: يُنشر ولا يصل.
+ *
+ * ── الحلّ ───────────────────────────────────────────────────
+ *
+ * `?v=<بصمة>` من محتوى الملف. تغيّر المحتوى يغيّر الرابط فيُبطل
+ * التخزين حتماً، وثباته يُبقيه فيستفيد الزائر من ذاكرته.
+ *
+ * والبصمة من المحتوى لا من الوقت: الطابع الزمني يتغيّر عند كل نسخ
+ * للملفات فيُبطل التخزين بلا سبب، وكل نشر يعيد تنزيل كل شيء.
+ *
+ * ⚠️ لماذا استعلام لا اسم مبصوم مثل حزم CSS؟ لأن ملفات JS يشير
+ * بعضها إلى بعض بالاسم، ولأنها ليست ناتج بناء — تُحرَّر مباشرةً.
+ * الاستعلام يعطي الإبطال نفسه بلا خطوة بناء.
+ *
+ * @param string $path مسار نسبي تحت public/ مثل 'js/core/utils.js'
+ * @param bool   $defer
+ */
+function jsTag(string $path, bool $defer = true): string
+{
+    static $stamps = [];
+
+    $relative = ltrim($path, '/');
+
+    if (!isset($stamps[$relative])) {
+        $disk = ROOTPATH . '/public/' . $relative;
+        // غياب الملف ليس سبباً لإيقاف الصفحة: نطبع الوسم بلا بصمة
+        // ويظهر 404 في الطرفية — وهو تشخيص أوضح من صفحة بيضاء.
+        $stamps[$relative] = is_file($disk)
+            ? substr(hash_file('sha256', $disk), 0, 10)
+            : '';
+    }
+
+    $suffix = $stamps[$relative] !== '' ? '?v=' . $stamps[$relative] : '';
+
+    return '<script src="' . URLROOT . '/' . $relative . $suffix . '"'
+        . ($defer ? ' defer' : '') . '></script>' . "
+";
+}
+
+/**
+ * بيان حزم JS الذي ينتجه `npm run build`.
+ *
+ * @return array<string, string>
+ */
+function jsManifest(): array
+{
+    static $manifest = null;
+    if ($manifest !== null) {
+        return $manifest;
+    }
+
+    $path = ROOTPATH . '/public/js/dist/manifest.json';
+    if (!is_file($path)) {
+        return $manifest = [];
+    }
+
+    $decoded = json_decode((string) file_get_contents($path), true);
+
+    return $manifest = is_array($decoded) ? $decoded : [];
+}
+
+/**
+ * يطبع وسم <script> لحزمة مدموجة — أو وسوم الملفات المفردة إن لم تُبنَ.
+ *
+ * ── لماذا ───────────────────────────────────────────────────
+ *
+ * الصفحة الرئيسية كانت تطلب **ثمانية عشر ملف JS**. والمتصفح يسمح بستّ
+ * اتصالات متزامنة لكل نطاق على HTTP/1.1، فتقف في طابور. مقيس:
+ *
+ *     أول ملف يبدأ:      467 ms
+ *     آخر ملف ينتهي:     999 ms
+ *     DOMContentLoaded: 1051 ms
+ *
+ * والسلايدر لا وجود له في HTML: يبنيه products-catalog.js — الرابع عشر
+ * في الطابور. فيبقى مكانه فارغاً أكثر من ثانية بعد ظهور الصفحة.
+ *
+ * ── المساران ───────────────────────────────────────────────
+ *
+ * **مبنيّ**: وسم واحد. و**غير مبنيّ**: الملفات مفردة كما كانت — وهو
+ * وضع التطوير المفضَّل، إذ يظهر كل ملف منفصلاً في DevTools ويظهر
+ * تعديله فوراً بلا إعادة بناء.
+ *
+ * ووجود البيان هو الاختيار، تماماً كما في cssBundle.
+ *
+ * ⚠️ الترتيب داخل الحزمة هو ترتيب هذه القوائم في build/build-js.mjs،
+ * وهو ترتيب الـfooter حرفاً بحرف. الملفات تتشارك النطاق العام ويعتمد
+ * اللاحق على ما عرّفه السابق — فأي إعادة ترتيب تكسره بصمت.
+ *
+ * @param string       $bundle اسم الحزمة: store | admin | store-auth
+ * @param list<string> $fallback مسارات الملفات المفردة عند غياب البناء
+ * @param bool         $defer
+ */
+function jsBundle(string $bundle, array $fallback, bool $defer = true): string
+{
+    $manifest = jsManifest();
+
+    if (isset($manifest[$bundle])) {
+        $path = $manifest[$bundle];
+        // البصمة في الاسم تُبطل التخزين المؤقّت، فلا حاجة لـ?v=
+        return '<script src="' . URLROOT . '/' . $path . '"'
+            . ($defer ? ' defer' : '') . '></script>' . "
+";
+    }
+
+    $out = '';
+    foreach ($fallback as $file) {
+        $out .= jsTag($file, $defer);
+    }
+
+    return $out;
+}
+
+/**
+ * يطبع جزيرة بيانات JSON تُنقَل إلى النطاق العام.
+ *
+ * ── لماذا ────────────────────────────────────────────────────
+ *
+ * أربع عشرة صفحة كانت تمرّر بياناتها إلى JS بكتلة <script> مضمّنة:
+ *
+ *     <script>window.dbProducts = <?= json_encode(...) ?>;</script>
+ *
+ * وهي **كتلة قابلة للتنفيذ**، فأي سياسة CSP جادّة تحجبها. ولهذا بقيت
+ * سياسة المشروع بوضع الإبلاغ فقط: تفعيلها كان يكسر الصفحات الأربع عشرة.
+ *
+ * ── الحلّ ───────────────────────────────────────────────────
+ *
+ * `<script type="application/json">` **ليست كتلة تنفيذ**. المتصفح لا
+ * ينفّذها، وCSP لا يعنيها `script-src` أصلاً. فتصير البيانات عنصراً
+ * في الصفحة يقرأه js/core/page-data.js وينسخه إلى window.
+ *
+ * ── ما لم يتغيّر ────────────────────────────────────────────
+ *
+ * **عقد `window.X` كما هو حرفياً.** الأسماء نفسها والقيم نفسها، فلا
+ * يتغيّر سطر واحد في ملفات JS الأربعة والثلاثين. البيانات تصل بطريق
+ * آخر، ومن يقرأها لا يعلم بالفرق.
+ *
+ * ⚠️ ثلاثة قيود على المحتوى:
+ *
+ *   1. JSON_HEX_TAG لازم: قيمة تحوي `</script>` كانت ستُنهي الوسم
+ *      وتفتح باب حقن. الترميز يحوّل < و > إلى < و>.
+ *   2. البيانات تُقرأ عند DOMContentLoaded، لذا يجب أن يُطبع هذا
+ *      الوسم **قبل** أي سكربت يقرأ window، وهو كذلك: الـviews تُطبع
+ *      قبل الـfooter.
+ *   3. القيم تمرّ كما هي إلى JSON — لا تضع فيها ما لا يجوز أن يراه
+ *      الزائر. هذا لم يتغيّر عن السلوك السابق.
+ *
+ * @param array<string, mixed> $data أزواج اسم/قيمة تُنسخ إلى window
+ */
+function pageData(array $data): string
+{
+    if ($data === []) {
+        return '';
+    }
+
+    $json = json_encode(
+        $data,
+        JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP
+    );
+
+    if ($json === false) {
+        error_log('[Cairo Store] pageData: json_encode فشل — ' . json_last_error_msg());
+        return '';
+    }
+
+    return '<script type="application/json" data-page-data>' . $json . '</script>' . "
+";
 }
 
 /**

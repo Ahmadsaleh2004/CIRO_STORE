@@ -1,4 +1,5 @@
 <?php
+
 /**
  * scripts/backfill_blocked_users_cancel_orders.php
  * سكربت one-time يُشغَّل يدويًا من CLI:
@@ -29,12 +30,16 @@ spl_autoload_register(function (string $class): void {
     $prefix  = 'App\\';
     $baseDir = dirname(__DIR__) . '/app/';
 
-    if (strncmp($prefix, $class, strlen($prefix)) !== 0) return;
+    if (strncmp($prefix, $class, strlen($prefix)) !== 0) {
+        return;
+    }
 
     $relativeClass = substr($class, strlen($prefix));
     $file          = $baseDir . str_replace('\\', '/', $relativeClass) . '.php';
 
-    if (file_exists($file)) require_once $file;
+    if (file_exists($file)) {
+        require_once $file;
+    }
 });
 
 use App\Core\Database;

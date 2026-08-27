@@ -1,0 +1,66 @@
+# ══════════════════════════════════════════════════════════════
+# Cairo Store — بيئة قابلة للتكرار
+# ══════════════════════════════════════════════════════════════
+#
+# قبل هذا الملف كان تشغيل المشروع يتطلّب XAMPP بنسخة بعينها، ومساراً
+# بعينه (/STORE/public كان مكتوباً صراحةً في config.php)، وقاعدة
+# تُبنى يدوياً. أي أن «شغّله عندك» كانت تعليمات لا أمراً.
+#
+#     docker compose up -d
+#     docker compose exec app php scripts/migrate.php baseline
+#
+# ولا شيء آخر.
+
+services:
+  app:
+    build: .
+    ports:
+      - "${APP_PORT:-8080}:80"
+    environment:
+      APP_ENV: "${APP_ENV:-local}"
+      APP_DEBUG: "${APP_DEBUG:-true}"
+      APP_URL: "http://localhost:${APP_PORT:-8080}"
+      APP_NAME: "Cairo Store"
+      DB_HOST: db
+      DB_PORT: "3306"
+      DB_DATABASE: "${DB_DATABASE:-ciro_db}"
+      DB_USERNAME: "${DB_USERNAME:-cairo}"
+      DB_PASSWORD: "${DB_PASSWORD:-cairo}"
+    volumes:
+      # الصور المرفوعة والنسخ الاحتياطية تعيش خارج الحاوية: إعادة
+      # البناء تمحو نظام ملفاتها، ومنتجات الأدمن ليست جزءاً من الصورة.
+      - uploads:/var/www/html/public/images
+      - backups:/var/www/html/storage/backups
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  db:
+    image: mysql:8.0
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    environment:
+      MYSQL_DATABASE: "${DB_DATABASE:-ciro_db}"
+      MYSQL_USER: "${DB_USERNAME:-cairo}"
+      MYSQL_PASSWORD: "${DB_PASSWORD:-cairo}"
+      MYSQL_ROOT_PASSWORD: "${DB_ROOT_PASSWORD:-root}"
+    volumes:
+      - dbdata:/var/lib/mysql
+      # المخطّط المرجعي يُحمَّل تلقائياً عند أول تشغيل وحده. المجلد
+      # docker-entrypoint-initdb.d يُتجاهَل إن كانت القاعدة مبنيّة —
+      # فلا خطر على بيانات قائمة.
+      - ./tests/fixtures/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+    healthcheck:
+      # الفحص بالمستخدم العادي لا بـroot: نجاحه يعني أن الصلاحيات
+      # جاهزة فعلاً، لا أن الخادم يستجيب وحسب.
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-u", "${DB_USERNAME:-cairo}", "-p${DB_PASSWORD:-cairo}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
+    restart: unless-stopped
+
+volumes:
+  dbdata:
+  uploads:
+  backups:

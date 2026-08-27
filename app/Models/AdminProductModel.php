@@ -35,13 +35,13 @@ class AdminProductModel
      * الأولوية: سعر → كمية → تاريخ.
      */
     public static function getPaginated(
-        string  $search,
-        array   $categoryIds,  // array بدل int — يقبل عدة كاتوجريز (OR)
+        string $search,
+        array $categoryIds,  // array بدل int — يقبل عدة كاتوجريز (OR)
         ?string $priceSort,
         ?string $stockSort,
         ?string $dateSort,
-        int     $limit,
-        int     $offset
+        int $limit,
+        int $offset
     ): array {
         try {
             $db     = Database::connect();
@@ -67,14 +67,23 @@ class AdminProductModel
 
             // compound ORDER BY بالأولوية: سعر → كمية → تاريخ
             $orderParts = [];
-            if ($priceSort === 'price_desc')     $orderParts[] = 'p.price DESC';
-            elseif ($priceSort === 'price_asc')  $orderParts[] = 'p.price ASC';
+            if ($priceSort === 'price_desc') {
+                $orderParts[] = 'p.price DESC';
+            } elseif ($priceSort === 'price_asc') {
+                $orderParts[] = 'p.price ASC';
+            }
 
-            if ($stockSort === 'stock_desc')     $orderParts[] = 'total_stock DESC';
-            elseif ($stockSort === 'stock_asc')  $orderParts[] = 'total_stock ASC';
+            if ($stockSort === 'stock_desc') {
+                $orderParts[] = 'total_stock DESC';
+            } elseif ($stockSort === 'stock_asc') {
+                $orderParts[] = 'total_stock ASC';
+            }
 
-            if ($dateSort === 'date_asc')        $orderParts[] = 'p.date_added ASC';
-            elseif ($dateSort === 'date_desc')   $orderParts[] = 'p.date_added DESC';
+            if ($dateSort === 'date_asc') {
+                $orderParts[] = 'p.date_added ASC';
+            } elseif ($dateSort === 'date_desc') {
+                $orderParts[] = 'p.date_added DESC';
+            }
 
             // افتراضي: تاريخ تنازلي إذا لم يُحدد ترتيب
             if (empty($orderParts)) {
@@ -543,19 +552,26 @@ class AdminProductModel
             return null;
         }
 
-        $allowed = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
-        $mime    = mime_content_type($fileEntry['tmp_name']);
-        if (!in_array($mime, $allowed, true)) {
-            return null;
-        }
-
-        $ext = match ($mime) {
+        // خريطة واحدة تحكم القبول والامتداد معاً.
+        //
+        // كانت قائمة $allowed منفصلة عن أذرع match، ولا شيء يربطهما:
+        // إضافة 'image/avif' إلى القائمة بلا ذراع مقابل كانت تحفظ الملف
+        // بامتداد .jpg الافتراضي **بصمت** — صورة avif باسم jpg يرفضها
+        // المتصفح. الخريطة تجعل النسيان مستحيلاً: ما ليس فيها مفتاحاً
+        // يُرفض قبل أن يُسأل عن امتداده.
+        $extByMime = [
             'image/jpeg' => 'jpg',
             'image/png'  => 'png',
             'image/webp' => 'webp',
             'image/gif'  => 'gif',
-            default      => 'jpg',
-        };
+        ];
+
+        $mime = mime_content_type($fileEntry['tmp_name']);
+        if (!isset($extByMime[$mime])) {
+            return null;
+        }
+
+        $ext = $extByMime[$mime];
 
         $filename = 'product_' . time() . '_' . bin2hex(random_bytes(4)) . '.' . $ext;
         $dest     = rtrim($uploadDir, '/\\') . DIRECTORY_SEPARATOR . $filename;

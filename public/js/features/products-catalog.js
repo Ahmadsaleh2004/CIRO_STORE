@@ -48,6 +48,17 @@ function renderSlider(homeSliders) {
     const sliderSection = document.getElementById('mainSlider');
     if (!sliderInner) return;
 
+    // ⚠️ لا تُعِد بناء ما صُيِّر على الخادم.
+    //
+    // السلايدر صار يُصيَّر في home.php ويصل في HTML جاهزاً. وإعادة
+    // بنائه هنا تمحو صورةً حمّلها المتصفح سلفاً وتُنزّلها من جديد —
+    // وميضٌ مرئي وطلب مهدور، وضياع fetchpriority="high" على الشريحة
+    // الأولى وهي أكبر عنصر مرئي في الصفحة.
+    //
+    // الدالة تبقى للتحديث الحيّ (معاينة لوحة التحكّم مثلاً) وللارتداد
+    // لو صار الخادم لا يُصيّر يوماً.
+    if (sliderInner.children.length > 0) return;
+
     if (!homeSliders || !homeSliders.length) {
         // لا توجد بيانات سلايدر بعد — أخفِ القسم بالكامل بدل ترك مساحة فارغة
         if (sliderSection) sliderSection.style.display = 'none';

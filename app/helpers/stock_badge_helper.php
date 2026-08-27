@@ -1,4 +1,5 @@
 <?php
+
 /**
  * app/helpers/stock_badge_helper.php
  * دالة موحّدة لتحديد باج المخزون (Limited/Out of Stock).

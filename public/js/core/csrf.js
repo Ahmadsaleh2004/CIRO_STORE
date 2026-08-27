@@ -69,6 +69,26 @@ function rebuildBodyWithToken(options, newToken) {
         return { body: out, ok: true };
     }
 
+    // 1ب. URLSearchParams ككائن — لا كنصّ.
+    //
+    // المشروع اليوم لا يرسله (مفحوص: 38 موضعاً بـFormData و3 بـJSON،
+    // وURLSearchParams مستعملة لسلاسل الاستعلام وحدها). لكن `fetch`
+    // يقبله جسماً ويسلسله urlencoded من تلقائه، فكتابة
+    //     body: params
+    // خطوة طبيعية تماماً لمن يضيف نقطة جديدة.
+    //
+    // وبلا هذا الفرع كانت تسقط إلى «شكل لا نعرفه» فتُرجع ok=false —
+    // أي **تُفقد إعادة المحاولة بصمت**. وهو الصنف نفسه الذي أوقع هذا
+    // الملف ثلاث مرّات: الشبكة تبدو عاملة لأن الطلب الأول ينجح، ولا
+    // يظهر العطل إلا حين ينتهي التوكن فعلاً.
+    //
+    // أربعة أسطر تقفل باباً مفتوحاً، فُتح ثلاث مرّات من قبل.
+    if (typeof URLSearchParams !== 'undefined' && body instanceof URLSearchParams) {
+        const out = new URLSearchParams(body.toString());
+        out.set('csrf_token', newToken); // set يضيف إذا كان غائباً
+        return { body: out, ok: true };
+    }
+
     if (typeof body === 'string') {
         const contentType = headerValue(options.headers, 'content-type').toLowerCase();
         const looksJson   = contentType.includes('json')

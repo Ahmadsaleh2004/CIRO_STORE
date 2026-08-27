@@ -47,9 +47,6 @@ abstract class DatabaseTestCase extends TestCase
         parent::tearDown();
     }
 
-    /** قائمة الجداول — تُقرأ مرّة واحدة لكل تشغيل لا مرّة لكل اختبار. */
-    private static ?string $truncateSql = null;
-
     /**
      * يُفرّغ كل جداول قاعدة الاختبار.
      *
@@ -79,19 +76,28 @@ abstract class DatabaseTestCase extends TestCase
      */
     protected function truncateAll(): void
     {
-        if (self::$truncateSql === null) {
-            $tables = $this->pdo->query('SHOW TABLES')->fetchAll(PDO::FETCH_COLUMN);
+        // ⚠️ القائمة تُقرأ في كل مرّة، **ولا تُخبَّأ**.
+        //
+        // كانت مخبّأة في حقل static كتحسين، والتحسين كان خاطئاً من
+        // وجهين: أوّلاً أن القياس أثبت أن العنق هو TRUNCATE نفسه لا عدد
+        // الرحلات (راجع أدناه)، فالتخبئة لم توفّر شيئاً يُذكر. وثانياً —
+        // وهو الأهمّ — أنها تفترض مخطّطاً ثابتاً طوال التشغيل.
+        //
+        // وMigratorTest ينقض ذلك: يُسقط schema_migrations ويُنشئ جداول
+        // مؤقّتة. فالقائمة المخبّأة من أول اختبار تصير كاذبة، وتفشل
+        // سبعة عشر اختباراً بـ«Base table doesn't exist».
+        //
+        // استعلام SHOW TABLES رحلة واحدة بأجزاء من الملّي ثانية. الثمن
+        // الحقيقي كان في مكان آخر.
+        $tables = $this->pdo->query('SHOW TABLES')->fetchAll(PDO::FETCH_COLUMN);
 
-            $sql = 'SET FOREIGN_KEY_CHECKS = 0; ';
-            foreach ($tables as $table) {
-                $sql .= 'DELETE FROM `' . str_replace('`', '``', $table) . '`; ';
-            }
-            $sql .= 'SET FOREIGN_KEY_CHECKS = 1;';
-
-            self::$truncateSql = $sql;
+        $sql = 'SET FOREIGN_KEY_CHECKS = 0; ';
+        foreach ($tables as $table) {
+            $sql .= 'DELETE FROM `' . str_replace('`', '``', $table) . '`; ';
         }
+        $sql .= 'SET FOREIGN_KEY_CHECKS = 1;';
 
-        $this->pdo->exec(self::$truncateSql);
+        $this->pdo->exec($sql);
     }
 
     /** يعدّ صفوف جدول — مساعد يتكرّر في كل اختبار تقريباً. */

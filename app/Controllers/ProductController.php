@@ -19,7 +19,11 @@ class ProductController extends Controller
         parameters: [
             new OA\Parameter(name: 'page', in: 'query', schema: new OA\Schema(type: 'integer', default: 1)),
         ],
-        responses: [new OA\Response(response: 200, description: 'صفحة HTML')]
+        responses: [
+            new OA\Response(response: 200, ref: '#/components/responses/HtmlPage'),
+            new OA\Response(response: 404, ref: '#/components/responses/NotFoundPage'),
+            new OA\Response(response: 503, ref: '#/components/responses/ServiceUnavailable'),
+        ]
     )]
     public function index(): void
     {
@@ -114,7 +118,11 @@ class ProductController extends Controller
                 )
             )
         ),
-        responses: [new OA\Response(response: 200, description: 'صفحة HTML مع رسالة نجاح أو خطأ')]
+        responses: [
+            new OA\Response(response: 200, ref: '#/components/responses/HtmlPage'),
+            new OA\Response(response: 404, ref: '#/components/responses/NotFoundPage'),
+            new OA\Response(response: 503, ref: '#/components/responses/ServiceUnavailable'),
+        ]
     )]
     public function show(): void
     {
@@ -158,12 +166,14 @@ class ProductController extends Controller
 
         // جلب الـ Variants إن وجدت
         $variants = ProductModel::getVariants($pid);
-        
+
         // تجهيز الـ Variant المعروض (إن وجد، وإلا نستخدم بيانات المنتج الأساسية)
         $visitorGender   = getVisitorGender();
+        // الفرع الثاني كان `$variants[0] ?? []` — وهو مستحيل: نصل إليه
+        // فقط حين تكون $variants فارغة، فلا عنصر صفر فيها أبداً.
         $selectedVariant = !empty($variants)
-            ? pickDisplayVariant($variants, $visitorGender) 
-            : ($variants[0] ?? []);
+            ? pickDisplayVariant($variants, $visitorGender)
+            : [];
 
         // معالجة التقييمات
         $reviews   = ProductModel::getReviews($pid);

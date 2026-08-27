@@ -40,7 +40,7 @@ class AdminAuthController extends Controller
     #[OA\Get(
         path: '/admin/login',
         summary: 'عرض صفحة تسجيل دخول الأدمن',
-        tags: ['Admin Auth'],
+        tags: ['Admin - Auth'],
         responses: [
             new OA\Response(response: 200, description: 'صفحة HTML لتسجيل الدخول')
         ]
@@ -69,7 +69,7 @@ class AdminAuthController extends Controller
     #[OA\Post(
         path: '/admin/login',
         summary: 'تسجيل دخول الأدمن',
-        tags: ['Admin Auth'],
+        tags: ['Admin - Auth'],
         requestBody: new OA\RequestBody(
             required: true,
             content: new OA\MediaType(
@@ -77,9 +77,9 @@ class AdminAuthController extends Controller
                 schema: new OA\Schema(
                     required: ['email', 'password', 'csrf_token'],
                     properties: [
-                        new OA\Property(property: 'email',              type: 'string', format: 'email',    description: 'البريد الإلكتروني للأدمن'),
-                        new OA\Property(property: 'password',           type: 'string', format: 'password', description: 'كلمة المرور'),
-                        new OA\Property(property: 'csrf_token',         type: 'string', description: 'CSRF token — مطلوب دائماً'),
+                        new OA\Property(property: 'email', type: 'string', format: 'email', description: 'البريد الإلكتروني للأدمن'),
+                        new OA\Property(property: 'password', type: 'string', format: 'password', description: 'كلمة المرور'),
+                        new OA\Property(property: 'csrf_token', type: 'string', description: 'CSRF token — مطلوب دائماً'),
                         new OA\Property(property: 'h-captcha-response', type: 'string', description: 'hCaptcha response — مطلوب بعد أول محاولة فاشلة'),
                     ]
                 )
@@ -91,10 +91,10 @@ class AdminAuthController extends Controller
                 description: 'نجاح أو فشل تسجيل الدخول',
                 content: new OA\JsonContent(
                     properties: [
-                        new OA\Property(property: 'success',         type: 'boolean'),
-                        new OA\Property(property: 'message',         type: 'string'),
-                        new OA\Property(property: 'redirect',        type: 'string',  description: 'موجود عند النجاح فقط'),
-                        new OA\Property(property: 'show_captcha',    type: 'boolean', description: 'موجود عند الفشل — يعني يجب إظهار hCaptcha'),
+                        new OA\Property(property: 'success', type: 'boolean'),
+                        new OA\Property(property: 'message', type: 'string'),
+                        new OA\Property(property: 'redirect', type: 'string', description: 'موجود عند النجاح فقط'),
+                        new OA\Property(property: 'show_captcha', type: 'boolean', description: 'موجود عند الفشل — يعني يجب إظهار hCaptcha'),
                         new OA\Property(property: 'failed_attempts', type: 'integer', description: 'عدد المحاولات الفاشلة'),
                     ]
                 )
@@ -156,7 +156,6 @@ class AdminAuthController extends Controller
         $admin = AdminModel::findByEmail($email);
 
         if ($admin && password_verify($pass, $admin['password'])) {
-
             AdminModel::logLoginAttempt($email, true);
 
             // ── 2FA (TOTP) — خطوة ثانية اختيارية لكل أدمن ────────────
@@ -251,7 +250,7 @@ class AdminAuthController extends Controller
         summary: 'الخطوة الثانية من دخول الأدمن — التحقق من رمز TOTP',
         description: 'تُستدعى بعد أن يُرجع /admin/login الحقل requires_2fa. '
                    . 'الرمز من تطبيق مصادقة (Google Authenticator أو ما يماثله).',
-        tags: ['Admin Auth'],
+        tags: ['Admin - Auth'],
         requestBody: new OA\RequestBody(
             required: true,
             content: new OA\MediaType(
@@ -265,7 +264,18 @@ class AdminAuthController extends Controller
                 )
             )
         ),
-        responses: [new OA\Response(response: 200, description: 'JSON — {success, message, redirect?}')]
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'نتيجة العملية. الحقل success يفصل النجاح عن الفشل — كود HTTP يبقى 200 في الحالتين. وعند فشل CSRF يحمل الجسم error_code=csrf_invalid.',
+                content: new OA\JsonContent(oneOf: [
+                    new OA\Schema(ref: '#/components/schemas/ApiResponse'),
+                    new OA\Schema(ref: '#/components/schemas/ApiError'),
+                ])
+            ),
+            new OA\Response(response: 401, ref: '#/components/responses/SessionExpired'),
+            new OA\Response(response: 403, ref: '#/components/responses/PermissionDenied'),
+        ]
     )]
     public function verify2FALogin(): void
     {
@@ -348,7 +358,7 @@ class AdminAuthController extends Controller
     #[OA\Post(
         path: '/admin/logout',
         summary: 'تسجيل خروج الأدمن',
-        tags: ['Admin Auth'],
+        tags: ['Admin - Auth'],
         responses: [
             new OA\Response(response: 302, description: 'إعادة توجيه لـ /admin/login بعد تدمير الجلسة')
         ]
@@ -377,8 +387,13 @@ class AdminAuthController extends Controller
         if (ini_get('session.use_cookies')) {
             $p = session_get_cookie_params();
             setcookie(
-                session_name(), '', time() - 42000,
-                $p['path'], $p['domain'], $p['secure'], $p['httponly']
+                session_name(),
+                '',
+                time() - 42000,
+                $p['path'],
+                $p['domain'],
+                $p['secure'],
+                $p['httponly']
             );
         }
         session_destroy();
@@ -395,7 +410,7 @@ class AdminAuthController extends Controller
         summary: 'طلب رابط إعادة تعيين كلمة مرور الأدمن',
         description: 'الرسالة المُرجَعة واحدة سواء وُجد البريد أم لا — كي لا تكشف النقطة '
                    . 'أي البُرد مسجَّلة كأدمن.',
-        tags: ['Admin Auth'],
+        tags: ['Admin - Auth'],
         requestBody: new OA\RequestBody(
             required: true,
             content: new OA\MediaType(
@@ -409,7 +424,18 @@ class AdminAuthController extends Controller
                 )
             )
         ),
-        responses: [new OA\Response(response: 200, description: 'JSON — {success, message}')]
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'نتيجة العملية. الحقل success يفصل النجاح عن الفشل — كود HTTP يبقى 200 في الحالتين. وعند فشل CSRF يحمل الجسم error_code=csrf_invalid.',
+                content: new OA\JsonContent(oneOf: [
+                    new OA\Schema(ref: '#/components/schemas/ApiResponse'),
+                    new OA\Schema(ref: '#/components/schemas/ApiError'),
+                ])
+            ),
+            new OA\Response(response: 401, ref: '#/components/responses/SessionExpired'),
+            new OA\Response(response: 403, ref: '#/components/responses/PermissionDenied'),
+        ]
     )]
     public function forgotPassword(): void
     {
@@ -460,7 +486,7 @@ class AdminAuthController extends Controller
     #[OA\Post(
         path: '/admin/store-mode/enter',
         summary: 'دخول الأدمن لوضع تصفح المتجر كزائر (Store Mode)',
-        tags: ['Admin Auth'],
+        tags: ['Admin - Auth'],
         requestBody: new OA\RequestBody(
             required: true,
             content: new OA\MediaType(
@@ -527,7 +553,7 @@ class AdminAuthController extends Controller
     #[OA\Get(
         path: '/admin/store-mode/reauth',
         summary: 'عرض صفحة إعادة التحقق بكلمة السر قبل الرجوع للوحة',
-        tags: ['Admin Auth'],
+        tags: ['Admin - Auth'],
         responses: [
             new OA\Response(response: 200, description: 'صفحة HTML مستقلة لإعادة التحقق'),
             new OA\Response(response: 302, description: 'إعادة توجيه لـ /admin/home إن لم يكن الأدمن في وضع المتجر')
@@ -563,7 +589,7 @@ class AdminAuthController extends Controller
     #[OA\Post(
         path: '/admin/store-mode/reauth',
         summary: 'إعادة تحقق الأدمن بكلمة السر قبل الرجوع للوحة (JSON)',
-        tags: ['Admin Auth'],
+        tags: ['Admin - Auth'],
         requestBody: new OA\RequestBody(
             required: true,
             content: new OA\MediaType(
@@ -571,9 +597,9 @@ class AdminAuthController extends Controller
                 schema: new OA\Schema(
                     required: ['password', 'csrf_token'],
                     properties: [
-                        new OA\Property(property: 'password',   type: 'string', format: 'password', description: 'كلمة مرور الأدمن'),
+                        new OA\Property(property: 'password', type: 'string', format: 'password', description: 'كلمة مرور الأدمن'),
                         new OA\Property(property: 'csrf_token', type: 'string', description: 'CSRF token — مطلوب دائماً'),
-                        new OA\Property(property: 'return',      type: 'string', description: 'وجهة العودة (اختياري) — تُحمى ضد Open Redirect'),
+                        new OA\Property(property: 'return', type: 'string', description: 'وجهة العودة (اختياري) — تُحمى ضد Open Redirect'),
                     ]
                 )
             )
@@ -584,8 +610,8 @@ class AdminAuthController extends Controller
                 description: 'نجاح أو فشل التحقق',
                 content: new OA\JsonContent(
                     properties: [
-                        new OA\Property(property: 'success',  type: 'boolean'),
-                        new OA\Property(property: 'message',  type: 'string'),
+                        new OA\Property(property: 'success', type: 'boolean'),
+                        new OA\Property(property: 'message', type: 'string'),
                         new OA\Property(property: 'redirect', type: 'string', description: 'موجود عند النجاح فقط'),
                     ]
                 )
@@ -637,13 +663,19 @@ class AdminAuthController extends Controller
             ]);
         }
 
-        // نجاح — إزالة وضع المتجر من جلستي الأدمن والزائر معاً
-        unset($_SESSION['admin_in_store_mode']);
+        // نجاح — إزالة وضع المتجر من جلستي الأدمن والزائر معاً.
+        //
+        // الرفع إلى دالة ليس تجميلاً: كتابة unset مرّتين على $_SESSION
+        // تُخفي أن الاثنتين تعملان على **جلستين مختلفتين** — الأولى
+        // admin_session والثانية PHPSESSID بعد تبديل الاسم. السطران
+        // متطابقان نصّاً ومختلفان أثراً، وهذا أسوأ ما يمكن أن يكون
+        // عليه سطران متجاوران.
+        $this->forgetStoreMode();
         session_write_close();
 
         session_name('PHPSESSID');
         session_start();
-        unset($_SESSION['admin_in_store_mode']);
+        $this->forgetStoreMode();
         session_write_close();
 
         session_name('admin_session');
@@ -662,7 +694,7 @@ class AdminAuthController extends Controller
     #[OA\Get(
         path: '/admin/csrf',
         summary: 'توليد CSRF token جديد لفورم الأدمن',
-        tags: ['Admin Auth'],
+        tags: ['Admin - Auth'],
         responses: [
             new OA\Response(
                 response: 200,
@@ -670,7 +702,7 @@ class AdminAuthController extends Controller
                 content: new OA\JsonContent(
                     properties: [
                         new OA\Property(property: 'success', type: 'boolean', example: true),
-                        new OA\Property(property: 'token',   type: 'string',  description: 'CSRF token hex string'),
+                        new OA\Property(property: 'token', type: 'string', description: 'CSRF token hex string'),
                     ]
                 )
             )
@@ -773,4 +805,17 @@ class AdminAuthController extends Controller
     // الكلاس الأب — $this->view($path, $data, 'bare') — فلم يعد لنسخة
     // محلية معنى. الفروق التي كسبناها بالحذف: فحص الوجود يسبق أي إخراج،
     // وصفحة 404 حقيقية بدل "View not found: {$viewPath}" النصية.
+
+    /**
+     * يمحو علامة وضع المتجر من **الجلسة المفتوحة حالياً**.
+     *
+     * الاسم مهمّ: الدالة لا تعرف أي جلسة هي، وهذا مقصود — يستدعيها
+     * reauth مرّتين، مرّة لجلسة الأدمن ومرّة لجلسة الزائر بعد
+     * session_name('PHPSESSID'). الدالة تصف الفعل، والمستدعي يملك
+     * السياق.
+     */
+    private function forgetStoreMode(): void
+    {
+        unset($_SESSION['admin_in_store_mode']);
+    }
 }

@@ -6,7 +6,7 @@
  */
 ?>
 <!-- نقل Skip to content و BASE_URL لداية الـ body لتنظيف ملف الـ head -->
-<script>window.BASE_URL = "<?= URLROOT ?>";</script>
+<?= pageData(['BASE_URL' => URLROOT]) ?>
 <a href="#main-content" class="skip-nav">Skip to main content</a>
 
 <?php
@@ -113,7 +113,7 @@ $adminInStoreMode = !empty($_SESSION['admin_in_store_mode']);
                         <li><hr class="dropdown-divider" style="border-color:var(--section-border);"></li>
                         <!-- دالة الـ logoutUser() هي دالة JS معرفة في ملفات الـ JS الثابتة -->
                         <li><a class="dropdown-item text-danger" href="#"
-                               onclick="logoutUser()">🚪 Log Out</a></li>
+                               data-action="logout-user">🚪 Log Out</a></li>
                     </ul>
                 </div>
                 <?php endif; ?>

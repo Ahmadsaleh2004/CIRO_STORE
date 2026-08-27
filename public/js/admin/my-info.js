@@ -40,7 +40,7 @@
             if (res.success) {
                 form.querySelector('[name="current_password"]').value = '';
             }
-        } catch (err) {
+        } catch {
             msgEl.className   = 'alert alert-danger py-2 small';
             msgEl.textContent = 'Network error.';
             msgEl.style.display = 'block';

@@ -185,6 +185,47 @@ abstract class Controller
     }
 
     /**
+     * يفحص مدخلات الطلب ويُرجع القيم المطبَّعة — أو يردّ بأول خطأ ويخرج.
+     *
+     * سطران يربطان Validator بالطلب:
+     *
+     *     $input = $this->validate([
+     *         'full_address' => 'required|string|min:5|max:255',
+     *         'label'        => 'string|default:Home',
+     *         'city'         => 'nullable|string',
+     *     ]);
+     *
+     * ── لماذا يردّ ويخرج بدل أن يُرجع نتيجة ─────────────────
+     *
+     * لأن هذا **هو السلوك القائم حرفياً**. كل فعل اليوم يكتب:
+     *
+     *     if (!$full) { $this->respond(false, 'Full address is required.'); }
+     *
+     * و respond تُنهي الطلب. فالتحويل لا يغيّر شيئاً في التدفّق — يوحّد
+     * صياغته فقط. ولو أُرجعت نتيجة لوجب على كل مستدعٍ أن يتذكّر فحصها،
+     * وهو بالضبط ما يُنسى.
+     *
+     * ⚠️ يجب أن تُستدعى **بعد** beginJsonPost: تلك تضبط رأس JSON، وبلا
+     * الرأس تصل رسالة الخطأ نصّاً خاماً لا يقرأه العميل.
+     *
+     * ومنطق التحقّق نفسه في App\Core\Validator وهو نقيّ تماماً — لا
+     * يقرأ الطلب ولا يطبع — فيُختبَر بلا خادم ولا جلسة.
+     *
+     * @param array<string, string> $rules
+     * @return array<string, mixed>
+     */
+    protected function validate(array $rules): array
+    {
+        $validator = (new Validator($this->requestData()))->check($rules);
+
+        if ($validator->fails()) {
+            $this->respond(false, (string) $validator->firstError());
+        }
+
+        return $validator->validated();
+    }
+
+    /**
      * مدخلات الطلب موحّدة: $_POST مدموجاً بجسم JSON إن وُجد.
      *
      * لماذا؟ جزء من نقاط المشروع يرسل FormData وجزء يرسل JSON

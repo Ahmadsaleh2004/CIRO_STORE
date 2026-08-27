@@ -29,8 +29,8 @@ class AdminProductsController extends AdminController
         tags: ['Admin - Manage Products'],
         security: [['adminSessionAuth' => []]],
         parameters: [
-            new OA\Parameter(name: 'q',    in: 'query', schema: new OA\Schema(type: 'string')),
-            new OA\Parameter(name: 'cat',  in: 'query', schema: new OA\Schema(type: 'integer')),
+            new OA\Parameter(name: 'q', in: 'query', schema: new OA\Schema(type: 'string')),
+            new OA\Parameter(name: 'cat', in: 'query', schema: new OA\Schema(type: 'integer')),
             new OA\Parameter(name: 'sort', in: 'query', schema: new OA\Schema(
                 type: 'string',
                 enum: ['date_desc', 'date_asc', 'price_desc', 'price_asc', 'stock_desc', 'stock_asc']
@@ -62,8 +62,13 @@ class AdminProductsController extends AdminController
         $offset     = ($page - 1) * self::PER_PAGE;
 
         $products   = AdminProductModel::getPaginated(
-            $search, $categoryIds, $priceSort, $stockSort, $dateSort,
-            self::PER_PAGE, $offset
+            $search,
+            $categoryIds,
+            $priceSort,
+            $stockSort,
+            $dateSort,
+            self::PER_PAGE,
+            $offset
         );
         $categories = CategoryModel::getAllOrdered();
 
@@ -101,7 +106,12 @@ class AdminProductsController extends AdminController
         summary: 'عرض فورم إضافة منتج جديد',
         tags: ['Admin - Manage Products'],
         security: [['adminSessionAuth' => []]],
-        responses: [new OA\Response(response: 200, description: 'صفحة HTML للفورم')]
+        responses: [
+            new OA\Response(response: 200, ref: '#/components/responses/HtmlPage'),
+            new OA\Response(response: 302, ref: '#/components/responses/RedirectToLogin'),
+            new OA\Response(response: 403, ref: '#/components/responses/PermissionDenied'),
+            new OA\Response(response: 503, ref: '#/components/responses/ServiceUnavailable'),
+        ]
     )]
     public function showAdd(): void
     {
@@ -129,8 +139,8 @@ class AdminProductsController extends AdminController
                 schema: new OA\Schema(
                     required: ['name', 'category_ids', 'variants', 'csrf_token'],
                     properties: [
-                        new OA\Property(property: 'name',         type: 'string'),
-                        new OA\Property(property: 'description',  type: 'string'),
+                        new OA\Property(property: 'name', type: 'string'),
+                        new OA\Property(property: 'description', type: 'string'),
                         new OA\Property(property: 'manufacturer', type: 'string'),
                         new OA\Property(
                             property: 'category_ids',
@@ -155,10 +165,10 @@ class AdminProductsController extends AdminController
                 description: 'JSON — {success, message, product_id?, redirect?}. Always 200, even on validation errors (success:false + a message).',
                 content: new OA\JsonContent(
                     properties: [
-                        new OA\Property(property: 'success',    type: 'boolean'),
-                        new OA\Property(property: 'message',    type: 'string'),
+                        new OA\Property(property: 'success', type: 'boolean'),
+                        new OA\Property(property: 'message', type: 'string'),
                         new OA\Property(property: 'product_id', type: 'integer', nullable: true),
-                        new OA\Property(property: 'redirect',   type: 'string',  nullable: true, description: 'URL to navigate to on success'),
+                        new OA\Property(property: 'redirect', type: 'string', nullable: true, description: 'URL to navigate to on success'),
                     ]
                 )
             )
@@ -290,9 +300,9 @@ class AdminProductsController extends AdminController
                 schema: new OA\Schema(
                     required: ['product_id', 'category_ids', 'variants', 'csrf_token'],
                     properties: [
-                        new OA\Property(property: 'product_id',   type: 'integer'),
-                        new OA\Property(property: 'name',         type: 'string'),
-                        new OA\Property(property: 'description',  type: 'string'),
+                        new OA\Property(property: 'product_id', type: 'integer'),
+                        new OA\Property(property: 'name', type: 'string'),
+                        new OA\Property(property: 'description', type: 'string'),
                         new OA\Property(property: 'manufacturer', type: 'string'),
                         new OA\Property(property: 'category_ids', type: 'array', items: new OA\Items(type: 'integer')),
                         new OA\Property(
@@ -300,7 +310,7 @@ class AdminProductsController extends AdminController
                             type: 'array',
                             items: new OA\Items(type: 'object', description: 'صف variant واحد: color_name و price و discount و stock و gender و image'),
                         ),
-                        new OA\Property(property: 'csrf_token',   type: 'string'),
+                        new OA\Property(property: 'csrf_token', type: 'string'),
                     ]
                 )
             )
@@ -523,8 +533,8 @@ class AdminProductsController extends AdminController
                 description: 'JSON: {success, is_visible}',
                 content: new OA\JsonContent(
                     properties: [
-                        new OA\Property(property: 'success',    type: 'boolean'),
-                        new OA\Property(property: 'message',    type: 'string'),
+                        new OA\Property(property: 'success', type: 'boolean'),
+                        new OA\Property(property: 'message', type: 'string'),
                         new OA\Property(property: 'is_visible', type: 'integer', description: '0 أو 1'),
                     ]
                 )
@@ -610,7 +620,7 @@ class AdminProductsController extends AdminController
                 schema: new OA\Schema(
                     required: ['name', 'csrf_token'],
                     properties: [
-                        new OA\Property(property: 'name',       type: 'string'),
+                        new OA\Property(property: 'name', type: 'string'),
                         new OA\Property(property: 'csrf_token', type: 'string'),
                     ]
                 )
@@ -664,7 +674,7 @@ class AdminProductsController extends AdminController
                 schema: new OA\Schema(
                     required: ['category_id', 'destination_id', 'csrf_token'],
                     properties: [
-                        new OA\Property(property: 'category_id',    type: 'integer'),
+                        new OA\Property(property: 'category_id', type: 'integer'),
                         new OA\Property(
                             property: 'destination_id',
                             type: 'integer',
@@ -724,10 +734,14 @@ class AdminProductsController extends AdminController
         tags: ['Admin - Manage Products'],
         security: [['adminSessionAuth' => []]],
         parameters: [
-            new OA\Parameter(name: 'q',   in: 'query', schema: new OA\Schema(type: 'string')),
+            new OA\Parameter(name: 'q', in: 'query', schema: new OA\Schema(type: 'string')),
             new OA\Parameter(name: 'cat', in: 'query', schema: new OA\Schema(type: 'integer')),
         ],
-        responses: [new OA\Response(response: 200, description: 'ملف CSV للتحميل')]
+        responses: [
+            new OA\Response(response: 200, ref: '#/components/responses/CsvDownload'),
+            new OA\Response(response: 401, ref: '#/components/responses/SessionExpired'),
+            new OA\Response(response: 403, ref: '#/components/responses/PermissionDenied'),
+        ]
     )]
     public function exportCsv(): void
     {
@@ -743,7 +757,13 @@ class AdminProductsController extends AdminController
                         ? $_GET['date_sort'] : null;
 
         $rows = AdminProductModel::getPaginated(
-            $search, $categoryIds, $priceSort, $stockSort, $dateSort, 100000, 0
+            $search,
+            $categoryIds,
+            $priceSort,
+            $stockSort,
+            $dateSort,
+            100000,
+            0
         );
 
         AdminModel::logAction(
@@ -822,5 +842,4 @@ class AdminProductsController extends AdminController
             );
         }
     }
-
 }

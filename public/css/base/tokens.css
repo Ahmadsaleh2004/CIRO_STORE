@@ -8,13 +8,13 @@
 :root {
     --bg-color:          #f0f2f5;
     --text-color:        #1a1a2e;
-    --card-bg:           #ffffff;
+    --card-bg:           #fff;
     --navbar-bg:         #1a1a2e;
-    --navbar-text:       #ffffff;
+    --navbar-text:       #fff;
     --footer-bg:         #1a1a2e;
     --footer-text:       #e2e8f0;
     --footer-link:       #94a3b8;
-    --input-bg:          #ffffff;
+    --input-bg:          #fff;
     --input-border:      #d1d5db;
     --input-text:        #1a1a2e;
     --placeholder-color: #9ca3af;
@@ -24,7 +24,7 @@
        instead. Both values clear 4.5:1 (WCAG AA) on their own theme's
        card and page backgrounds. */
     --muted-text:        #5b6472;
-    --modal-bg:          #ffffff;
+    --modal-bg:          #fff;
     --modal-text:        #1a1a2e;
     --modal-border:      #e5e7eb;
     --shadow-color:      rgba(15, 15, 15, 0.04);
@@ -40,9 +40,9 @@
     --accent-strong:     #4f46e5;  /* solid accent fill under white text */
     --price-color:       #6366f1;
     --badge-bg:          #ef4444;
-    --badge-text:        #ffffff;
+    --badge-text:        #fff;
     --badge-bg-soft:     #1a1a2e;
-    --badge-text-soft:   #ffffff;
+    --badge-text-soft:   #fff;
     --section-border:    #e5e7eb;
     --card-radius:       10px;
     --card-border-color:  rgba(15, 15, 15, 0.09);
@@ -99,7 +99,7 @@ html[data-bs-theme="dark"] body {
     --accent-strong:     #4338ca;
     --price-color:       #818cf8;
     --badge-bg:          #f87171;
-    --badge-text:        #ffffff;
+    --badge-text:        #fff;
     --badge-bg-soft:     #e6edf3;
     --badge-text-soft:   #1a1a2e;
     --section-border:    #30363d;

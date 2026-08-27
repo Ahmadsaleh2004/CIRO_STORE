@@ -39,7 +39,8 @@ class BackupModel
 
         // 2) Fallback: تصدير SQL يدوي عبر PDO
         $sql = self::exportSqlNative();
-        if (!is_string($sql) || $sql === '') {
+        // exportSqlNative معلَنة `: string`، فـis_string كانت دائماً true.
+        if ($sql === '') {
             return ['success' => false, 'filename' => null, 'message' => 'Both mysqldump and native export failed.'];
         }
 
@@ -107,11 +108,16 @@ class BackupModel
             $cnf  = escapeshellarg($cnfPath);
 
             foreach ($candidates as $bin) {
-                if ($bin !== 'mysqldump' && !is_file($bin)) continue;
+                if ($bin !== 'mysqldump' && !is_file($bin)) {
+                    continue;
+                }
                 $cmd = sprintf(
                     '%s --defaults-extra-file=%s'
                     . ' --single-transaction --routines --triggers %s > %s 2>&1',
-                    escapeshellarg($bin), $cnf, $name, $out
+                    escapeshellarg($bin),
+                    $cnf,
+                    $name,
+                    $out
                 );
                 // الأمر لا يحمل أي مدخل مستخدم: $bin من قائمة مسارات
                 // مكتوبة في هذا الملف، و$name من ثابت DB_NAME، و$path
@@ -147,7 +153,9 @@ class BackupModel
         try {
             $db    = Database::connect();
             $tables = $db->query('SHOW TABLES')->fetchAll(\PDO::FETCH_COLUMN);
-            if (!$tables) return '';
+            if (!$tables) {
+                return '';
+            }
 
             $out  = "-- Cairo Store Database Backup\n";
             $out .= "-- Generated: " . date('Y-m-d H:i:s') . " (PHP native export)\n";
@@ -162,14 +170,20 @@ class BackupModel
                 $out .= ($row['Create Table'] ?? '') . ";\n\n";
 
                 $rows = $db->query("SELECT * FROM `{$table}`")->fetchAll(\PDO::FETCH_ASSOC);
-                if (!$rows) continue;
+                if (!$rows) {
+                    continue;
+                }
 
                 $out .= "-- Data: `{$table}`\n";
                 foreach ($rows as $row) {
                     $cols  = array_map(fn(string $c) => "`{$c}`", array_keys($row));
                     $vals  = implode(',', array_map(function ($v) use ($db) {
-                        if ($v === null) return 'NULL';
-                        if (is_int($v) || is_float($v)) return (string)$v;
+                        if ($v === null) {
+                            return 'NULL';
+                        }
+                        if (is_int($v) || is_float($v)) {
+                            return (string)$v;
+                        }
                         return $db->quote((string)$v);
                     }, array_values($row)));
                     $out .= "INSERT INTO `{$table}` (" . implode(',', $cols) . ") VALUES ({$vals});\n";
@@ -191,18 +205,24 @@ class BackupModel
     public static function listBackups(): array
     {
         $dir = self::getDir();
-        if (!is_dir($dir)) return [];
+        if (!is_dir($dir)) {
+            return [];
+        }
 
         $files = glob($dir . '/' . self::PREFIX . '*.sql');
-        if (!$files) return [];
+        if (!$files) {
+            return [];
+        }
 
         $result = [];
         foreach ($files as $file) {
-            if (!is_file($file)) continue;
+            if (!is_file($file)) {
+                continue;
+            }
             $result[] = [
                 'filename'  => basename($file),
                 'size'      => filesize($file),
-                'size_human'=> self::formatBytes((int)filesize($file)),
+                'size_human' => self::formatBytes((int)filesize($file)),
                 'date'      => date('Y-m-d H:i:s', filemtime($file)),
             ];
         }
@@ -217,7 +237,9 @@ class BackupModel
     public static function deleteBackup(string $filename): bool
     {
         $path = self::getBackupPath($filename);
-        if ($path === null) return false;
+        if ($path === null) {
+            return false;
+        }
         // getBackupPath هي الحارس: تشترط basename($f) === $f، وتطابق
         // نمطاً صارماً للاسم، وتتحقق is_file — فما يصل هنا مسار مفهرس
         // داخل مجلد النسخ لا غير.
@@ -231,8 +253,12 @@ class BackupModel
      */
     public static function getBackupPath(string $filename): ?string
     {
-        if (basename($filename) !== $filename) return null;
-        if (!preg_match(self::PATTERN, $filename)) return null;
+        if (basename($filename) !== $filename) {
+            return null;
+        }
+        if (!preg_match(self::PATTERN, $filename)) {
+            return null;
+        }
 
         $path = self::getDir() . DIRECTORY_SEPARATOR . $filename;
         return is_file($path) ? $path : null;
@@ -246,8 +272,12 @@ class BackupModel
 
     private static function formatBytes(int $bytes): string
     {
-        if ($bytes >= 1048576) return number_format($bytes / 1048576, 2) . ' MB';
-        if ($bytes >= 1024)    return number_format($bytes / 1024, 1) . ' KB';
+        if ($bytes >= 1048576) {
+            return number_format($bytes / 1048576, 2) . ' MB';
+        }
+        if ($bytes >= 1024) {
+            return number_format($bytes / 1024, 1) . ' KB';
+        }
         return $bytes . ' B';
     }
 }

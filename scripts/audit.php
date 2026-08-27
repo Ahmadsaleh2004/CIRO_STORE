@@ -1,4 +1,5 @@
 <?php
+
 /**
  * scripts/audit.php
  * تقرير قياس لحالة الكود — شغّله قبل وبعد كل مرحلة تنظيف لترى التقدّم
@@ -26,13 +27,17 @@ $asJson = in_array('--json', $argv, true);
 // ── أدوات مساعدة ───────────────────────────────────────────────────
 function filesIn(string $dir, string $ext = 'php'): array
 {
-    if (!is_dir($dir)) return [];
+    if (!is_dir($dir)) {
+        return [];
+    }
     $out = [];
     $it  = new RecursiveIteratorIterator(
         new RecursiveDirectoryIterator($dir, FilesystemIterator::SKIP_DOTS)
     );
     foreach ($it as $f) {
-        if ($f->isFile() && $f->getExtension() === $ext) $out[] = $f->getPathname();
+        if ($f->isFile() && $f->getExtension() === $ext) {
+            $out[] = $f->getPathname();
+        }
     }
     sort($out);
     return $out;
@@ -53,12 +58,16 @@ function openApiLines(string $file): int
 
     foreach ($lines as $line) {
         $inBlock = $depth > 0;
-        if (!$inBlock && !preg_match('/#\[OA\\\\/', $line)) continue;
+        if (!$inBlock && !preg_match('/#\[OA\\\\/', $line)) {
+            continue;
+        }
 
         $count++;
         $depth += substr_count($line, '(') + substr_count($line, '[');
         $depth -= substr_count($line, ')') + substr_count($line, ']');
-        if ($depth < 0) $depth = 0;
+        if ($depth < 0) {
+            $depth = 0;
+        }
     }
 
     return $count;
@@ -81,8 +90,10 @@ function blankPhpComments(string $src): string
 {
     // الـviews مزيج HTML وPHP؛ token_get_all يتعامل معها كما يتعامل معها
     // المفسّر نفسه، فأجزاء الـHTML تصل كـT_INLINE_HTML بلا تغيير.
+    // token_get_all تُرجع مصفوفة دائماً (ترمي عند الخطأ ولا تُرجع
+    // false)، فالمقارنة بـfalse كانت شرطاً لا يتحقّق.
     $tokens = @token_get_all($src);
-    if ($tokens === false || $tokens === []) {
+    if ($tokens === []) {
         return $src; // ملف غير قابل للتحليل — أرجعه كما هو بدل إسقاطه
     }
 
@@ -139,12 +150,24 @@ function inlineAssetLines(string $file): array
     $js = $css = 0;
 
     foreach ($lines as $line) {
-        if (preg_match('/<script(?![^>]*\bsrc=)[^>]*>/i', $line)) $inJs  = true;
-        if (preg_match('/<style/i', $line))                       $inCss = true;
-        if ($inJs)  $js++;
-        if ($inCss) $css++;
-        if (stripos($line, '</script>') !== false) $inJs  = false;
-        if (stripos($line, '</style>')  !== false) $inCss = false;
+        if (preg_match('/<script(?![^>]*\bsrc=)[^>]*>/i', $line)) {
+            $inJs  = true;
+        }
+        if (preg_match('/<style/i', $line)) {
+            $inCss = true;
+        }
+        if ($inJs) {
+            $js++;
+        }
+        if ($inCss) {
+            $css++;
+        }
+        if (stripos($line, '</script>') !== false) {
+            $inJs  = false;
+        }
+        if (stripos($line, '</style>')  !== false) {
+            $inCss = false;
+        }
     }
 
     return ['js' => $js, 'css' => $css];
@@ -178,13 +201,20 @@ function longestFunctions(array $files, int $limit = 10): array
                 // تجاهل الأقواس داخل النصوص البسيطة على السطر
                 $code   = preg_replace('/([\'"]).*?\1/', '', $lines[$j]);
                 $depth += substr_count($code, '{');
-                if ($depth > 0) $seen = true;
+                if ($depth > 0) {
+                    $seen = true;
+                }
                 $depth -= substr_count($code, '}');
-                if ($seen && $depth <= 0) { $end = $j; break; }
+                if ($seen && $depth <= 0) {
+                    $end = $j;
+                    break;
+                }
             }
 
             // دالة مجرّدة أو تعريف واجهة (بلا جسم)
-            if ($end === null) continue;
+            if ($end === null) {
+                continue;
+            }
 
             $found[] = ['file' => $file, 'name' => $m[1], 'lines' => $end - $i + 1];
         }
@@ -210,7 +240,9 @@ function grepFiles(array $files, string $pattern): array
     foreach ($files as $f) {
         $src = file_get_contents($f) ?: '';
         $c   = preg_match_all($pattern, $src);
-        if ($c > 0) $hits[$f] = $c;
+        if ($c > 0) {
+            $hits[$f] = $c;
+        }
     }
     arsort($hits);
     return $hits;
@@ -258,7 +290,9 @@ foreach ($views as $f) {
     $a = inlineAssetLines($f);
     $inlineJs  += $a['js'];
     $inlineCss += $a['css'];
-    if ($a['js'] + $a['css'] > 0) $inlinePerFile[basename($f)] = $a;
+    if ($a['js'] + $a['css'] > 0) {
+        $inlinePerFile[basename($f)] = $a;
+    }
 }
 uasort($inlinePerFile, fn($x, $y) => ($y['js'] + $y['css']) <=> ($x['js'] + $x['css']));
 
@@ -297,17 +331,25 @@ printf("  %-20s %8s %10s\n  %s\n", 'الطبقة', 'ملفات', 'أسطر', $ba
 foreach ($report['layers'] as $name => $d) {
     printf("  %-20s %8d %10s\n", $name, $d['files'], number_format($d['lines']));
 }
-printf("  %s\n  %-20s %8d %10s\n\n", $bar, 'المجموع',
+printf(
+    "  %s\n  %-20s %8d %10s\n\n",
+    $bar,
+    'المجموع',
     array_sum(array_column($report['layers'], 'files')),
-    number_format(array_sum(array_column($report['layers'], 'lines'))));
+    number_format(array_sum(array_column($report['layers'], 'lines')))
+);
 
 printf("  توثيق OpenAPI داخل الكنترولرز\n  %s\n", $bar);
 printf("  %-42s %6s %8s %6s\n", 'الملف', 'إجمالي', 'توثيق', 'كود');
 foreach ($report['openapi'] as $f => $d) {
     printf("  %-42s %6d %8d %6d\n", $f, $d['total'], $d['openapi'], $d['code']);
 }
-printf("  %s\n  إجمالي أسطر التوثيق: %d · كنترولرز بلا توثيق: %d\n",
-    $bar, $report['issues']['openapi_lines_total'], $report['issues']['controllers_no_docs']);
+printf(
+    "  %s\n  إجمالي أسطر التوثيق: %d · كنترولرز بلا توثيق: %d\n",
+    $bar,
+    $report['issues']['openapi_lines_total'],
+    $report['issues']['controllers_no_docs']
+);
 if ($report['no_openapi']) {
     echo '    ' . implode(', ', $report['no_openapi']) . "\n";
 }

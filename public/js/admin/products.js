@@ -163,7 +163,7 @@ function initEditProductForm(form) {
                 if (typeof showToast === 'function') showToast(data.message || 'Could not update product.', 'error');
                 btn.disabled = false;
             }
-        } catch (err) {
+        } catch {
             if (typeof showToast === 'function') showToast('Network error. Please try again.', 'error');
             btn.disabled = false;
         }
@@ -259,7 +259,7 @@ function initAddProductForm(form) {
                 if (typeof showToast === 'function') showToast(data.message || 'Could not add product.', 'error');
                 if (submitBtn) submitBtn.disabled = false;
             }
-        } catch (err) {
+        } catch {
             if (typeof showToast === 'function') showToast('Network error. Please try again.', 'error');
             if (submitBtn) submitBtn.disabled = false;
         }
@@ -310,7 +310,7 @@ function initProductsListInteractions() {
                 if (typeof showToast === 'function') {
                     showToast(visible ? 'Product is now visible.' : 'Product hidden from store.', 'success');
                 }
-            } catch (err) {
+            } catch {
                 if (typeof showToast === 'function') showToast('Network error. Please try again.', 'error');
             } finally {
                 btn.disabled = false;
@@ -356,7 +356,7 @@ function initProductsListInteractions() {
                     } else {
                         if (typeof showToast === 'function') showToast(data.message || 'Error deleting product.', 'error');
                     }
-                } catch (err) {
+                } catch {
                     if (typeof showToast === 'function') showToast('Network error.', 'error');
                 }
             });

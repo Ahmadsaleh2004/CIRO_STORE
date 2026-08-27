@@ -28,7 +28,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     document.getElementById('currentPassword').value = '';
                     document.getElementById('newPassword').value = '';
                 }
-            } catch (err) {
+            } catch {
                 msgEl.className = 'alert alert-danger py-2 small';
                 msgEl.textContent = 'Network error, please try again.';
                 msgEl.style.display = 'block';
@@ -67,7 +67,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (result.success) {
                     setTimeout(() => location.reload(), 1200);
                 }
-            } catch (err) {
+            } catch {
                 msgEl.className = 'alert alert-danger py-2 small';
                 msgEl.textContent = 'Network error, please try again.';
                 msgEl.style.display = 'block';
@@ -101,7 +101,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 } else {
                     Swal.fire({ icon: 'error', text: data.message });
                 }
-            } catch (err) {
+            } catch {
                 Swal.fire({ icon: 'error', text: 'Network error.' });
             }
         });

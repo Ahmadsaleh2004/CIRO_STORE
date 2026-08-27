@@ -41,7 +41,7 @@ document.querySelectorAll('.order-cancel-btn').forEach(btn => {
             } else {
                 Swal.fire({ icon: 'error', text: data.message });
             }
-        } catch (e) {
+        } catch {
             Swal.fire({ icon: 'error', text: 'Network error. Please try again.' });
         }
     });

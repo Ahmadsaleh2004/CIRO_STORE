@@ -17,10 +17,14 @@ define('ROOTPATH', dirname(dirname(__DIR__)));
 // ==========================================
 //
 // يُحمَّل من **هنا** لا من نقطة الدخول وحدها. كان public/index.php
-// يستدعي loadEnv بنفسه، لكن scripts/reset_admins_keep_root.php يحمّل
-// config.php مباشرة بلا استدعاء — فكان سيعمل ببيئة فارغة ويتصل بقاعدة
-// غير المقصودة **بصمت**. جعل config.php مكتفياً بذاته يغلق هذا الباب
-// لكل نقطة دخول قائمة أو قادمة.
+// يستدعي loadEnv بنفسه، وكان سكربت في scripts/ يحمّل config.php
+// مباشرة بلا استدعاء — فيعمل ببيئة فارغة ويتصل بقاعدة غير المقصودة
+// **بصمت**. جعل config.php مكتفياً بذاته يغلق هذا الباب لكل نقطة دخول
+// قائمة أو قادمة.
+//
+// (ذلك السكربت — reset_admins_keep_root — حُذف لاحقاً لأنه كان يمحو
+// كل الأدمنية عدا الجذر، وهي أداة لا مكان لها في مستودع إنتاج. لكن
+// الدرس بقي: نقطة الدخول لا يجب أن تتذكّر شيئاً.)
 //
 // loadEnv يحمل حارس `static $loaded`، فاستدعاؤه مرّة أخرى من
 // public/index.php لا يفعل شيئاً ولا يدهس ما حُمّل.
@@ -37,12 +41,12 @@ loadEnv(ROOTPATH . '/.env');
 // دائم: المطوّر يرى الخطأ على شاشته، والخادم يكتبه في سجلّه، والزائر
 // لا يرى إلا صفحة خطأ نظيفة.
 
-define('APP_ENV',   env('APP_ENV', 'production'));
+define('APP_ENV', env('APP_ENV', 'production'));
 define('APP_DEBUG', envBool('APP_DEBUG', APP_ENV !== 'production'));
 
 // الافتراضي الآمن مقصود: غياب APP_ENV يعني **إنتاج** لا تطوير. نسيان
 // ضبط المتغيّر يجب أن يُخفي الأخطاء لا أن يكشفها.
-ini_set('display_errors',         APP_DEBUG ? '1' : '0');
+ini_set('display_errors', APP_DEBUG ? '1' : '0');
 ini_set('display_startup_errors', APP_DEBUG ? '1' : '0');
 error_reporting(E_ALL);
 
@@ -83,12 +87,12 @@ define('SITENAME', env('APP_NAME', 'Cairo Store'));
 // كثوابت لا كقراءة مباشرة لأن BackupModel::createDump يستعملها في ملف
 // خيارات mysqldump؛ تحويلها إلى $_ENV هناك كان تغييراً بلا داعٍ في
 // مسار يتعامل مع كلمة السر.
-define('DB_HOST',    env('DB_HOST',     '127.0.0.1'));
-define('DB_PORT',    env('DB_PORT',     '3306'));
-define('DB_NAME',    env('DB_DATABASE', 'store_db'));
-define('DB_USER',    env('DB_USERNAME', 'root'));
-define('DB_PASS',    $_ENV['DB_PASSWORD'] ?? '');  // ← لا env(): كلمة السر الفارغة قيمة صالحة هنا
-define('DB_CHARSET', env('DB_CHARSET',  'utf8mb4'));
+define('DB_HOST', env('DB_HOST', '127.0.0.1'));
+define('DB_PORT', env('DB_PORT', '3306'));
+define('DB_NAME', env('DB_DATABASE', 'store_db'));
+define('DB_USER', env('DB_USERNAME', 'root'));
+define('DB_PASS', $_ENV['DB_PASSWORD'] ?? '');  // ← لا env(): كلمة السر الفارغة قيمة صالحة هنا
+define('DB_CHARSET', env('DB_CHARSET', 'utf8mb4'));
 
 // ==========================================
 // 6. تصليب الجلسة (Session Hardening)

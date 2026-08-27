@@ -22,7 +22,31 @@ class NotificationController extends Controller
         tags: ['Store - Notifications'],
         security: [['userSessionAuth' => []]],
         responses: [
-            new OA\Response(response: 200, description: 'JSON — {success, message, notifications[], unread}'),
+            new OA\Response(
+                response: 200,
+                description: 'قائمة إشعارات المستخدم وعدد غير المقروء منها.',
+                content: new OA\JsonContent(
+                    allOf: [
+                        new OA\Schema(ref: '#/components/schemas/ApiResponse'),
+                        new OA\Schema(
+                            properties: [
+                                new OA\Property(
+                                    property: 'notifications',
+                                    type: 'array',
+                                    items: new OA\Items(ref: '#/components/schemas/Notification')
+                                ),
+                                new OA\Property(
+                                    property: 'unread',
+                                    type: 'integer',
+                                    description: 'عدد غير المقروء — يُستعمل لشارة الجرس.',
+                                    example: 3
+                                ),
+                            ],
+                            type: 'object'
+                        ),
+                    ]
+                )
+            ),
         ]
     )]
     public function list(): void
@@ -71,7 +95,16 @@ class NotificationController extends Controller
                 )
             )
         ),
-        responses: [new OA\Response(response: 200, description: 'JSON — {success, message}')]
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'نتيجة العملية. الحقل success يفصل النجاح عن الفشل — كود HTTP يبقى 200 في الحالتين. وعند فشل CSRF يحمل الجسم error_code=csrf_invalid.',
+                content: new OA\JsonContent(oneOf: [
+                    new OA\Schema(ref: '#/components/schemas/ApiResponse'),
+                    new OA\Schema(ref: '#/components/schemas/ApiError'),
+                ])
+            ),
+        ]
     )]
     public function markRead(): void
     {
@@ -99,7 +132,16 @@ class NotificationController extends Controller
         summary: 'تعليم كل إشعارات المستخدم كمقروءة',
         tags: ['Store - Notifications'],
         security: [['userSessionAuth' => []]],
-        responses: [new OA\Response(response: 200, description: 'JSON — {success, message}')]
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'نتيجة العملية. الحقل success يفصل النجاح عن الفشل — كود HTTP يبقى 200 في الحالتين. وعند فشل CSRF يحمل الجسم error_code=csrf_invalid.',
+                content: new OA\JsonContent(oneOf: [
+                    new OA\Schema(ref: '#/components/schemas/ApiResponse'),
+                    new OA\Schema(ref: '#/components/schemas/ApiError'),
+                ])
+            ),
+        ]
     )]
     public function markAllRead(): void
     {
@@ -132,7 +174,16 @@ class NotificationController extends Controller
                 )
             )
         ),
-        responses: [new OA\Response(response: 200, description: 'JSON — {success, message}')]
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'نتيجة العملية. الحقل success يفصل النجاح عن الفشل — كود HTTP يبقى 200 في الحالتين. وعند فشل CSRF يحمل الجسم error_code=csrf_invalid.',
+                content: new OA\JsonContent(oneOf: [
+                    new OA\Schema(ref: '#/components/schemas/ApiResponse'),
+                    new OA\Schema(ref: '#/components/schemas/ApiError'),
+                ])
+            ),
+        ]
     )]
     public function dismiss(): void
     {
@@ -160,7 +211,16 @@ class NotificationController extends Controller
         summary: 'حذف كل إشعارات المستخدم',
         tags: ['Store - Notifications'],
         security: [['userSessionAuth' => []]],
-        responses: [new OA\Response(response: 200, description: 'JSON — {success, message}')]
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'نتيجة العملية. الحقل success يفصل النجاح عن الفشل — كود HTTP يبقى 200 في الحالتين. وعند فشل CSRF يحمل الجسم error_code=csrf_invalid.',
+                content: new OA\JsonContent(oneOf: [
+                    new OA\Schema(ref: '#/components/schemas/ApiResponse'),
+                    new OA\Schema(ref: '#/components/schemas/ApiError'),
+                ])
+            ),
+        ]
     )]
     public function deleteAll(): void
     {

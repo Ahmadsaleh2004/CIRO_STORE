@@ -287,8 +287,8 @@ class UserModel
     public static function getAllForAdmin(
         string $search,
         string $status,
-        int    $page,
-        int    $perPage = 20
+        int $page,
+        int $perPage = 20
     ): array {
         try {
             $db      = Database::connect();
@@ -392,8 +392,7 @@ class UserModel
                            (SELECT COUNT(*) FROM user_strikes us WHERE us.user_id = u.id) AS strikes_count
                     FROM users u
                 ) t
-                WHERE " . implode(' OR ', $conds)
-            );
+                WHERE " . implode(' OR ', $conds));
 
             return array_map('intval', $stmt->fetchAll(\PDO::FETCH_COLUMN));
         } catch (Exception $e) {
@@ -530,7 +529,9 @@ class UserModel
                 'ordersByStatus'     => $ordersByStatus,
             ];
         } catch (Exception $e) {
-            if ($db->inTransaction()) $db->rollBack();
+            if ($db->inTransaction()) {
+                $db->rollBack();
+            }
             error_log("UserModel::deleteUser Error: " . $e->getMessage());
             return ['success' => false, 'ordersDeletedCount' => 0, 'ordersByStatus' => $ordersByStatus];
         }
@@ -541,12 +542,12 @@ class UserModel
      * (الموجودة والمختبرة) للحفاظ على التماثل مع AdminModel::sendNotification().
      */
     public static function sendNotification(
-        int     $userId,
-        string  $title,
-        string  $message,
-        ?int    $senderAdminId = null,
-        ?string $relatedType   = null,
-        ?int    $relatedId     = null
+        int $userId,
+        string $title,
+        string $message,
+        ?int $senderAdminId = null,
+        ?string $relatedType = null,
+        ?int $relatedId = null
     ): void {
         \App\Models\NotificationModel::insert($userId, $title, $message, $senderAdminId, $relatedType, $relatedId);
     }
@@ -668,7 +669,9 @@ class UserModel
             $stmt = $db->prepare("SELECT user_id FROM email_verifications WHERE token_hash = ? AND expires_at > NOW() LIMIT 1");
             $stmt->execute([$tokenHash]);
             $row = $stmt->fetch();
-            if (!$row) return false;
+            if (!$row) {
+                return false;
+            }
 
             $update = $db->prepare("UPDATE users SET email_verified_at = NOW() WHERE id = ?");
             $update->execute([$row['user_id']]);
