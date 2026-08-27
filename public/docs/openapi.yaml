@@ -28,7 +28,7 @@ paths:
       tags:
         - 'Admin - Site Settings'
       summary: 'حفظ إعدادات الموقع (AJAX) — الحقول المالية/العملة تُقبل فقط لصاحب can_manage_checkout_settings'
-      description: "AdminSiteSettingsController — صفحة إعدادات الموقع للأدمن.\nيرث من AdminController الذي يتحقق من تسجيل دخول الأدمن تلقائياً."
+      description: "AdminSiteSettingsController — صفحة إعدادات الموقع للأدمن.\r\nيرث من AdminController الذي يتحقق من تسجيل دخول الأدمن تلقائياً."
       operationId: 3e053842fbd06f520e821e6726b6fe5f
       requestBody:
         required: true
@@ -1663,7 +1663,7 @@ paths:
       tags:
         - 'Admin - Support'
       summary: 'إرسال رد على رسالة دعم كإشعار للمستخدم صاحب الرسالة'
-      description: "AdminSupportController — صفحة رسائل الدعم الفني للأدمن.\nيرث من AdminController الذي يتحقق من تسجيل دخول الأدمن تلقائياً."
+      description: "AdminSupportController — صفحة رسائل الدعم الفني للأدمن.\r\nيرث من AdminController الذي يتحقق من تسجيل دخول الأدمن تلقائياً."
       operationId: 1352770916a2a4c08bb0492de4740ed7
       requestBody:
         required: true
@@ -2338,7 +2338,7 @@ paths:
               type: object
       responses:
         '200':
-          description: "المخزون الحيّ للنسخ المطلوبة.\n\nالسلّة محفوظة في متصفّح الزائر، فقد تحمل أسعاراً ومخزوناً\nقديمين. هذه النقطة تُرجع الحقيقة من القاعدة قبل الدفع."
+          description: "المخزون الحيّ للنسخ المطلوبة.\r\n\r\nالسلّة محفوظة في متصفّح الزائر، فقد تحمل أسعاراً ومخزوناً\r\nقديمين. هذه النقطة تُرجع الحقيقة من القاعدة قبل الدفع."
           content:
             application/json:
               schema:
@@ -2460,7 +2460,7 @@ paths:
       tags:
         - 'Store - Pages'
       summary: 'إرسال نموذج "اتصل بنا" من الصفحة نفسها'
-      description: "النقطة الوحيدة التي كانت مسجَّلة في الراوتر وغائبة عن المواصفة\n(103 من 104). وُثّقت هنا كما تعمل فعلاً.\n\nتختلف عن POST /contact/send اختلافاً جوهرياً: هذه **لا تُرجع\nJSON**. الدالة تخدم GET وPOST معاً، وتعيد عرض الصفحة كاملةً مع\nرسالة نجاح أو خطأ في متن HTML. ولهذا استُثنيت من beginJsonPost\nصراحةً — الفشل هنا لا يوقف التنفيذ بل يملأ $errorMsg ويُكمل.\n\nوفشل CSRF لا يُرجع error_code لأن لا عميل JS يقرأ هذه الاستجابة:\nالصفحة تُعرض والرسالة داخلها.\n\nشرطان للإرسال: مستخدم مسجّل الدخول (الزائر يُرفض)، ورسالة لا تقلّ\nعن عشرة محارف. والاسم والبريد يُقرآن من قاعدة البيانات لا من\nالطلب — تمريرهما في الجسم لا أثر له."
+      description: "النقطة الوحيدة التي كانت مسجَّلة في الراوتر وغائبة عن المواصفة\r\n(103 من 104). وُثّقت هنا كما تعمل فعلاً.\r\n\r\nتختلف عن POST /contact/send اختلافاً جوهرياً: هذه **لا تُرجع\r\nJSON**. الدالة تخدم GET وPOST معاً، وتعيد عرض الصفحة كاملةً مع\r\nرسالة نجاح أو خطأ في متن HTML. ولهذا استُثنيت من beginJsonPost\r\nصراحةً — الفشل هنا لا يوقف التنفيذ بل يملأ $errorMsg ويُكمل.\r\n\r\nوفشل CSRF لا يُرجع error_code لأن لا عميل JS يقرأ هذه الاستجابة:\r\nالصفحة تُعرض والرسالة داخلها.\r\n\r\nشرطان للإرسال: مستخدم مسجّل الدخول (الزائر يُرفض)، ورسالة لا تقلّ\r\nعن عشرة محارف. والاسم والبريد يُقرآن من قاعدة البيانات لا من\r\nالطلب — تمريرهما في الجسم لا أثر له."
       operationId: f519ff2180ddfa32f78b30a2e4b9648c
       requestBody:
         required: true
@@ -2524,6 +2524,32 @@ paths:
                 oneOf:
                   - { $ref: '#/components/schemas/ApiResponse' }
                   - { $ref: '#/components/schemas/ApiError' }
+  /health:
+    get:
+      tags:
+        - 'Store - Pages'
+      summary: 'فحص صحّة التطبيق'
+      description: "تُرجع 200 حين يكون التطبيق قادراً على خدمة الطلبات فعلاً، و503\nحين لا يكون. الفحص ينفّذ استعلاماً حقيقياً على قاعدة البيانات\nلا مجرّد ردّ ثابت — فحاوية تردّ 200 وقاعدتها ساقطة ليست سليمة.\n\nعامة بلا مصادقة بالضرورة: فاحص الصحّة لا يملك جلسة. ولذلك لا\nتكشف نسخاً ولا أسماء ولا مسارات — التفاصيل في السجلّ وحده."
+      operationId: 0f6f4acf921ee6317a01dfda0e60a1ec
+      responses:
+        '200':
+          description: 'التطبيق سليم.'
+          content:
+            application/json:
+              schema:
+                properties:
+                  status: { type: string, example: ok, enum: [ok] }
+                  checks: { properties: { database: { type: string, example: ok } }, type: object }
+                type: object
+        '503':
+          description: 'التطبيق غير قادر على خدمة الطلبات.'
+          content:
+            application/json:
+              schema:
+                properties:
+                  status: { type: string, example: fail, enum: [fail] }
+                  checks: { properties: { database: { type: string, example: fail } }, type: object }
+                type: object
   /:
     get:
       tags:
@@ -2949,7 +2975,7 @@ components:
   schemas:
     ApiResponse:
       title: 'غلاف استجابة JSON الموحّد'
-      description: "الشكل الذي تُرجعه كل نقطة JSON في المشروع، من Controller::respond().\n\nكود HTTP يبقى 200 حتى عند الفشل. النتيجة تُقرأ من الحقل success لا\nمن كود الحالة. هذا سلوك قائم يعتمد عليه الـfrontend في 34 ملف JS."
+      description: "الشكل الذي تُرجعه كل نقطة JSON في المشروع، من Controller::respond().\r\n\r\nكود HTTP يبقى 200 حتى عند الفشل. النتيجة تُقرأ من الحقل success لا\r\nمن كود الحالة. هذا سلوك قائم يعتمد عليه الـfrontend في 34 ملف JS."
       required:
         - success
         - message
@@ -2965,7 +2991,7 @@ components:
       type: object
     ApiError:
       title: 'استجابة فشل تحمل رمزاً صريحاً'
-      description: "مثل ApiResponse لكن success=false ومعها error_code اختياري.\n\nالرمز عقد بين الخادم والمتصفح، والنصّ للعرض وحده. الفصل بينهما ليس\nتفضيلاً أسلوبياً: كان js/core/csrf.js يكتشف فشل CSRF بمطابقة بداية\nنصّ الرسالة، فأي نقطة تصوغ رسالتها بشكل آخر تفقد إعادة المحاولة\nالتلقائية بصمت. حدث ذلك ثلاث مرّات قبل أن يُستبدل النصّ برمز."
+      description: "مثل ApiResponse لكن success=false ومعها error_code اختياري.\r\n\r\nالرمز عقد بين الخادم والمتصفح، والنصّ للعرض وحده. الفصل بينهما ليس\r\nتفضيلاً أسلوبياً: كان js/core/csrf.js يكتشف فشل CSRF بمطابقة بداية\r\nنصّ الرسالة، فأي نقطة تصوغ رسالتها بشكل آخر تفقد إعادة المحاولة\r\nالتلقائية بصمت. حدث ذلك ثلاث مرّات قبل أن يُستبدل النصّ برمز."
       required:
         - success
         - message
@@ -3110,7 +3136,7 @@ components:
       type: object
     StockBadge:
       title: 'شارة المخزون'
-      description: "ناتج getStockBadge() في app/helpers/stock_badge_helper.php.\n\nللدالة مرآة في JS (stockBadge في js/core/utils.js) تخدم البطاقات التي\nيبنيها المتصفح. العتبة 50 والنصوص مكرّرة بين اللغتين عمداً في مشروع\nبلا خطوة بناء. القيمة null تعني «لا شارة» — مخزون وفير في سياق لا\nيطلب شارة خضراء."
+      description: "ناتج getStockBadge() في app/helpers/stock_badge_helper.php.\r\n\r\nللدالة مرآة في JS (stockBadge في js/core/utils.js) تخدم البطاقات التي\r\nيبنيها المتصفح. العتبة 50 والنصوص مكرّرة بين اللغتين عمداً في مشروع\r\nبلا خطوة بناء. القيمة null تعني «لا شارة» — مخزون وفير في سياق لا\r\nيطلب شارة خضراء."
       properties:
         label:
           type: string
@@ -3209,7 +3235,7 @@ components:
       type: object
     Admin:
       title: 'حساب أدمن'
-      description: "الرتب مرتّبة تماماً: A=4 أعلى من B=3 أعلى من C=2 أعلى من D=1.\n\nالقاعدة الحاكمة في AdminModel::canManageTarget هي «أكبر تماماً» لا\n«أكبر أو يساوي» — فلا يدير أدمنٌ رتبتَه. لو كانت الثانية لاستطاع كل\nأدمن حذف أقرانه، ومنهم من أضاف حسابه. ورتبة A تتجاوز كل الصلاحيات."
+      description: "الرتب مرتّبة تماماً: A=4 أعلى من B=3 أعلى من C=2 أعلى من D=1.\r\n\r\nالقاعدة الحاكمة في AdminModel::canManageTarget هي «أكبر تماماً» لا\r\n«أكبر أو يساوي» — فلا يدير أدمنٌ رتبتَه. لو كانت الثانية لاستطاع كل\r\nأدمن حذف أقرانه، ومنهم من أضاف حسابه. ورتبة A تتجاوز كل الصلاحيات."
       properties:
         id:
           type: integer
@@ -3323,7 +3349,7 @@ components:
       type: object
     CsrfToken:
       title: 'توكن CSRF'
-      description: "مطلوب في كل نقطة POST عدا ثلاث موثّقة الاستثناء.\n\nيُقرأ من $_POST أو من جسم JSON معاً (Controller::requestData)، فيصحّ\nإرساله بأيّ من الشكلين. عند الفشل تُرجع النقطة error_code بقيمة\ncsrf_invalid، فيجلب js/core/csrf.js توكناً جديداً ويعيد المحاولة\nمرّة واحدة تلقائياً."
+      description: "مطلوب في كل نقطة POST عدا ثلاث موثّقة الاستثناء.\r\n\r\nيُقرأ من $_POST أو من جسم JSON معاً (Controller::requestData)، فيصحّ\r\nإرساله بأيّ من الشكلين. عند الفشل تُرجع النقطة error_code بقيمة\r\ncsrf_invalid، فيجلب js/core/csrf.js توكناً جديداً ويعيد المحاولة\r\nمرّة واحدة تلقائياً."
       type: string
       example: 3f2a9c1e8b7d6f5a4c3b2a190e8d7c6b5a4f3e2d1c0b9a8f7e6d5c4b3a291807
   responses:
@@ -3342,7 +3368,7 @@ components:
       content:
         text/csv: {  }
     CsrfFailure:
-      description: "فشل التحقق من توكن CSRF.\n\nكود HTTP يبقى 200 — الفشل يُقرأ من success=false ومن error_code.\nالعميل (js/core/csrf.js) يكتشف الرمز، يجلب توكناً جديداً، ويعيد\nالمحاولة مرّة واحدة تلقائياً. لذلك لا يرى المستخدم هذا الخطأ عادةً."
+      description: "فشل التحقق من توكن CSRF.\r\n\r\nكود HTTP يبقى 200 — الفشل يُقرأ من success=false ومن error_code.\r\nالعميل (js/core/csrf.js) يكتشف الرمز، يجلب توكناً جديداً، ويعيد\r\nالمحاولة مرّة واحدة تلقائياً. لذلك لا يرى المستخدم هذا الخطأ عادةً."
       content:
         application/json:
           schema:
@@ -3352,7 +3378,7 @@ components:
             message: 'Invalid CSRF token, please refresh and try again.'
             error_code: csrf_invalid
     ValidationFailure:
-      description: "مدخلات غير صالحة (حقل ناقص، بريد غير صحيح، رسالة أقصر من الحدّ…).\n\nكود HTTP يبقى 200 كبقية نقاط JSON؛ التمييز من success=false."
+      description: "مدخلات غير صالحة (حقل ناقص، بريد غير صحيح، رسالة أقصر من الحدّ…).\r\n\r\nكود HTTP يبقى 200 كبقية نقاط JSON؛ التمييز من success=false."
       content:
         application/json:
           schema:
@@ -3370,7 +3396,7 @@ components:
             success: false
             message: 'Method not allowed.'
     SessionExpired:
-      description: "لا جلسة صالحة. يُرجعها Middleware::requireAdmin لطلبات AJAX/POST\nبكود 401؛ أما طلبات الصفحات الكاملة فتُحوَّل بـ302 إلى صفحة الدخول."
+      description: "لا جلسة صالحة. يُرجعها Middleware::requireAdmin لطلبات AJAX/POST\r\nبكود 401؛ أما طلبات الصفحات الكاملة فتُحوَّل بـ302 إلى صفحة الدخول."
       content:
         application/json:
           schema:
@@ -3379,7 +3405,7 @@ components:
             success: false
             message: 'Session expired. Please log in again.'
     PermissionDenied:
-      description: "الجلسة صالحة لكن الصلاحية ناقصة (Middleware::requirePermission).\n\nرتبة A تتجاوز كل الصلاحيات، فلا تصل إلى هنا أبداً. والرسالة عامة\nعمداً: كشف اسم الصلاحية الناقصة للزائر يرسم له خريطة النظام."
+      description: "الجلسة صالحة لكن الصلاحية ناقصة (Middleware::requirePermission).\r\n\r\nرتبة A تتجاوز كل الصلاحيات، فلا تصل إلى هنا أبداً. والرسالة عامة\r\nعمداً: كشف اسم الصلاحية الناقصة للزائر يرسم له خريطة النظام."
       content:
         application/json:
           schema:
@@ -3392,7 +3418,7 @@ components:
       content:
         text/html: {  }
     ServiceUnavailable:
-      description: "عطل تقني يمنع إكمال الطلب — أبرزه فشل الاتصال بقاعدة البيانات.\n\n503 لا 500 عمداً: الخدمة غير متاحة مؤقتاً لا «خطأ في الخادم»،\nوالفرق يهمّ محرّكات البحث وأدوات المراقبة. التفاصيل تذهب إلى سجلّ\nالأخطاء ولا تُطبع للزائر أبداً — رسالة PDO تحمل اسم المضيف واسم\nالقاعدة واسم المستخدم."
+      description: "عطل تقني يمنع إكمال الطلب — أبرزه فشل الاتصال بقاعدة البيانات.\r\n\r\n503 لا 500 عمداً: الخدمة غير متاحة مؤقتاً لا «خطأ في الخادم»،\r\nوالفرق يهمّ محرّكات البحث وأدوات المراقبة. التفاصيل تذهب إلى سجلّ\r\nالأخطاء ولا تُطبع للزائر أبداً — رسالة PDO تحمل اسم المضيف واسم\r\nالقاعدة واسم المستخدم."
       content:
         text/html: {  }
     RedirectToLogin:

@@ -1,0 +1,22 @@
+# ما لا يدخل الصورة — يصغّر سياق البناء ويمنع تسريب أسرار.
+
+.git/
+.github/
+node_modules/
+vendor/
+graphify-out/
+STORE/
+
+# ⚠️ .env لا يدخل الصورة إطلاقاً. الإعدادات تصل من environment في
+# docker-compose، ونسخ ملف أسرار جهاز التطوير داخل صورة قابلة للنشر
+# هو أشيع طرق تسريبها.
+.env
+
+storage/backups/*
+storage/*.log
+coverage/
+.phpunit.cache/
+.lighthouseci/
+tests/
+*.md
+!README.md

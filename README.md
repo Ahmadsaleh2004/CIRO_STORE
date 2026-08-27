@@ -20,12 +20,33 @@
 
 ---
 
-## التركيب
+## التشغيل بـDocker (الأسرع)
+
+```bash
+docker compose up -d
+docker compose exec app php scripts/migrate.php baseline
+```
+
+ثم افتح `http://localhost:8080`. لا XAMPP ولا مسار بعينه ولا قاعدة
+تُبنى يدوياً — المخطّط يُحمَّل تلقائياً عند أول تشغيل.
+
+للتحقّق من أن كل شيء حيّ:
+
+```bash
+curl http://localhost:8080/health
+```
+
+> `/health` تنفّذ استعلاماً حقيقياً على القاعدة لا ردّاً ثابتاً — فحاوية تردّ 200 وقاعدتها ساقطة ليست سليمة. وهي ما يستعمله `HEALTHCHECK` في الصورة.
+
+---
+
+## التركيب المحلي (بلا Docker)
 
 ```bash
 git clone <repo-url> && cd STORE
 composer install
-cp .env.example .env      # ثم املأ القيم
+npm install && npm run build   # حزم CSS
+cp .env.example .env           # ثم املأ القيم
 ```
 
 أنشئ قاعدة البيانات وحمّل مخطّطها:

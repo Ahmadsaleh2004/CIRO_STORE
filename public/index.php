@@ -23,6 +23,7 @@ loadEnv(__DIR__ . '/../.env');
 require_once __DIR__ . '/../app/config/config.php';
 
 use App\Core\App;
+use App\Controllers\HealthController;
 use App\Controllers\HomeController;
 use App\Controllers\ProductController;
 use App\Controllers\AboutController;
@@ -80,6 +81,10 @@ $app = new App();
 $r   = $app->getRouter();
 
 // ── الصفحة الرئيسية ──────────────────────────────────────────
+// فحص صحّة — يستدعيه HEALTHCHECK في Dockerfile ودوّار الحمل.
+// بلا حارس بالضرورة: الفاحص لا يملك جلسة.
+$r->get('/health', [HealthController::class, 'index']);
+
 $r->get('/',     [HomeController::class, 'index']);
 $r->get('/home', [HomeController::class, 'index']);
 
