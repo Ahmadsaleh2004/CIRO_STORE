@@ -1,3 +1,15 @@
+-- ══════════════════════════════════════════════════════════════
+-- 0003_admin_notifications
+-- ══════════════════════════════════════════════════════════════
+--
+-- الترتيب في اسم الملف لا في تعليق. كان الاعتماد مكتوباً نصّاً
+-- («يعتمد على admin_auth.sql») ولا شيء يفرضه — فترتيب التنفيذ
+-- كان يتبع ترتيب نظام الملفات، وهو يختلف بين جهاز وآخر.
+--
+-- يُشغَّل بـ`php scripts/migrate.php up`. والملف يبقى SQL صالحاً
+-- يمكن لصقه في أي عميل كما هو — القسمان تعليقان لا صيغة خاصة.
+
+-- @UP
 -- ════════════════════════════════════════════════════════════════════════
 -- Migration: Admin Notifications — رسائل فردية + Broadcast بين الأدمنية
 -- يعتمد على جدول admins (موجود بـ admin_auth.sql)
@@ -21,3 +33,6 @@ CREATE TABLE `admin_notifications` (
     CONSTRAINT `fk_adminnotif_sender`
         FOREIGN KEY (`sender_admin_id`) REFERENCES `admins`(`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- @DOWN
+DROP TABLE IF EXISTS `admin_notifications`;

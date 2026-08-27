@@ -103,6 +103,21 @@ jobs:
       - name: تحميل المخطّط
         run: mysql -h 127.0.0.1 -u root ciro_db < tests/fixtures/schema.sql
 
+      # المخطّط المرجعي يحوي أثر الهجرات السبع، فتُسجَّل كمطبَّقة بلا
+      # تنفيذ. ثم يجب ألّا يبقى شيء معلّق: هجرة أُضيفت بلا تحديث
+      # tests/fixtures/schema.sql تعني أن الاختبارات ستعمل على بنية
+      # لا تطابق ما ستراه الإنتاج.
+      - name: الهجرات محدَّثة مقابل المخطّط
+        run: |
+          php scripts/migrate.php baseline
+          PENDING=$(php scripts/migrate.php status | grep -c 'معلّقة$' || true)
+          if [ "$PENDING" != "0" ]; then
+            echo "::error::هجرات معلّقة بعد baseline — شغّل 'composer test:schema' والتزم الناتج."
+            php scripts/migrate.php status
+            exit 1
+          fi
+          echo "لا هجرات معلّقة."
+
       # اختبار عقد CSRF يفحص نقاط HTTP حيّة. بلا خادم يتخطّى نفسه —
       # أي يصير حارساً لا يحرس. الخادم المدمج يكفي: يخدم الملفات
       # الموجودة ويحوّل الباقي إلى index.php تماماً كقاعدة mod_rewrite.

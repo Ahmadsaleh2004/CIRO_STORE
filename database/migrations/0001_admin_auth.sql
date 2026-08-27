@@ -1,3 +1,15 @@
+-- ══════════════════════════════════════════════════════════════
+-- 0001_admin_auth
+-- ══════════════════════════════════════════════════════════════
+--
+-- الترتيب في اسم الملف لا في تعليق. كان الاعتماد مكتوباً نصّاً
+-- («يعتمد على admin_auth.sql») ولا شيء يفرضه — فترتيب التنفيذ
+-- كان يتبع ترتيب نظام الملفات، وهو يختلف بين جهاز وآخر.
+--
+-- يُشغَّل بـ`php scripts/migrate.php up`. والملف يبقى SQL صالحاً
+-- يمكن لصقه في أي عميل كما هو — القسمان تعليقان لا صيغة خاصة.
+
+-- @UP
 -- ════════════════════════════════════════════════════════════════════════════
 -- Migration: Admin Auth Tables — نظام صلاحيات A/B/C/D
 -- يجب تنفيذ هذا الملف على قاعدة البيانات: ciro_db
@@ -91,3 +103,9 @@ INSERT INTO `admin_permissions`
      `can_manage_checkout_settings`, `can_manage_orders`)
 VALUES
     (1, 1, 1, 1, 1, 1, 1, 1, 1);
+
+-- @DOWN
+DROP TABLE IF EXISTS `admin_login_attempts`;
+DROP TABLE IF EXISTS `admin_audit_log`;
+DROP TABLE IF EXISTS `admin_permissions`;
+DROP TABLE IF EXISTS `admins`;

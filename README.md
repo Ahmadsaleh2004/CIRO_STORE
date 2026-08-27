@@ -35,7 +35,15 @@ mysql -u root -e "CREATE DATABASE ciro_db CHARACTER SET utf8mb4"
 mysql -u root ciro_db < tests/fixtures/schema.sql
 ```
 
-> `tests/fixtures/schema.sql` هو المخطّط المرجعي (بنية بلا بيانات). ملفات `database/migrations/*.sql` تغييرات تاريخية مطبَّقة عليه.
+ثم سجّل الهجرات الموجودة كمطبَّقة:
+
+```bash
+composer migrate:baseline
+```
+
+> **لماذا `baseline` لا `migrate`؟** الهجرات السبع القائمة لا تبني القاعدة من الصفر — كلها تعتمد على جداول (`users`, `products`, `orders`) لا وجود لها في أيٍّ منها. فالمخطّط الحقيقي وُلد قبلها ونما بها.
+>
+> `tests/fixtures/schema.sql` هو **خطّ الأساس** ويحوي أثرها فعلاً، فتنفيذها عليه يفشل بـ«الجدول موجود». و`baseline` تسجّلها كمطبَّقة بلا تنفيذها. أي هجرة تُضاف بعد ذلك تعمل بـ`composer migrate` عادةً.
 
 ### المتغيّرات اللازمة في `.env`
 
@@ -79,6 +87,24 @@ composer test:schema     # يعيد توليد tests/fixtures/schema.sql
 
 ---
 
+## الهجرات
+
+```bash
+composer migrate:status              # ما طُبِّق وما هو معلّق
+composer migrate                     # تطبيق المعلّق
+php scripts/migrate.php up --pretend # ماذا سيُطبَّق، بلا تنفيذ
+php scripts/migrate.php down 1       # تراجع عن آخر هجرة
+php scripts/migrate.php make add_x   # ملف هجرة جديد بالرقم التالي
+```
+
+**الترتيب في اسم الملف لا في تعليق.** كان مكتوباً نصّاً («يعتمد على `admin_auth.sql`») ولا شيء يفرضه، فترتيب التنفيذ يتبع ترتيب نظام الملفات — وهو يختلف بين جهاز وآخر.
+
+**كل ملف يحمل قسمَي `-- @UP` و`-- @DOWN`.** التعليق اختير صيغةً كي يبقى الملف SQL صالحاً يمكن لصقه في أي عميل كما هو.
+
+**البصمة تكشف الانحراف.** تعديل ملف طُبِّق سلفاً عطلٌ صامت من أسوأ نوع: قاعدة المطوّر تحمل النسخة القديمة وقاعدة الإنتاج الجديدة، والاثنتان تقولان «مطبَّقة». المهاجر يرفض التقدّم حتى يُحلّ الانحراف. (نهايات الأسطر لا تُحسب انحرافاً — راجع `.gitattributes`.)
+
+---
+
 ## البنية
 
 ```
@@ -93,7 +119,7 @@ app/
 public/         جذر الويب — index.php وجدول المسارات · css · js · docs
 tests/          Unit · Integration · Support · fixtures
 scripts/        أدوات تدقيق وصيانة تعمل على الطرفية
-database/       ملفات هجرة SQL
+database/       هجرات مرقّمة بقسمَي @UP و @DOWN
 ```
 
 ### كيف يمرّ الطلب

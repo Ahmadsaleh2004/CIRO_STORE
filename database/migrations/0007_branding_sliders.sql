@@ -1,3 +1,15 @@
+-- ══════════════════════════════════════════════════════════════
+-- 0007_branding_sliders
+-- ══════════════════════════════════════════════════════════════
+--
+-- الترتيب في اسم الملف لا في تعليق. كان الاعتماد مكتوباً نصّاً
+-- («يعتمد على admin_auth.sql») ولا شيء يفرضه — فترتيب التنفيذ
+-- كان يتبع ترتيب نظام الملفات، وهو يختلف بين جهاز وآخر.
+--
+-- يُشغَّل بـ`php scripts/migrate.php up`. والملف يبقى SQL صالحاً
+-- يمكن لصقه في أي عميل كما هو — القسمان تعليقان لا صيغة خاصة.
+
+-- @UP
 -- ════════════════════════════════════════════════════════════════════════════
 -- Migration: Branding / Home Slider — إدارة سلايدر الصفحة الرئيسية
 -- يجب تنفيذ هذا الملف يدوياً على قاعدة البيانات: ciro_db
@@ -71,3 +83,8 @@ CREATE TABLE IF NOT EXISTS `home_slider_items` (
     CONSTRAINT `fk_item_product`
         FOREIGN KEY (`product_id`) REFERENCES `products`(`id`)     ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- @DOWN
+DROP TABLE IF EXISTS `home_slider_items`;
+DROP TABLE IF EXISTS `home_sliders`;
+ALTER TABLE `admin_permissions` DROP COLUMN `can_manage_branding`;
