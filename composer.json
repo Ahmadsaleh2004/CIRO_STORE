@@ -46,6 +46,7 @@
         "audit:escaping": "php scripts/audit-escaping.php",
         "audit:imports": "php scripts/audit-imports.php",
         "images:webp": "php scripts/convert_images_to_webp.php",
+        "fix:blocked-orders": "php scripts/backfill_blocked_users_cancel_orders.php",
         "check": [
             "@composer validate --strict",
             "@analyse",
@@ -84,6 +85,7 @@
         "audit:escaping": "يصنّف كل <?= ?> في الـviews حسب حاجتها للهروب",
         "audit:imports": "يكشف الكلاسات المستعملة بلا استيراد وبلا تأهيل",
         "images:webp": "يولّد نسخ WebP لصور المنتجات (يعتمد عليها <picture>)",
-        "check": "البوّابة الكاملة: validate + analyse + lint + test — شغّله قبل أي push"
+        "check": "البوّابة الكاملة: validate + analyse + lint + test — شغّله قبل أي push",
+        "fix:blocked-orders": "إصلاح بيانات لمرّة واحدة: يلغي الطلبات المعلّقة لمستخدمين محظورين قبل تفعيل الإلغاء التلقائي"
     }
 }
