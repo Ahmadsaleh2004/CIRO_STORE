@@ -113,7 +113,7 @@ $adminInStoreMode = !empty($_SESSION['admin_in_store_mode']);
                         <li><hr class="dropdown-divider" style="border-color:var(--section-border);"></li>
                         <!-- دالة الـ logoutUser() هي دالة JS معرفة في ملفات الـ JS الثابتة -->
                         <li><a class="dropdown-item text-danger" href="#"
-                               onclick="logoutUser()">🚪 Log Out</a></li>
+                               data-action="logout-user">🚪 Log Out</a></li>
                     </ul>
                 </div>
                 <?php endif; ?>

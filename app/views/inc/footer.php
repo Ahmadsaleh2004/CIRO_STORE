@@ -69,6 +69,7 @@ $csrfToken = generateCsrfToken();
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11" defer></script>
 
     <!-- Core JS -->
+    <?= jsTag('js/core/inline-actions.js') ?>
     <?= jsTag('js/core/utils.js') ?>
     <?= jsTag('js/core/csrf.js') ?>
     <?= jsTag('js/core/ui.js') ?>

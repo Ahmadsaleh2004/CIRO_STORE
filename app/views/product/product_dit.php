@@ -167,7 +167,7 @@ usort($sortedByStock, fn($a, $b) => (int)$a['stock_quantity'] <=> (int)$b['stock
                             class="btn btn-success btn-lg px-5 btn-disabled-faded"
                             disabled
                             data-bs-toggle="modal" data-bs-target="#loginModal"
-                            onclick="this.removeAttribute('disabled')">
+                            data-action="self-enable">
                         🛒 Add To Cart
                     </button>
                     <?php endif; ?>

@@ -35,7 +35,7 @@
                     <div class="modal-divider">or</div>
                     <p class="text-center small mb-0">
                         <a href="#" class="fw-bold"
-                           onclick="switchAuthModal(this, 'loginModal'); return false;">← Back to Sign In</a>
+                           data-action="switch-modal" data-modal-target="loginModal">← Back to Sign In</a>
                     </p>
                 </form>
             </div>

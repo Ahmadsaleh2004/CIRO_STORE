@@ -48,7 +48,7 @@
                                     <input type="password" id="regPass" name="password"
                                            placeholder=" " required autocomplete="new-password">
                                     <span class="input-group-text"
-                                          onclick="toggleBothPasswords('eyeReg')"
+                                          data-action="toggle-both-passwords" data-eye="eyeReg"
                                           id="eyeReg" style="cursor:pointer;">👁️</span>
                                 </div>
                                 <label>Password</label>
@@ -131,7 +131,7 @@
                             I agree to the
                         </label>
                         <a href="#" class="small"
-                           onclick="switchAuthModal(this, 'privacyModal'); return false;">Privacy Policy</a>
+                           data-action="switch-modal" data-modal-target="privacyModal">Privacy Policy</a>
                     </div>
 
                     <div id="regError" class="alert alert-danger py-2 small mb-3" style="display:none;"></div>
@@ -142,7 +142,7 @@
                     <p class="text-center small mb-0">
                         Already have an account?
                         <a href="#" class="fw-bold"
-                           onclick="switchAuthModal(this, 'loginModal'); return false;">Sign In</a>
+                           data-action="switch-modal" data-modal-target="loginModal">Sign In</a>
                     </p>
                 </form>
             </div>

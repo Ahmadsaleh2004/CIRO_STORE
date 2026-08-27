@@ -42,12 +42,15 @@
                 <p>إذا كان لديك أي أسئلة أو مخاوف بشأن سياسة الخصوصية هذه، يمكنك التواصل معنا عبر صفحة 'اتصل بنا'.</p>
             </div>
             <div class="modal-footer" style="border-top:1px solid var(--section-border);">
+                <?php
+                // كان هنا **دالة JS كاملة مكتوبة داخل سمة onclick** —
+                // أربعة أسطر منطق في وسم HTML. صارت نيّةً معلَنة
+                // (accept-privacy) وجسمها في js/core/inline-actions.js.
+                ?>
                 <button type="button" class="btn btn-success"
-                    onclick="switchAuthModal(this, 'registerModal', function() {
-                        var cb = document.getElementById('privacyCheck');
-                        if (cb) cb.checked = true;
-                        if (typeof checkSignupFormValidity === 'function') checkSignupFormValidity();
-                    });">✅ I Agree / موافق</button>
+                    data-action="switch-modal"
+                    data-modal-target="registerModal"
+                    data-modal-after="accept-privacy">✅ I Agree / موافق</button>
             </div>
         </div>
     </div>

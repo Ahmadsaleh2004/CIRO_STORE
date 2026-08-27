@@ -38,11 +38,11 @@ if ($order['status'] === 'completed' && !empty($order['handler_admin_name'])) {
     </h1>
     <div class="d-flex gap-2 align-items-center flex-wrap">
         <?php if ($order['status'] === 'not_taken'): ?>
-            <button type="button" id="takeBtn" class="btn btn-success" onclick="handleTakeIt()">💚 Take It</button>
+            <button type="button" id="takeBtn" class="btn btn-success" data-action="take-order">💚 Take It</button>
         <?php elseif ($order['status'] === 'taken'): ?>
             <?php $isHolder = ((int)($order['taken_by_admin_id'] ?? 0) === (int)$adminId); ?>
             <button type="button" id="takeBtn" class="btn btn-danger"
-                    <?= $isHolder ? 'onclick="handleReleaseOrder()"' : 'disabled' ?>>🔴 Taken</button>
+                    <?= $isHolder ? 'data-action="release-order"' : 'disabled' ?>>🔴 Taken</button>
             <div id="countdown" class="badge bg-dark text-light fs-6">--:--:--</div>
         <?php endif; ?>
     </div>
@@ -155,7 +155,7 @@ if ($order['status'] === 'completed' && !empty($order['handler_admin_name'])) {
             <h5 class="mb-3">🚨 Report an Issue</h5>
             <textarea id="reportReason" class="form-control mb-2" rows="3"
                       placeholder="Describe the issue with this order..."></textarea>
-            <button type="button" id="reportBtn" class="btn btn-outline-danger" onclick="submitReport()" disabled>🚨 Report Issue</button>
+            <button type="button" id="reportBtn" class="btn btn-outline-danger" data-action="submit-report" disabled>🚨 Report Issue</button>
         </div>
 
     </div>
@@ -203,8 +203,8 @@ if ($order['status'] === 'completed' && !empty($order['handler_admin_name'])) {
             <h5 class="mb-3">⚙️ Delivery Actions</h5>
             <?php if ($order['status'] === 'taken'): ?>
                 <div class="d-grid gap-2">
-                    <button type="button" id="deliverBtn" class="btn btn-success" onclick="updateDelivery('mark_delivered')">✅ Mark as Delivered</button>
-                    <button type="button" id="cancelDelBtn" class="btn btn-outline-danger" onclick="updateDelivery('cancel_delivery')">❌ Cancel Delivery</button>
+                    <button type="button" id="deliverBtn" class="btn btn-success" data-action="update-delivery" data-delivery="mark_delivered">✅ Mark as Delivered</button>
+                    <button type="button" id="cancelDelBtn" class="btn btn-outline-danger" data-action="update-delivery" data-delivery="cancel_delivery">❌ Cancel Delivery</button>
                 </div>
             <?php elseif ($order['status'] === 'completed'): ?>
                 <p class="mb-0 text-muted">✅ This order has been delivered and completed.</p>

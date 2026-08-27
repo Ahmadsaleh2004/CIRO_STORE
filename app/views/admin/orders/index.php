@@ -42,7 +42,7 @@
     <?php endif; ?>
     <input type="text" name="q" value="<?= htmlspecialchars($search) ?>"
            class="form-control" style="max-width:280px;" placeholder="Order ID or customer...">
-    <select class="form-select" style="max-width:180px;" onchange="filterStatus(this.value)">
+    <select class="form-select" style="max-width:180px;" data-action="filter-status">
         <option value="">All Orders</option>
         <option value="not_taken" <?= $filter==='not_taken' ?'selected':'' ?>>Not Taken</option>
         <option value="taken"     <?= $filter==='taken'     ?'selected':'' ?>>Taken</option>
@@ -80,7 +80,7 @@
                 ?>
             <?php else: ?>
                 <?php foreach ($orders as $o): ?>
-                <tr onclick="goToOrderDetails(<?= (int)$o['order_id'] ?>)" style="cursor:pointer;">
+                <tr data-action="order-details" data-order-id="<?= (int)$o['order_id'] ?>" style="cursor:pointer;">
                     <td class="fw-semibold">#<?= (int)$o['order_id'] ?></td>
                     <td>
                         <span class="fw-semibold"><?= htmlspecialchars($o['full_name']) ?></span>
@@ -109,7 +109,7 @@
                     <td style="color:var(--muted-text);font-size:.8rem;white-space:nowrap;">
                         <?= htmlspecialchars(date('M j, Y H:i', strtotime($o['created_at']))) ?>
                     </td>
-                    <td class="text-center" onclick="event.stopPropagation()">
+                    <td class="text-center" data-action="stop-propagation">
                         <?php if (in_array($o['status'], ['completed', 'cancelled'], true)): ?>
                         <button type="button" class="btn btn-sm btn-outline-danger delete-order-btn"
                                 data-oid="<?= (int)$o['order_id'] ?>"
