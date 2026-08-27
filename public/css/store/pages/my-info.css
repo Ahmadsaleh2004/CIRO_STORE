@@ -29,7 +29,7 @@
 
 .info-tab-btn.active {
     background: var(--accent) !important;
-    color: #ffffff !important;
+    color: #fff !important;
 }
 
 /* ==================================================

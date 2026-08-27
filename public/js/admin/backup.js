@@ -39,7 +39,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 } else {
                     if (typeof showToast === 'function') showToast(data.message || 'Error creating backup.', 'error');
                 }
-            } catch (e) {
+            } catch {
                 if (typeof showToast === 'function') showToast('Network error.', 'error');
             } finally {
                 createBtn.disabled = false;
@@ -81,7 +81,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (typeof showToast === 'function') showToast(data.message || 'Error deleting backup.', 'error');
                     btn.disabled = false;
                 }
-            } catch (e) {
+            } catch {
                 if (typeof showToast === 'function') showToast('Network error.', 'error');
                 btn.disabled = false;
             }

@@ -35,7 +35,7 @@ document.addEventListener('submit', async (e) => {
             btn.textContent = originalText;
             if (typeof showToast === 'function') showToast(data.message || 'Something went wrong.', 'error');
         }
-    } catch (err) {
+    } catch {
         btn.disabled = false;
         btn.textContent = originalText;
         if (typeof showToast === 'function') showToast('Network error, please try again.', 'error');

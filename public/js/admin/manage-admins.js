@@ -74,7 +74,7 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 showToast(data.message || 'Could not add admin.', 'error');
             }
-        } catch (err) {
+        } catch {
             showToast('Network error. Please try again.', 'error');
         }
     });
@@ -111,7 +111,7 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 showToast(data.message || 'Could not update admin.', 'error');
             }
-        } catch (err) {
+        } catch {
             showToast('Network error. Please try again.', 'error');
         }
     });
@@ -175,7 +175,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     } else {
                         if (typeof showToast === 'function') showToast(data.message || 'Error', 'error');
                     }
-                } catch (err) {
+                } catch {
                     if (typeof showToast === 'function') showToast('Network error.', 'error');
                 }
             });

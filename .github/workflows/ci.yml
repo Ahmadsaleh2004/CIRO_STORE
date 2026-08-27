@@ -211,6 +211,42 @@ jobs:
       - name: spectral — فحص المواصفة
         run: npx --yes @stoplight/spectral-cli lint public/docs/openapi.yaml --ruleset .spectral.yaml
 
+  # ── الواجهة ──────────────────────────────────────────────────
+  frontend:
+    name: الواجهة
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - run: npm ci
+
+      - name: ESLint
+        run: npx eslint public/js --max-warnings 60
+
+      - name: Stylelint
+        run: npx stylelint "public/css/**/*.css"
+
+      # حزم CSS متتبَّعة في git ومولَّدة معاً، فقد تتخلّف: يعدّل أحدهم
+      # ملف CSS وينسى `npm run build`، فيبقى المرفوع يخدم النسخة
+      # القديمة — وهي الأسوأ من كل الحالات: الكود صحيح والمعروض قديم.
+      # إعادة البناء ومقارنة البصمة تمسك ذلك مباشرةً.
+      - name: حزم CSS محدَّثة
+        run: |
+          cp public/css/dist/manifest.json /tmp/committed.json
+          npm run build
+          if ! diff -q /tmp/committed.json public/css/dist/manifest.json > /dev/null; then
+            echo "::error::حزم CSS متخلّفة — شغّل 'npm run build' والتزم public/css/dist/."
+            echo "المُلتزَم:"; cat /tmp/committed.json
+            echo "المتوقّع:"; cat public/css/dist/manifest.json
+            exit 1
+          fi
+          echo "الحزم مطابقة للمصدر."
+
   # ── أمن ──────────────────────────────────────────────────────
   # الأدوات الثلاث نفسها التي تعمل في .pre-commit-config.yaml.
   security:
