@@ -144,11 +144,11 @@ class AdminModel
     // تسجيل عملية بجدول admin_audit_log
     // ════════════════════════════════════════════════════════
     public static function logAction(
-        int     $adminId,
-        string  $action,
+        int $adminId,
+        string $action,
         ?string $targetType = null,
-        ?int    $targetId   = null,
-        ?string $details    = null
+        ?int $targetId = null,
+        ?string $details = null
     ): void {
         try {
             $db   = Database::connect();
@@ -460,13 +460,13 @@ class AdminModel
 
     /** إرسال إشعار فردي لأدمن */
     public static function sendNotification(
-        int     $recipientAdminId,
-        string  $title,
-        string  $message,
-        string  $type          = 'system',
-        ?string $relatedType   = null,
-        ?int    $relatedId     = null,
-        ?int    $senderAdminId = null
+        int $recipientAdminId,
+        string $title,
+        string $message,
+        string $type = 'system',
+        ?string $relatedType = null,
+        ?int $relatedId = null,
+        ?int $senderAdminId = null
     ): void {
         try {
             Database::connect()->prepare("
@@ -523,7 +523,7 @@ class AdminModel
      *
      * @return int[] IDs الأدمنية المستهدفين (قد تكون مصفوفة فارغة)
      */
-public static function findHigherRankWithPermission(string $perm, string $actorRole): array
+    public static function findHigherRankWithPermission(string $perm, string $actorRole): array
     {
         $actorRank = self::getRankValue($actorRole);
 
@@ -565,14 +565,14 @@ public static function findHigherRankWithPermission(string $perm, string $actorR
      * @param int|null    $relatedId      Notification `related_id` column value.
      */
     public static function notifyHigherRanksOnAction(
-        int     $actorAdminId,
-        string  $permission,
-        string  $title,
-        string  $selfMessage,
-        string  $othersMessage,
-        string  $type,
+        int $actorAdminId,
+        string $permission,
+        string $title,
+        string $selfMessage,
+        string $othersMessage,
+        string $type,
         ?string $relatedType = null,
-        ?int    $relatedId   = null
+        ?int $relatedId = null
     ): void {
         $rankMap = ['A' => 4, 'B' => 3, 'C' => 2, 'D' => 1];
 

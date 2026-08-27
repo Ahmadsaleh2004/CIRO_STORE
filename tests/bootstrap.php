@@ -1,4 +1,5 @@
 <?php
+
 /**
  * tests/bootstrap.php
  * تهيئة بيئة الاختبار.
@@ -34,7 +35,9 @@ function testServerConnection(): ?PDO
     static $pdo = null;
     static $tried = false;
 
-    if ($tried) return $pdo;
+    if ($tried) {
+        return $pdo;
+    }
     $tried = true;
 
     try {
@@ -64,14 +67,20 @@ function prepareTestDatabase(): ?PDO
     static $pdo = null;
     static $tried = false;
 
-    if ($tried) return $pdo;
+    if ($tried) {
+        return $pdo;
+    }
     $tried = true;
 
     $server = testServerConnection();
-    if ($server === null) return null;
+    if ($server === null) {
+        return null;
+    }
 
     $schemaFile = __DIR__ . '/fixtures/schema.sql';
-    if (!is_file($schemaFile)) return null;
+    if (!is_file($schemaFile)) {
+        return null;
+    }
 
     $name = TEST_DB_NAME;
 

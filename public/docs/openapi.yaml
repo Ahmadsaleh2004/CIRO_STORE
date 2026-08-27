@@ -1,7 +1,7 @@
 openapi: 3.0.0
 info:
   title: 'Cairo Store API'
-  description: "كل نقاط المتجر ولوحة التحكم.\r\n\r\nملاحظة عامة على الأخطاء: نقاط JSON في هذا المشروع تُرجع 200 حتى عند\r\nفشل التحقق، والنتيجة تُقرأ من الحقل success في الجسم لا من كود HTTP.\r\nالاستثناءات الوحيدة هي 302 (تحويل لتسجيل الدخول) و403 (صلاحية ناقصة)\r\nو404 (راوت غير موجود). هذا سلوك قائم يعتمد عليه الـfrontend، ووُثّق\r\nهنا كما هو لا كما ينبغي أن يكون."
+  description: "كل نقاط المتجر ولوحة التحكم.\n\nملاحظة عامة على الأخطاء: نقاط JSON في هذا المشروع تُرجع 200 حتى عند\nفشل التحقق، والنتيجة تُقرأ من الحقل success في الجسم لا من كود HTTP.\nالاستثناءات الوحيدة هي 302 (تحويل لتسجيل الدخول) و403 (صلاحية ناقصة)\nو404 (راوت غير موجود). هذا سلوك قائم يعتمد عليه الـfrontend، ووُثّق\nهنا كما هو لا كما ينبغي أن يكون."
   version: 1.1.0
 servers:
   -
@@ -28,7 +28,7 @@ paths:
       tags:
         - 'Admin Site Settings'
       summary: 'حفظ إعدادات الموقع (AJAX) — الحقول المالية/العملة تُقبل فقط لصاحب can_manage_checkout_settings'
-      description: "AdminSiteSettingsController — صفحة إعدادات الموقع للأدمن.\r\nيرث من AdminController الذي يتحقق من تسجيل دخول الأدمن تلقائياً."
+      description: "AdminSiteSettingsController — صفحة إعدادات الموقع للأدمن.\nيرث من AdminController الذي يتحقق من تسجيل دخول الأدمن تلقائياً."
       operationId: 3e053842fbd06f520e821e6726b6fe5f
       requestBody:
         required: true
@@ -1567,7 +1567,7 @@ paths:
       tags:
         - 'Admin Support'
       summary: 'إرسال رد على رسالة دعم كإشعار للمستخدم صاحب الرسالة'
-      description: "AdminSupportController — صفحة رسائل الدعم الفني للأدمن.\r\nيرث من AdminController الذي يتحقق من تسجيل دخول الأدمن تلقائياً."
+      description: "AdminSupportController — صفحة رسائل الدعم الفني للأدمن.\nيرث من AdminController الذي يتحقق من تسجيل دخول الأدمن تلقائياً."
       operationId: 1352770916a2a4c08bb0492de4740ed7
       requestBody:
         required: true
@@ -2672,7 +2672,7 @@ components:
       in: cookie
     userSessionAuth:
       type: apiKey
-      description: "جلسة المستخدم العادي — منفصلة تماماً عن admin_session بالاسم\r\nوالمحتوى، فلا يمكن الوصول لبيانات الأدمن من جلسة مستخدم ولا العكس\r\n(راجع isUser/isAdmin في auth_helper.php)."
+      description: "جلسة المستخدم العادي — منفصلة تماماً عن admin_session بالاسم\nوالمحتوى، فلا يمكن الوصول لبيانات الأدمن من جلسة مستخدم ولا العكس\n(راجع isUser/isAdmin في auth_helper.php)."
       name: PHPSESSID
       in: cookie
 tags:

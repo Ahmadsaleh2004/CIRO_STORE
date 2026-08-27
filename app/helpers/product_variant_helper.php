@@ -1,4 +1,5 @@
 <?php
+
 /**
  * app/helpers/product_variant_helper.php
  * دوال مشتركة لاختيار "اللون المعروض افتراضيًا" لمنتج له عدة Variants.
@@ -13,7 +14,9 @@
  */
 function pickDisplayVariant(array $variants, ?string $visitorGender): ?array
 {
-    if (empty($variants)) return null;
+    if (empty($variants)) {
+        return null;
+    }
 
     if ($visitorGender === 'male' || $visitorGender === 'female') {
         foreach ($variants as $v) {
@@ -57,7 +60,9 @@ function getVisitorGender(?PDO $pdo = null): ?string
     // scripts/ التي تحمّل الهيلبرز بترتيبها الخاص، فلا نفترض أن
     // auth_helper.php محمَّل. باقي حُرّاس function_exists في المشروع
     // كانت تحرس دوالّ محمَّلة دائماً وأُزيلت.
-    if (!function_exists('isUser') || !isUser()) return null;
+    if (!function_exists('isUser') || !isUser()) {
+        return null;
+    }
 
     $pdo ??= \App\Core\Database::connect();
     $stmt = $pdo->prepare("SELECT gender FROM users WHERE id = ? LIMIT 1");

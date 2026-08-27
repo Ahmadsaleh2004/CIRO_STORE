@@ -1,4 +1,5 @@
 <?php
+
 /**
  * scripts/convert_images_to_webp.php
  * سكربت تحويل صور المنتجات (jpg/jpeg/png) إلى WebP مع تصغير أي صورة > 1200px

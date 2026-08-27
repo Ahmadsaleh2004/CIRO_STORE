@@ -22,7 +22,9 @@ class BrandingModel
             $sliders = $db->query("SELECT * FROM home_sliders ORDER BY sort_order ASC, id ASC")
                            ->fetchAll(PDO::FETCH_ASSOC);
 
-            if (!$sliders) return [];
+            if (!$sliders) {
+                return [];
+            }
 
             $sliderIds = array_column($sliders, 'id');
             $placeholders = implode(',', array_fill(0, count($sliderIds), '?'));
@@ -86,7 +88,9 @@ class BrandingModel
 
             $sliders = $db->query("SELECT id FROM home_sliders ORDER BY sort_order ASC, id ASC")
                            ->fetchAll(PDO::FETCH_ASSOC);
-            if (!$sliders) return [];
+            if (!$sliders) {
+                return [];
+            }
 
             $stmt = $db->query("
                 SELECT
@@ -114,7 +118,9 @@ class BrandingModel
             $bySlider = [];
             foreach ($items as $it) {
                 // تجاهل أي عنصر Product بلا منتج فعلي، أو Manual بلا صورة — بيانات فاسدة/غير مكتملة
-                if (empty($it['image_path'])) continue;
+                if (empty($it['image_path'])) {
+                    continue;
+                }
                 $bySlider[(int)$it['slider_id']][] = [
                     'image_path'  => fixImagePath($it['image_path']),
                     'link_url'    => $it['link_url'] ?: null,
@@ -268,19 +274,22 @@ class BrandingModel
             return null;
         }
 
-        $allowed = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
-        $mime    = mime_content_type($fileEntry['tmp_name']);
-        if (!in_array($mime, $allowed, true)) {
-            return null;
-        }
-
-        $ext = match ($mime) {
+        // خريطة واحدة تحكم القبول والامتداد معاً — راجع الشرح نفسه في
+        // AdminProductModel::…: قائمة منفصلة عن أذرع match تنفصل عنها
+        // بصمت، فيُحفظ الملف بامتداد خاطئ.
+        $extByMime = [
             'image/jpeg' => 'jpg',
             'image/png'  => 'png',
             'image/webp' => 'webp',
             'image/gif'  => 'gif',
-            default      => 'jpg',
-        };
+        ];
+
+        $mime = mime_content_type($fileEntry['tmp_name']);
+        if (!isset($extByMime[$mime])) {
+            return null;
+        }
+
+        $ext = $extByMime[$mime];
 
         $filename = 'slider_' . time() . '_' . bin2hex(random_bytes(4)) . '.' . $ext;
         $dest     = rtrim($uploadDir, '/\\') . DIRECTORY_SEPARATOR . $filename;

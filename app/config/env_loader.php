@@ -1,4 +1,5 @@
 <?php
+
 /**
  * app/config/env_loader.php
  * قارئ .env بسيط — سطراً بسطر، بلا تفسير PHP لأي أقواس أو كلمات محجوزة.
@@ -7,18 +8,27 @@
  * وكل سكربت في scripts/) تحصل على البيئة بلا أن تتذكّر استدعاءه.
  */
 
-function loadEnv(string $path): void {
+function loadEnv(string $path): void
+{
     static $loaded = false;
-    if ($loaded) return;
+    if ($loaded) {
+        return;
+    }
     $loaded = true;
 
-    if (!file_exists($path)) return;
+    if (!file_exists($path)) {
+        return;
+    }
 
     $lines = file($path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
     foreach ($lines as $line) {
         $line = trim($line);
-        if ($line === '' || str_starts_with($line, '#')) continue;
-        if (!str_contains($line, '=')) continue;
+        if ($line === '' || str_starts_with($line, '#')) {
+            continue;
+        }
+        if (!str_contains($line, '=')) {
+            continue;
+        }
 
         [$key, $value] = explode('=', $line, 2);
         $key   = trim($key);
@@ -50,10 +60,13 @@ function loadEnv(string $path): void {
  * "" الفارغة كقيمة صالحة وتتخطّى الافتراضي تماماً. لم يظهر العطل لأن
  * أحداً لم يكن يستدعي الدالة إطلاقاً (صفر مستدعٍ، مفحوص).
  */
-function env(string $key, $default = null) {
+function env(string $key, $default = null)
+{
+    // ?? تتخطّى null أصلاً، وgetenv تُرجع string|false — فلا سبيل
+    // لأن تكون $value هنا null. الفحص عنها كان شرطاً لا يتحقّق أبداً.
     $value = $_ENV[$key] ?? getenv($key);
 
-    if ($value === false || $value === null || $value === '') {
+    if ($value === false || $value === '') {
         return $default;
     }
 
@@ -67,7 +80,8 @@ function env(string $key, $default = null) {
  * **true** في PHP. فمفتاح APP_DEBUG=false كان سيفتح وضع التنقيح لا
  * يغلقه — وهو أخطر نوع من الأعطال: يعمل عكس ما يقرأه القارئ.
  */
-function envBool(string $key, bool $default = false): bool {
+function envBool(string $key, bool $default = false): bool
+{
     $value = env($key);
 
     if ($value === null) {

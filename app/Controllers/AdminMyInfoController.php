@@ -57,10 +57,10 @@ class AdminMyInfoController extends AdminController
                 schema: new OA\Schema(
                     required: ['csrf_token', 'full_name', 'current_password'],
                     properties: [
-                        new OA\Property(property: 'csrf_token',       type: 'string'),
-                        new OA\Property(property: 'full_name',        type: 'string'),
-                        new OA\Property(property: 'phone_number',     type: 'string'),
-                        new OA\Property(property: 'new_password',     type: 'string', format: 'password', description: 'اختياري — اتركه فارغًا للإبقاء على كلمة المرور الحالية'),
+                        new OA\Property(property: 'csrf_token', type: 'string'),
+                        new OA\Property(property: 'full_name', type: 'string'),
+                        new OA\Property(property: 'phone_number', type: 'string'),
+                        new OA\Property(property: 'new_password', type: 'string', format: 'password', description: 'اختياري — اتركه فارغًا للإبقاء على كلمة المرور الحالية'),
                         new OA\Property(property: 'current_password', type: 'string', format: 'password', description: 'إلزامي دائمًا للتأكيد قبل الحفظ'),
                     ]
                 )

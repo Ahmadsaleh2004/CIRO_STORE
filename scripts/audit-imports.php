@@ -1,4 +1,5 @@
 <?php
+
 /**
  * scripts/audit-imports.php
  * يبحث عن كلاسات مستعملة داخل ملف ذي namespace بلا استيراد وبلا تأهيل.
@@ -52,14 +53,20 @@ function analyse(string $file): array
     $count = count($tokens);
     for ($i = 0; $i < $count; $i++) {
         $t = $tokens[$i];
-        if (!is_array($t)) continue;
+        if (!is_array($t)) {
+            continue;
+        }
 
         // namespace X\Y;
         if ($t[0] === T_NAMESPACE) {
             $buf = '';
             for ($j = $i + 1; $j < $count; $j++) {
-                if ($tokens[$j] === ';' || $tokens[$j] === '{') break;
-                if (is_array($tokens[$j]) && $tokens[$j][0] !== T_WHITESPACE) $buf .= $tokens[$j][1];
+                if ($tokens[$j] === ';' || $tokens[$j] === '{') {
+                    break;
+                }
+                if (is_array($tokens[$j]) && $tokens[$j][0] !== T_WHITESPACE) {
+                    $buf .= $tokens[$j][1];
+                }
             }
             $ns = trim($buf, '\\');
             continue;
@@ -69,11 +76,17 @@ function analyse(string $file): array
         if ($t[0] === T_USE) {
             $buf = '';
             for ($j = $i + 1; $j < $count; $j++) {
-                if ($tokens[$j] === ';' || $tokens[$j] === '{' || $tokens[$j] === '(') break;
-                if (is_array($tokens[$j]) && $tokens[$j][0] !== T_WHITESPACE) $buf .= $tokens[$j][1] . ' ';
+                if ($tokens[$j] === ';' || $tokens[$j] === '{' || $tokens[$j] === '(') {
+                    break;
+                }
+                if (is_array($tokens[$j]) && $tokens[$j][0] !== T_WHITESPACE) {
+                    $buf .= $tokens[$j][1] . ' ';
+                }
             }
             $buf = trim($buf);
-            if ($buf === '' || str_starts_with($buf, 'function ') || str_starts_with($buf, 'const ')) continue;
+            if ($buf === '' || str_starts_with($buf, 'function ') || str_starts_with($buf, 'const ')) {
+                continue;
+            }
             if (preg_match('/\bas\s+(\w+)$/i', $buf, $m)) {
                 $imported[$m[1]] = true;
             } else {
@@ -86,8 +99,13 @@ function analyse(string $file): array
         // class X | interface X | trait X | enum X
         if (in_array($t[0], [T_CLASS, T_INTERFACE, T_TRAIT], true)) {
             for ($j = $i + 1; $j < $count; $j++) {
-                if (is_array($tokens[$j]) && $tokens[$j][0] === T_STRING) { $declared[$tokens[$j][1]] = true; break; }
-                if (is_array($tokens[$j]) && $tokens[$j][0] === T_WHITESPACE) continue;
+                if (is_array($tokens[$j]) && $tokens[$j][0] === T_STRING) {
+                    $declared[$tokens[$j][1]] = true;
+                    break;
+                }
+                if (is_array($tokens[$j]) && $tokens[$j][0] === T_WHITESPACE) {
+                    continue;
+                }
                 break;
             }
             continue;
@@ -102,7 +120,10 @@ function analyse(string $file): array
             // مؤهَّل بالفعل (\App\Core\X أو App\Core\X)
             $qualified = is_array($prev)
                 && in_array($prev[0], [T_NS_SEPARATOR, T_NAME_QUALIFIED, T_NAME_FULLY_QUALIFIED], true);
-            if ($qualified) { $mentioned[$t[1]] = true; continue; }
+            if ($qualified) {
+                $mentioned[$t[1]] = true;
+                continue;
+            }
 
             $mentioned[$t[1]] = true;
 
@@ -119,7 +140,9 @@ function analyse(string $file): array
         // قد تكون السبب الوحيد لوجود use — نعدّها ذِكراً كي لا نقترح حذفها.
         if (in_array($t[0], [T_DOC_COMMENT, T_COMMENT], true)) {
             if (preg_match_all('/\b([A-Z]\w+)\b/', $t[1], $cm)) {
-                foreach ($cm[1] as $name) $mentioned[$name] = true;
+                foreach ($cm[1] as $name) {
+                    $mentioned[$name] = true;
+                }
             }
         }
     }
@@ -132,9 +155,13 @@ function analyse(string $file): array
 
 $files = [];
 foreach ($dirs as $d) {
-    if (!is_dir("$root/$d")) continue;
+    if (!is_dir("$root/$d")) {
+        continue;
+    }
     foreach (new RecursiveIteratorIterator(new RecursiveDirectoryIterator("$root/$d", FilesystemIterator::SKIP_DOTS)) as $f) {
-        if ($f->isFile() && $f->getExtension() === 'php') $files[] = $f->getPathname();
+        if ($f->isFile() && $f->getExtension() === 'php') {
+            $files[] = $f->getPathname();
+        }
     }
 }
 sort($files);
@@ -144,16 +171,24 @@ $unused   = [];   // استيراد لا يشير إليه شيء — فوضى �
 
 foreach ($files as $file) {
     $a = analyse($file);
-    if ($a['ns'] === '') continue;
+    if ($a['ns'] === '') {
+        continue;
+    }
     $rel = str_replace($root . DIRECTORY_SEPARATOR, '', $file);
 
     foreach ($a['used'] as $cls => $line) {
-        if (isset($a['imported'][$cls]) || isset($a['declared'][$cls])) continue;
-        if (in_array($cls, BUILTIN, true)) continue;
+        if (isset($a['imported'][$cls]) || isset($a['declared'][$cls])) {
+            continue;
+        }
+        if (in_array($cls, BUILTIN, true)) {
+            continue;
+        }
 
         // اسم غير مؤهَّل يُحلّ داخل النيسبيس الحالي — سليم إن كان الملف موجوداً
         $sameNsPath = $root . '/' . str_replace('\\', '/', $a['ns']) . '/' . $cls . '.php';
-        if (is_file($sameNsPath)) continue;
+        if (is_file($sameNsPath)) {
+            continue;
+        }
 
         $problems[] = ['file' => $rel, 'line' => $line, 'class' => $cls, 'ns' => $a['ns']];
     }

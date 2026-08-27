@@ -158,12 +158,14 @@ class ProductController extends Controller
 
         // جلب الـ Variants إن وجدت
         $variants = ProductModel::getVariants($pid);
-        
+
         // تجهيز الـ Variant المعروض (إن وجد، وإلا نستخدم بيانات المنتج الأساسية)
         $visitorGender   = getVisitorGender();
+        // الفرع الثاني كان `$variants[0] ?? []` — وهو مستحيل: نصل إليه
+        // فقط حين تكون $variants فارغة، فلا عنصر صفر فيها أبداً.
         $selectedVariant = !empty($variants)
-            ? pickDisplayVariant($variants, $visitorGender) 
-            : ($variants[0] ?? []);
+            ? pickDisplayVariant($variants, $visitorGender)
+            : [];
 
         // معالجة التقييمات
         $reviews   = ProductModel::getReviews($pid);

@@ -33,13 +33,25 @@
         "test": "phpunit",
         "test:unit": "phpunit --testsuite Unit",
         "test:integration": "phpunit --testsuite Integration",
-        "test:coverage": "phpunit --coverage-text --coverage-html coverage"
+        "test:coverage": "phpunit --coverage-text --coverage-html coverage",
+        "test:schema": "php -r \"require 'app/config/config.php'; passthru('mysqldump --no-data --skip-comments --skip-add-locks --skip-set-charset --routines=false --triggers=false -h ' . DB_HOST . ' -u ' . DB_USER . ' ' . DB_NAME . ' > tests/fixtures/schema.sql');\"",
+        "analyse": "phpstan analyse --no-progress",
+        "lint": "phpcs",
+        "lint:fix": "phpcbf",
+        "check": [
+            "@composer validate --strict",
+            "@analyse",
+            "@lint",
+            "@test"
+        ]
     },
     "require": {
         "phpmailer/phpmailer": "^7.1"
     },
     "require-dev": {
         "zircote/swagger-php": "^6.7",
-        "phpunit/phpunit": "^11"
+        "phpunit/phpunit": "^11",
+        "phpstan/phpstan": "^2.2",
+        "squizlabs/php_codesniffer": "^4.0"
     }
 }

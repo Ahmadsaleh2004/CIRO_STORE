@@ -45,12 +45,12 @@ class CheckoutController extends Controller
             // منطق الصفحة صار في ملف خارجي. كان هنا سطر <script> يحقن
             // window.CHECKOUT_IDEMPOTENCY_KEY — لم يعد له داع: المفتاح
             // يصل الـview كمتغيّر ويُطبع في data-checkout-idempotency.
-            'extraScripts'=> '<script src="' . URLROOT . '/js/features/checkout.js" defer></script>',
+            'extraScripts' => '<script src="' . URLROOT . '/js/features/checkout.js" defer></script>',
             'addresses'   => $addresses,
             'csrf'        => $csrf,
             'idempotencyKey' => $idempotencyKey,
-            'returnPolicy'=> '14-day return policy on all products in original condition.',
-            'userLoggedIn'=> true,
+            'returnPolicy' => '14-day return policy on all products in original condition.',
+            'userLoggedIn' => true,
             'userName'    => $_SESSION['user_name'] ?? '',
         ]);
     }
@@ -121,7 +121,9 @@ class CheckoutController extends Controller
             $price     = (float)($item['price']     ?? 0);
             $color     = htmlspecialchars(trim($item['color_name'] ?? ''));
 
-            if (!$productId || $price <= 0) continue;
+            if (!$productId || $price <= 0) {
+                continue;
+            }
 
             $cleanItems[] = [
                 'variant_id' => $variantId ?: null,
@@ -251,7 +253,7 @@ class CheckoutController extends Controller
             'robots'      => 'noindex, nofollow',
             'extraHead'   => '<link rel="stylesheet" href="' . URLROOT . '/css/store/pages/confirmation.css">',
             'orderId'     => $orderId,
-            'userLoggedIn'=> true,
+            'userLoggedIn' => true,
             'userName'    => $_SESSION['user_name'] ?? '',
         ]);
     }

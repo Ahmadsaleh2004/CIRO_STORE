@@ -1,4 +1,5 @@
 <?php
+
 /**
  * scripts/smoke-test.php
  * فحص دخان (smoke test) لكل راوتات GET في المشروع.
@@ -81,7 +82,9 @@ $isTty = function_exists('stream_isatty') && @stream_isatty(STDOUT);
 function paint(string $s, string $color): string
 {
     global $isTty;
-    if (!$isTty) return $s;
+    if (!$isTty) {
+        return $s;
+    }
     $codes = ['red' => 31, 'green' => 32, 'yellow' => 33, 'grey' => 90, 'bold' => 1];
     return "\033[" . ($codes[$color] ?? 0) . "m{$s}\033[0m";
 }
@@ -95,7 +98,9 @@ function extractGetRoutes(string $indexFile): array
         exit(1);
     }
     preg_match_all("/\\\$r->get\(\s*'([^']+)'/", $src, $m);
-    return array_values(array_unique($m[1] ?? []));
+    // preg_match_all تملأ $m[1] دائماً (ولو مصفوفة فارغة)، فـ?? هنا
+    // كانت تعد بحماية لا تحتاجها.
+    return array_values(array_unique($m[1]));
 }
 
 // ── 2. طلب HTTP واحد ───────────────────────────────────────────────
@@ -145,7 +150,8 @@ function inspectBody(string $body, string $route, int $code): array
         $problems[] = 'صفحة فارغة';
     }
 
-    if ($code === 200
+    if (
+        $code === 200
         && !in_array($route, NON_HTML_ROUTES, true)
         && !str_contains($body, '</html>')
     ) {
@@ -206,7 +212,9 @@ function allPhpFiles(string $root): array
         new RecursiveCallbackFilterIterator(
             new RecursiveDirectoryIterator($root, FilesystemIterator::SKIP_DOTS),
             function (SplFileInfo $f) use ($skipDirs) {
-                if ($f->isDir()) return !in_array($f->getFilename(), $skipDirs, true);
+                if ($f->isDir()) {
+                    return !in_array($f->getFilename(), $skipDirs, true);
+                }
                 return $f->getExtension() === 'php';
             }
         )
@@ -235,7 +243,9 @@ function changedPhpFiles(string $root): ?array
     // وبقية الأمر حرفية في هذا الملف — لا مدخل مستخدم في أي موضع.
     // nosemgrep: php.lang.security.exec-use.exec-use
     exec('git -C ' . escapeshellarg($root) . ' rev-parse --is-inside-work-tree 2>&1', $out, $rc);
-    if ($rc !== 0) return null;
+    if ($rc !== 0) {
+        return null;
+    }
 
     $files = [];
     foreach (['diff --name-only HEAD', 'ls-files --others --exclude-standard'] as $cmd) {
@@ -245,9 +255,13 @@ function changedPhpFiles(string $root): ?array
         exec('git -C ' . escapeshellarg($root) . ' ' . $cmd . ' 2>&1', $lines);
         foreach ($lines as $line) {
             $line = trim($line);
-            if ($line === '' || !str_ends_with($line, '.php')) continue;
+            if ($line === '' || !str_ends_with($line, '.php')) {
+                continue;
+            }
             $path = $root . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $line);
-            if (is_file($path)) $files[$path] = true;
+            if (is_file($path)) {
+                $files[$path] = true;
+            }
         }
     }
 
@@ -287,7 +301,9 @@ if (!$SKIPHTTP) {
 
     foreach ($results as $r) {
         $ok = empty($r['problems']);
-        if (!$ok) $failed++;
+        if (!$ok) {
+            $failed++;
+        }
 
         if (!$ok || $VERBOSE) {
             printf(
@@ -306,7 +322,9 @@ if (!$SKIPHTTP) {
         ? paint("  ✓ نجح {$passed}/" . count($results) . "\n\n", 'green')
         : paint("  ✗ فشل {$failed} من " . count($results) . "\n\n", 'red');
 
-    if ($failed > 0) $exitCode = 1;
+    if ($failed > 0) {
+        $exitCode = 1;
+    }
 }
 
 if (!$SKIPLINT) {
@@ -339,7 +357,9 @@ if (!$SKIPLINT) {
             ? paint("  ✓ {$lint['checked']} ملف سليم\n\n", 'green')
             : paint('  ✗ ' . count($lint['failures']) . " ملف فيه خطأ صياغة\n\n", 'red');
 
-        if (!empty($lint['failures'])) $exitCode = 1;
+        if (!empty($lint['failures'])) {
+            $exitCode = 1;
+        }
     }
 }
 

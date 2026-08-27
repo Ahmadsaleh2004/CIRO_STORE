@@ -1,4 +1,5 @@
 <?php
+
 /**
  * app/helpers/csrf_helper.php
  * إدارة CSRF Token — توليد + تحقق.

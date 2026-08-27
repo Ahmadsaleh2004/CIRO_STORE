@@ -72,7 +72,7 @@ class AdminOrdersController extends AdminController
         tags: ['Admin - Manage Orders'],
         security: [['adminSessionAuth' => []]],
         parameters: [
-            new OA\Parameter(name: 'id', in: 'query', required: true,  schema: new OA\Schema(type: 'integer')),
+            new OA\Parameter(name: 'id', in: 'query', required: true, schema: new OA\Schema(type: 'integer')),
         ],
         responses: [
             new OA\Response(response: 200, description: 'صفحة HTML بتفاصيل الطلب — يتطلب صلاحية can_manage_orders'),
@@ -124,7 +124,7 @@ class AdminOrdersController extends AdminController
                 schema: new OA\Schema(
                     required: ['order_id', 'csrf_token'],
                     properties: [
-                        new OA\Property(property: 'order_id',   type: 'integer'),
+                        new OA\Property(property: 'order_id', type: 'integer'),
                         new OA\Property(property: 'csrf_token', type: 'string'),
                     ]
                 )
@@ -193,8 +193,8 @@ class AdminOrdersController extends AdminController
                 schema: new OA\Schema(
                     required: ['order_id', 'csrf_token'],
                     properties: [
-                        new OA\Property(property: 'order_id',   type: 'integer'),
-                        new OA\Property(property: 'notif_msg',  type: 'string'),
+                        new OA\Property(property: 'order_id', type: 'integer'),
+                        new OA\Property(property: 'notif_msg', type: 'string'),
                         new OA\Property(property: 'csrf_token', type: 'string'),
                     ]
                 )
@@ -258,9 +258,9 @@ class AdminOrdersController extends AdminController
                 schema: new OA\Schema(
                     required: ['order_id', 'reason', 'csrf_token'],
                     properties: [
-                        new OA\Property(property: 'order_id',   type: 'integer'),
-                        new OA\Property(property: 'reason',     type: 'string'),
-                        new OA\Property(property: 'notif_msg',  type: 'string'),
+                        new OA\Property(property: 'order_id', type: 'integer'),
+                        new OA\Property(property: 'reason', type: 'string'),
+                        new OA\Property(property: 'notif_msg', type: 'string'),
                         new OA\Property(property: 'csrf_token', type: 'string'),
                     ]
                 )
@@ -329,8 +329,8 @@ class AdminOrdersController extends AdminController
                 schema: new OA\Schema(
                     required: ['order_id', 'reason', 'csrf_token'],
                     properties: [
-                        new OA\Property(property: 'order_id',   type: 'integer'),
-                        new OA\Property(property: 'reason',     type: 'string'),
+                        new OA\Property(property: 'order_id', type: 'integer'),
+                        new OA\Property(property: 'reason', type: 'string'),
                         new OA\Property(property: 'csrf_token', type: 'string'),
                     ]
                 )
@@ -406,8 +406,8 @@ class AdminOrdersController extends AdminController
                 schema: new OA\Schema(
                     required: ['order_id', 'reason', 'csrf_token'],
                     properties: [
-                        new OA\Property(property: 'order_id',   type: 'integer'),
-                        new OA\Property(property: 'reason',     type: 'string'),
+                        new OA\Property(property: 'order_id', type: 'integer'),
+                        new OA\Property(property: 'reason', type: 'string'),
                         new OA\Property(property: 'csrf_token', type: 'string'),
                     ]
                 )
@@ -470,8 +470,8 @@ class AdminOrdersController extends AdminController
                 schema: new OA\Schema(
                     required: ['order_id', 'reason', 'csrf_token'],
                     properties: [
-                        new OA\Property(property: 'order_id',   type: 'integer'),
-                        new OA\Property(property: 'reason',     type: 'string'),
+                        new OA\Property(property: 'order_id', type: 'integer'),
+                        new OA\Property(property: 'reason', type: 'string'),
                         new OA\Property(property: 'csrf_token', type: 'string'),
                     ]
                 )
@@ -565,25 +565,11 @@ class AdminOrdersController extends AdminController
 
     // ── Helpers خاصة داخلية ───────────────────────────────────────
 
-    /**
-     * Notify admins with a strictly higher rank than the actor who hold
-     * can_manage_orders, always excluding rank A.
-     */
-    private function notifyHigherRanks(int $actorAdminId, string $title, string $message, string $type, int $orderId): void
-    {
-        $actorRole = getAdminRole();
-        $targets   = AdminModel::findHigherRankWithPermission('can_manage_orders', $actorRole);
-
-        foreach ($targets as $targetAdminId) {
-            $targetAdminId = (int)$targetAdminId;
-            if ($targetAdminId === $actorAdminId) {
-                continue;
-            }
-            AdminModel::sendNotification(
-                $targetAdminId, $title, $message, $type, 'order', $orderId, $actorAdminId
-            );
-        }
-    }
+    // ملاحظة: كان هنا notifyHigherRanks() خاصة بلا مستدعٍ. الكنترولر
+    // ينادي AdminModel::notifyHigherRanksOnAction مباشرةً في ستّة
+    // مواضع، فالغلاف بقي بعد الترحيل ميّتاً. حذفه ليس تنظيفاً تجميلياً:
+    // نسخة حيّة منه ما زالت في AdminUsersController، ووجود اثنتين
+    // إحداهما ميّتة يجعل تعديل قاعدة الإشعار يبدو منجزاً وهو نصف منجز.
 
     /**
      * For every order that releaseExpiredTakenOrders() just reverted: log the action

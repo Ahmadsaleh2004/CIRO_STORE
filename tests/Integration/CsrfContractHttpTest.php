@@ -25,7 +25,22 @@ use PHPUnit\Framework\TestCase;
  */
 final class CsrfContractHttpTest extends TestCase
 {
-    private const BASE = 'http://localhost/STORE/public';
+    /**
+     * جذر الخادم الذي تُفحص نقاطه.
+     *
+     * قابل للضبط بمتغيّر البيئة TEST_BASE_URL كي يعمل الاختبار في
+     * موضعين مختلفين تماماً: XAMPP محلياً على مسار فرعي
+     * (/STORE/public)، وخادم PHP المدمج في CI على جذر منفذ
+     * (http://127.0.0.1:8080). تثبيت المسار كان سيجعل الاختبار
+     * يتخطّى نفسه في CI دائماً — أي حارس لا يحرس.
+     */
+    private static function base(): string
+    {
+        return rtrim(
+            getenv('TEST_BASE_URL') ?: ($_ENV['TEST_BASE_URL'] ?? 'http://localhost/STORE/public'),
+            '/'
+        );
+    }
 
     /**
      * نقاط POST عامة **لا** تتحقّق من CSRF — كل واحدة بسببها.
@@ -45,14 +60,14 @@ final class CsrfContractHttpTest extends TestCase
         parent::setUp();
 
         if (self::request('/', 'GET') === null) {
-            $this->markTestSkipped('خادم التطوير لا يستجيب على ' . self::BASE);
+            $this->markTestSkipped('خادم التطوير لا يستجيب على ' . self::base());
         }
     }
 
     /** @return array{status:int, body:string}|null */
     private static function request(string $path, string $method = 'POST'): ?array
     {
-        $ch = curl_init(self::BASE . $path);
+        $ch = curl_init(self::base() . $path);
         curl_setopt_array($ch, [
             CURLOPT_CUSTOMREQUEST  => $method,
             CURLOPT_RETURNTRANSFER => true,

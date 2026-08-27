@@ -1,4 +1,5 @@
 <?php
+
 /**
  * app/config/openapi_info.php
  * تعريف معلومات OpenAPI العامة — يُفحص بواسطة zircote/swagger-php
@@ -9,6 +10,12 @@
  * يُنشأ في AdminAuthController::login() عبر session_regenerate_id() + $_SESSION.
  * لا يوجد JWT أو Bearer token — الكوكي يُرسل تلقائياً مع كل طلب محمي.
  */
+
+// النطاق مطلوب بـPSR-4/PSR-12: كل كلاس في نطاق من مستوى واحد على
+// الأقل. الكلاس هنا علامة لا أكثر — وجوده كي تُعلَّق عليه سمات
+// swagger-php، ولا مستدعٍ له في المشروع (مفحوص). والنطاق لا يؤثّر على
+// الفحص: swagger-php يمسح المسارات لا الأسماء.
+namespace App\Config;
 
 use OpenApi\Attributes as OA;
 
@@ -47,4 +54,6 @@ use OpenApi\Attributes as OA;
     (راجع isUser/isAdmin في auth_helper.php).
     TXT
 )]
-class OpenApiInfo {}
+class OpenApiInfo
+{
+}
