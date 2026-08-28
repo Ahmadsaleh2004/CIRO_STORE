@@ -4,14 +4,21 @@ namespace App\Controllers;
 
 use App\Core\AdminController;
 use App\Core\ErrorPage;
+use App\Core\Middleware;
 use App\Models\BackupModel;
 use App\Models\AdminModel;
 use OpenApi\Attributes as OA;
 
 /**
- * BackupController — نسخ احتياطي لقاعدة البيانات (Root admin ID=1 فقط — لا صلاحية can_*).
- * كل الـ methods تبدأ بفحص المعرّف وفق النمط المستخدم بـ
- * AdminManageAdminsController::exportCsv() بالحرف.
+ * BackupController — نسخ احتياطي لقاعدة البيانات (الروت وحده — لا صلاحية can_*).
+ *
+ * ⚠️ كان الشرط `getCurrentAdminId() !== 1` مكتوباً بيده أربع مرّات —
+ * أي أن حقّ تنزيل قاعدة البيانات كاملةً كان معلَّقاً بـ**موضع** في طابور
+ * المعرّفات لا بشخص. وdeleteAdmin كانت تزحف بالمعرّفات عند كل حذف، فحذف
+ * صفٍّ واحد كان كفيلاً بنقل الحقّ إلى شخص آخر بصمت.
+ *
+ * الزحف حُذف، والشرط صار Middleware::requireRoot() المعتمدة على رتبة A —
+ * تعريف واحد للروت في المشروع كله بدل ثلاثة متنافسة.
  */
 class BackupController extends AdminController
 {
@@ -29,15 +36,7 @@ class BackupController extends AdminController
     )]
     public function index(): void
     {
-        // صفحة كاملة: صفحة 403 حقيقية بدل نصّ خام بلا لايوت ولا رجوع.
-        // والرسالة المعروضة عامة — قاعدة الصلاحية إلى السجل وحده.
-        if (getCurrentAdminId() !== 1) {
-            ErrorPage::forbidden(
-                'backup/index: محاولة من أدمن #' . (getCurrentAdminId() ?? 0),
-                URLROOT . '/admin/home',
-                'العودة للوحة التحكم'
-            );
-        }
+        Middleware::requireRoot();
 
         $this->adminView('backup', [
             'pageTitle' => 'Backup DB',
@@ -84,10 +83,7 @@ class BackupController extends AdminController
         // شيئاً — كلاهما شرط لازم.
         $this->beginJsonPost();
 
-        if (getCurrentAdminId() !== 1) {
-            http_response_code(403);
-            $this->respond(false, 'Access denied. You do not have permission for this action.');
-        }
+        Middleware::requireRoot();
 
         $adminId = getCurrentAdminId();
         $result  = BackupModel::createBackup();
@@ -129,16 +125,7 @@ class BackupController extends AdminController
     )]
     public function download(): void
     {
-        // كانت الحالتان أدناه ترّدان بـdie() ونصّ خام: صفحة بيضاء بلا
-        // <head> ولا لايوت ولا طريق رجوع، على نقطة يصلها الأدمن بنقرة
-        // من جدول النسخ. صارتا صفحتَي خطأ حقيقيتين عبر ErrorPage.
-        if (getCurrentAdminId() !== 1) {
-            ErrorPage::forbidden(
-                'backup/download: محاولة من أدمن #' . (getCurrentAdminId() ?? 0),
-                URLROOT . '/admin/home',
-                'العودة للوحة التحكم'
-            );
-        }
+        Middleware::requireRoot();
 
         $filename = $_GET['file'] ?? '';
         $path     = BackupModel::getBackupPath($filename);
@@ -199,10 +186,7 @@ class BackupController extends AdminController
         // كسابقتها: ترويسة JSON قبل أي ردّ، فلا يصل backup.js نصّ خام.
         $this->beginJsonPost();
 
-        if (getCurrentAdminId() !== 1) {
-            http_response_code(403);
-            $this->respond(false, 'Access denied. You do not have permission for this action.');
-        }
+        Middleware::requireRoot();
 
         $filename = $_POST['file'] ?? '';
         if (!BackupModel::deleteBackup($filename)) {

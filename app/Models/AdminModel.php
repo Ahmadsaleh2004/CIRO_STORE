@@ -214,7 +214,14 @@ class AdminModel
     public static function getRootAdminId(): ?int
     {
         try {
-            $id = Database::connect()->query("SELECT id FROM admins WHERE role='A' LIMIT 1")->fetchColumn();
+            // ORDER BY صريح: بدونه ترتيب الصفوف من صنع المحرّك، فقد
+            // يتغيّر «الروت» بين استدعاءين على البيانات نفسها. رتبة A
+            // واحدة اليوم (ولا سبيل لإنشاء ثانية — canManageTarget تشترط
+            // رتبة أعلى من A وهي غير موجودة)، لكن اعتماد الحظّ في تعريف
+            // الروت ليس شيئاً يُترك للمستقبل.
+            $id = Database::connect()
+                ->query("SELECT id FROM admins WHERE role='A' ORDER BY id ASC LIMIT 1")
+                ->fetchColumn();
             return $id ? (int)$id : null;
         } catch (Exception $e) {
             error_log("AdminModel::getRootAdminId Error: " . $e->getMessage());
@@ -366,43 +373,37 @@ class AdminModel
         }
     }
 
+    /**
+     * يحذف أدمناً — والمعرّفات الباقية لا تتحرّك.
+     *
+     * ⚠️ كان هنا زحفٌ لكل معرّف أكبر من المحذوف: يُنقَص واحداً عبر تسعة
+     * جداول، مع SET FOREIGN_KEY_CHECKS=0 وALTER TABLE AUTO_INCREMENT في
+     * النهاية. حُذف كلّه، لثلاثة أسباب لا واحد:
+     *
+     *   1. **الـALTER كان يكسر الـtransaction.** ALTER TABLE في MySQL
+     *      يسبّب implicit commit — فالـbeginTransaction أعلاه كان ينتهي
+     *      عنده، ورollBack() في catch لا يجد ما يتراجع عنه. أي أن زحف
+     *      المعرّفات عبر التسعة جداول كان **غير قابل للتراجع** لو فشل
+     *      شيء بعده، ومع فحص المفاتيح مُطفأ.
+     *
+     *   2. **المعرّف كان مقترناً بالتخويل.** BackupController كان يمنح
+     *      حقّ تنزيل القاعدة كاملة لـ`getCurrentAdminId() !== 1` — أي
+     *      لموضعٍ في طابور، لا لشخص. وزحفٌ واحد كان كفيلاً بأن يرث
+     *      شخصٌ آخر ذلك الحقّ صامتاً.
+     *
+     *   3. **المعرّف هوية لا ترتيب عرض.** قرار صاحب المشروع: من كان
+     *      معرّفه 10 يبقى 10 مدى الحياة. الفجوات بعد الحذف مقصودة،
+     *      والترقيم المتسلسل في الجداول يُحسب في الـview من ترتيب الصف.
+     */
     public static function deleteAdmin(int $id): bool
     {
         $db = Database::connect();
         try {
             $db->beginTransaction();
-
-            // Disable FK checks for reordering PK while FKs exist
-            $db->exec("SET FOREIGN_KEY_CHECKS=0");
-
             $db->prepare("DELETE FROM admins WHERE id=?")->execute([$id]);
-
-            $stmt = $db->prepare("SELECT id FROM admins WHERE id > ? ORDER BY id ASC");
-            $stmt->execute([$id]);
-            $toShift = $stmt->fetchAll(\PDO::FETCH_COLUMN);
-
-            foreach ($toShift as $oldId) {
-                $newId = $oldId - 1;
-
-                $db->prepare("UPDATE admins SET id=? WHERE id=?")->execute([$newId, $oldId]);
-                $db->prepare("UPDATE admin_permissions SET admin_id=? WHERE admin_id=?")->execute([$newId, $oldId]);
-                $db->prepare("UPDATE admins SET added_by=? WHERE added_by=?")->execute([$newId, $oldId]);
-                $db->prepare("UPDATE admin_notifications SET admin_id=? WHERE admin_id=?")->execute([$newId, $oldId]);
-                $db->prepare("UPDATE admin_notifications SET sender_admin_id=? WHERE sender_admin_id=?")->execute([$newId, $oldId]);
-                $db->prepare("UPDATE home_sliders SET updated_by_admin_id=? WHERE updated_by_admin_id=?")->execute([$newId, $oldId]);
-                $db->prepare("UPDATE order_expiry_log SET previous_admin_id=? WHERE previous_admin_id=?")->execute([$newId, $oldId]);
-                $db->prepare("UPDATE user_strikes SET issued_by_admin_id=? WHERE issued_by_admin_id=?")->execute([$newId, $oldId]);
-                $db->prepare("UPDATE orders SET taken_by_admin_id=? WHERE taken_by_admin_id=?")->execute([$newId, $oldId]);
-            }
-
-            $maxId = (int)$db->query("SELECT COALESCE(MAX(id),0) FROM admins")->fetchColumn();
-            $db->exec("ALTER TABLE admins AUTO_INCREMENT = " . ($maxId + 1));
-
-            $db->exec("SET FOREIGN_KEY_CHECKS=1");
             $db->commit();
             return true;
         } catch (\Exception $e) {
-            $db->exec("SET FOREIGN_KEY_CHECKS=1");
             if ($db->inTransaction()) {
                 $db->rollBack();
             }

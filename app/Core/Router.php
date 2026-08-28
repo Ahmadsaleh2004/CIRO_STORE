@@ -243,6 +243,11 @@ class Router
                 continue;
             }
 
+            if ($name === 'root') {
+                Middleware::requireRoot();
+                continue;
+            }
+
             if (str_starts_with($name, 'perm:')) {
                 Middleware::requirePermission(substr($name, 5));
                 continue;
