@@ -137,4 +137,101 @@ final class TotpTest extends TestCase
 
         $this->assertFalse(Totp::verifyCode($mine, $code));
     }
+
+    // ════════════════════════════════════════════════════════
+    // منع إعادة استخدام الكود — verifyAndGetSlice
+    // ════════════════════════════════════════════════════════
+
+    /**
+     * النجاح يُرجع الشريحة لا مجرّد true.
+     *
+     * القيمة المُعادة هي ما يخزّنه المستدعي ليمنع إعادة الاستخدام، فلو
+     * أُعيدت شريحة خاطئة لصار المنع إمّا واسعاً (يرفض أكواداً صالحة)
+     * وإمّا فارغاً (لا يمنع شيئاً).
+     */
+    public function testVerifyAndGetSliceReturnsTheMatchingSlice(): void
+    {
+        $secret = Totp::generateSecret();
+        $now    = (int) floor(time() / 30);
+
+        $this->assertSame($now, Totp::verifyAndGetSlice($secret, $this->generateCodeAt($secret, $now)));
+        $this->assertSame($now - 1, Totp::verifyAndGetSlice($secret, $this->generateCodeAt($secret, $now - 1)));
+        $this->assertSame($now + 1, Totp::verifyAndGetSlice($secret, $this->generateCodeAt($secret, $now + 1)));
+    }
+
+    public function testVerifyAndGetSliceReturnsNullOnFailure(): void
+    {
+        $secret = Totp::generateSecret();
+
+        $this->assertNull(Totp::verifyAndGetSlice($secret, '000000'));
+        $this->assertNull(Totp::verifyAndGetSlice($secret, 'abcdef'));
+    }
+
+    /**
+     * الكود المستهلَك يُرفض داخل نافذته.
+     *
+     * بدون هذا يبقى الكود صالحاً تسعين ثانية كاملة، فمن يلتقطه — فوق
+     * كتف، أو من سجلّ، أو من شاشة مشارَكة — يعيد إرساله ويدخل.
+     */
+    public function testAConsumedSliceIsRejected(): void
+    {
+        $secret = Totp::generateSecret();
+        $now    = (int) floor(time() / 30);
+        $code   = $this->generateCodeAt($secret, $now);
+
+        $this->assertSame($now, Totp::verifyAndGetSlice($secret, $code, null));
+        $this->assertNull(Totp::verifyAndGetSlice($secret, $code, $now));
+    }
+
+    /**
+     * والأقدم من المستهلَك يُرفض أيضاً، لا المساواة وحدها.
+     *
+     * النافذة تحوي ثلاث شرائح. لو مُنعت المطابِقة وحدها لبقي كود
+     * الشريحة السابقة صالحاً بعد استعمال اللاحقة — أي ثغرة بحجم ثلاثين
+     * ثانية تُفتح بالضبط في اللحظة التي يُفترض أن يكون الباب فيها مغلقاً.
+     */
+    public function testASliceOlderThanTheConsumedOneIsRejected(): void
+    {
+        $secret = Totp::generateSecret();
+        $now    = (int) floor(time() / 30);
+
+        $this->assertNull(Totp::verifyAndGetSlice($secret, $this->generateCodeAt($secret, $now - 1), $now));
+    }
+
+    /**
+     * لكن الشريحة الأحدث من المستهلَكة تبقى مقبولة.
+     *
+     * الحدّ الأعلى للمنع مهمّ كالحدّ الأدنى: لو رُفض ما بعد المستهلَكة
+     * لَقُفل الحساب بعد أوّل دخول ناجح.
+     */
+    public function testANewerSliceIsStillAccepted(): void
+    {
+        $secret = Totp::generateSecret();
+        $now    = (int) floor(time() / 30);
+
+        $this->assertSame(
+            $now,
+            Totp::verifyAndGetSlice($secret, $this->generateCodeAt($secret, $now), $now - 1)
+        );
+    }
+
+    /**
+     * verifyCode القديمة تبقى غلافاً صادقاً فوق verifyAndGetSlice.
+     *
+     * ما زالت مستعملة في مسار تفعيل الـ2FA، فانحرافها عن الدالة التي
+     * تفوّض إليها كان سيعني قاعدتَي تحقّق مختلفتين في المشروع نفسه.
+     */
+    public function testVerifyCodeStaysConsistentWithVerifyAndGetSlice(): void
+    {
+        $secret = Totp::generateSecret();
+        $now    = (int) floor(time() / 30);
+
+        foreach ([$this->generateCodeAt($secret, $now), '000000', '', 'zzzzzz'] as $code) {
+            $this->assertSame(
+                Totp::verifyAndGetSlice($secret, $code) !== null,
+                Totp::verifyCode($secret, $code),
+                "انحراف بين الدالتين على المدخل [{$code}]"
+            );
+        }
+    }
 }

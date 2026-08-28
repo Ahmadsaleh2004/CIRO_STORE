@@ -133,6 +133,63 @@ class Middleware
     }
 
     /**
+     * يخنق نقطة دخول: يرفض بـ429 حين يتجاوز المصدر الحدَّ خلال النافذة.
+     *
+     * الحارس يسجّل المحاولة **قبل** أن ينفّذ الكنترولر، أي أنه يعدّ
+     * الطلبات لا الإخفاقات. هذا فرق جوهري عن isRateLimited القائمة:
+     * تلك تعدّ محاولات الدخول الفاشلة، فلا ترى أصلاً من يستدعي
+     * /auth/forgot ألف مرّة — كل استدعاء منها «ناجح» من زاويتها بينما
+     * هو ألف رسالة بريد.
+     *
+     * والعدّ قبل التنفيذ يجعل الحارس يعمل حتى لو انتهى الفعل بـexit
+     * مبكّر، وهو ما تفعله معظم نقاط JSON هنا.
+     *
+     * @param string $bucket        اسم الدلو — يفصل عدّاد نقطة عن أخرى
+     * @param int    $max           أقصى عدد طلبات مسموح خلال النافذة
+     * @param int    $windowMinutes طول النافذة بالدقائق
+     */
+    public static function throttle(string $bucket, int $max, int $windowMinutes): void
+    {
+        $identifier = Throttle::clientIp();
+
+        if (Throttle::tooMany($bucket, $identifier, $max, $windowMinutes)) {
+            self::denyThrottled($bucket, $windowMinutes);
+        }
+
+        Throttle::record($bucket, $identifier);
+    }
+
+    /**
+     * يرفض الطلب المخنوق: JSON لنقاط الـAJAX، وصفحة 429 كاملة للصفحات.
+     *
+     * التفريق يتبع expectsJson() نفسها التي يستعملها requireLogin — لا
+     * فحصاً ثالثاً بصياغة رابعة، فقد كان ذلك بالضبط ما وحّدته تلك الدالة.
+     */
+    private static function denyThrottled(string $bucket, int $windowMinutes): void
+    {
+        $retryAfter = $windowMinutes * 60;
+
+        if (self::expectsJson()) {
+            if (!headers_sent()) {
+                http_response_code(429);
+                header('Retry-After: ' . $retryAfter);
+                header('Cache-Control: no-store');
+                header('Content-Type: application/json; charset=utf-8');
+            }
+            echo json_encode([
+                'success' => false,
+                'message' => 'محاولات كثيرة خلال وقت قصير. انتظر قليلاً ثم أعد المحاولة.',
+            ], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
+        ErrorPage::tooManyRequests(
+            $retryAfter,
+            'خنق الدلو [' . $bucket . '] من ' . Throttle::clientIp()
+        );
+    }
+
+    /**
      * يرجع JSON لو الطلب AJAX أو POST، أو صفحة HTML عادية لو طلب صفحة كامل.
      * يُستدعى فقط عند رفض الصلاحية (403).
      */

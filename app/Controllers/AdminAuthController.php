@@ -34,6 +34,28 @@ use OpenApi\Attributes as OA;
  */
 class AdminAuthController extends Controller
 {
+    /** عمر الحالة المعلّقة بين كلمة المرور والكود، بالثواني. */
+    private const PENDING_2FA_TTL = 300;
+
+    /** كم كوداً خاطئاً تحتمله الحالة المعلّقة قبل أن تُلغى. */
+    private const MAX_2FA_ATTEMPTS = 5;
+
+    /**
+     * يُنهي الحالة المعلّقة بين كلمة المرور والكود.
+     *
+     * المفاتيح الثلاثة تُمسح معاً دائماً: بقاء أحدها بلا الآخرين كان
+     * سيترك حالة نصفية — معرّفاً بلا مهلة، أو عدّاداً بلا معرّف — وهي
+     * بالضبط الحالات التي يصعب التفكير فيها لاحقاً.
+     */
+    private function clearPending2FA(): void
+    {
+        unset(
+            $_SESSION['pending_2fa_admin_id'],
+            $_SESSION['pending_2fa_started_at'],
+            $_SESSION['pending_2fa_attempts']
+        );
+    }
+
     // ════════════════════════════════════════════════════════
     // GET /admin/login — عرض صفحة تسجيل الدخول
     // ════════════════════════════════════════════════════════
@@ -163,11 +185,21 @@ class AdminAuthController extends Controller
             // نخزّن الـ id بجلسة مؤقتة "pending" حتى يدخل الكود الصحيح.
             if (!empty($admin['totp_enabled']) && !empty($admin['totp_secret'])) {
                 $_SESSION['pending_2fa_admin_id'] = (int)$admin['id'];
+                // الحالة المعلّقة تُختم بوقت بدئها وعدّاد محاولاتها.
+                //
+                // بدونهما كانت تبقى مفتوحة إلى الأبد: من عبر كلمة المرور
+                // يحتفظ بالجلسة المعلّقة ويجرّب فيها بلا حدّ ولا انتهاء.
+                // الوقت يقصر النافذة، والعدّاد يقصر عدد الطلبات داخلها —
+                // وخنق الراوتر فوقهما يحدّ المصدر نفسه.
+                $_SESSION['pending_2fa_started_at'] = time();
+                $_SESSION['pending_2fa_attempts']   = 0;
                 unset($_SESSION['csrf_token']);
                 generateCsrfToken();
                 $this->respond(true, 'Enter your 2FA code.', ['requires_2fa' => true]);
             }
             // إذا كانت 2FA غير مفعّلة نكمل بفتح الجلسة العادي أسفل هذا السطر
+
+            \App\Core\Throttle::clear('admin-login', \App\Core\Throttle::clientIp());
 
             session_regenerate_id(true);
 
@@ -302,14 +334,48 @@ class AdminAuthController extends Controller
             $this->respond(false, 'Session expired. Please log in again.');
         }
 
+        // ── حدود الحالة المعلّقة ────────────────────────────────
+        //
+        // كانت هذه الخطوة بلا أي حدّ: كلمة المرور عبرت، والكود ست خانات
+        // بنافذة ±30 ثانية — ثلاثة أكواد صالحة من مليون في كل لحظة. من
+        // يملك كلمة المرور كان يتجاوز الطبقة الثانية بحلقة تخمين، فتصير
+        // موجودة شكلاً لا فعلاً.
+        //
+        // ثلاثة حدود تعمل معاً الآن، كلٌّ يسدّ ما لا يسدّه الآخر:
+        //   · خنق الراوتر (throttle:admin-2fa) يحدّ المصدر عبر الجلسات
+        //   · المهلة أدناه تُغلق النافذة الزمنية
+        //   · العدّاد يُنهي الحالة المعلّقة نفسها
+        if (time() - (int)($_SESSION['pending_2fa_started_at'] ?? 0) > self::PENDING_2FA_TTL) {
+            $this->clearPending2FA();
+            $this->respond(false, 'Session expired. Please log in again.');
+        }
+
         $admin = AdminModel::findById($pendingId);
         if (!$admin || empty($admin['totp_enabled']) || empty($admin['totp_secret'])) {
-            unset($_SESSION['pending_2fa_admin_id']);
+            $this->clearPending2FA();
             $this->respond(false, '2FA is not enabled for this account. Please log in again.');
         }
 
-        $code = $_POST['code'] ?? '';
-        if (!\App\Core\Totp::verifyCode($admin['totp_secret'], $code)) {
+        $code  = $_POST['code'] ?? '';
+        $slice = \App\Core\Totp::verifyAndGetSlice(
+            $admin['totp_secret'],
+            $code,
+            isset($admin['last_totp_slice']) ? (int)$admin['last_totp_slice'] : null
+        );
+
+        // الاستهلاك شرط للنجاح لا أثر جانبي له: consumeTotpSlice تكتب
+        // بشرط، فترجع false حين يسبقها طلب متزامن بالكود نفسه. رفضها
+        // هنا هو ما يجعل الكود الواحد صالحاً مرّة واحدة فعلاً.
+        if ($slice === null || !AdminModel::consumeTotpSlice($pendingId, $slice)) {
+            $attempts = (int)($_SESSION['pending_2fa_attempts'] ?? 0) + 1;
+            $_SESSION['pending_2fa_attempts'] = $attempts;
+
+            if ($attempts >= self::MAX_2FA_ATTEMPTS) {
+                AdminModel::logAction($pendingId, '2fa_attempts_exceeded');
+                $this->clearPending2FA();
+                $this->respond(false, 'Too many attempts. Please log in again.');
+            }
+
             $this->respond(false, 'Invalid code. Please try again.');
         }
 
@@ -344,7 +410,11 @@ class AdminAuthController extends Controller
             ")
         );
 
-        unset($_SESSION['pending_2fa_admin_id']);
+        $this->clearPending2FA();
+        // الدخول اكتمل، فلا معنى لأن يدفع صاحبه ثمن محاولاته الفاشلة في
+        // المرّة القادمة — من نحرس منه لا يصل إلى هذا السطر أصلاً.
+        \App\Core\Throttle::clear('admin-2fa', \App\Core\Throttle::clientIp());
+        \App\Core\Throttle::clear('admin-login', \App\Core\Throttle::clientIp());
         unset($_SESSION['csrf_token']);
         generateCsrfToken();
         $this->respond(true, 'Welcome, ' . $_SESSION['admin_name'], [

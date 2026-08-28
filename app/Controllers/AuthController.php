@@ -82,6 +82,8 @@ class AuthController extends Controller
             }
 
             UserModel::logLoginAttempt($email, true);
+            // الدخول نجح — لا يدفع صاحبه ثمن محاولاته الفاشلة لاحقاً.
+            \App\Core\Throttle::clear('store-login', \App\Core\Throttle::clientIp());
             session_regenerate_id(true);
 
             $_SESSION['user_id']     = (int)$user['id'];

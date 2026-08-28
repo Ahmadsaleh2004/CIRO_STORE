@@ -822,14 +822,44 @@ class AdminModel
     public static function enable2FA(int $adminId, string $secret): bool
     {
         $db = \App\Core\Database::connect();
-        $stmt = $db->prepare("UPDATE admins SET totp_secret = ?, totp_enabled = 1 WHERE id = ?");
+        // last_totp_slice تُصفَّر مع كل تفعيل: السرّ جديد، فالشرائح
+        // المستهلَكة تخصّ سرّاً آخر ولا معنى لتوريثها.
+        $stmt = $db->prepare(
+            "UPDATE admins SET totp_secret = ?, totp_enabled = 1, last_totp_slice = NULL WHERE id = ?"
+        );
         return $stmt->execute([$secret, $adminId]);
     }
 
     public static function disable2FA(int $adminId): bool
     {
         $db = \App\Core\Database::connect();
-        $stmt = $db->prepare("UPDATE admins SET totp_secret = NULL, totp_enabled = 0 WHERE id = ?");
+        $stmt = $db->prepare(
+            "UPDATE admins SET totp_secret = NULL, totp_enabled = 0, last_totp_slice = NULL WHERE id = ?"
+        );
         return $stmt->execute([$adminId]);
+    }
+
+    /**
+     * يسجّل آخر شريحة TOTP استُهلكت — يمنع إعادة استخدام الكود نفسه.
+     *
+     * الشرط `last_totp_slice IS NULL OR last_totp_slice < ?` ليس تزيّناً:
+     * طلبان متزامنان بالكود نفسه قد يمرّان معاً من فحص التحقق قبل أن
+     * يكتب أيّهما. الشرط يجعل الكتابة نفسها هي الحَكَم، فينجح أحدهما
+     * فقط — وترجع الدالة false للآخر ليرفضه المستدعي.
+     */
+    public static function consumeTotpSlice(int $adminId, int $slice): bool
+    {
+        try {
+            $db   = \App\Core\Database::connect();
+            $stmt = $db->prepare(
+                "UPDATE admins SET last_totp_slice = ?
+                 WHERE id = ? AND (last_totp_slice IS NULL OR last_totp_slice < ?)"
+            );
+            $stmt->execute([$slice, $adminId, $slice]);
+            return $stmt->rowCount() === 1;
+        } catch (Exception $e) {
+            error_log("AdminModel::consumeTotpSlice Error: " . $e->getMessage());
+            return false;
+        }
     }
 }

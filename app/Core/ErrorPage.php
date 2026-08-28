@@ -153,6 +153,45 @@ final class ErrorPage
     }
 
     /**
+     * يرسل 429 «محاولات كثيرة» ويوقف التنفيذ.
+     *
+     * تُستدعى من Middleware::throttle وحدها. الرسالة المعروضة لا تذكر
+     * الحدَّ ولا كم بقي من محاولات — من يعرف الرقم يضبط وتيرته تحته
+     * بالضبط، فيصير الخنق دليلاً للمهاجم بدل أن يكون حاجزاً أمامه.
+     *
+     * Retry-After ليست تزيّناً هنا أيضاً: RFC 9110 §15.5.28 توصي بها مع
+     * كل 429، وهي ما يقرؤه العميل الشريف ليعرف متى يعاود بدل أن يخمّن.
+     * تُرسَل بالثواني لأن الصيغة الرقمية هي ما تفهمه المكتبات.
+     *
+     * @param int         $retryAfterSeconds كم ثانية قبل معاودة مجدية.
+     * @param string|null $logDetail تفصيل تشخيصي — إلى error_log وحده.
+     */
+    public static function tooManyRequests(int $retryAfterSeconds, ?string $logDetail = null): never
+    {
+        if ($logDetail !== null && $logDetail !== '') {
+            error_log('[Cairo Store] 429: ' . $logDetail);
+        }
+
+        if (!headers_sent()) {
+            http_response_code(429);
+            header('Retry-After: ' . max(1, $retryAfterSeconds));
+            header('Content-Type: text/html; charset=utf-8');
+            // لا تُخزَّن استجابة خنق في أي وسيط — وإلا خُدم الرفض لغير صاحبه.
+            header('Cache-Control: no-store');
+        }
+
+        echo '<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="UTF-8">'
+           . '<meta name="viewport" content="width=device-width,initial-scale=1">'
+           . '<title>429 — محاولات كثيرة</title></head>'
+           . '<body style="font-family:system-ui,sans-serif;text-align:center;padding:60px">'
+           . '<h1>429</h1><p>محاولات كثيرة خلال وقت قصير. انتظر قليلاً ثم أعد المحاولة.</p>'
+           . '<p><a href="' . htmlspecialchars(URLROOT) . '/">العودة للصفحة الرئيسية</a></p>'
+           . '</body></html>';
+
+        exit;
+    }
+
+    /**
      * يرسل صفحة 500 كاملة ويوقف التنفيذ.
      *
      * وُجدت لسبب notFound() نفسه. كان فشل الاتصال بقاعدة البيانات يُعالج

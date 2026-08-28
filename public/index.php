@@ -97,7 +97,8 @@ $r->post('/product', [ProductController::class, 'show']);
 $r->get('/about',   [AboutController::class,   'about']);
 $r->get('/contact', [ContactController::class, 'contact']);
 $r->post('/contact',[ContactController::class, 'contact']);
-$r->post('/contact/send', [ContactController::class, 'send']);
+$r->post('/contact/send', [ContactController::class, 'send'])
+    ->middleware('throttle:contact,5,60');
 
 // ── Wishlist ─────────────────────────────────────────────────
 $r->get('/wishlist', [WishlistController::class, 'index']);
@@ -105,13 +106,23 @@ $r->get('/handlers/product_stock_handler.php', [WishlistController::class, 'stoc
 $r->post('/handlers/notify_handler.php',       [WishlistController::class, 'notify']);
 
 // ── Auth ─────────────────────────────────────────────────────
-$r->post('/auth/login',            [AuthController::class, 'login']);
-$r->post('/auth/register',         [AuthController::class, 'register']);
+//
+// الخنق هنا يعدّ **الطلبات** من مصدر واحد، وهو غير الخنق القائم في
+// UserModel::isRateLimited الذي يعدّ إخفاقات الدخول إلى حساب واحد.
+// الطبقتان تحرسان شيئين مختلفين: تلك تحمي حساباً بعينه من التخمين،
+// وهذه تحمي النقطة نفسها من الاستنزاف — وأوضح مثال /auth/forgot، إذ
+// كل استدعاء لها «ناجح» من زاوية عدّاد الإخفاقات بينما هو رسالة بريد.
+$r->post('/auth/login',            [AuthController::class, 'login'])
+    ->middleware('throttle:store-login,10,15');
+$r->post('/auth/register',         [AuthController::class, 'register'])
+    ->middleware('throttle:store-register,5,60');
 $r->post('/auth/logout',           [AuthController::class, 'logout']);
-$r->post('/auth/forgot',           [AuthController::class, 'forgot']);
+$r->post('/auth/forgot',           [AuthController::class, 'forgot'])
+    ->middleware('throttle:store-forgot,5,60');
 $r->get('/auth/verify',            [AuthController::class, 'verifyEmail']);
 $r->get('/auth/reset',             [AuthController::class, 'resetForm']);
-$r->post('/auth/reset',            [AuthController::class, 'resetSubmit']);
+$r->post('/auth/reset',            [AuthController::class, 'resetSubmit'])
+    ->middleware('throttle:store-reset,10,15');
 $r->get('/auth/google',            [AuthController::class, 'googleLogin']);
 $r->get('/auth/google/callback',   [AuthController::class, 'googleCallback']);
 $r->get('/auth/csrf',              [AuthController::class, 'getCsrf']);
@@ -150,14 +161,22 @@ $r->post('/notifications/delete-all',   [NotificationController::class, 'deleteA
 // ملاحظة: هذه المسارات تستخدم session_name('admin_session') منفصلة
 // عن جلسة المستخدم العادي (PHPSESSID) — لا تخلطهما أبداً
 $r->get('/admin/login',  [AdminAuthController::class, 'showLogin']);
-$r->post('/admin/login', [AdminAuthController::class, 'login']);
-$r->post('/admin/login/2fa', [AdminAuthController::class, 'verify2FALogin']);
-$r->post('/admin/forgot',[AdminAuthController::class, 'forgotPassword']);
+$r->post('/admin/login', [AdminAuthController::class, 'login'])
+    ->middleware('throttle:admin-login,10,15');
+// ⚠️ أهمّ خنق في الجدول. خطوة الـ2FA كانت بلا أي عدّاد: كلمة المرور
+// عبرت أصلاً، والكود ست خانات بنافذة ±30 ثانية — أي ثلاثة أكواد صالحة
+// من مليون في كل لحظة. بلا حدّ، من يملك كلمة المرور يتجاوز الطبقة
+// الثانية بحلقة تخمين. الحدّ هنا أضيق من الدخول عمداً.
+$r->post('/admin/login/2fa', [AdminAuthController::class, 'verify2FALogin'])
+    ->middleware('throttle:admin-2fa,8,15');
+$r->post('/admin/forgot',[AdminAuthController::class, 'forgotPassword'])
+    ->middleware('throttle:admin-forgot,5,60');
 $r->post('/admin/logout',[AdminAuthController::class, 'logout']);
 $r->get('/admin/csrf',   [AdminAuthController::class, 'getCsrf']);
 $r->post('/admin/store-mode/enter',  [AdminAuthController::class, 'enterStoreMode']);
 $r->get('/admin/store-mode/reauth',  [AdminAuthController::class, 'showReauth']);
-$r->post('/admin/store-mode/reauth', [AdminAuthController::class, 'reauth']);
+$r->post('/admin/store-mode/reauth', [AdminAuthController::class, 'reauth'])
+    ->middleware('throttle:admin-reauth,10,15');
 $r->get('/admin/home',     [AdminHomeController::class,   'index']);
 $r->get('/admin/my-info',  [AdminMyInfoController::class, 'index']);
 $r->post('/admin/my-info', [AdminMyInfoController::class, 'updateProfile']);

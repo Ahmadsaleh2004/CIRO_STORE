@@ -248,6 +248,23 @@ class Router
                 continue;
             }
 
+            // throttle:bucket,max,windowMinutes
+            //
+            // الوسائط في اسم الحارس لا في إعداد منفصل، لأن الحدّ جزء من
+            // تعريف المسار لا من إعداد عامّ: «الدخول خمس محاولات في ربع
+            // ساعة» جملة تُقرأ عند المسار نفسه، ومن يضيف مساراً جديداً
+            // يرى الحدّ أمامه فيقرّره بدل أن ينساه.
+            if (str_starts_with($name, 'throttle:')) {
+                $args = explode(',', substr($name, 9));
+                if (count($args) !== 3) {
+                    throw new \InvalidArgumentException(
+                        "Malformed throttle middleware [{$name}] — expected throttle:bucket,max,windowMinutes."
+                    );
+                }
+                Middleware::throttle(trim($args[0]), (int)$args[1], (int)$args[2]);
+                continue;
+            }
+
             // اسم حارس غير معروف خطأ برمجي لا حالة وقت تشغيل. الفشل
             // الصاخب مقصود: حارس مكتوب خطأً يعني مساراً بلا حماية،
             // وتجاهله بصمت هو أسوأ ما يمكن فعله هنا.
