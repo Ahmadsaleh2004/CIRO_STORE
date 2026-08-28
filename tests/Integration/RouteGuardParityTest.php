@@ -143,12 +143,98 @@ final class RouteGuardParityTest extends TestCase
 
         $extra = [];
         foreach ($inTable as $action => $guard) {
+            // الخنق مُعلَن في المسار وحده بلا مقابل في الجسم، وهذا تصميمه
+            // لا سهو فيه. قاعدة التكافؤ أعلاه تخصّ ازدواج **التخويل**
+            // (perm/auth) وهو ازدواج مؤقّت مقصود يُحذف نصفه لاحقاً؛ أمّا
+            // الخنق فوُلد في المسار من أوّل يوم: مكانه الصحيح قبل بناء
+            // الكنترولر، لأنه يعدّ الطلبات لا نتائجها — ونسخة منه داخل
+            // الجسم كانت ستعدّ الطلب مرّتين.
+            if (str_starts_with($guard, 'throttle:')) {
+                continue;
+            }
+
             if (!isset($inBody[$action])) {
                 $extra[] = "{$action} — المسار يعلن [{$guard}] ولا أثر له في جسم الفعل.";
             }
         }
 
         $this->assertSame([], $extra, "حُرّاس مُعلَنة بلا مقابل:\n  " . implode("\n  ", $extra));
+    }
+
+    /**
+     * كل حارس خنق مكتوب بالصيغة التي يفهمها الراوتر، وبحدود معقولة.
+     *
+     * Router::runMiddleware يرمي عند صيغة مشوّهة — لكن وقت الطلب. وخطأ
+     * مطبعي في رقم («throttle:login,5» بلا نافذة، أو نافذة صفر) يعني
+     * إمّا صفحة 500 لكل زائر، وإمّا حارساً يمرّ كل شيء. كلاهما يُكتشَف
+     * هنا لا هناك.
+     */
+    public function testEveryThrottleGuardIsWellFormed(): void
+    {
+        $problems = [];
+
+        foreach (self::guardsInRouteTable() as $action => $guard) {
+            if (!str_starts_with($guard, 'throttle:')) {
+                continue;
+            }
+
+            $args = explode(',', substr($guard, 9));
+
+            if (count($args) !== 3) {
+                $problems[] = "{$action} → [{$guard}] — الصيغة throttle:bucket,max,windowMinutes.";
+                continue;
+            }
+
+            [$bucket, $max, $window] = $args;
+
+            if (!preg_match('/^[a-z0-9-]+$/', $bucket)) {
+                $problems[] = "{$action} → اسم دلو غير صالح [{$bucket}].";
+            }
+            if ((int)$max < 1) {
+                $problems[] = "{$action} → حدّ [{$max}] لا يمنع شيئاً.";
+            }
+            if ((int)$window < 1) {
+                $problems[] = "{$action} → نافذة [{$window}] دقيقة تُفرغ العدّاد فوراً.";
+            }
+        }
+
+        $this->assertSame([], $problems, "حُرّاس خنق مشوّهة:\n  " . implode("\n  ", $problems));
+    }
+
+    /**
+     * كل نقطة دخول حسّاسة مخنوقة — لا واحدة منسيّة.
+     *
+     * القائمة مكتوبة بأسمائها عمداً بدل اشتقاقها: الاشتقاق يجيب عن
+     * «ما المخنوق؟» بينما السؤال الذي يحرس هو «ما الذي **يجب** أن
+     * يُخنق؟». من يضيف نقطة دخول جديدة ولا يخنقها لن يكسر اشتقاقاً،
+     * لكنه سيصطدم بهذه القائمة حين يضيف اسمه إليها — وهو الموضع الصحيح
+     * لاتخاذ القرار.
+     */
+    public function testEverySensitiveEntryPointIsThrottled(): void
+    {
+        $mustBeThrottled = [
+            'ContactController::send',
+            'AuthController::login',
+            'AuthController::register',
+            'AuthController::forgot',
+            'AuthController::resetSubmit',
+            'AdminAuthController::login',
+            'AdminAuthController::verify2FALogin',
+            'AdminAuthController::forgotPassword',
+            'AdminAuthController::reauth',
+        ];
+
+        $inTable = self::guardsInRouteTable();
+
+        $missing = [];
+        foreach ($mustBeThrottled as $action) {
+            $guard = $inTable[$action] ?? '';
+            if (!str_starts_with($guard, 'throttle:')) {
+                $missing[] = $action;
+            }
+        }
+
+        $this->assertSame([], $missing, "نقاط دخول حسّاسة بلا خنق:\n  " . implode("\n  ", $missing));
     }
 
     /**
@@ -165,7 +251,8 @@ final class RouteGuardParityTest extends TestCase
         foreach (self::guardsInRouteTable() as $action => $guard) {
             $known = $guard === 'auth'
                 || $guard === 'admin'
-                || str_starts_with($guard, 'perm:');
+                || str_starts_with($guard, 'perm:')
+                || str_starts_with($guard, 'throttle:');
 
             if (!$known) {
                 $unknown[] = "{$action} → [{$guard}]";

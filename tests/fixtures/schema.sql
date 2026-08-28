@@ -88,6 +88,7 @@ CREATE TABLE `admins` (
   `password` varchar(255) NOT NULL,
   `totp_secret` varchar(64) DEFAULT NULL,
   `totp_enabled` tinyint(1) NOT NULL DEFAULT 0,
+  `last_totp_slice` bigint(20) DEFAULT NULL COMMENT 'آخر شريحة TOTP استُهلكت — يمنع إعادة استخدام الكود نفسه',
   `phone_number` varchar(30) DEFAULT NULL,
   `role` enum('A','B','C','D') NOT NULL DEFAULT 'B',
   `added_by` int(10) unsigned DEFAULT NULL,
@@ -454,6 +455,18 @@ CREATE TABLE `stock_notifications` (
   CONSTRAINT `fk_sn_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
   CONSTRAINT `fk_sn_variant` FOREIGN KEY (`variant_id`) REFERENCES `product_variants` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB AUTO_INCREMENT=11 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+DROP TABLE IF EXISTS `throttle_attempts`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `throttle_attempts` (
+  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `bucket` varchar(40) NOT NULL COMMENT 'اسم النقطة المحروسة — login, forgot, twofa …',
+  `identifier` varchar(64) NOT NULL COMMENT 'المصدر المحروس — عنوان IP حالياً (يدعم IPv6)',
+  `attempted_at` datetime NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  KEY `idx_bucket_identifier_time` (`bucket`,`identifier`,`attempted_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `user_addresses`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;

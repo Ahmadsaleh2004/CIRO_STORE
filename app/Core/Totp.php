@@ -26,9 +26,32 @@ class Totp
 
     public static function verifyCode(string $secret, string $code): bool
     {
+        return self::verifyAndGetSlice($secret, $code) !== null;
+    }
+
+    /**
+     * يتحقق من الكود ويُرجع الشريحة الزمنية التي طابقته، أو null.
+     *
+     * وُجدت لأن bool وحدها لا تكفي لمنع إعادة الاستخدام: النافذة ±30
+     * ثانية تجعل الكود الواحد صالحاً تسعين ثانية، فمن يلتقطه (فوق كتف،
+     * أو من سجلّ، أو من شاشة مشارَكة) يعيد إرساله داخلها. المستدعي يخزّن
+     * الشريحة المُعادة ويمرّرها في المرّة التالية كـ$lastSlice، فيصير كل
+     * كود صالحاً مرّة واحدة فقط.
+     *
+     * المقارنة بـhash_equals لا بـ===. الفارق الزمني بين مقارنتَي نصّين
+     * من ست خانات ضئيل ويصعب استغلاله عبر الشبكة، لكن الكلفة هنا صفر
+     * والقاعدة واحدة: أي مقارنة تمسّ سرّاً تُجرى بزمن ثابت. (المشروع
+     * يطبّقها أصلاً على state في OAuth، فالاستثناء كان هنا وحده.)
+     *
+     * @param  int|null $lastSlice آخر شريحة استُهلكت لهذا الحساب.
+     * @return int|null الشريحة المطابِقة عند النجاح، أو null عند الفشل
+     *                  أو عند كون الكود مستهلَكاً سابقاً.
+     */
+    public static function verifyAndGetSlice(string $secret, string $code, ?int $lastSlice = null): ?int
+    {
         $code = trim($code);
         if (!preg_match('/^\d{6}$/', $code)) {
-            return false;
+            return null;
         }
 
         // نسمح بفارق دقيقة واحدة قبل/بعد (لفروقات الساعة البسيطة)
@@ -37,11 +60,22 @@ class Totp
             // كان التحويل يحدث ضمنياً بحكم الوضع غير الصارم — يعمل
             // اليوم ويتوقّف عن العمل لحظة إضافة declare(strict_types=1).
             $timeSlice = (int) floor(time() / 30) + $offset;
-            if (self::generateCode($secret, $timeSlice) === $code) {
-                return true;
+
+            if (!hash_equals(self::generateCode($secret, $timeSlice), $code)) {
+                continue;
             }
+
+            // الكود صحيح — لكن هل استُهلك؟ الرفض يشمل الشرائح الأقدم من
+            // آخر مستهلَكة أيضاً، لا المساواة وحدها: بدونه يبقى الكود
+            // السابق في النافذة صالحاً بعد استعمال اللاحق.
+            if ($lastSlice !== null && $timeSlice <= $lastSlice) {
+                return null;
+            }
+
+            return $timeSlice;
         }
-        return false;
+
+        return null;
     }
 
     private static function generateCode(string $secret, int $timeSlice): string
