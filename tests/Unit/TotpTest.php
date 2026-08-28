@@ -139,6 +139,111 @@ final class TotpTest extends TestCase
     }
 
     // ════════════════════════════════════════════════════════
+    // صورة QR — تُولَّد محلياً، والسرّ لا يغادر الخادم
+    // ════════════════════════════════════════════════════════
+
+    /**
+     * الـQR صورة مضمّنة لا رابط إلى مضيف خارجي.
+     *
+     * كان المولّد يُرجع رابطاً إلى api.qrserver.com يحمل السرّ في
+     * الـquery string — أي أن سرّ المصادقة الثنائية لكل أدمن كان يُسلَّم
+     * إلى طرف ثالث ويمرّ في سجلّاته وسجلّات أي وسيط. هذا الاختبار يمنع
+     * عودة ذلك مهما تغيّر التنفيذ.
+     */
+    public function testTheQrCodeIsAnInlineImageNotARemoteUrl(): void
+    {
+        $secret = Totp::generateSecret();
+        $src    = Totp::getQrCodeUrl($secret, 'admin@example.com');
+
+        $this->assertStringStartsWith('data:image/svg+xml;base64,', $src);
+        $this->assertDoesNotMatchRegularExpression(
+            '#https?://#i',
+            $src,
+            'صورة الـQR تشير إلى مضيف خارجي — السرّ يغادر الخادم.'
+        );
+    }
+
+    /**
+     * والأهمّ: السرّ نفسه ليس في أي موضع يمكن أن يُرسَل.
+     *
+     * الفحص على القيمة المفكوكة لا على النصّ المُرمَّز: base64 يخفي
+     * السرّ عن القراءة السريعة ولا يخفيه عن الشبكة.
+     */
+    public function testTheSecretDoesNotAppearInAnyRequestableForm(): void
+    {
+        $secret = Totp::generateSecret();
+        $src    = Totp::getQrCodeUrl($secret, 'admin@example.com');
+        $svg    = base64_decode(substr($src, strlen('data:image/svg+xml;base64,')));
+
+        $this->assertStringContainsString('<svg', $svg, 'الناتج ليس SVG صالحاً.');
+
+        // السرّ مُرمَّز داخل وحدات الـQR نفسها (مربّعات)، لا كنصّ.
+        $this->assertStringNotContainsString($secret, $svg);
+        $this->assertStringNotContainsString('otpauth://', $svg);
+    }
+
+    /**
+     * رابط otpauth يحمل ما تحتاجه تطبيقات المصادقة.
+     *
+     * يُعرض نصّاً للأدمن حين يتعذّر المسح — فلو نقصه المُصدِر أو السرّ
+     * لأضاف الأدمن حساباً لا يعمل، ولا يكتشف ذلك إلا عند أوّل دخول.
+     */
+    public function testTheProvisioningUriCarriesIssuerAndSecret(): void
+    {
+        $secret = Totp::generateSecret();
+        $uri    = Totp::provisioningUri($secret, 'admin@example.com', 'Cairo Store');
+
+        $this->assertStringStartsWith('otpauth://totp/', $uri);
+        $this->assertStringContainsString('secret=' . $secret, $uri);
+        $this->assertStringContainsString('issuer=Cairo%20Store', $uri);
+    }
+
+    /**
+     * لا مصدر في المشروع يذكر خدمة QR خارجية.
+     *
+     * الاختباران أعلاه يحرسان المولّد الحالي؛ هذا يحرس المشروع من
+     * «حلّ سريع» في موضع آخر — سطر في view أو في JS يبني الرابط بنفسه.
+     * السرّ في الـquery string لا يصير آمناً بتغيير من يكتبه.
+     */
+    public function testNoSourceReferencesAnExternalQrService(): void
+    {
+        $roots = [
+            dirname(__DIR__, 2) . '/app',
+            dirname(__DIR__, 2) . '/public/js',
+        ];
+
+        $offenders = [];
+
+        foreach ($roots as $root) {
+            $files = new \RecursiveIteratorIterator(
+                new \RecursiveDirectoryIterator($root, \FilesystemIterator::SKIP_DOTS)
+            );
+
+            foreach ($files as $file) {
+                if (!in_array($file->getExtension(), ['php', 'js'], true)) {
+                    continue;
+                }
+
+                $src = (string) file_get_contents($file->getPathname());
+
+                foreach (['qrserver.com', 'chart.googleapis.com', 'quickchart.io'] as $host) {
+                    // الذكر داخل تعليق يشرح الإصلاح مسموح؛ الممنوع بناء
+                    // رابط فعلي — أي المضيف مسبوقاً بمخطّط.
+                    if (preg_match('#https?://[^\s\'"]*' . preg_quote($host, '#') . '#i', $src)) {
+                        $offenders[] = $file->getFilename() . " → {$host}";
+                    }
+                }
+            }
+        }
+
+        $this->assertSame(
+            [],
+            $offenders,
+            "خدمة QR خارجية — السرّ يغادر الخادم:\n  " . implode("\n  ", $offenders)
+        );
+    }
+
+    // ════════════════════════════════════════════════════════
     // منع إعادة استخدام الكود — verifyAndGetSlice
     // ════════════════════════════════════════════════════════
 

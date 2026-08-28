@@ -77,9 +77,20 @@
     #             preg_match('#<script>(.*?)</script>#s', themeBootScript(), \$m);
     #             echo 'sha256-'.base64_encode(hash('sha256', \$m[1], true));"
     #
-    # style-src فيها 'unsafe-inline' بعد: 239 سمة style= في الـviews.
+    # img-src بلا `https:` المفتوحة.
+    #
+    # كانت مفتوحة لسبب واحد: صورة QR للمصادقة الثنائية كانت تُجلَب من
+    # api.qrserver.com — برابط يحمل **السرّ نفسه** في الـquery string.
+    # الصورة تُولَّد محلياً الآن (bacon/bacon-qr-code) وتُسلَّم كـdata:
+    # URI، فلم يبقَ ما يبرّر السماح بأي مضيف صور على الإنترنت.
+    #
+    # مفحوص قبل التشديد: لا صورة خارجية في أي view، ولا في البيانات
+    # (منتجات · variants · شرائح السلايدر — صفر مسار يبدأ بـhttp).
+    # `data:` تبقى: هي ما تحمل الـQR الآن.
+    #
+    # style-src فيها 'unsafe-inline' بعد: 241 سمة style= في الـviews.
     # وهي الخطوة التالية، وأثرها الأمني أقلّ بكثير من السكربتات.
-    Header always set Content-Security-Policy "default-src 'self'; script-src 'self' 'sha256-n33GJ973YEUTpbG1xOj611JYTc5wI4V+8xmEtfPaLjk=' https://cdn.jsdelivr.net https://code.jquery.com https://js.hcaptcha.com https://*.hcaptcha.com; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://*.hcaptcha.com; img-src 'self' data: https:; font-src 'self' data: https://cdn.jsdelivr.net; connect-src 'self' https://*.hcaptcha.com; frame-src https://*.hcaptcha.com; form-action 'self'; frame-ancestors 'self'; base-uri 'self'; object-src 'none'"
+    Header always set Content-Security-Policy "default-src 'self'; script-src 'self' 'sha256-n33GJ973YEUTpbG1xOj611JYTc5wI4V+8xmEtfPaLjk=' https://cdn.jsdelivr.net https://code.jquery.com https://js.hcaptcha.com https://*.hcaptcha.com; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://*.hcaptcha.com; img-src 'self' data:; font-src 'self' data: https://cdn.jsdelivr.net; connect-src 'self' https://*.hcaptcha.com; frame-src https://*.hcaptcha.com; form-action 'self'; frame-ancestors 'self'; base-uri 'self'; object-src 'none'"
 
 
 </IfModule>
