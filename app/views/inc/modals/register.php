@@ -14,7 +14,7 @@
                 <div>
                     <span class="modal-icon">✨</span>
                     <h5 class="modal-title">Create Account</h5>
-                    <small style="color:rgba(255,255,255,.7);font-size:.8rem;">Join Cairo Store today</small>
+                    <small class="u-on-dark u-fs-80">Join Cairo Store today</small>
                 </div>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
@@ -49,7 +49,7 @@
                                            placeholder=" " required autocomplete="new-password">
                                     <span class="input-group-text"
                                           data-action="toggle-both-passwords" data-eye="eyeReg"
-                                          id="eyeReg" style="cursor:pointer;">👁️</span>
+                                          id="eyeReg" class="u-clickable">👁️</span>
                                 </div>
                                 <label>Password</label>
                             </div>
@@ -97,7 +97,7 @@
                                 <input type="date" name="birth_date" id="regBirthDate" placeholder=" ">
                                 <label>Birth Date</label>
                             </div>
-                            <small class="text-muted d-block mt-n2 mb-2" style="font-size:0.75rem;padding-left:4px;">
+                            <small class="text-muted d-block mt-n2 mb-2 u-fs-75 ps-1">
                                 Must be 13 years or older
                             </small>
                         </div>
@@ -120,21 +120,18 @@
                         </div>
                     </div>
 
-                    <div style="position:relative; z-index:10; isolation:isolate; display:flex;
-                                align-items:center; gap:8px; margin-bottom:1rem;">
+                    <div class="u-consent-row">
                         <input type="checkbox"
                                id="privacyCheck" name="privacy_policy_accepted" required
-                               style="width:18px; height:18px; min-width:18px; cursor:pointer;
-                                      accent-color:#16a34a; position:relative; z-index:10; flex-shrink:0;">
-                        <label for="privacyCheck" style="cursor:pointer; font-size:0.875rem; margin:0;
-                                                         color:var(--text-color); user-select:none;">
+                               class="u-consent-box">
+                        <label for="privacyCheck" class="u-consent-label">
                             I agree to the
                         </label>
                         <a href="#" class="small"
                            data-action="switch-modal" data-modal-target="privacyModal">Privacy Policy</a>
                     </div>
 
-                    <div id="regError" class="alert alert-danger py-2 small mb-3" style="display:none;"></div>
+                    <div id="regError" class="alert alert-danger py-2 small mb-3 d-none"></div>
                     <button type="submit" id="regBtn" class="btn btn-success w-100 mb-3 py-2">
                         Create Account
                     </button>

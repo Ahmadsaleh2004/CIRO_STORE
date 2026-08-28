@@ -13,7 +13,7 @@ $csrfToken = generateCsrfToken();
         <div class="row">
             <div class="col-lg-4 mb-4">
                 <h4 class="fw-bold mb-2">🏪 Cairo Store</h4>
-                <p class="small" style="color:var(--footer-text);">
+                <p class="small u-footer-text">
                     <?= htmlspecialchars($footerText ?? 'Premium electronics store offering smartphones, laptops, gaming devices and smart accessories.') ?>
                 </p>
             </div>
@@ -28,7 +28,7 @@ $csrfToken = generateCsrfToken();
             </div>
             <div class="col-lg-4 mb-4">
                 <h5 class="fw-semibold mb-3">Stay Connected</h5>
-                <p class="small mb-3" style="color:var(--footer-text);">Stay updated with our latest news and offers!</p>
+                <p class="small mb-3 u-footer-text">Stay updated with our latest news and offers!</p>
                 <div class="d-flex gap-3 mt-2">
                     <a href="<?= htmlspecialchars($fbUrl ?? '#') ?>" title="Facebook">
                         <img src="<?= URLROOT ?>/images/icons/facebook.svg" width="26" height="26" alt="Facebook" loading="lazy"></a>
@@ -41,7 +41,7 @@ $csrfToken = generateCsrfToken();
         </div>
         <hr>
         <div class="text-center">
-            <p class="mb-0 small" style="color:var(--footer-text);">
+            <p class="mb-0 small u-footer-text">
                 <?= htmlspecialchars($copyrightText ?? ('© ' . date('Y') . ' Cairo Store. All Rights Reserved.')) ?>
             </p>
         </div>

@@ -32,7 +32,7 @@
     <div class="modal-dialog modal-dialog-scrollable">
         <div class="modal-content">
 
-            <div class="modal-header" style="border-color:var(--section-border);">
+            <div class="modal-header u-border-section">
                 <h5 class="modal-title" id="categoryPickerModalLabel">🏷️ Choose Categories</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
@@ -42,12 +42,12 @@
                 <!-- قائمة الكاتوجريز بنمط .perm-grid/.perm-item — نفس نمط manage-admins -->
                 <div class="perm-grid mb-4" id="categoryPickerList">
                     <!-- تُبنى ديناميكياً من category-picker.js -->
-                    <div class="text-center py-2" style="color:var(--muted-text);">
+                    <div class="text-center py-2 u-muted">
                         <span class="spinner-border spinner-border-sm"></span> Loading...
                     </div>
                 </div>
 
-                <hr style="border-color:var(--section-border);">
+                <hr class="u-border-section">
 
                 <!-- إضافة كاتوجري جديدة -->
                 <div class="mb-1">
@@ -65,12 +65,12 @@
                     </div>
                     <div id="categorySuggestions"
                          class="small mt-1"
-                         style="color:var(--muted-text);min-height:18px;"></div>
+                         class="u-picker-hint"></div>
                 </div>
 
             </div>
 
-            <div class="modal-footer" style="border-color:var(--section-border);">
+            <div class="modal-footer u-border-section">
                 <button type="button"
                         class="btn btn-secondary"
                         data-bs-dismiss="modal">Close</button>
@@ -97,7 +97,7 @@
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
 
-            <div class="modal-header" style="border-color:var(--section-border);">
+            <div class="modal-header u-border-section">
                 <h5 class="modal-title text-danger" id="categoryDeleteModalLabel">🗑 Delete Category</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
@@ -105,7 +105,7 @@
             <div class="modal-body">
                 <p class="mb-3">
                     Move all products from
-                    <strong id="delCatName" style="color:var(--accent);"></strong>
+                    <strong id="delCatName" class="u-accent"></strong>
                     to:
                 </p>
                 <div class="float-group">
@@ -120,7 +120,7 @@
                 </p>
             </div>
 
-            <div class="modal-footer" style="border-color:var(--section-border);">
+            <div class="modal-footer u-border-section">
                 <button type="button"
                         class="btn btn-secondary"
                         data-bs-dismiss="modal">Cancel</button>

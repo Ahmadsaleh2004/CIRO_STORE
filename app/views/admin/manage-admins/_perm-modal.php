@@ -11,7 +11,7 @@
     <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
         <div class="modal-content">
 
-            <div class="modal-header" style="border-color:var(--section-border);">
+            <div class="modal-header u-border-section">
                 <h5 class="modal-title" id="permModalTitle">Edit Permissions</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
@@ -22,7 +22,7 @@
                     <input type="hidden" name="target_id"  id="permTargetId">
 
                     <!-- Role -->
-                    <div class="float-group mb-3" style="max-width:220px;">
+                    <div class="float-group mb-3 u-mw-220">
                         <select name="edit_role" id="permRole">
                             <?php
                             $roleMap = ['A' => 4, 'B' => 3, 'C' => 2, 'D' => 1];

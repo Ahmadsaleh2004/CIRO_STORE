@@ -64,11 +64,11 @@ if ($order['status'] === 'completed' && !empty($order['handler_admin_name'])) {
                 <table class="table admin-table mb-0">
                     <tbody>
                         <tr>
-                            <td style="width:40%;color:var(--muted-text);">Order ID</td>
+                            <td class="u-label-cell">Order ID</td>
                             <td><strong>#<?= (int)$order['order_id'] ?></strong></td>
                         </tr>
                         <tr>
-                            <td style="color:var(--muted-text);">Payment Method</td>
+                            <td class="u-muted">Payment Method</td>
                             <td><?= htmlspecialchars($order['payment_method']) ?></td>
                         </tr>
                     </tbody>
@@ -80,7 +80,7 @@ if ($order['status'] === 'completed' && !empty($order['handler_admin_name'])) {
         <div class="card p-4 mb-4">
             <h5 class="mb-3">🛍️ Items Ordered (<?= count($items) ?>)</h5>
             <?php if (empty($items)): ?>
-            <p class="text-center py-3" style="color:var(--muted-text);">No items found for this order.</p>
+            <p class="text-center py-3 u-muted">No items found for this order.</p>
             <?php else: ?>
             <div class="table-responsive">
                 <table class="table admin-table mb-0">
@@ -100,11 +100,11 @@ if ($order['status'] === 'completed' && !empty($order['handler_admin_name'])) {
                             <td>
                                 <div class="d-flex align-items-center gap-2">
                                     <img src="<?= htmlspecialchars(fixImagePath($item['image_path'] ?? '')) ?>"
-                                         alt="" style="width:42px;height:42px;object-fit:cover;border-radius:6px;">
+                                         alt="" class="u-thumb-42">
                                     <div>
                                         <div class="fw-semibold"><?= htmlspecialchars($item['product_name']) ?></div>
                                         <?php if (!empty($item['color_name'])): ?>
-                                        <small style="color:var(--muted-text);">Color: <?= htmlspecialchars($item['color_name']) ?></small>
+                                        <small class="u-muted">Color: <?= htmlspecialchars($item['color_name']) ?></small>
                                         <?php endif; ?>
                                     </div>
                                 </div>
@@ -127,22 +127,22 @@ if ($order['status'] === 'completed' && !empty($order['handler_admin_name'])) {
                 <table class="table admin-table mb-0">
                     <tbody>
                         <tr>
-                            <td style="width:40%;color:var(--muted-text);">Label</td>
-                            <td><?= !empty($order['address_label']) ? htmlspecialchars($order['address_label']) : '<span style="color:var(--muted-text)">—</span>' ?></td>
+                            <td class="u-label-cell">Label</td>
+                            <td><?= !empty($order['address_label']) ? htmlspecialchars($order['address_label']) : '<span class="u-muted">—</span>' ?></td>
                         </tr>
                         <tr>
-                            <td style="color:var(--muted-text);">Phone</td>
-                            <td><?= !empty($order['shipping_phone']) ? htmlspecialchars($order['shipping_phone']) : '<span style="color:var(--muted-text)">—</span>' ?></td>
+                            <td class="u-muted">Phone</td>
+                            <td><?= !empty($order['shipping_phone']) ? htmlspecialchars($order['shipping_phone']) : '<span class="u-muted">—</span>' ?></td>
                         </tr>
                         <tr>
-                            <td style="color:var(--muted-text);">Address</td>
-                            <td><?= !empty($order['full_address']) ? htmlspecialchars($order['full_address']) : '<span style="color:var(--muted-text)">—</span>' ?></td>
+                            <td class="u-muted">Address</td>
+                            <td><?= !empty($order['full_address']) ? htmlspecialchars($order['full_address']) : '<span class="u-muted">—</span>' ?></td>
                         </tr>
                         <tr>
-                            <td style="color:var(--muted-text);">City / Country</td>
+                            <td class="u-muted">City / Country</td>
                             <td>
                                 <?php $location = trim(($order['city'] ?? '') . ', ' . ($order['country'] ?? ''), ', '); ?>
-                                <?= $location !== '' ? htmlspecialchars($location) : '<span style="color:var(--muted-text)">—</span>' ?>
+                                <?= $location !== '' ? htmlspecialchars($location) : '<span class="u-muted">—</span>' ?>
                             </td>
                         </tr>
                     </tbody>
@@ -172,19 +172,19 @@ if ($order['status'] === 'completed' && !empty($order['handler_admin_name'])) {
                 <table class="table admin-table mb-0">
                     <tbody>
                         <tr>
-                            <td style="width:40%;color:var(--muted-text);">Name</td>
+                            <td class="u-label-cell">Name</td>
                             <td class="fw-semibold"><?= htmlspecialchars($order['user_name']) ?></td>
                         </tr>
                         <tr>
-                            <td style="color:var(--muted-text);">Email</td>
+                            <td class="u-muted">Email</td>
                             <td><?= htmlspecialchars($order['user_email']) ?></td>
                         </tr>
                         <tr>
-                            <td style="color:var(--muted-text);">Phone</td>
-                            <td><?= !empty($order['user_phone']) ? htmlspecialchars($order['user_phone']) : '<span style="color:var(--muted-text)">—</span>' ?></td>
+                            <td class="u-muted">Phone</td>
+                            <td><?= !empty($order['user_phone']) ? htmlspecialchars($order['user_phone']) : '<span class="u-muted">—</span>' ?></td>
                         </tr>
                         <tr>
-                            <td style="color:var(--muted-text);">Strikes</td>
+                            <td class="u-muted">Strikes</td>
                             <td>
                                 <span class="badge <?= $userStrikes >= 3 ? 'bg-danger' : ($userStrikes > 0 ? 'bg-warning text-dark' : 'bg-success') ?>">
                                     <?= (int)$userStrikes ?>/3

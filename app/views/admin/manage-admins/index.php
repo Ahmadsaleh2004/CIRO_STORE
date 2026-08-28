@@ -10,7 +10,7 @@ use App\Models\AdminModel;
 ?>
 <!-- ── Page Header ────────────────────────────────────────── -->
 <div class="admin-page-header">
-    <h1>👑 Manage Admins <span class="badge bg-secondary fw-normal" style="font-size:.9rem;vertical-align:middle;"><?= (int)$totalAdmins ?></span></h1>
+    <h1>👑 Manage Admins <span class="badge bg-secondary fw-normal u-fs-90 align-middle"><?= (int)$totalAdmins ?></span></h1>
     <div class="d-flex gap-2 flex-wrap">
         <?php
             $exportCsvUrl = URLROOT . '/admin/admins/export-csv';
@@ -58,7 +58,7 @@ use App\Models\AdminModel;
                     <td>
                         <strong><?= htmlspecialchars($adm['full_name']) ?></strong>
                         <?php if ((int)$adm['id'] === (int)$adminId): ?>
-                        <span class="badge bg-warning text-dark ms-1" style="font-size:.6rem;">You</span>
+                        <span class="badge bg-warning text-dark ms-1 u-fs-60">You</span>
                         <?php endif; ?>
                     </td>
                     <td><?= htmlspecialchars($adm['email']) ?></td>
@@ -73,7 +73,7 @@ use App\Models\AdminModel;
                             <?= htmlspecialchars($adm['role']) ?>
                         </span>
                     </td>
-                    <td style="font-size:.75rem;">
+                    <td class="u-fs-75">
                         <?php
                         $permMap = [
                             'can_manage_admins'            => 'Admins',
@@ -91,21 +91,21 @@ use App\Models\AdminModel;
                             if (!empty($adm[$key])) $active[] = $label;
                         }
                         echo $active
-                            ? '<span style="color:var(--accent);">' . implode(', ', $active) . '</span>'
-                            : '<span style="color:var(--muted-text);">—</span>';
+                            ? '<span class="u-accent">' . implode(', ', $active) . '</span>'
+                            : '<span class="u-muted">—</span>';
                         ?>
                     </td>
-                    <td style="color:var(--muted-text);font-size:.8rem;">
+                    <td class="u-muted u-fs-80">
                         <?= htmlspecialchars(date('M j, Y', strtotime($adm['created_at']))) ?>
                     </td>
-                    <td style="color:var(--muted-text);font-size:.8rem;">
+                    <td class="u-muted u-fs-80">
                         <?php if (!empty($adm['updated_at']) && $adm['updated_at'] !== $adm['created_at']): ?>
                             <?= htmlspecialchars(date('M j, Y', strtotime($adm['updated_at']))) ?>
                             <?php if (!empty($adm['last_modified_by_name'])): ?>
-                                <br><span style="font-size:.7rem;">by <?= htmlspecialchars($adm['last_modified_by_name']) ?></span>
+                                <br><span class="u-fs-70">by <?= htmlspecialchars($adm['last_modified_by_name']) ?></span>
                             <?php endif; ?>
                         <?php else: ?>
-                            <span style="color:var(--muted-text);">—</span>
+                            <span class="u-muted">—</span>
                         <?php endif; ?>
                     </td>
                     <!-- data-action="stop-propagation" إلزامي — يمنع تفعيل clickable-row -->
@@ -147,7 +147,7 @@ use App\Models\AdminModel;
                                 data-name="<?= htmlspecialchars($adm['full_name'], ENT_QUOTES) ?>"
                                 title="Delete admin">🗑️ Delete</button>
                         <?php else: ?>
-                        <span style="color:var(--muted-text);font-size:.75rem;">—</span>
+                        <span class="u-muted u-fs-75">—</span>
                         <?php endif; ?>
                     </td>
                 </tr>

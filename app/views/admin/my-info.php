@@ -9,10 +9,10 @@
 
 <!-- Header -->
 <div class="d-flex align-items-center gap-3 mb-4">
-    <div style="font-size:3rem;">👤</div>
+    <div class="u-fs-xxl">👤</div>
     <div>
         <h1 class="fw-bold mb-0"><?= htmlspecialchars($profile['full_name'] ?? '') ?></h1>
-        <p class="text-muted mb-0" style="font-size:.9rem;"><?= htmlspecialchars($profile['email'] ?? '') ?></p>
+        <p class="text-muted mb-0 u-fs-90"><?= htmlspecialchars($profile['email'] ?? '') ?></p>
     </div>
 </div>
 
@@ -20,21 +20,21 @@
 <ul class="nav nav-tabs mb-4">
     <li class="nav-item">
         <button class="nav-link info-tab-btn active" type="button" disabled
-                style="cursor:default;">
+                class="u-cursor-default">
             📋 Personal Info
         </button>
     </li>
 </ul>
 
 <!-- كارد الفورم -->
-<div class="card p-4" style="max-width:550px;">
+<div class="card p-4 u-mw-550">
     <h4 class="mb-4">✏️ Personal Information</h4>
 
     <form id="adminProfileForm" novalidate autocomplete="off">
         <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf) ?>">
 
         <!-- رسالة النجاح / الخطأ -->
-        <div id="profileMsg" class="alert py-2 small" style="display:none;"></div>
+        <div id="profileMsg" class="alert py-2 small d-none"></div>
 
         <!-- Full Name -->
         <div class="float-group mb-3">
@@ -54,7 +54,7 @@
                    value="<?= htmlspecialchars($profile['email'] ?? '') ?>"
                    placeholder=" "
                    disabled
-                   style="opacity:.6;cursor:not-allowed;">
+                   class="u-disabled">
             <label>Email Address <small class="text-muted">(cannot change)</small></label>
         </div>
 
@@ -96,7 +96,7 @@
 </div>
 
 <!-- ════════════════════ التحقق الثنائي (2FA / TOTP) ════════════════════ -->
-<div class="card p-4 mt-4" style="max-width:550px;">
+<div class="card p-4 mt-4 u-mw-550">
     <div class="d-flex align-items-center justify-content-between mb-2">
         <h4 class="mb-0">🔑 Two-Factor Authentication</h4>
         <?php if (!empty($profile['totp_enabled'])): ?>
@@ -109,7 +109,7 @@
         Add an extra layer of security using a TOTP app (Google Authenticator, Authy, …).
     </p>
 
-    <div id="twofaMsg" class="alert py-2 small" style="display:none;"></div>
+    <div id="twofaMsg" class="alert py-2 small d-none"></div>
 
     <?php if (!empty($profile['totp_enabled'])): ?>
         <!-- حالة: مفعّل → زر تعطيل مع طلب كلمة المرور الحالية -->
@@ -133,7 +133,7 @@
             <button type="button" id="twofaEnableBtn" class="btn btn-success w-100">🔐 Enable 2FA</button>
         </div>
 
-        <div id="twofaSetupStep" style="display:none;">
+        <div id="twofaSetupStep" class="d-none">
             <div class="text-center my-3">
                 <!-- بلا سمة src: src="" يجعل المتصفح يطلب عنوان الصفحة
                      نفسها في كل تحميل ثم يفشل. المصدر يضبطه
@@ -145,7 +145,7 @@
             </div>
             <div class="text-center small mb-3">
                 <span class="text-muted">Manual entry key:</span>
-                <code id="twofaSecret" class="d-block mt-1" style="font-size:1rem;word-break:break-all;"></code>
+                <code id="twofaSecret" class="d-block mt-1" class="u-secret-text"></code>
             </div>
             <div class="float-group mb-3">
                 <input type="text"

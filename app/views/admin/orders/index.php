@@ -16,7 +16,7 @@
      ملاحظة: .admin-page-header معرّف أصلاً كـ flex + space-between +
      wrap + gap في admin.css، فلا حاجة لتكرار كلاسات Bootstrap هنا. -->
 <div class="admin-page-header">
-    <h1>📦 Manage Orders <span class="badge bg-secondary fw-normal" style="font-size:.9rem;vertical-align:middle;"><?= (int)$totalOrders ?></span></h1>
+    <h1>📦 Manage Orders <span class="badge bg-secondary fw-normal u-fs-90 align-middle"><?= (int)$totalOrders ?></span></h1>
     <div class="d-flex gap-2 flex-wrap">
         <?php
         $csvParams = http_build_query(array_filter(['q' => $search, 'status' => $filter]));
@@ -41,8 +41,8 @@
         <input type="hidden" name="status" value="<?= htmlspecialchars($filter) ?>">
     <?php endif; ?>
     <input type="text" name="q" value="<?= htmlspecialchars($search) ?>"
-           class="form-control" style="max-width:280px;" placeholder="Order ID or customer...">
-    <select class="form-select" style="max-width:180px;" data-action="filter-status">
+           class="form-control u-mw-280" placeholder="Order ID or customer...">
+    <select class="form-select u-mw-180" data-action="filter-status">
         <option value="">All Orders</option>
         <option value="not_taken" <?= $filter==='not_taken' ?'selected':'' ?>>Not Taken</option>
         <option value="taken"     <?= $filter==='taken'     ?'selected':'' ?>>Taken</option>
@@ -80,11 +80,11 @@
                 ?>
             <?php else: ?>
                 <?php foreach ($orders as $o): ?>
-                <tr data-action="order-details" data-order-id="<?= (int)$o['order_id'] ?>" style="cursor:pointer;">
+                <tr data-action="order-details" data-order-id="<?= (int)$o['order_id'] ?>" class="u-clickable">
                     <td class="fw-semibold">#<?= (int)$o['order_id'] ?></td>
                     <td>
                         <span class="fw-semibold"><?= htmlspecialchars($o['full_name']) ?></span>
-                        <br><small style="color:var(--muted-text);"><?= htmlspecialchars($o['email']) ?></small>
+                        <br><small class="u-muted"><?= htmlspecialchars($o['email']) ?></small>
                     </td>
                     <td>$<?= number_format($o['total_amount'], 2) ?></td>
                     <td><?= htmlspecialchars($o['payment_method']) ?></td>
@@ -106,7 +106,7 @@
                             ? htmlspecialchars($o['handled_by_name'])
                             : '<span class="text-muted">—</span>' ?>
                     </td>
-                    <td style="color:var(--muted-text);font-size:.8rem;white-space:nowrap;">
+                    <td class="u-meta-80">
                         <?= htmlspecialchars(date('M j, Y H:i', strtotime($o['created_at']))) ?>
                     </td>
                     <td class="text-center" data-action="stop-propagation">

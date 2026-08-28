@@ -26,14 +26,14 @@ function renderCart() {
 
     let cart = getCartData();
     if (cart.length === 0) {
-        cartContainer.innerHTML = `<li class="text-center py-5" style="color:var(--placeholder-color);">Your cart is empty.</li>`;
+        cartContainer.innerHTML = `<li class="text-center py-5 u-placeholder">Your cart is empty.</li>`;
         if (cartTotal) cartTotal.innerText = "$0.00";
     } else {
         let total = 0;
         cartContainer.innerHTML = cart.map(item => {
             total += item.price * item.quantity;
             const vId = item.variant_id ?? '';
-            const colorLabel = item.color_name ? ` <span class="small" style="opacity:.75;">(${escHtml(item.color_name)})</span>` : '';
+            const colorLabel = item.color_name ? ` <span class="small u-o-75">(${escHtml(item.color_name)})</span>` : '';
             return `
                 <li class="mb-3 p-2 border-bottom border-secondary">
                     <div class="d-flex justify-content-between align-items-center">

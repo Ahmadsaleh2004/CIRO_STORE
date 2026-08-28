@@ -49,7 +49,7 @@ require APPROOT . '/views/inc/head-bare.php';
                 <input type="hidden" name="email" value="<?= htmlspecialchars($email) ?>">
                 <input type="hidden" name="type"  value="<?= htmlspecialchars($type) ?>">
 
-                <div id="resetMsg" class="alert py-2 small mb-3" style="display:none;"></div>
+                <div id="resetMsg" class="alert py-2 small mb-3 d-none"></div>
 
                 <div class="float-group">
                     <input type="password" name="password" id="newPassword"

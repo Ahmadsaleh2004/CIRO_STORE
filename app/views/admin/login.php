@@ -69,7 +69,7 @@ require APPROOT . '/views/inc/head-bare.php';
             </div>
 
             <!-- حقل كود 2FA (TOTP) — يظهر فقط عندما يطلب السيرفر requires_2fa -->
-            <div class="form-group" id="twofaGroup" style="display:none;">
+            <div class="form-group" id="twofaGroup" class="d-none">
                 <label class="form-label" for="adminTOTP">Authenticator Code</label>
                 <input
                     type="text"

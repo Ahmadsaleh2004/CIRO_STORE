@@ -9,7 +9,7 @@
 
 <div class="admin-page-header">
     <h1>💬 Support Messages</h1>
-    <span style="color:var(--muted-text);font-size:.85rem;">
+    <span class="u-muted u-fs-85">
         Total: <?= (int) $totalMessages ?> message<?= $totalMessages !== 1 ? 's' : '' ?>
     </span>
 </div>
@@ -20,8 +20,7 @@
         <input
             type="text"
             name="q"
-            class="form-control"
-            style="max-width:320px;"
+            class="form-control u-mw-320"
             placeholder="Search by name, email or message..."
             value="<?= htmlspecialchars($search) ?>"
         >
@@ -34,8 +33,8 @@
 
 <!-- ── Messages List ──────────────────────────────────────── -->
 <?php if (empty($messages)): ?>
-<div class="text-center py-5" style="color:var(--muted-text);">
-    <p style="font-size:1.1rem;">No messages found<?= $search !== '' ? ' for "' . htmlspecialchars($search) . '"' : '' ?>.</p>
+<div class="text-center py-5 u-muted">
+    <p class="u-fs-110">No messages found<?= $search !== '' ? ' for "' . htmlspecialchars($search) . '"' : '' ?>.</p>
 </div>
 <?php else: ?>
 
@@ -47,27 +46,27 @@
             data-msg-id="<?= (int) $m['id'] ?>"
             data-user-id="<?= (int) ($m['user_id'] ?? 0) ?>"
             data-user-name="<?= htmlspecialchars($m['user_name'] ?? $m['full_name']) ?>"
-            style="cursor:pointer;"
+            class="u-clickable"
         >
             <div class="d-flex justify-content-between align-items-start mb-2">
                 <div>
                     <strong><?= htmlspecialchars($m['full_name']) ?></strong>
                     <?php if ($m['user_id']): ?>
-                    <span class="badge bg-primary ms-1" style="font-size:.65rem;">Registered</span>
+                    <span class="badge bg-primary ms-1 u-fs-65">Registered</span>
                     <?php else: ?>
-                    <span class="badge bg-secondary ms-1" style="font-size:.65rem;">Guest</span>
+                    <span class="badge bg-secondary ms-1 u-fs-65">Guest</span>
                     <?php endif; ?>
                 </div>
-                <small style="color:var(--muted-text);white-space:nowrap;">
+                <small class="u-meta">
                     <?= htmlspecialchars(date('M j, Y', strtotime($m['sent_at']))) ?>
                 </small>
             </div>
 
-            <p class="small mb-2" style="color:var(--muted-text);">
+            <p class="small mb-2 u-muted">
                 ✉️ <?= htmlspecialchars($m['email']) ?>
             </p>
 
-            <p class="mb-3" style="font-size:.9rem;line-height:1.5;">
+            <p class="mb-3" class="u-message-body">
                 <?= nl2br(htmlspecialchars($m['message'])) ?>
             </p>
 

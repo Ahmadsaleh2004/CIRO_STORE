@@ -88,9 +88,26 @@
     # (منتجات · variants · شرائح السلايدر — صفر مسار يبدأ بـhttp).
     # `data:` تبقى: هي ما تحمل الـQR الآن.
     #
-    # style-src فيها 'unsafe-inline' بعد: 241 سمة style= في الـviews.
-    # وهي الخطوة التالية، وأثرها الأمني أقلّ بكثير من السكربتات.
-    Header always set Content-Security-Policy "default-src 'self'; script-src 'self' 'sha256-n33GJ973YEUTpbG1xOj611JYTc5wI4V+8xmEtfPaLjk=' https://cdn.jsdelivr.net https://code.jquery.com https://js.hcaptcha.com https://*.hcaptcha.com; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://*.hcaptcha.com; img-src 'self' data:; font-src 'self' data: https://cdn.jsdelivr.net; connect-src 'self' https://*.hcaptcha.com; frame-src https://*.hcaptcha.com; form-action 'self'; frame-ancestors 'self'; base-uri 'self'; object-src 'none'"
+    # **وبلا 'unsafe-inline' في style-src أيضاً** — وهي آخر خطوة كانت
+    # مؤجّلة. كانت الـviews تحمل 234 سمة `style="…"`، وسياسة تسمح
+    # بالأنماط المضمّنة لا تستطيع أن تمنع نمطاً محقوناً.
+    #
+    # ما تغيّر ليصير هذا ممكناً:
+    #   · 217 سمة ثابتة → أدوات في base/utilities.css (وBootstrap حيث
+    #     كان له مقابل تامّ: d-none · text-nowrap · align-middle).
+    #   · السمات الشرطية → أصناف شرطية: `class="<?= $x ? 'd-none' : '' ?>"`
+    #     بدل `style="<?= $x ? 'display:none;' : '' ?>"`.
+    #   · بلاطات لوحة الأدمن → نغمات مسمّاة (u-tone-*): اللوحة مغلقة
+    #     ومعرَّفة في الـview نفسه، فصارت المصفوفة تحمل 'tone' => 'amber'
+    #     بدل 'color' => '#f59e0b'.
+    #   · لون الـvariant وحده مجموعة **مفتوحة** (من القاعدة) — يخرج في
+    #     data-swatch، وjs/store/variant-swatches.js يكتبه في خاصية CSS
+    #     مخصّصة عبر الـCSSOM. وCSP يحكم ما في الترميز لا ما يكتبه
+    #     سكربت مسموح به.
+    #
+    # ⚠️ لا تُعِد أي `style="…"` إلى view. اختبار
+    # tests/Unit/InlineStyleTest.php يرفض ذلك عند البناء لا عند النشر.
+    Header always set Content-Security-Policy "default-src 'self'; script-src 'self' 'sha256-n33GJ973YEUTpbG1xOj611JYTc5wI4V+8xmEtfPaLjk=' https://cdn.jsdelivr.net https://code.jquery.com https://js.hcaptcha.com https://*.hcaptcha.com; style-src 'self' https://cdn.jsdelivr.net https://*.hcaptcha.com; img-src 'self' data:; font-src 'self' data: https://cdn.jsdelivr.net; connect-src 'self' https://*.hcaptcha.com; frame-src https://*.hcaptcha.com; form-action 'self'; frame-ancestors 'self'; base-uri 'self'; object-src 'none'"
 
 
 </IfModule>

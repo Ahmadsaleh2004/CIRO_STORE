@@ -9,7 +9,7 @@
 
 <div class="admin-page-header">
     <h1>⚙️ Site Configuration</h1>
-    <span style="color:var(--muted-text);font-size:.85rem;">
+    <span class="u-muted u-fs-85">
         Changes are saved instantly without page reload
     </span>
 </div>
@@ -196,9 +196,9 @@
          هذا الإخفاء بالـ View هو UX فقط — ليس الحماية الوحيدة
          ══════════════════════════════════════════════ -->
     <?php if ($canEditCheckout): ?>
-    <div class="card p-4 mb-4" style="border-color:#f59e0b;">
+    <div class="card p-4 mb-4 u-alert-amber">
         <h5 class="mb-1">💳 Checkout Settings</h5>
-        <p class="small mb-4" style="color:var(--muted-text);">
+        <p class="small mb-4 u-muted">
             Visible only to admins with <code>can_manage_checkout_settings</code> permission.
         </p>
 
