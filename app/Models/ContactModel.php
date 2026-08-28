@@ -2,10 +2,10 @@
 
 namespace App\Models;
 
-use App\Core\Database;
+use App\Core\Model;
 use Exception;
 
-class ContactModel
+class ContactModel extends Model
 {
     /**
      * حفظ رسالة تواصل جديدة في قاعدة البيانات
@@ -13,7 +13,7 @@ class ContactModel
     public static function save(?int $userId, string $fullName, string $email, string $message): bool
     {
         try {
-            $db = Database::connect();
+            $db = self::db();
             $stmt = $db->prepare(
                 "INSERT INTO contact_messages (user_id, full_name, email, message, is_notified)
                  VALUES (?, ?, ?, ?, 0)"

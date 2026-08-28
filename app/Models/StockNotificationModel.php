@@ -2,7 +2,7 @@
 
 namespace App\Models;
 
-use App\Core\Database;
+use App\Core\Model;
 use PDO;
 use Exception;
 
@@ -20,7 +20,7 @@ use Exception;
  * الاستثناء وتسجّله ثم تُرجع قيمة محايدة — نفس نمط ProductModel و
  * AdminModel: فشل استعلام ثانوي يجب ألّا يُسقط الصفحة كلها.
  */
-class StockNotificationModel
+class StockNotificationModel extends Model
 {
     /**
      * هل طلب هذا المستخدم إشعاراً عن هذا المنتج؟
@@ -28,7 +28,7 @@ class StockNotificationModel
     public static function exists(int $productId, int $userId): bool
     {
         try {
-            $stmt = Database::connect()->prepare(
+            $stmt = self::db()->prepare(
                 "SELECT id FROM stock_notifications
                  WHERE product_id = ? AND user_id = ? LIMIT 1"
             );
@@ -48,7 +48,7 @@ class StockNotificationModel
     public static function productIdsForUser(int $userId): array
     {
         try {
-            $stmt = Database::connect()->prepare(
+            $stmt = self::db()->prepare(
                 "SELECT product_id FROM stock_notifications WHERE user_id = ?"
             );
             $stmt->execute([$userId]);
@@ -75,7 +75,7 @@ class StockNotificationModel
 
         try {
             $placeholders = implode(',', array_fill(0, count($productIds), '?'));
-            $stmt = Database::connect()->prepare(
+            $stmt = self::db()->prepare(
                 "SELECT product_id FROM stock_notifications
                  WHERE user_id = ? AND product_id IN ({$placeholders})"
             );
@@ -99,7 +99,7 @@ class StockNotificationModel
         }
 
         try {
-            Database::connect()
+            self::db()
                 ->prepare("INSERT INTO stock_notifications (product_id, user_id) VALUES (?, ?)")
                 ->execute([$productId, $userId]);
             return true;
@@ -115,7 +115,7 @@ class StockNotificationModel
     public static function countForProduct(int $productId): int
     {
         try {
-            $stmt = Database::connect()->prepare(
+            $stmt = self::db()->prepare(
                 "SELECT COUNT(*) FROM stock_notifications WHERE product_id = ?"
             );
             $stmt->execute([$productId]);
@@ -134,7 +134,7 @@ class StockNotificationModel
     public static function waitingUserIds(int $productId): array
     {
         try {
-            $stmt = Database::connect()->prepare(
+            $stmt = self::db()->prepare(
                 "SELECT DISTINCT user_id FROM stock_notifications WHERE product_id = ?"
             );
             $stmt->execute([$productId]);
@@ -152,7 +152,7 @@ class StockNotificationModel
     public static function clearForProduct(int $productId): void
     {
         try {
-            Database::connect()
+            self::db()
                 ->prepare("DELETE FROM stock_notifications WHERE product_id = ?")
                 ->execute([$productId]);
         } catch (Exception $e) {

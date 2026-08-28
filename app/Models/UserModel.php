@@ -2,14 +2,14 @@
 
 namespace App\Models;
 
-use App\Core\Database;
+use App\Core\Model;
 use Exception;
 
 /**
  * UserModel — يغطي جدول users
  * عمليات: تسجيل الدخول، إنشاء حساب، البحث بالإيميل، تحديث البيانات
  */
-class UserModel
+class UserModel extends Model
 {
     /**
      * جلب مستخدم بالإيميل
@@ -17,7 +17,7 @@ class UserModel
     public static function findByEmail(string $email): ?array
     {
         try {
-            $db   = Database::connect();
+            $db   = self::db();
             $stmt = $db->prepare("SELECT * FROM users WHERE email = ? LIMIT 1");
             $stmt->execute([$email]);
             $row = $stmt->fetch();
@@ -34,7 +34,7 @@ class UserModel
     public static function findById(int $id): ?array
     {
         try {
-            $db   = Database::connect();
+            $db   = self::db();
             $stmt = $db->prepare("SELECT * FROM users WHERE id = ? LIMIT 1");
             $stmt->execute([$id]);
             $row = $stmt->fetch();
@@ -51,7 +51,7 @@ class UserModel
     public static function findByGoogleId(string $googleId): ?array
     {
         try {
-            $db   = Database::connect();
+            $db   = self::db();
             $stmt = $db->prepare("SELECT * FROM users WHERE google_id = ? LIMIT 1");
             $stmt->execute([$googleId]);
             $row = $stmt->fetch();
@@ -68,7 +68,7 @@ class UserModel
     public static function phoneExists(string $phone): bool
     {
         try {
-            $db   = Database::connect();
+            $db   = self::db();
             $stmt = $db->prepare("SELECT id FROM users WHERE phone_number = ? LIMIT 1");
             $stmt->execute([$phone]);
             return (bool)$stmt->fetch();
@@ -83,7 +83,7 @@ class UserModel
     public static function create(array $data): ?int
     {
         try {
-            $db   = Database::connect();
+            $db   = self::db();
             $stmt = $db->prepare("
                 INSERT INTO users
                     (full_name, email, password, phone_number, country, city,
@@ -114,7 +114,7 @@ class UserModel
     public static function createFromGoogle(string $googleId, string $email, string $name): ?int
     {
         try {
-            $db           = Database::connect();
+            $db           = self::db();
             $randomPass   = password_hash(bin2hex(random_bytes(16)), PASSWORD_BCRYPT);
             $stmt         = $db->prepare("
                 INSERT INTO users
@@ -138,7 +138,7 @@ class UserModel
     public static function updateGoogleId(int $userId, string $googleId): bool
     {
         try {
-            $db   = Database::connect();
+            $db   = self::db();
             $stmt = $db->prepare("UPDATE users SET google_id = ? WHERE id = ?");
             return $stmt->execute([$googleId, $userId]);
         } catch (Exception $e) {
@@ -153,7 +153,7 @@ class UserModel
     public static function updateActivity(int $userId): void
     {
         try {
-            $db = Database::connect();
+            $db = self::db();
             $db->prepare("UPDATE users SET last_activity = NOW() WHERE id = ?")->execute([$userId]);
         } catch (Exception $e) {
             error_log("UserModel::updateActivity Error: " . $e->getMessage());
@@ -166,7 +166,7 @@ class UserModel
     public static function updateProfile(int $userId, array $data): bool
     {
         try {
-            $db   = Database::connect();
+            $db   = self::db();
             $stmt = $db->prepare("
                 UPDATE users
                 SET full_name = ?, phone_number = ?, country = ?, city = ?
@@ -191,7 +191,7 @@ class UserModel
     public static function getStrikesCount(int $userId): int
     {
         try {
-            $db   = Database::connect();
+            $db   = self::db();
             $stmt = $db->prepare("SELECT COUNT(*) FROM user_strikes WHERE user_id = ?");
             $stmt->execute([$userId]);
             return (int)$stmt->fetchColumn();
@@ -206,7 +206,7 @@ class UserModel
     public static function countAll(): int
     {
         try {
-            return (int)Database::connect()
+            return (int)self::db()
                 ->query("SELECT COUNT(*) FROM users")
                 ->fetchColumn();
         } catch (\Exception $e) {
@@ -221,7 +221,7 @@ class UserModel
     public static function logLoginAttempt(string $email, bool $success): void
     {
         try {
-            $db   = Database::connect();
+            $db   = self::db();
             $ip   = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
             $stmt = $db->prepare(
                 "INSERT INTO login_attempts (email, ip_address, attempted_at, success)
@@ -239,7 +239,7 @@ class UserModel
     public static function isRateLimited(string $email, int $maxAttempts = 5, int $windowMinutes = 15): bool
     {
         try {
-            $db   = Database::connect();
+            $db   = self::db();
             $stmt = $db->prepare(
                 "SELECT COUNT(*) FROM login_attempts
                  WHERE email = ? AND success = 0
@@ -259,7 +259,7 @@ class UserModel
     public static function getFailedAttemptsCount(string $email, int $windowMinutes = 15): int
     {
         try {
-            $db   = Database::connect();
+            $db   = self::db();
             $stmt = $db->prepare(
                 "SELECT COUNT(*) FROM login_attempts
                  WHERE email = ? AND success = 0
@@ -291,7 +291,7 @@ class UserModel
         int $perPage = 20
     ): array {
         try {
-            $db      = Database::connect();
+            $db      = self::db();
             $search  = trim($search);
             $status  = in_array($status, ['all', 'active', 'not_active', 'blocked'], true) ? $status : 'all';
             $page    = max(1, $page);
@@ -385,7 +385,7 @@ class UserModel
                 }
             }
 
-            $stmt = Database::connect()->query("
+            $stmt = self::db()->query("
                 SELECT t.id
                 FROM (
                     SELECT u.id, u.last_activity,
@@ -405,7 +405,7 @@ class UserModel
     public static function getByIdForAdmin(int $id): ?array
     {
         try {
-            $stmt = Database::connect()->prepare("
+            $stmt = self::db()->prepare("
                 SELECT u.*,
                        (SELECT COUNT(*) FROM user_strikes us WHERE us.user_id = u.id) AS strikes_count
                 FROM users u
@@ -423,7 +423,7 @@ class UserModel
     public static function getStrikes(int $userId): array
     {
         try {
-            $stmt = Database::connect()->prepare(
+            $stmt = self::db()->prepare(
                 "SELECT * FROM user_strikes WHERE user_id = ? ORDER BY created_at DESC, id DESC"
             );
             $stmt->execute([$userId]);
@@ -442,7 +442,7 @@ class UserModel
     public static function addStrike(int $userId, int $adminId, string $reason): bool
     {
         try {
-            $db   = Database::connect();
+            $db   = self::db();
             $stmt = $db->prepare(
                 "INSERT INTO user_strikes (user_id, reason, issued_by_admin_id) VALUES (?, ?, ?)"
             );
@@ -463,7 +463,7 @@ class UserModel
     public static function removeStrike(int $strikeId, int $userId): bool
     {
         try {
-            $stmt = Database::connect()->prepare(
+            $stmt = self::db()->prepare(
                 "DELETE FROM user_strikes WHERE id = ? AND user_id = ?"
             );
             // execute() يرجع true حتى لو ما انحذف صف — لازم نتحقق من rowCount
@@ -488,7 +488,7 @@ class UserModel
      */
     public static function deleteUser(int $id): array
     {
-        $db = Database::connect();
+        $db = self::db();
         $ordersByStatus = ['not_taken' => 0, 'taken' => 0, 'completed' => 0, 'cancelled' => 0];
 
         try {
@@ -556,7 +556,7 @@ class UserModel
     public static function getAllForCsvExport(): array
     {
         try {
-            $stmt = Database::connect()->query("
+            $stmt = self::db()->query("
                 SELECT u.id, u.full_name, u.email, u.phone_number, u.country, u.city, u.gender,
                        u.birth_date, u.google_id, u.last_activity, u.created_at,
                        (SELECT COUNT(*) FROM user_strikes us WHERE us.user_id = u.id) AS strikes_count
@@ -577,7 +577,7 @@ class UserModel
     public static function createPasswordReset(string $email, string $userType = 'user'): ?string
     {
         try {
-            $db = \App\Core\Database::connect();
+            $db = self::db();
             $token = bin2hex(random_bytes(32));
             $tokenHash = hash('sha256', $token);
 
@@ -599,7 +599,7 @@ class UserModel
     public static function validatePasswordResetToken(string $email, string $token, string $userType = 'user'): bool
     {
         try {
-            $db = \App\Core\Database::connect();
+            $db = self::db();
             $tokenHash = hash('sha256', $token);
             $stmt = $db->prepare("SELECT id FROM password_resets WHERE email = ? AND user_type = ? AND token_hash = ? AND used = 0 AND expires_at > NOW() LIMIT 1");
             $stmt->execute([$email, $userType, $tokenHash]);
@@ -615,7 +615,7 @@ class UserModel
      */
     public static function consumePasswordResetToken(string $email, string $token, string $userType = 'user'): void
     {
-        $db = \App\Core\Database::connect();
+        $db = self::db();
         $tokenHash = hash('sha256', $token);
         $stmt = $db->prepare("UPDATE password_resets SET used = 1 WHERE email = ? AND user_type = ? AND token_hash = ?");
         $stmt->execute([$email, $userType, $tokenHash]);
@@ -627,7 +627,7 @@ class UserModel
     public static function updatePassword(int $userId, string $newPasswordHash): bool
     {
         try {
-            $db = \App\Core\Database::connect();
+            $db = self::db();
             $stmt = $db->prepare("UPDATE users SET password = ? WHERE id = ?");
             return $stmt->execute([$newPasswordHash, $userId]);
         } catch (\Exception $e) {
@@ -643,7 +643,7 @@ class UserModel
     public static function createEmailVerification(int $userId): ?string
     {
         try {
-            $db = \App\Core\Database::connect();
+            $db = self::db();
             $token = bin2hex(random_bytes(32));
             $tokenHash = hash('sha256', $token);
 
@@ -664,7 +664,7 @@ class UserModel
     public static function verifyEmailToken(string $token): bool
     {
         try {
-            $db = \App\Core\Database::connect();
+            $db = self::db();
             $tokenHash = hash('sha256', $token);
             $stmt = $db->prepare("SELECT user_id FROM email_verifications WHERE token_hash = ? AND expires_at > NOW() LIMIT 1");
             $stmt->execute([$tokenHash]);
@@ -704,7 +704,7 @@ class UserModel
     public static function getFullNameById(int $userId): ?string
     {
         try {
-            $stmt = Database::connect()->prepare("SELECT full_name FROM users WHERE id = ? LIMIT 1");
+            $stmt = self::db()->prepare("SELECT full_name FROM users WHERE id = ? LIMIT 1");
             $stmt->execute([$userId]);
             $name = $stmt->fetchColumn();
             return $name !== false ? (string)$name : null;

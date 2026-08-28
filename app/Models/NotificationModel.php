@@ -2,13 +2,13 @@
 
 namespace App\Models;
 
-use App\Core\Database;
+use App\Core\Model;
 use Exception;
 
 /**
  * NotificationModel — يغطي جدول notifications (إشعارات المستخدمين)
  */
-class NotificationModel
+class NotificationModel extends Model
 {
     /**
      * جلب قائمة الإشعارات للمستخدم
@@ -16,7 +16,7 @@ class NotificationModel
     public static function getList(int $userId, int $limit = 30): array
     {
         try {
-            $db   = Database::connect();
+            $db   = self::db();
             $stmt = $db->prepare(
                 "SELECT id, title, message, is_read, related_type, related_id, created_at
                  FROM notifications
@@ -38,7 +38,7 @@ class NotificationModel
     public static function countUnread(int $userId): int
     {
         try {
-            $db   = Database::connect();
+            $db   = self::db();
             $stmt = $db->prepare(
                 "SELECT COUNT(*) FROM notifications WHERE user_id = ? AND is_read = 0"
             );
@@ -55,7 +55,7 @@ class NotificationModel
     public static function markRead(int $notifId, int $userId): bool
     {
         try {
-            $db   = Database::connect();
+            $db   = self::db();
             $stmt = $db->prepare(
                 "UPDATE notifications SET is_read = 1
                  WHERE id = ? AND user_id = ?"
@@ -73,7 +73,7 @@ class NotificationModel
     public static function markAllRead(int $userId): bool
     {
         try {
-            $db   = Database::connect();
+            $db   = self::db();
             $stmt = $db->prepare(
                 "UPDATE notifications SET is_read = 1 WHERE user_id = ?"
             );
@@ -98,7 +98,7 @@ class NotificationModel
     public static function deleteAll(int $userId): bool
     {
         try {
-            $db   = Database::connect();
+            $db   = self::db();
             $stmt = $db->prepare("DELETE FROM notifications WHERE user_id = ?");
             return $stmt->execute([$userId]);
         } catch (Exception $e) {
@@ -113,7 +113,7 @@ class NotificationModel
     public static function insert(int $userId, string $title, string $message, ?int $adminId = null, ?string $relatedType = null, ?int $relatedId = null): bool
     {
         try {
-            $db   = Database::connect();
+            $db   = self::db();
             $stmt = $db->prepare(
                 "INSERT INTO notifications
                     (user_id, title, message, sender_admin_id, related_type, related_id, created_at)

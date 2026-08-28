@@ -2,7 +2,7 @@
 
 namespace App\Models;
 
-use App\Core\Database;
+use App\Core\Model;
 use Exception;
 use PDO;
 
@@ -10,7 +10,7 @@ use PDO;
  * AdminProductModel — استعلامات لوحة تحكم الأدمن الخاصة بالمنتجات فقط
  * (منفصل عن ProductModel المستخدم بواجهة المتجر العامة).
  */
-class AdminProductModel
+class AdminProductModel extends Model
 {
     /** خيارات ترتيب السعر */
     public const PRICE_SORT_OPTIONS = [
@@ -44,7 +44,7 @@ class AdminProductModel
         int $offset
     ): array {
         try {
-            $db     = Database::connect();
+            $db     = self::db();
             $where  = [];
             $params = [];
 
@@ -143,7 +143,7 @@ class AdminProductModel
     public static function countFiltered(string $search, array $categoryIds = []): int
     {
         try {
-            $db        = Database::connect();
+            $db        = self::db();
             $where     = [];
             $catParams = [];
             $params    = [];
@@ -182,7 +182,7 @@ class AdminProductModel
     public static function countAll(): int
     {
         try {
-            return (int)Database::connect()
+            return (int)self::db()
                 ->query("SELECT COUNT(*) FROM products")
                 ->fetchColumn();
         } catch (Exception $e) {
@@ -197,7 +197,7 @@ class AdminProductModel
     public static function findByIdWithCategories(int $id): ?array
     {
         try {
-            $db = Database::connect();
+            $db = self::db();
 
             $stmt = $db->prepare("SELECT * FROM products WHERE id = ? LIMIT 1");
             $stmt->execute([$id]);
@@ -269,7 +269,7 @@ class AdminProductModel
             return null;
         }
 
-        $db = Database::connect();
+        $db = self::db();
         try {
             $db->beginTransaction();
 
@@ -334,7 +334,7 @@ class AdminProductModel
             return null;
         }
 
-        $db = Database::connect();
+        $db = self::db();
         try {
             $db->beginTransaction();
 
@@ -406,7 +406,7 @@ class AdminProductModel
      */
     public static function delete(int $productId): ?bool
     {
-        $db = Database::connect();
+        $db = self::db();
         try {
             $db->beginTransaction();
             $db->prepare("DELETE FROM product_variants WHERE product_id = ?")->execute([$productId]);
@@ -440,7 +440,7 @@ class AdminProductModel
     public static function getTotalStock(int $productId): int
     {
         try {
-            $stmt = Database::connect()->prepare("
+            $stmt = self::db()->prepare("
                 SELECT COALESCE(SUM(stock_quantity), 0)
                 FROM product_variants
                 WHERE product_id = ?
@@ -476,7 +476,7 @@ class AdminProductModel
     public static function toggleVisibility(int $productId): ?int
     {
         try {
-            $db   = Database::connect();
+            $db   = self::db();
             $stmt = $db->prepare("SELECT is_visible FROM products WHERE id = ? LIMIT 1");
             $stmt->execute([$productId]);
             $current = $stmt->fetchColumn();
@@ -499,7 +499,7 @@ class AdminProductModel
     public static function getVariantImagePaths(int $productId): array
     {
         try {
-            $stmt = Database::connect()->prepare(
+            $stmt = self::db()->prepare(
                 "SELECT image_path FROM product_variants WHERE product_id = ? AND image_path IS NOT NULL"
             );
             $stmt->execute([$productId]);

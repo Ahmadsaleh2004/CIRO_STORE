@@ -2,11 +2,13 @@
 
 namespace App\Models;
 
+use App\Core\Model;
+
 /**
  * AboutModel — يوفّر بيانات صفحة "About Us"
  * البيانات الثابتة مُعرَّفة هنا (يمكن ربطها بـ website_settings لاحقاً)
  */
-class AboutModel
+class AboutModel extends Model
 {
     /**
      * يُرجع معلومات المتجر الثابتة
