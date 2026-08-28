@@ -76,7 +76,12 @@ usort($sortedByStock, fn($a, $b) => (int)$a['stock_quantity'] <=> (int)$b['stock
                     <button type="button"
                         class="btn btn-outline-secondary btn-sm color-swatch-btn <?= $v['id'] == $selectedVariant['id'] ? 'active' : '' ?>"
                         data-variant-id="<?= (int)$v['id'] ?>"
-                        <?= $v['color_hex'] ? 'style="border-left:14px solid ' . htmlspecialchars($v['color_hex']) . ';"' : '' ?>
+                        <?php /* اللون يأتي من القاعدة فلا يمكن أن يصير class،
+                                 ولا أن يبقى style= بعد تشديد الـCSP. يخرج هنا
+                                 كبيان في data-swatch، وjs/store/variant-swatches.js
+                                 يكتبه في خاصية CSS مخصّصة عبر الـCSSOM — وهو ما
+                                 لا يمنعه CSP لأن القيمة لا تظهر في الترميز. */ ?>
+                        <?= $v['color_hex'] ? 'data-swatch="' . htmlspecialchars($v['color_hex']) . '"' : '' ?>
                         <?= (int)$v['stock_quantity'] <= 0 ? 'title="Out of stock"' : '' ?>>
                         <?= htmlspecialchars($v['color_name']) ?>
                     </button>
@@ -90,7 +95,7 @@ usort($sortedByStock, fn($a, $b) => (int)$a['stock_quantity'] <=> (int)$b['stock
                         aria-expanded="false" aria-controls="allColorsPanel">
                     <span id="toggleArrowIcon">▾</span> Show all colors &amp; stock details
                 </button>
-                <div id="allColorsPanel" style="display:none;" class="mt-2 p-3 rounded border">
+                <div id="allColorsPanel" class="d-none" class="mt-2 p-3 rounded border">
                     <?php foreach ($sortedByStock as $i => $v):
                         $vPrice = (float)($v['discount_percentage'] > 0 ? $v['price_after_discount'] : $v['price']);
                         $isLowStockFlag = (int)$v['stock_quantity'] > 0 && $i === 0;
@@ -104,7 +109,7 @@ usort($sortedByStock, fn($a, $b) => (int)$a['stock_quantity'] <=> (int)$b['stock
                             <?php if ((int)$v['stock_quantity'] <= 0): ?>
                             <span class="badge bg-secondary ms-2">Out of stock</span>
                             <?php endif; ?>
-                            <div class="small" style="color:var(--muted-text);">
+                            <div class="small u-muted">
                                 Gender: <?= htmlspecialchars(ucfirst($v['gender_category'] ?? '')) ?> · Stock: <?= (int)$v['stock_quantity'] ?>
                             </div>
                         </div>
@@ -152,7 +157,7 @@ usort($sortedByStock, fn($a, $b) => (int)$a['stock_quantity'] <=> (int)$b['stock
             <div class="mb-3"><span class="badge <?= $sb['class'] ?> fs-6" id="stockBadge"><?= htmlspecialchars($sb['label']) ?></span></div>
 
             <!-- ── Qty + Cart block ── -->
-            <div id="qtyCartBlock" style="<?= $stock > 0 ? '' : 'display:none;' ?>">
+            <div id="qtyCartBlock" class="<?= $stock > 0 ? '' : 'd-none' ?>">
                 <div class="quantity-box mb-4">
                     <button class="btn btn-outline-secondary" id="minusBtn">−</button>
                     <input type="number" value="1" min="1" max="<?= $stock ?>"
@@ -176,7 +181,7 @@ usort($sortedByStock, fn($a, $b) => (int)$a['stock_quantity'] <=> (int)$b['stock
             </div>
 
             <!-- ── Notify Me block ── -->
-            <div id="notifyBlock" style="<?= $stock > 0 ? 'display:none;' : '' ?>">
+            <div id="notifyBlock" class="<?= $stock > 0 ? 'd-none' : '' ?>">
                 <?php if ($alreadyRequested): ?>
                 <div class="alert alert-success py-2">✅ We'll notify you when this product is back in stock!</div>
                 <?php elseif ($userLoggedIn && empty($_SESSION['admin_in_store_mode'] ?? false)): ?>
@@ -194,7 +199,7 @@ usort($sortedByStock, fn($a, $b) => (int)$a['stock_quantity'] <=> (int)$b['stock
                     🔔 Notify Me (Login Required)
                 </button>
                 <?php endif; ?>
-                <div id="wishBtnStandalone" class="mt-2" style="display:<?= $stock <= 0 ? 'block' : 'none' ?>;">
+                <div id="wishBtnStandalone" class="mt-2 <?= $stock <= 0 ? '' : 'd-none' ?>">
                     <button id="wishBtn2" class="btn btn-outline-danger">🤍 Add to Wishlist</button>
                 </div>
             </div>

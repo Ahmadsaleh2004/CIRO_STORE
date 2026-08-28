@@ -6,8 +6,8 @@
 ?>
 
 <main id="main-content" class="container py-5 text-center">
-    <div class="card p-5 mx-auto" style="max-width:500px;">
-        <div style="font-size:4rem;">✅</div>
+    <div class="card p-5 mx-auto u-mw-500">
+        <div class="u-fs-xxxl">✅</div>
         <h2 class="fw-bold mt-3">Order Confirmed!</h2>
         <p class="lead">Thank you for your order.</p>
         <p class="text-muted">Your Order ID: <strong>#<?= (int)($orderId ?? 0) ?></strong></p>

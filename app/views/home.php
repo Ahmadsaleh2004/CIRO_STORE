@@ -26,7 +26,7 @@
 // المصدر الوحيد للعرض الأول.
 $homeSliders = $data['homeSliders'] ?? [];
 ?>
-<section<?= $homeSliders === [] ? ' style="display:none"' : '' ?>>
+<section<?= $homeSliders === [] ? ' class="d-none"' : '' ?>>
     <div id="mainSlider" class="carousel slide" data-bs-ride="carousel">
         <div class="carousel-inner" id="slider-inner">
             <?php foreach ($homeSliders as $index => $slide): ?>

@@ -8,14 +8,14 @@
 <!-- ══ Privacy Policy Modal ════════════════════════════════ -->
 <div class="modal fade" id="privacyModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content" style="background:var(--card-bg); color:var(--text-color); border:1px solid var(--section-border);">
-            <div class="modal-header" style="border-bottom:1px solid var(--section-border);">
+        <div class="modal-content" class="u-policy-panel">
+            <div class="modal-header u-border-bottom">
                 <h5 class="modal-title">🔒 Privacy Policy / سياسة الخصوصية</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body" style="max-height:60vh;overflow-y:auto;">
+            <div class="modal-body u-scroll-60vh">
                 <h3>🔒 Privacy Policy / سياسة الخصوصية</h3>
-                <hr style="border-color:var(--section-border);">
+                <hr class="u-border-section">
 
                 <h5>1. Information We Collect / البيانات التي نجمعها</h5>
                 <p>We collect personal information that you provide to us directly, such as your full name, email address, password, phone number, birth date, gender, country, and city when registering an account or communicating with us.</p>
@@ -41,7 +41,7 @@
                 <p>If you have any questions or concerns regarding this Privacy Policy, you can reach out via the 'Contact Us' page.</p>
                 <p>إذا كان لديك أي أسئلة أو مخاوف بشأن سياسة الخصوصية هذه، يمكنك التواصل معنا عبر صفحة 'اتصل بنا'.</p>
             </div>
-            <div class="modal-footer" style="border-top:1px solid var(--section-border);">
+            <div class="modal-footer u-border-top">
                 <?php
                 // كان هنا **دالة JS كاملة مكتوبة داخل سمة onclick** —
                 // أربعة أسطر منطق في وسم HTML. صارت نيّةً معلَنة

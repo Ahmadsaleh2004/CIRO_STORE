@@ -14,7 +14,7 @@ if (hasPermission('can_manage_admins')) {
         'icon'  => '👑',
         'label' => 'Manage Admins',
         'href'  => URLROOT . '/admin/admins',
-        'color' => '#f59e0b',
+        'tone'  => 'amber',
     ];
 }
 
@@ -23,7 +23,7 @@ if (hasPermission('can_view_dashboard')) {
         'icon'  => '📊',
         'label' => 'Dashboard',
         'href'  => URLROOT . '/admin/dashboard',
-        'color' => '#6366f1',
+        'tone'  => 'indigo',
     ];
 }
 
@@ -32,7 +32,7 @@ if (hasPermission('can_manage_products')) {
         'icon'  => '🛍️',
         'label' => 'Products',
         'href'  => URLROOT . '/admin/products',
-        'color' => '#16a34a',
+        'tone'  => 'green',
     ];
 }
 
@@ -41,7 +41,7 @@ if (hasPermission('can_manage_users')) {
         'icon'  => '👥',
         'label' => 'Users',
         'href'  => URLROOT . '/admin/users',
-        'color' => '#0ea5e9',
+        'tone'  => 'sky',
     ];
 }
 
@@ -50,7 +50,7 @@ if (hasPermission('can_manage_support')) {
         'icon'  => '💬',
         'label' => 'Support',
         'href'  => URLROOT . '/admin/support',
-        'color' => '#8b5cf6',
+        'tone'  => 'violet',
     ];
 }
 
@@ -59,7 +59,7 @@ if (hasPermission('can_manage_orders')) {
         'icon'  => '📦',
         'label' => 'Orders',
         'href'  => URLROOT . '/admin/orders',
-        'color' => '#f97316',
+        'tone'  => 'orange',
     ];
 }
 
@@ -68,7 +68,7 @@ if (hasPermission('can_edit_site_content')) {
         'icon'  => '⚙️',
         'label' => 'Site Configuration',
         'href'  => URLROOT . '/admin/settings',
-        'color' => '#64748b',
+        'tone'  => 'slate',
     ];
 }
 
@@ -77,7 +77,7 @@ if (hasPermission('can_manage_branding')) {
         'icon'  => '🎬',
         'label' => 'Slider',
         'href'  => URLROOT . '/admin/branding',
-        'color' => '#a855f7',
+        'tone'  => 'purple',
     ];
 }
 
@@ -86,7 +86,7 @@ $tiles[] = [
     'icon'  => '🌐',
     'label' => 'Store Mode',
     'href'  => URLROOT . '/admin/store-mode/enter',
-    'color' => '#0ea5e9',
+    'tone'  => 'sky',
     'method' => 'POST',
 ];
 
@@ -95,7 +95,7 @@ if ($adminId === 1) {
         'icon'  => '💾',
         'label' => 'Backup DB',
         'href'  => URLROOT . '/admin/backup',
-        'color' => '#dc2626',
+        'tone'  => 'red',
     ];
 }
 ?>
@@ -109,7 +109,7 @@ if ($adminId === 1) {
 <?php if (empty($tiles)): ?>
     <!-- لا صلاحيات مخصصة لهذا الأدمن -->
     <div class="text-center py-5 text-muted">
-        <div style="font-size:3rem;">🔒</div>
+        <div class="u-fs-xxl">🔒</div>
         <p class="mt-3">No sections are available for your current role.<br>Contact a Super Admin to assign permissions.</p>
     </div>
 
@@ -119,9 +119,8 @@ if ($adminId === 1) {
         <?php if (($tiles[0]['method'] ?? 'GET') === 'POST'): ?>
         <form method="POST" action="<?= htmlspecialchars($tiles[0]['href']) ?>" class="d-inline m-0 p-0">
             <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf) ?>">
-            <button type="submit" class="home-tile w-100" style="border:0;background:none;padding:0;">
-                <div class="tile-icon"
-                     style="background:<?= $tiles[0]['color'] ?>22; color:<?= $tiles[0]['color'] ?>;">
+            <button type="submit" class="home-tile w-100 u-bare-button">
+                <div class="tile-icon u-tone-<?= htmlspecialchars($tiles[0]['tone']) ?>">
                     <?= $tiles[0]['icon'] ?>
                 </div>
                 <span class="tile-label"><?= htmlspecialchars($tiles[0]['label']) ?></span>
@@ -129,8 +128,7 @@ if ($adminId === 1) {
         </form>
         <?php else: ?>
         <a class="home-tile" href="<?= htmlspecialchars($tiles[0]['href']) ?>">
-            <div class="tile-icon"
-                 style="background:<?= $tiles[0]['color'] ?>22; color:<?= $tiles[0]['color'] ?>;">
+            <div class="tile-icon u-tone-<?= htmlspecialchars($tiles[0]['tone']) ?>">
                 <?= $tiles[0]['icon'] ?>
             </div>
             <span class="tile-label"><?= htmlspecialchars($tiles[0]['label']) ?></span>
@@ -146,9 +144,8 @@ if ($adminId === 1) {
             <?php if (($tile['method'] ?? 'GET') === 'POST'): ?>
             <form method="POST" action="<?= htmlspecialchars($tile['href']) ?>" class="d-inline m-0 p-0">
                 <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf) ?>">
-                <button type="submit" class="home-tile h-100 w-100" style="border:0;background:none;padding:0;">
-                    <div class="tile-icon"
-                         style="background:<?= $tile['color'] ?>22; color:<?= $tile['color'] ?>;">
+                <button type="submit" class="home-tile h-100 w-100 u-bare-button">
+                    <div class="tile-icon u-tone-<?= htmlspecialchars($tile['tone']) ?>">
                         <?= $tile['icon'] ?>
                     </div>
                     <span class="tile-label"><?= htmlspecialchars($tile['label']) ?></span>
@@ -156,8 +153,7 @@ if ($adminId === 1) {
             </form>
             <?php else: ?>
             <a class="home-tile h-100" href="<?= htmlspecialchars($tile['href']) ?>">
-                <div class="tile-icon"
-                     style="background:<?= $tile['color'] ?>22; color:<?= $tile['color'] ?>;">
+                <div class="tile-icon u-tone-<?= htmlspecialchars($tile['tone']) ?>">
                     <?= $tile['icon'] ?>
                 </div>
                 <span class="tile-label"><?= htmlspecialchars($tile['label']) ?></span>

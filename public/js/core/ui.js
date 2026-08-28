@@ -43,7 +43,7 @@ function showLoading() {
         overlay.style.display = 'flex';
         overlay.style.justifyContent = 'center';
         overlay.style.alignItems = 'center';
-        overlay.innerHTML = '<div class="spinner-border text-light" style="width: 3rem; height: 3rem;" role="status"><span class="visually-hidden">Loading...</span></div>';
+        overlay.innerHTML = '<div class="spinner-border text-light u-spinner-lg" role="status"><span class="visually-hidden">Loading...</span></div>';
         document.body.appendChild(overlay);
     }
     overlay.style.display = 'flex';

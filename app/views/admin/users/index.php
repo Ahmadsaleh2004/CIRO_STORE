@@ -10,7 +10,7 @@ $totalPages = max(1, (int)ceil($total / $perPage));
 ?>
 <!-- ── Page Header ────────────────────────────────────────── -->
 <div class="admin-page-header">
-    <h1>👥 Manage Users <span class="badge bg-secondary fw-normal" style="font-size:.9rem;vertical-align:middle;"><?= (int)$totalUsers ?></span></h1>
+    <h1>👥 Manage Users <span class="badge bg-secondary fw-normal u-fs-90 align-middle"><?= (int)$totalUsers ?></span></h1>
     <div class="d-flex gap-2 flex-wrap">
         <?php
             $exportCsvUrl       = URLROOT . '/admin/users/export-csv';
@@ -29,8 +29,8 @@ $totalPages = max(1, (int)ceil($total / $perPage));
 <!-- ── Search + Status Filter ─────────────────────────────── -->
 <form method="GET" class="d-flex gap-2 flex-wrap mb-3" action="<?= URLROOT ?>/admin/users">
     <input type="text" name="q" value="<?= htmlspecialchars($search) ?>"
-           class="form-control" style="max-width:280px;" placeholder="Search name or email...">
-    <select name="status" class="form-select" style="max-width:180px;">
+           class="form-control u-mw-280" placeholder="Search name or email...">
+    <select name="status" class="form-select u-mw-180">
         <option value="all"        <?= $status==='all'?'selected':'' ?>>All</option>
         <option value="active"     <?= $status==='active'?'selected':'' ?>>Active</option>
         <option value="not_active" <?= $status==='not_active'?'selected':'' ?>>Not Active</option>
@@ -95,10 +95,10 @@ $totalPages = max(1, (int)ceil($total / $perPage));
                             <?= $sc ?>/3
                         </span>
                     </td>
-                    <td style="color:var(--muted-text);font-size:.8rem;">
+                    <td class="u-muted u-fs-80">
                         <?= !empty($u['last_activity']) ? htmlspecialchars(date('d M Y', strtotime($u['last_activity']))) : '—' ?>
                     </td>
-                    <td style="color:var(--muted-text);font-size:.8rem;">
+                    <td class="u-muted u-fs-80">
                         <?= htmlspecialchars(date('d M Y', strtotime($u['created_at']))) ?>
                     </td>
                     <!-- data-action="stop-propagation" إلزامي — يمنع تفعيل user-row -->

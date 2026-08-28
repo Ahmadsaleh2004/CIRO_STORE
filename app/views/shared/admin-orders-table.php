@@ -48,7 +48,7 @@ $showAutoReleased = $showAutoReleased ?? false;
                     <?php endif; ?>
                 </td>
                 <td>$<?= number_format($o['total_amount'], 2) ?></td>
-                <td style="font-size:.8rem;color:var(--muted-text);white-space:nowrap;"><?= htmlspecialchars(date('M j, Y H:i', strtotime($o['created_at']))) ?></td>
+                <td class="u-meta-80"><?= htmlspecialchars(date('M j, Y H:i', strtotime($o['created_at']))) ?></td>
             </tr>
             <?php endforeach; ?>
         </tbody>

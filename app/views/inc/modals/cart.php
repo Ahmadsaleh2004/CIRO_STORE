@@ -13,7 +13,7 @@
     </div>
     <div class="offcanvas-body">
         <ul id="cart-items-list" class="list-unstyled" aria-label="Cart items">
-            <li class="text-center py-5" style="color:var(--muted-text);">Your cart is empty.</li>
+            <li class="text-center py-5 u-muted">Your cart is empty.</li>
         </ul>
         <div class="mt-4 pt-3 border-top">
             <div class="d-flex justify-content-between mb-3">

@@ -71,9 +71,9 @@ async function renderWishlist() {
     if (!wishlist.length) {
         container.innerHTML = `
         <div class="col-12 text-center py-5 fade-in-up">
-            <div style="font-size:5rem;">💔</div>
-            <h3 class="mt-3 fw-bold" style="color:var(--text-color);">Your Wishlist is Empty</h3>
-            <p class="mt-2" style="color:var(--placeholder-color);">Save your favorite products and come back anytime.</p>
+            <div class="u-fs-5r">💔</div>
+            <h3 class="mt-3 fw-bold u-text">Your Wishlist is Empty</h3>
+            <p class="mt-2 u-placeholder">Save your favorite products and come back anytime.</p>
             <a href="${window.BASE_URL}/products" class="btn btn-success mt-3 px-4 py-2">🛍️ Browse Products</a>
         </div>`;
         return;
@@ -121,7 +121,7 @@ async function renderWishlist() {
         <div class="col-lg-4 col-md-6 mb-4">
             <div class="card product-card h-100 shadow border-0 position-relative">
                 <button class="favorite-btn remove-fav" data-id="${p.id}" aria-label="Remove from wishlist">❤️</button>
-                <a href="${window.BASE_URL}/product?id=${p.id}" style="text-decoration:none;">
+                <a href="${window.BASE_URL}/product?id=${p.id}" class="text-decoration-none">
                     ${window.buildProductPicture(imgSrc, name, 'card-img-top product-image')}
                 </a>
                 <div class="card-body d-flex flex-column justify-content-between">
@@ -137,7 +137,7 @@ async function renderWishlist() {
                         <div class="quantity-box mb-3 d-flex justify-content-center gap-2">
                             <button class="btn btn-outline-secondary btn-sm" onclick="changeWishlistQty('${p.id}',-1,${stock})">−</button>
                             <input type="number" value="1" id="qty-${p.id}"
-                                   class="form-control quantity-input" min="1" max="${stock}" style="width:60px;"
+                                   class="form-control quantity-input u-w-60" min="1" max=""
                                    oninput="this.value = this.value.replace(/[^0-9]/g,'')"
                                    onchange="changeWishlistQty('${p.id}',0,${stock})">
                             <button class="btn btn-outline-secondary btn-sm" onclick="changeWishlistQty('${p.id}',1,${stock})">+</button>

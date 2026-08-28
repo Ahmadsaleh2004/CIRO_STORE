@@ -141,10 +141,10 @@
         Swal.fire({
             title: escHtml(notif.title),
             html: `
-                <div style="text-align:left;">
-                    <p style="white-space:pre-line;margin-bottom:1rem;">${escHtml(notif.message)}</p>
-                    <hr style="border-color:#e5e7eb;">
-                    <small style="color:#6b7280;">
+                <div class="u-text-left">
+                    <p class="u-prewrap mb-3">${escHtml(notif.message)}</p>
+                    <hr class="u-hr-light">
+                    <small class="u-note-grey">
                         <strong>From:</strong> ${escHtml(senderName)}<br>
                         ${senderEmail ? `<strong>Email:</strong> ${escHtml(senderEmail)}<br>` : ''}
                         <strong>Date:</strong> ${sentDate}

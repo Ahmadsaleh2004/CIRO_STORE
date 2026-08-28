@@ -21,16 +21,16 @@
         </div>
     </div>
     <div class="col-6 col-lg-3">
-        <div class="stat-card" style="<?= $pendingOrders > 0 ? 'border-color:#f59e0b;' : '' ?>">
+        <div class="stat-card <?= $pendingOrders > 0 ? 'u-alert-amber' : '' ?>">
             <span class="stat-icon">📦</span>
-            <div class="stat-value" style="<?= $pendingOrders > 0 ? 'color:#f59e0b;' : '' ?>"><?= $pendingOrders ?></div>
+            <div class="stat-value <?= $pendingOrders > 0 ? 'u-alert-amber-text' : '' ?>"><?= $pendingOrders ?></div>
             <div class="stat-label">Pending Orders</div>
         </div>
     </div>
     <div class="col-6 col-lg-3">
-        <div class="stat-card" style="<?= $newMessages > 0 ? 'border-color:#6366f1;' : '' ?>">
+        <div class="stat-card <?= $newMessages > 0 ? 'u-alert-indigo' : '' ?>">
             <span class="stat-icon">💬</span>
-            <div class="stat-value" style="<?= $newMessages > 0 ? 'color:#6366f1;' : '' ?>"><?= $newMessages ?></div>
+            <div class="stat-value <?= $newMessages > 0 ? 'u-alert-indigo-text' : '' ?>"><?= $newMessages ?></div>
             <div class="stat-label">New Messages</div>
         </div>
     </div>
@@ -44,7 +44,7 @@
     <div class="col-6 col-lg-3">
         <div class="stat-card">
             <span class="stat-icon">⚠️</span>
-            <div class="stat-value" style="color:#dc3545;"><?= $totalStrikes ?></div>
+            <div class="stat-value u-danger"><?= $totalStrikes ?></div>
             <div class="stat-label">Strikes (7d)</div>
         </div>
     </div>
@@ -67,7 +67,7 @@
                     Total this month: $<?= number_format($monthToDateSales, 2) ?>
                 </span>
             </div>
-            <div style="position:relative;min-height:200px"><canvas id="salesChart"></canvas></div>
+            <div class="u-chart-box"><canvas id="salesChart"></canvas></div>
         </div>
     </div>
     <div class="col-lg-4">
@@ -110,11 +110,11 @@
     </div>
     <div class="row g-3">
         <?php if (empty($bestProducts)): ?>
-        <p class="text-center" style="color:var(--muted-text);">No products found.</p>
+        <p class="text-center u-muted">No products found.</p>
         <?php endif; ?>
         <?php foreach ($bestProducts as $bp): ?>
         <div class="col-6 col-md-4 col-lg-2">
-            <div class="card p-2 text-center h-100 d-block" style="cursor:default;">
+            <div class="card p-2 text-center h-100 d-block u-cursor-default">
                 <img src="<?= htmlspecialchars(fixImagePath($bp['image_path'] ?? '')) ?>"
                      alt="<?= htmlspecialchars($bp['name']) ?>"
                      class="dash-product-img"

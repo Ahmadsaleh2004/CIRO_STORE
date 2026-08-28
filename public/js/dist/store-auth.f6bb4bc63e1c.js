@@ -10,10 +10,10 @@
                 ${t.is_read==0?'<span class="notif-dot"></span>':""}
             </li>
         `).join(""),g(),l||(l=setInterval(g,1e3))}}function w(t){return t.type!=="order_taken"||!t.created_at?"":`<span class="notif-countdown" data-deadline="${new Date(t.created_at.replace(" ","T")).getTime()+4*60*60*1e3}">--:--:--</span>`}function g(){const t=e.sidebarList?e.sidebarList.querySelectorAll(".notif-countdown"):[];if(!t.length){l&&(clearInterval(l),l=null);return}const n=Date.now();t.forEach(function(i){const d=parseInt(i.dataset.deadline,10);let o=Math.max(0,Math.floor((d-n)/1e3));if(o<=0){i.textContent="Expired";return}const a=Math.floor(o/3600),r=Math.floor(o%3600/60),h=o%60;i.textContent=String(a).padStart(2,"0")+":"+String(r).padStart(2,"0")+":"+String(h).padStart(2,"0")})}const y=function(t){const n=s.find(r=>r.id==t);if(!n)return;n.is_read==0&&b(t);const i=new Date(n.created_at).toLocaleString("en-US",{year:"numeric",month:"short",day:"numeric",hour:"2-digit",minute:"2-digit"}),d=n.sender_name||e.senderName,o=n.sender_email||"",a=n.related_type==="product"&&n.related_id;Swal.fire({title:escHtml(n.title),html:`
-                <div style="text-align:left;">
-                    <p style="white-space:pre-line;margin-bottom:1rem;">${escHtml(n.message)}</p>
-                    <hr style="border-color:#e5e7eb;">
-                    <small style="color:#6b7280;">
+                <div class="u-text-left">
+                    <p class="u-prewrap mb-3">${escHtml(n.message)}</p>
+                    <hr class="u-hr-light">
+                    <small class="u-note-grey">
                         <strong>From:</strong> ${escHtml(d)}<br>
                         ${o?`<strong>Email:</strong> ${escHtml(o)}<br>`:""}
                         <strong>Date:</strong> ${i}

@@ -10,7 +10,7 @@
 
 <!-- ── Page Header ────────────────────────────────────────── -->
 <div class="admin-page-header">
-    <h1>📦 Manage Products <span class="badge bg-secondary fw-normal" style="font-size:.9rem;vertical-align:middle;"><?= (int)$totalProducts ?></span></h1>
+    <h1>📦 Manage Products <span class="badge bg-secondary fw-normal u-fs-90 align-middle"><?= (int)$totalProducts ?></span></h1>
     <div class="d-flex gap-2 flex-wrap align-items-center">
         <?php
             $exportParams = http_build_query(array_filter([
@@ -50,7 +50,7 @@ $activeCount = (int)(bool)$priceSort + (int)(bool)$stockSort + (int)(bool)$dateS
 
     <form method="GET"
           class="dropdown-menu p-3"
-          style="min-width:270px;max-height:440px;overflow-y:auto;"
+          class="u-category-panel"
           id="sortFilterForm">
 
         <input type="hidden" name="q" value="<?= htmlspecialchars($search) ?>">
@@ -125,9 +125,9 @@ $activeCount = (int)(bool)$priceSort + (int)(bool)$stockSort + (int)(bool)$dateS
                 <label class="form-check-label small" for="c_<?= (int)$c['id'] ?>">
                     <?= htmlspecialchars($c['name']) ?>
                     <?php if ($c['is_core']): ?>
-                    <span class="badge bg-secondary" style="font-size:.5rem;">core</span>
+                    <span class="badge bg-secondary u-fs-50">core</span>
                     <?php endif; ?>
-                    <span class="badge bg-light text-dark" style="font-size:.5rem;"><?= (int)$c['product_count'] ?></span>
+                    <span class="badge bg-light text-dark u-fs-50"><?= (int)$c['product_count'] ?></span>
                 </label>
             </div>
             <?php endforeach; ?>
@@ -154,7 +154,7 @@ $activeCount = (int)(bool)$priceSort + (int)(bool)$stockSort + (int)(bool)$dateS
         <input type="text"
                name="q"
                class="form-control form-control-sm"
-               style="min-width:220px;"
+               class="u-category-trigger"
                placeholder="Search by name..."
                value="<?= htmlspecialchars($search) ?>">
         <button class="btn btn-sm btn-success">🔍 Search</button>
@@ -167,7 +167,7 @@ $activeCount = (int)(bool)$priceSort + (int)(bool)$stockSort + (int)(bool)$dateS
         <a href="?<?= $clearQuery ?>" class="btn btn-sm btn-outline-secondary">✕ Clear Search</a>
         <?php endif; ?>
     </form>
-    <small style="color:var(--muted-text);">
+    <small class="u-muted">
         <?= (int)($total ?? 0) ?> product<?= ($total ?? 0) !== 1 ? 's' : '' ?> found
     </small>
 </div>
@@ -182,8 +182,8 @@ $activeCount = (int)(bool)$priceSort + (int)(bool)$stockSort + (int)(bool)$dateS
                              موجودة في id="product-row-N" وحدها، أي يراها
                              الـJS ولا يراها الأدمن. وهو يحتاجها: روابط
                              التعديل والدعم والسجلّات كلها بالمعرّف. */ ?>
-                    <th style="width:64px;">#</th>
-                    <th style="width:60px;">Image</th>
+                    <th class="u-w-64">#</th>
+                    <th class="u-w-60">Image</th>
                     <th>Name</th>
                     <th>Last Modified</th>
                     <th>Price</th>
@@ -214,32 +214,30 @@ $activeCount = (int)(bool)$priceSort + (int)(bool)$stockSort + (int)(bool)$dateS
                     <td>
                         <img src="<?= htmlspecialchars(fixImagePath($p['image_path'] ?? '')) ?>"
                              alt="<?= htmlspecialchars($p['name']) ?>"
-                             style="width:48px;height:48px;object-fit:contain;border-radius:6px;"
+                             class="u-thumb-48"
                              loading="lazy">
                     </td>
 
                     <!-- اسم المنتج -->
                     <td>
                         <a href="<?= URLROOT ?>/admin/products/edit?id=<?= (int)$p['id'] ?>"
-                           class="fw-semibold text-decoration-none"
-                           style="color:var(--text-color);">
+                           class="fw-semibold text-decoration-none u-text">
                             <?= htmlspecialchars($p['name']) ?>
                         </a>
-                        <span class="badge bg-secondary ms-1 hidden-badge"
-                              style="font-size:.6rem;<?= ($p['is_visible'] ?? 1) ? 'display:none;' : '' ?>">
+                        <span class="badge bg-secondary ms-1 hidden-badge u-fs-60 <?= ($p['is_visible'] ?? 1) ? 'd-none' : '' ?>">
                             Hidden
                         </span>
                         <?php if (!empty($p['manufacturer'])): ?>
-                        <br><small style="color:var(--muted-text);font-size:.75rem;">
+                        <br><small class="u-muted u-fs-75">
                             <?= htmlspecialchars($p['manufacturer']) ?>
                         </small>
                         <?php endif; ?>
                     </td>
 
                     <!-- آخر تعديل -->
-                    <td style="font-size:.8rem;color:var(--muted-text);white-space:nowrap;">
+                    <td class="u-meta-80">
                         <?php if (!empty($p['last_modified_by_name'])): ?>
-                            <span style="color:var(--text-color);font-weight:500;">
+                            <span class="u-text fw-medium">
                                 <?= htmlspecialchars($p['last_modified_by_name']) ?>
                             </span>
                             <?php if (!empty($p['updated_at'])): ?>
@@ -251,12 +249,12 @@ $activeCount = (int)(bool)$priceSort + (int)(bool)$stockSort + (int)(bool)$dateS
                     </td>
 
                     <!-- السعر -->
-                    <td style="white-space:nowrap;">
-                        <span style="font-weight:600;color:var(--accent);">
+                    <td class="text-nowrap">
+                        <span class="fw-semibold u-accent">
                             $<?= number_format((float)($p['price'] ?? 0), 2) ?>
                         </span>
                         <?php if (($p['discount_percentage'] ?? 0) > 0): ?>
-                        <br><small class="text-muted" style="font-size:.75rem;">
+                        <br><small class="text-muted u-fs-75">
                             -<?= (int)$p['discount_percentage'] ?>%
                         </small>
                         <?php endif; ?>

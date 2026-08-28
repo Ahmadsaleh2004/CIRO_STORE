@@ -12,7 +12,7 @@ $broadcastTargetType = $broadcastTargetType ?? 'admin';
     <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
         <div class="modal-content">
 
-            <div class="modal-header" style="border-color:var(--section-border);">
+            <div class="modal-header u-border-section">
                 <h5 class="modal-title" id="broadcastModalLabel">
                     📢 Broadcast to <?= $broadcastTargetType === 'user' ? 'Users' : 'Admins' ?>
                 </h5>

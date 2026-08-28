@@ -151,8 +151,8 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         const indicator = itemEl.querySelector('.active-mode-indicator');
         indicator.innerHTML = panel === 'product'
-            ? '<span style="color:var(--accent);">✓ Product is the active image</span>'
-            : '<span style="color:var(--accent);">✓ Manual image is the active image</span>';
+            ? '<span class="u-accent">✓ Product is the active image</span>'
+            : '<span class="u-accent">✓ Manual image is the active image</span>';
     }
 
     // ── 8) إعادة ترقيم كل الشرائح والعناصر (للعرض البصري فقط: "Slide 1", "Image 2"...) ──
@@ -198,11 +198,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 resultsEl.innerHTML = data.products.map(p => `
                     <div class="d-flex align-items-center gap-2 p-2 product-picker-row"
-                         style="border:1px solid var(--section-border);border-radius:6px;cursor:pointer;"
+                         class="u-picker-card"
                          data-id="${p.id}" data-name="${escHtml(p.name)}"
                          data-image="${escHtml(p.image)}" data-desc="${escHtml(p.description)}"
                          data-link="${escHtml(p.link)}">
-                        <img src="${p.image}" style="width:48px;height:48px;object-fit:cover;border-radius:4px;">
+                        <img src="${p.image}" class="u-thumb-48-cover">
                         <span class="fw-semibold">${escHtml(p.name)}</span>
                     </div>
                 `).join('');

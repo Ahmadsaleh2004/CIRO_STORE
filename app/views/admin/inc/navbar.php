@@ -12,7 +12,7 @@
     <div class="container-fluid px-3">
         <a class="navbar-brand fw-bold" href="<?= URLROOT ?>/admin/home">
             🏪 Cairo Store
-            <span class="badge bg-warning text-dark ms-1" style="font-size:.6rem;vertical-align:middle;">ADMIN</span>
+            <span class="badge bg-warning text-dark ms-1 u-fs-60 align-middle">ADMIN</span>
         </a>
 
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#adminNav">
@@ -52,7 +52,7 @@
                     <a class="nav-link" href="<?= URLROOT ?>/admin/support">
                         💬 Support
                         <?php if ($newMessages > 0): ?>
-                        <span class="counter-badge" style="top:-4px;right:-8px;"><?= $newMessages ?></span>
+                        <span class="counter-badge u-badge-corner-out"><?= $newMessages ?></span>
                         <?php endif; ?>
                     </a>
                 </li>
@@ -63,7 +63,7 @@
                     <a class="nav-link" href="<?= URLROOT ?>/admin/orders">
                         📦 Orders
                         <?php if ($newOrders > 0): ?>
-                        <span class="counter-badge" style="top:-4px;right:-8px;"><?= $newOrders ?></span>
+                        <span class="counter-badge u-badge-corner-out"><?= $newOrders ?></span>
                         <?php endif; ?>
                     </a>
                 </li>
@@ -86,7 +86,7 @@
                     <form method="POST" action="<?= URLROOT ?>/admin/store-mode/enter" class="d-inline m-0 p-0">
                         <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf) ?>">
                         <button type="submit" class="nav-link btn btn-link p-0"
-                                title="تصفح المتجر كزائر" style="border:0;background:none;">🌐 Store</button>
+                                title="تصفح المتجر كزائر" class="u-bare-button">🌐 Store</button>
                     </form>
                 </li>
 
@@ -98,25 +98,23 @@
                 <!-- جرس إشعارات الأدمن — مربوط بـ admin-notifications.js + /admin/notifications/* -->
                 <button id="adminNotifBell" class="btn btn-outline-light position-relative me-2"
                         type="button" aria-label="Admin Notifications" title="Notifications">
-                    🔔 <span id="adminNotifBadge" class="counter-badge"
-                             style="background:#ef4444;display:none;top:-4px;right:-4px;" aria-live="polite">0</span>
+                    🔔 <span id="adminNotifBadge" class="counter-badge u-badge-dot d-none" aria-live="polite">0</span>
                 </button>
 
                 <div class="dropdown">
                     <button class="btn btn-outline-warning dropdown-toggle" type="button" data-bs-toggle="dropdown">
                         👑 <?= htmlspecialchars($adminName) ?>
-                        <span class="badge bg-dark ms-1" style="font-size:.6rem;"><?= htmlspecialchars($adminRole) ?></span>
+                        <span class="badge bg-dark ms-1 u-fs-60"><?= htmlspecialchars($adminRole) ?></span>
                     </button>
-                    <ul class="dropdown-menu dropdown-menu-end"
-                        style="background:var(--card-bg);border:1px solid var(--section-border);">
+                    <ul class="dropdown-menu dropdown-menu-end u-surface-card">
         <!-- My Info للأدمن — متاح الآن عبر AdminMyInfoController -->
                         <li><a class="dropdown-item" href="<?= URLROOT ?>/admin/my-info"
-                               style="color:var(--text-color);">👤 My Info</a></li>
+                               class="u-text">👤 My Info</a></li>
                         <?php if ($adminId === 1): ?>
                         <li><a class="dropdown-item" href="<?= URLROOT ?>/admin/backup"
-                               style="color:var(--text-color);">💾 Backup DB</a></li>
+                               class="u-text">💾 Backup DB</a></li>
                         <?php endif; ?>
-                        <li><hr class="dropdown-divider" style="border-color:var(--section-border);"></li>
+                        <li><hr class="dropdown-divider u-border-section"></li>
                         <li><a class="dropdown-item text-danger" href="#" data-action="logout-admin">🚪 Log Out</a></li>
                     </ul>
                 </div>

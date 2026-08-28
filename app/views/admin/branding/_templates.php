@@ -8,7 +8,7 @@
 
 <!-- ══ قالب الشريحة ═══════════════════════════════════════════════════════ -->
 <template id="slideTemplate">
-    <div class="slide-card card p-3 mb-4" style="border:2px solid var(--section-border);">
+    <div class="slide-card card p-3 mb-4 u-border-section-2">
         <div class="d-flex justify-content-between align-items-center mb-3">
             <h6 class="mb-0">Slide <span class="slide-number"></span></h6>
             <button type="button"
@@ -26,7 +26,7 @@
 
 <!-- ══ قالب العنصر/الصورة ═════════════════════════════════════════════════ -->
 <template id="itemTemplate">
-    <div class="slide-item-card card p-2" style="width:260px;border:1px solid var(--section-border);">
+    <div class="slide-item-card card p-2 u-w-260 u-border-section-all">
 
         <div class="d-flex justify-content-between align-items-center mb-2">
             <span class="small fw-semibold text-muted">Image <span class="item-number"></span></span>
@@ -49,7 +49,7 @@
 
             <div class="product-preview d-none mb-2 text-center">
                 <img class="product-preview-img" src="" alt=""
-                     style="max-width:100%;max-height:100px;object-fit:cover;border-radius:6px;">
+                     class="u-thumb-preview">
                 <div class="small fw-semibold product-preview-name mt-1"></div>
             </div>
             <input type="hidden" class="field-product-id" value="">
@@ -72,7 +72,7 @@
         <div class="mode-panel manual-panel d-none">
             <div class="manual-preview d-none mb-2 text-center">
                 <img class="manual-preview-img" src="" alt=""
-                     style="max-width:100%;max-height:100px;object-fit:cover;border-radius:6px;">
+                     class="u-thumb-preview">
             </div>
             <input type="file" class="field-manual-image form-control form-control-sm mb-2"
                    accept="image/jpeg,image/png,image/webp,image/gif">

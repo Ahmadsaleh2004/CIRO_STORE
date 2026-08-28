@@ -79,7 +79,7 @@ function renderCategoryPickerList() {
     if (!list) return;
 
     if (!allCategoriesData.length) {
-        list.innerHTML = '<p class="text-center py-2" style="color:var(--placeholder-color);">No categories found.</p>';
+        list.innerHTML = '<p class="text-center py-2 u-placeholder">No categories found.</p>';
         return;
     }
 
@@ -92,15 +92,15 @@ function renderCategoryPickerList() {
             <span>
                 ${escHtml(c.name)}
                 ${c.is_core
-                    ? '<span class="badge bg-secondary ms-1" style="font-size:.6rem;">core</span>'
+                    ? '<span class="badge bg-secondary ms-1 u-fs-60">core</span>'
                     : ''}
-                <span class="badge bg-light text-dark ms-1" style="font-size:.6rem;">${c.product_count}</span>
+                <span class="badge bg-light text-dark ms-1 u-fs-60">${c.product_count}</span>
                 ${!c.is_core
                     ? `<span class="cat-delete-icon ms-1"
                               data-id="${c.id}"
                               data-name="${escAttr(c.name)}"
                               title="Delete category"
-                              style="cursor:pointer;font-size:.85rem;">🗑️</span>`
+                              class="u-clickable u-fs-85">🗑️</span>`
                     : ''}
             </span>
         </label>
@@ -135,9 +135,9 @@ function renderSelectedChips() {
 
     chipsWrap.innerHTML = selected.length
         ? selected.map(c =>
-            `<span class="badge bg-primary" style="font-size:.8rem;padding:6px 10px;">${escHtml(c.name)}</span>`
+            `<span class="badge bg-primary u-chip">${escHtml(c.name)}</span>`
           ).join('')
-        : '<span style="color:var(--placeholder-color);font-size:.85rem;">None selected</span>';
+        : '<span class="u-placeholder u-fs-85">None selected</span>';
 
     hiddenWrap.innerHTML = selected
         .map(c => `<input type="hidden" name="category_ids[]" value="${c.id}">`)
@@ -201,7 +201,7 @@ async function fetchSuggestions(q) {
             const top = data.suggestions[0];
             suggestEl.innerHTML = top.similarity > 60
                 ? `Did you mean: <strong>${escHtml(top.name)}</strong>
-                   <span style="color:var(--placeholder-color);">(${top.similarity}% similar)</span>?`
+                   <span class="u-placeholder">(${top.similarity}% similar)</span>?`
                 : '';
         } else {
             suggestEl.innerHTML = '';

@@ -75,7 +75,7 @@
     <div id="categoryHiddenInputs"></div>
     <div class="form-text text-danger mb-3"
          id="categoryRequiredError"
-         style="display:none;">
+         class="d-none">
         Please select at least one category.
     </div>
 
@@ -109,8 +109,7 @@
 
     <!-- Template: مخفي، يُستنسخ بـ products.js::initAddProductForm -->
     <template id="variantRowTemplate">
-        <div class="variant-row card p-3 mb-3"
-             style="background:var(--bg-color);border:1px solid var(--section-border);">
+        <div class="variant-row card p-3 mb-3 u-surface-page">
             <div class="d-flex justify-content-between align-items-center mb-2">
                 <span class="fw-semibold small text-muted">
                     Color <span class="variant-number"></span>
@@ -134,10 +133,10 @@
                 </div>
                 <!-- Color Swatch -->
                 <div class="col-4 col-sm-2">
-                    <label class="small d-block mb-1" style="font-size:.75rem;">Swatch</label>
+                    <label class="small d-block mb-1 u-fs-75">Swatch</label>
                     <input type="color"
                            class="field-color-hex form-control form-control-sm"
-                           style="height:40px;padding:3px 5px;"
+                           class="u-color-input"
                            value="#000000">
                 </div>
                 <!-- Price -->

@@ -24,7 +24,7 @@ use App\Models\AdminModel;
 function renderAuditRowsTable(array $rows): void
 {
     if (empty($rows)) {
-        echo '<p class="text-center py-3" style="color:var(--muted-text);">No actions recorded yet.</p>';
+        echo '<p class="text-center py-3 u-muted">No actions recorded yet.</p>';
         return;
     }
     ?>
@@ -41,13 +41,13 @@ function renderAuditRowsTable(array $rows): void
             <tbody>
                 <?php foreach ($rows as $log): ?>
                 <tr>
-                    <td><code style="font-size:.78rem;"><?= htmlspecialchars($log['action']) ?></code></td>
-                    <td style="font-size:.8rem;color:var(--muted-text);">
+                    <td><code class="u-fs-78"><?= htmlspecialchars($log['action']) ?></code></td>
+                    <td class="u-fs-80 u-muted">
                         <?= htmlspecialchars($log['target_type'] ?? '—') ?>
                         <?= $log['target_id'] ? '#' . (int)$log['target_id'] : '' ?>
                     </td>
-                    <td style="font-size:.8rem;"><?= htmlspecialchars($log['details'] ?? '—') ?></td>
-                    <td style="font-size:.78rem;color:var(--muted-text);white-space:nowrap;">
+                    <td class="u-fs-80"><?= htmlspecialchars($log['details'] ?? '—') ?></td>
+                    <td class="u-meta-78">
                         <?= htmlspecialchars(date('M j, Y H:i', strtotime($log['created_at']))) ?>
                     </td>
                 </tr>
@@ -81,23 +81,23 @@ function renderAuditRowsTable(array $rows): void
                 <table class="table admin-table mb-0">
                     <tbody>
                         <tr>
-                            <td style="width:40%;color:var(--muted-text);">ID</td>
+                            <td class="u-label-cell">ID</td>
                             <td><strong><?= (int)$target['id'] ?></strong></td>
                         </tr>
                         <tr>
-                            <td style="color:var(--muted-text);">Full Name</td>
+                            <td class="u-muted">Full Name</td>
                             <td><?= htmlspecialchars($target['full_name']) ?></td>
                         </tr>
                         <tr>
-                            <td style="color:var(--muted-text);">Email</td>
+                            <td class="u-muted">Email</td>
                             <td><?= htmlspecialchars($target['email']) ?></td>
                         </tr>
                         <tr>
-                            <td style="color:var(--muted-text);">Phone</td>
+                            <td class="u-muted">Phone</td>
                             <td><?= htmlspecialchars($target['phone_number'] ?? '—') ?></td>
                         </tr>
                         <tr>
-                            <td style="color:var(--muted-text);">Role</td>
+                            <td class="u-muted">Role</td>
                             <td>
                                 <span class="badge <?= match($target['role']) {
                                     'A' => 'bg-danger',
@@ -110,12 +110,12 @@ function renderAuditRowsTable(array $rows): void
                             </td>
                         </tr>
                         <tr>
-                            <td style="color:var(--muted-text);">Joined</td>
+                            <td class="u-muted">Joined</td>
                             <td><?= htmlspecialchars(date('M j, Y', strtotime($target['created_at']))) ?></td>
                         </tr>
                         <?php if (!empty($target['last_modified_at'])): ?>
                         <tr>
-                            <td style="color:var(--muted-text);">Last Modified</td>
+                            <td class="u-muted">Last Modified</td>
                             <td><?= htmlspecialchars(date('M j, Y H:i', strtotime($target['last_modified_at']))) ?></td>
                         </tr>
                         <?php endif; ?>
@@ -144,7 +144,7 @@ function renderAuditRowsTable(array $rows): void
             ?>
             <div class="perm-grid">
                 <?php foreach ($permMap as $key => [$icon, $label]): ?>
-                <div class="perm-item" style="<?= empty($target[$key]) ? 'opacity:.4;' : '' ?>">
+                <div class="perm-item <?= empty($target[$key]) ? 'u-dimmed' : '' ?>">
                     <input type="checkbox" <?= !empty($target[$key]) ? 'checked' : '' ?> disabled>
                     <span><?= $icon ?> <?= $label ?></span>
                 </div>
@@ -168,7 +168,7 @@ function renderAuditRowsTable(array $rows): void
     require APPROOT . '/views/shared/admin-orders-table.php';
     ?>
     <?php else: ?>
-    <p class="text-center py-3" style="color:var(--muted-text);">
+    <p class="text-center py-3 u-muted">
         No orders handled by this admin yet.
     </p>
     <?php endif; ?>
@@ -189,10 +189,10 @@ function renderAuditRowsTable(array $rows): void
             <tbody>
                 <?php foreach ($orderAuditRows as $log): ?>
                 <tr>
-                    <td><code style="font-size:.78rem;"><?= htmlspecialchars($log['action']) ?></code></td>
-                    <td style="font-size:.8rem;"><?= $log['target_id'] ? '#' . (int)$log['target_id'] : '—' ?></td>
-                    <td style="font-size:.8rem;"><?= htmlspecialchars($log['details'] ?? '—') ?></td>
-                    <td style="font-size:.78rem;color:var(--muted-text);white-space:nowrap;">
+                    <td><code class="u-fs-78"><?= htmlspecialchars($log['action']) ?></code></td>
+                    <td class="u-fs-80"><?= $log['target_id'] ? '#' . (int)$log['target_id'] : '—' ?></td>
+                    <td class="u-fs-80"><?= htmlspecialchars($log['details'] ?? '—') ?></td>
+                    <td class="u-meta-78">
                         <?= htmlspecialchars(date('M j, Y H:i', strtotime($log['created_at']))) ?>
                     </td>
                 </tr>
