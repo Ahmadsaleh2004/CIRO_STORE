@@ -47,14 +47,48 @@ class Mailer
         }
     }
 
-    /** قالب HTML بسيط موحّد لكل إيميلات الموقع */
-    public static function template(string $title, string $bodyHtml): string
+    /**
+     * قالب HTML موحّد لكل إيميلات الموقع.
+     *
+     * ⚠️ القيم المتغيّرة تُمرَّر في $vars كنائبات `{اسم}` — **لا تُحقَن
+     * في النصّ**. الفرق ليس أسلوبياً:
+     *
+     * كان الجسم يُبنى بالحقن المباشر، ومن بين ما يُحقَن
+     * `$_SERVER['HTTP_USER_AGENT']` في إيميل تنبيه الدخول — وهي ترويسة
+     * يتحكّم بها المرسِل كلياً. أي أن مهاجماً يكتب HTML في اسم متصفّحه
+     * فيصل إلى صندوق بريد الأدمن كما هو.
+     *
+     * النائبات تجعل ذلك مستحيلاً بالبناء لا بالانضباط: كل قيمة تمرّ من
+     * htmlspecialchars قبل أن تُوضَع، ولا طريق آخر لإدخال قيمة. القالب
+     * الثابت يبقى HTML لأنه يُكتب في الكود لا يأتي من الشبكة.
+     *
+     * @param string                $title    عنوان الرسالة (يُهرَّب)
+     * @param string                $bodyHtml قالب ثابت، قد يحوي `{نائبات}`
+     * @param array<string, string> $vars     القيم — كلها تُهرَّب
+     */
+    public static function template(string $title, string $bodyHtml, array $vars = []): string
     {
         $siteName = defined('SITENAME') ? SITENAME : 'Store';
+
+        if ($vars !== []) {
+            $replacements = [];
+            foreach ($vars as $key => $value) {
+                $replacements['{' . $key . '}'] = htmlspecialchars(
+                    (string) $value,
+                    ENT_QUOTES | ENT_SUBSTITUTE,
+                    'UTF-8'
+                );
+            }
+            $bodyHtml = strtr($bodyHtml, $replacements);
+        }
+
+        $safeTitle = htmlspecialchars($title, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        $safeName  = htmlspecialchars($siteName, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+
         return "
         <div style='font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px;direction:rtl;text-align:right'>
-            <h2 style='color:#222'>{$siteName}</h2>
-            <h3 style='color:#333'>{$title}</h3>
+            <h2 style='color:#222'>{$safeName}</h2>
+            <h3 style='color:#333'>{$safeTitle}</h3>
             <div style='color:#444;line-height:1.8'>{$bodyHtml}</div>
             <hr style='margin-top:30px;border:none;border-top:1px solid #eee'>
             <p style='color:#999;font-size:12px'>هذا إيميل تلقائي، لا ترد عليه مباشرة.</p>

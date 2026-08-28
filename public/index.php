@@ -98,7 +98,7 @@ $r->get('/about',   [AboutController::class,   'about']);
 $r->get('/contact', [ContactController::class, 'contact']);
 $r->post('/contact',[ContactController::class, 'contact']);
 $r->post('/contact/send', [ContactController::class, 'send'])
-    ->middleware('throttle:contact,5,60');
+    ->middleware('throttle:contact,10,60');
 
 // ── Wishlist ─────────────────────────────────────────────────
 $r->get('/wishlist', [WishlistController::class, 'index']);
@@ -112,13 +112,22 @@ $r->post('/handlers/notify_handler.php',       [WishlistController::class, 'noti
 // الطبقتان تحرسان شيئين مختلفين: تلك تحمي حساباً بعينه من التخمين،
 // وهذه تحمي النقطة نفسها من الاستنزاف — وأوضح مثال /auth/forgot، إذ
 // كل استدعاء لها «ناجح» من زاوية عدّاد الإخفاقات بينما هو رسالة بريد.
+//
+// ⚠️ الأرقام تحسب إعادة المحاولة. js/core/csrf.js يعيد إرسال الطلب
+// مرّة واحدة تلقائياً عند انتهاء التوكن، فكل فعل مستخدم قد يصل كطلبين.
+// أي أن الحدّ المعروض هنا يساوي **نصفه تقريباً** من أفعال المستخدم:
+// 12 على التسجيل ≈ ست محاولات حقيقية. كشف هذا اختبارُ عقد CSRF حين
+// استنفد حدوداً كانت مضبوطة على الطلبات لا على الأفعال.
+//
+// والنقاط التي ترسل بريداً أضيق عمداً (6/ساعة ≈ ثلاث محاولات): هي
+// الوحيدة التي يكلّف كل استدعاء لها رسالةً فعلية.
 $r->post('/auth/login',            [AuthController::class, 'login'])
     ->middleware('throttle:store-login,10,15');
 $r->post('/auth/register',         [AuthController::class, 'register'])
-    ->middleware('throttle:store-register,5,60');
+    ->middleware('throttle:store-register,12,60');
 $r->post('/auth/logout',           [AuthController::class, 'logout']);
 $r->post('/auth/forgot',           [AuthController::class, 'forgot'])
-    ->middleware('throttle:store-forgot,5,60');
+    ->middleware('throttle:store-forgot,6,60');
 $r->get('/auth/verify',            [AuthController::class, 'verifyEmail']);
 $r->get('/auth/reset',             [AuthController::class, 'resetForm']);
 $r->post('/auth/reset',            [AuthController::class, 'resetSubmit'])
@@ -170,7 +179,7 @@ $r->post('/admin/login', [AdminAuthController::class, 'login'])
 $r->post('/admin/login/2fa', [AdminAuthController::class, 'verify2FALogin'])
     ->middleware('throttle:admin-2fa,8,15');
 $r->post('/admin/forgot',[AdminAuthController::class, 'forgotPassword'])
-    ->middleware('throttle:admin-forgot,5,60');
+    ->middleware('throttle:admin-forgot,6,60');
 $r->post('/admin/logout',[AdminAuthController::class, 'logout']);
 $r->get('/admin/csrf',   [AdminAuthController::class, 'getCsrf']);
 $r->post('/admin/store-mode/enter',  [AdminAuthController::class, 'enterStoreMode']);

@@ -271,10 +271,12 @@ class AuthController extends Controller
                 $email,
                 $fullName,
                 'فعّل بريدك الإلكتروني',
-                \App\Core\Mailer::template('أهلًا بك', "
-                    شكرًا لتسجيلك! اضغط على الرابط لتفعيل حسابك (صالح 24 ساعة):<br><br>
-                    <a href='{$verifyLink}'>{$verifyLink}</a>
-                ")
+                \App\Core\Mailer::template(
+                    'أهلًا بك',
+                    'شكرًا لتسجيلك! اضغط على الرابط لتفعيل حسابك (صالح 24 ساعة):<br><br>'
+                    . '<a href="{link}">{link}</a>',
+                    ['link' => $verifyLink]
+                )
             );
         }
 
@@ -391,12 +393,14 @@ class AuthController extends Controller
                     $email,
                     $user['full_name'] ?? 'User',
                     'إعادة تعيين كلمة المرور',
-                    \App\Core\Mailer::template('إعادة تعيين كلمة المرور', "
-                        اضغط على الرابط التالي لإعادة تعيين كلمة المرور
-                        (صالح لمدة 60 دقيقة فقط):<br><br>
-                        <a href='{$resetLink}'>{$resetLink}</a><br><br>
-                        إذا لم تطلب هذا، تجاهل هذا الإيميل.
-                    ")
+                    \App\Core\Mailer::template(
+                        'إعادة تعيين كلمة المرور',
+                        'اضغط على الرابط التالي لإعادة تعيين كلمة المرور'
+                        . ' (صالح لمدة 60 دقيقة فقط):<br><br>'
+                        . '<a href="{link}">{link}</a><br><br>'
+                        . 'إذا لم تطلب هذا، تجاهل هذا الإيميل.',
+                        ['link' => $resetLink]
+                    )
                 );
             }
         }
