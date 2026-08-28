@@ -2,7 +2,7 @@
 
 namespace App\Models;
 
-use App\Core\Database;
+use App\Core\Model;
 use Exception;
 
 /**
@@ -11,7 +11,7 @@ use Exception;
  * الإنشاء: يحاول mysqldump عبر exec() أولًا، فإن فشل يلجأ لتصدير PHP-native
  * (SHOW CREATE TABLE + SELECT * لكل جدول).
  */
-class BackupModel
+class BackupModel extends Model
 {
     private const DIR    = ROOTPATH . '/storage/backups';
     private const PREFIX = 'backup_';
@@ -151,7 +151,7 @@ class BackupModel
     private static function exportSqlNative(): string
     {
         try {
-            $db    = Database::connect();
+            $db    = self::db();
             $tables = $db->query('SHOW TABLES')->fetchAll(\PDO::FETCH_COLUMN);
             if (!$tables) {
                 return '';

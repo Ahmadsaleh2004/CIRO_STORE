@@ -2,14 +2,14 @@
 
 namespace App\Models;
 
-use App\Core\Database;
+use App\Core\Model;
 use Exception;
 
 /**
  * AdminNotificationModel — يغطي جدول admin_notifications (إشعارات الأدمنية)
  * الإدراج لا يتم هنا — فقط عبر AdminModel::sendNotification() الموجودة.
  */
-class AdminNotificationModel
+class AdminNotificationModel extends Model
 {
     /**
      * جلب قائمة الإشعارات لأدمن معيّن، الأحدث أولًا
@@ -17,7 +17,7 @@ class AdminNotificationModel
     public static function getList(int $adminId, int $limit = 30): array
     {
         try {
-            $db   = Database::connect();
+            $db   = self::db();
             $stmt = $db->prepare(
                 "SELECT id, title, message, type, related_type, related_id, is_read, created_at
                  FROM admin_notifications
@@ -39,7 +39,7 @@ class AdminNotificationModel
     public static function countUnread(int $adminId): int
     {
         try {
-            $db   = Database::connect();
+            $db   = self::db();
             $stmt = $db->prepare(
                 "SELECT COUNT(*) FROM admin_notifications WHERE admin_id = ? AND is_read = 0"
             );
@@ -56,7 +56,7 @@ class AdminNotificationModel
     public static function markRead(int $notifId, int $adminId): bool
     {
         try {
-            $db   = Database::connect();
+            $db   = self::db();
             $stmt = $db->prepare(
                 "UPDATE admin_notifications SET is_read = 1
                  WHERE id = ? AND admin_id = ?"
@@ -74,7 +74,7 @@ class AdminNotificationModel
     public static function markAllRead(int $adminId): bool
     {
         try {
-            $db   = Database::connect();
+            $db   = self::db();
             $stmt = $db->prepare(
                 "UPDATE admin_notifications SET is_read = 1 WHERE admin_id = ?"
             );
@@ -91,7 +91,7 @@ class AdminNotificationModel
     public static function deleteAll(int $adminId): bool
     {
         try {
-            $db   = Database::connect();
+            $db   = self::db();
             $stmt = $db->prepare("DELETE FROM admin_notifications WHERE admin_id = ?");
             return $stmt->execute([$adminId]);
         } catch (Exception $e) {
@@ -106,7 +106,7 @@ class AdminNotificationModel
     public static function dismiss(int $notifId, int $adminId): bool
     {
         try {
-            $stmt = Database::connect()->prepare(
+            $stmt = self::db()->prepare(
                 "DELETE FROM admin_notifications WHERE id = ? AND admin_id = ?"
             );
             $stmt->execute([$notifId, $adminId]);

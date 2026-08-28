@@ -2,17 +2,17 @@
 
 namespace App\Models;
 
-use App\Core\Database;
+use App\Core\Model;
 
 /**
  * AdminDashboardModel — استعلامات إحصائيات لوحة تحكم الأدمن فقط.
  * موديل منفصل خاص بالـ Dashboard، لا يلمس أي موديل آخر.
  */
-class AdminDashboardModel
+class AdminDashboardModel extends Model
 {
     public static function getTodaySales(): float
     {
-        $db = Database::connect();
+        $db = self::db();
         return (float) $db->query(
             "SELECT COALESCE(SUM(total_amount),0) FROM orders WHERE DATE(created_at)=CURDATE() AND status!='cancelled'"
         )->fetchColumn();
@@ -20,7 +20,7 @@ class AdminDashboardModel
 
     public static function getTodayOrdersCount(): int
     {
-        $db = Database::connect();
+        $db = self::db();
         return (int) $db->query(
             "SELECT COUNT(*) FROM orders WHERE DATE(created_at)=CURDATE()"
         )->fetchColumn();
@@ -28,7 +28,7 @@ class AdminDashboardModel
 
     public static function getPendingOrdersCount(): int
     {
-        $db = Database::connect();
+        $db = self::db();
         return (int) $db->query(
             "SELECT COUNT(*) FROM orders WHERE status = 'not_taken'"
         )->fetchColumn();
@@ -36,7 +36,7 @@ class AdminDashboardModel
 
     public static function getNewUsersThisWeek(): int
     {
-        $db = Database::connect();
+        $db = self::db();
         return (int) $db->query(
             "SELECT COUNT(*) FROM users WHERE created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)"
         )->fetchColumn();
@@ -44,7 +44,7 @@ class AdminDashboardModel
 
     public static function getStrikesThisWeek(): int
     {
-        $db = Database::connect();
+        $db = self::db();
         return (int) $db->query(
             "SELECT COUNT(*) FROM user_strikes WHERE created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)"
         )->fetchColumn();
@@ -58,7 +58,7 @@ class AdminDashboardModel
      */
     public static function getUnreadNotificationsCount(int $adminId): int
     {
-        $db   = Database::connect();
+        $db   = self::db();
         $stmt = $db->prepare(
             "SELECT COUNT(*) FROM admin_notifications WHERE admin_id = ? AND is_read = 0"
         );
@@ -68,7 +68,7 @@ class AdminDashboardModel
 
     public static function getMonthToDateSales(): float
     {
-        $db = Database::connect();
+        $db = self::db();
         return (float) $db->query(
             "SELECT COALESCE(SUM(total_amount),0) FROM orders
              WHERE created_at >= DATE_FORMAT(NOW(), '%Y-%m-01 00:00:00')
@@ -79,7 +79,7 @@ class AdminDashboardModel
     /** مبيعات آخر 30 يوم — لرسم الـ Chart. */
     public static function getSalesLast30Days(): array
     {
-        $db = Database::connect();
+        $db = self::db();
         return $db->query(
             "SELECT DATE(created_at) AS day, SUM(total_amount) AS total
              FROM orders
@@ -91,7 +91,7 @@ class AdminDashboardModel
     /** توزيع المستخدمين: نشط / غير نشط / محظور (3 إنذارات فأكثر). */
     public static function getUsersActivityBreakdown(): array
     {
-        $db = Database::connect();
+        $db = self::db();
 
         $active = (int) $db->query(
             "SELECT COUNT(*) FROM users u
@@ -116,7 +116,7 @@ class AdminDashboardModel
     /** أفضل 12 منتج مبيعًا، مع دعم بحث اختياري بالاسم. */
     public static function getBestSellingProducts(string $search = ''): array
     {
-        $db     = Database::connect();
+        $db     = self::db();
         $where  = '';
         $params = [];
 

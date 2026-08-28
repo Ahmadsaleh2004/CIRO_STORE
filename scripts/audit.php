@@ -305,7 +305,18 @@ $report['issues'] = [
     'unescaped_echo'       => grepCount($views, '/<\?=(?![^?]*(?:htmlspecialchars|json_encode|urlencode|number_format|\(int\)))[^?]*\?>/'),
     'openapi_lines_total'  => $oaTotal,
     'controllers_no_docs'  => count($undocumented),
-    'dead_Model_class'     => is_file("$ROOT/app/Core/Model.php") ? 1 : 0,
+    // ⚠️ كان هذا المقياس `is_file(app/Core/Model.php) ? 1 : 0` — أي أنه
+    // يقيس **وجود الملف** كبديل عن كونه ميتاً. صحّ حين حُذف الكلاس في
+    // المرحلة 1 لأنه لم يكن يرثه أحد، وكذب لحظة عاد كلاساً حيّاً ترثه
+    // الموديلات الستة عشر: صار العدّاد يبلّغ عن «كود ميت» وهو يشير إلى
+    // أكثر ملف مستعمَل في الطبقة.
+    //
+    // ما يقيسه الآن هو السؤال الأصلي بصيغته الصحيحة: كم موديلاً **لا**
+    // يرث الأساس المشترك — أي كم موديلاً ما زال يفتح اتصاله بنفسه.
+    'models_off_base'      => count(array_filter(
+        $layers['app/Models'],
+        fn(string $f): bool => !preg_match('/^class\s+\w+\s+extends\s+Model\b/m', (string) file_get_contents($f))
+    )),
     'dead_model_helper'    => grepCount($layers['app/Core'], '/function model\(/'),
     'shared_partials'      => count(filesIn("$ROOT/app/views/shared")),
 ];
@@ -364,7 +375,7 @@ $labels = [
     'inline_style_lines'  => 'أسطر <style> مضمّنة في الـviews     (الهدف 0)',
     'unescaped_echo'      => 'مواضع <?= ?> بلا هروب              (للمراجعة)',
     'controllers_no_docs' => 'كنترولرز بلا توثيق OpenAPI',
-    'dead_Model_class'    => 'app/Core/Model.php كود ميت         (الهدف 0)',
+    'models_off_base'     => 'موديلات خارج الأساس المشترك        (الهدف 0)',
     'dead_model_helper'   => 'Controller::model() كود ميت        (الهدف 0)',
     'shared_partials'     => 'partials في views/shared           (الهدف >5)',
 ];

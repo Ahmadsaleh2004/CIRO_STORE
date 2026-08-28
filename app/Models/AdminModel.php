@@ -2,14 +2,14 @@
 
 namespace App\Models;
 
-use App\Core\Database;
+use App\Core\Model;
 use Exception;
 
 /**
  * AdminModel — يغطي جدول admins حصراً
  * لا يلمس جدول users بأي شكل من الأشكال
  */
-class AdminModel
+class AdminModel extends Model
 {
     // ════════════════════════════════════════════════════════
     // الحدود والنوافذ الزمنية لـ Rate Limiting (أشد من المستخدم العادي)
@@ -24,7 +24,7 @@ class AdminModel
     public static function findByEmail(string $email): ?array
     {
         try {
-            $db   = Database::connect();
+            $db   = self::db();
             $stmt = $db->prepare("SELECT * FROM admins WHERE email = ? LIMIT 1");
             $stmt->execute([strtolower(trim($email))]);
             $row = $stmt->fetch();
@@ -41,7 +41,7 @@ class AdminModel
     public static function getFailedAttempts(string $email): int
     {
         try {
-            $db   = Database::connect();
+            $db   = self::db();
             $stmt = $db->prepare(
                 "SELECT COUNT(*) FROM admin_login_attempts
                  WHERE email = ? AND success = 0
@@ -61,7 +61,7 @@ class AdminModel
     public static function logLoginAttempt(string $email, bool $success): void
     {
         try {
-            $db   = Database::connect();
+            $db   = self::db();
             $ip   = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
             $stmt = $db->prepare(
                 "INSERT INTO admin_login_attempts (email, ip_address, attempted_at, success)
@@ -79,7 +79,7 @@ class AdminModel
     public static function isRateLimited(string $email): bool
     {
         try {
-            $db   = Database::connect();
+            $db   = self::db();
             $stmt = $db->prepare(
                 "SELECT COUNT(*) FROM admin_login_attempts
                  WHERE email = ? AND success = 0
@@ -99,7 +99,7 @@ class AdminModel
     public static function updateActivity(int $adminId): void
     {
         try {
-            $db = Database::connect();
+            $db = self::db();
             $db->prepare("UPDATE admins SET last_activity = NOW() WHERE id = ?")
                ->execute([$adminId]);
         } catch (Exception $e) {
@@ -113,7 +113,7 @@ class AdminModel
     public static function findById(int $id): ?array
     {
         try {
-            $db   = Database::connect();
+            $db   = self::db();
             $stmt = $db->prepare("SELECT * FROM admins WHERE id = ? LIMIT 1");
             $stmt->execute([$id]);
             $row  = $stmt->fetch(\PDO::FETCH_ASSOC);
@@ -130,7 +130,7 @@ class AdminModel
     public static function getPermissions(int $adminId): array
     {
         try {
-            $db   = Database::connect();
+            $db   = self::db();
             $stmt = $db->prepare("SELECT * FROM admin_permissions WHERE admin_id = ?");
             $stmt->execute([$adminId]);
             return $stmt->fetch(\PDO::FETCH_ASSOC) ?: [];
@@ -151,7 +151,7 @@ class AdminModel
         ?string $details = null
     ): void {
         try {
-            $db   = Database::connect();
+            $db   = self::db();
             $stmt = $db->prepare(
                 "INSERT INTO admin_audit_log (admin_id, action, target_type, target_id, details)
                  VALUES (?, ?, ?, ?, ?)"
@@ -168,7 +168,7 @@ class AdminModel
     public static function updateProfile(int $adminId, array $data): bool
     {
         try {
-            $db     = Database::connect();
+            $db     = self::db();
             $fields = [];
             $params = [];
 
@@ -219,7 +219,7 @@ class AdminModel
             // واحدة اليوم (ولا سبيل لإنشاء ثانية — canManageTarget تشترط
             // رتبة أعلى من A وهي غير موجودة)، لكن اعتماد الحظّ في تعريف
             // الروت ليس شيئاً يُترك للمستقبل.
-            $id = Database::connect()
+            $id = self::db()
                 ->query("SELECT id FROM admins WHERE role='A' ORDER BY id ASC LIMIT 1")
                 ->fetchColumn();
             return $id ? (int)$id : null;
@@ -237,7 +237,7 @@ class AdminModel
     public static function getAllWithPermissions(): array
     {
         try {
-            $stmt = Database::connect()->query("
+            $stmt = self::db()->query("
                 SELECT a.*, ap.can_manage_admins, ap.can_manage_products, ap.can_manage_users,
                        ap.can_view_dashboard, ap.can_manage_support, ap.can_edit_site_content,
                        ap.can_manage_checkout_settings, ap.can_manage_orders, ap.can_manage_branding,
@@ -258,7 +258,7 @@ class AdminModel
     public static function getByIdWithPermissions(int $id): ?array
     {
         try {
-            $stmt = Database::connect()->prepare("
+            $stmt = self::db()->prepare("
                 SELECT a.*, ap.can_manage_admins, ap.can_manage_products, ap.can_manage_users,
                        ap.can_view_dashboard, ap.can_manage_support, ap.can_edit_site_content,
                        ap.can_manage_checkout_settings, ap.can_manage_orders, ap.can_manage_branding,
@@ -279,7 +279,7 @@ class AdminModel
     public static function countAdmins(): int
     {
         try {
-            return (int)Database::connect()->query("SELECT COUNT(*) FROM admins")->fetchColumn();
+            return (int)self::db()->query("SELECT COUNT(*) FROM admins")->fetchColumn();
         } catch (Exception $e) {
             error_log("AdminModel::countAdmins Error: " . $e->getMessage());
             return 0;
@@ -293,7 +293,7 @@ class AdminModel
     public static function verifyPassword(int $adminId, string $plainPassword): bool
     {
         try {
-            $stmt = Database::connect()->prepare("SELECT password FROM admins WHERE id=? LIMIT 1");
+            $stmt = self::db()->prepare("SELECT password FROM admins WHERE id=? LIMIT 1");
             $stmt->execute([$adminId]);
             $hash = $stmt->fetchColumn();
             return $hash && password_verify($plainPassword, $hash);
@@ -306,7 +306,7 @@ class AdminModel
     public static function emailExists(string $email): bool
     {
         try {
-            $stmt = Database::connect()->prepare("SELECT id FROM admins WHERE email=? LIMIT 1");
+            $stmt = self::db()->prepare("SELECT id FROM admins WHERE email=? LIMIT 1");
             $stmt->execute([strtolower(trim($email))]);
             return (bool)$stmt->fetch();
         } catch (Exception $e) {
@@ -325,7 +325,7 @@ class AdminModel
      */
     public static function createAdmin(array $data, array $perms): ?int
     {
-        $db = Database::connect();
+        $db = self::db();
         try {
             $db->beginTransaction();
 
@@ -397,7 +397,7 @@ class AdminModel
      */
     public static function deleteAdmin(int $id): bool
     {
-        $db = Database::connect();
+        $db = self::db();
         try {
             $db->beginTransaction();
             $db->prepare("DELETE FROM admins WHERE id=?")->execute([$id]);
@@ -415,7 +415,7 @@ class AdminModel
     /** تحديث الرتبة + الصلاحيات معًا في معاملة واحدة */
     public static function updatePermissions(int $id, ?string $newRole, array $perms, int $editorAdminId): bool
     {
-        $db = Database::connect();
+        $db = self::db();
         try {
             $db->beginTransaction();
 
@@ -470,7 +470,7 @@ class AdminModel
         ?int $senderAdminId = null
     ): void {
         try {
-            Database::connect()->prepare("
+            self::db()->prepare("
                 INSERT INTO admin_notifications
                     (admin_id, title, message, type, related_type, related_id, sender_admin_id, created_at)
                 VALUES (?, ?, ?, ?, ?, ?, ?, NOW())
@@ -503,7 +503,7 @@ class AdminModel
             $permSql = implode(' OR ', array_map(fn($p) => "ap.{$p}=1", $perms));
             $rankPh  = implode(',', array_fill(0, count($ranks), '?'));
 
-            $stmt = Database::connect()->prepare("
+            $stmt = self::db()->prepare("
                 SELECT a.id FROM admins a
                 JOIN admin_permissions ap ON ap.admin_id = a.id
                 WHERE ({$permSql}) AND a.role IN ({$rankPh})
@@ -631,7 +631,7 @@ class AdminModel
     public static function getAuditLogForAdmin(int $adminId, int $limit = 50): array
     {
         try {
-            $stmt = Database::connect()->prepare("
+            $stmt = self::db()->prepare("
                 SELECT action, target_type, target_id, details, created_at
                 FROM admin_audit_log
                 WHERE admin_id = ?
@@ -657,7 +657,7 @@ class AdminModel
         }
         try {
             $placeholders = implode(',', array_fill(0, count($targetTypes), '?'));
-            $stmt = Database::connect()->prepare("
+            $stmt = self::db()->prepare("
                 SELECT action, target_type, target_id, details, created_at
                 FROM admin_audit_log
                 WHERE admin_id = ? AND target_type IN ({$placeholders})
@@ -689,7 +689,7 @@ class AdminModel
             }
             $params[] = $limit;
 
-            $stmt = Database::connect()->prepare("
+            $stmt = self::db()->prepare("
                 SELECT action, target_type, target_id, details, created_at
                 FROM admin_audit_log
                 WHERE {$where}
@@ -711,7 +711,7 @@ class AdminModel
     public static function getAuditLogForUser(int $userId, int $limit = 50): array
     {
         try {
-            $stmt = Database::connect()->prepare("
+            $stmt = self::db()->prepare("
                 SELECT al.action, al.target_type, al.target_id, al.details, al.created_at,
                        a.full_name AS admin_name
                 FROM admin_audit_log al
@@ -735,7 +735,7 @@ class AdminModel
     public static function getAllForCsvExport(): array
     {
         try {
-            $stmt = Database::connect()->query("
+            $stmt = self::db()->query("
                 SELECT a.id, a.full_name, a.email, a.phone_number, a.role, a.created_at,
                        ap.can_manage_products, ap.can_manage_users, ap.can_manage_orders,
                        ap.can_manage_support, ap.can_view_dashboard, ap.can_manage_branding
@@ -757,7 +757,7 @@ class AdminModel
     public static function createPasswordReset(string $email, string $userType = 'admin'): ?string
     {
         try {
-            $db = \App\Core\Database::connect();
+            $db = self::db();
             $token = bin2hex(random_bytes(32));
             $tokenHash = hash('sha256', $token);
 
@@ -779,7 +779,7 @@ class AdminModel
     public static function validatePasswordResetToken(string $email, string $token, string $userType = 'admin'): bool
     {
         try {
-            $db = \App\Core\Database::connect();
+            $db = self::db();
             $tokenHash = hash('sha256', $token);
             $stmt = $db->prepare("SELECT id FROM password_resets WHERE email = ? AND user_type = ? AND token_hash = ? AND used = 0 AND expires_at > NOW() LIMIT 1");
             $stmt->execute([$email, $userType, $tokenHash]);
@@ -795,7 +795,7 @@ class AdminModel
      */
     public static function consumePasswordResetToken(string $email, string $token, string $userType = 'admin'): void
     {
-        $db = \App\Core\Database::connect();
+        $db = self::db();
         $tokenHash = hash('sha256', $token);
         $stmt = $db->prepare("UPDATE password_resets SET used = 1 WHERE email = ? AND user_type = ? AND token_hash = ?");
         $stmt->execute([$email, $userType, $tokenHash]);
@@ -807,7 +807,7 @@ class AdminModel
     public static function updatePassword(int $adminId, string $newPasswordHash): bool
     {
         try {
-            $db = \App\Core\Database::connect();
+            $db = self::db();
             $stmt = $db->prepare("UPDATE admins SET password = ? WHERE id = ?");
             return $stmt->execute([$newPasswordHash, $adminId]);
         } catch (\Exception $e) {
@@ -822,7 +822,7 @@ class AdminModel
 
     public static function enable2FA(int $adminId, string $secret): bool
     {
-        $db = \App\Core\Database::connect();
+        $db = self::db();
         // last_totp_slice تُصفَّر مع كل تفعيل: السرّ جديد، فالشرائح
         // المستهلَكة تخصّ سرّاً آخر ولا معنى لتوريثها.
         $stmt = $db->prepare(
@@ -833,7 +833,7 @@ class AdminModel
 
     public static function disable2FA(int $adminId): bool
     {
-        $db = \App\Core\Database::connect();
+        $db = self::db();
         $stmt = $db->prepare(
             "UPDATE admins SET totp_secret = NULL, totp_enabled = 0, last_totp_slice = NULL WHERE id = ?"
         );
@@ -851,7 +851,7 @@ class AdminModel
     public static function consumeTotpSlice(int $adminId, int $slice): bool
     {
         try {
-            $db   = \App\Core\Database::connect();
+            $db   = self::db();
             $stmt = $db->prepare(
                 "UPDATE admins SET last_totp_slice = ?
                  WHERE id = ? AND (last_totp_slice IS NULL OR last_totp_slice < ?)"
