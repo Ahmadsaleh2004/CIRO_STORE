@@ -113,6 +113,10 @@ class WishlistController extends Controller
             $products[$pid]['already_notified'] = in_array((int)$pid, $notifiedIds, true);
         }
 
+        // إنذار كاذب: المطبوع صفوف منتجات من القاعدة مرّت من json_encode
+        // تحت رأس application/json. المعرّفات القادمة من الطلب تُستعمل
+        // للاستعلام وحده ولا يصل أيٌّ منها خاماً إلى المخرَج.
+        // nosemgrep: php.lang.security.injection.echoed-request.echoed-request
         echo json_encode(['success' => true, 'message' => 'ok', 'products' => $products]);
         exit;
     }

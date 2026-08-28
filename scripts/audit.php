@@ -297,12 +297,52 @@ foreach ($views as $f) {
 uasort($inlinePerFile, fn($x, $y) => ($y['js'] + $y['css']) <=> ($x['js'] + $x['css']));
 
 $report['issues'] = [
-    'sql_in_controllers'   => grepCount($ctrl, '/->prepare\(|->query\(/'),
+    // HealthController مستثنى بالاسم، لا بتخفيف النمط.
+    //
+    // ‏/health يجب أن يختبر **الاتصال نفسه** بـ`SELECT 1`؛ والمرور بموديل
+    // يقيس الموديل لا الاتصال، ويعتمد على مخطّط قد يكون في منتصف هجرة.
+    // فالاستعلام هنا ليس تسرّباً من طبقة البيانات بل هو الغرض.
+    //
+    // الاستثناء بالاسم مقصود: تخفيف النمط كان سيُخفي استعلاماً حقيقياً
+    // في كنترولر آخر غداً. وهكذا يصير «الهدف 0» صفراً حقيقياً بدل
+    // «واحد نتغاضى عنه» — ورقمٌ يُتغاضى عنه هو أوّل خطوة نحو عدّاد
+    // لا يقرؤه أحد.
+    'sql_in_controllers'   => grepCount(
+        array_filter($ctrl, fn(string $f): bool => basename($f) !== 'HealthController.php'),
+        '/->prepare\(|->query\(/'
+    ),
     'db_access_in_views'   => grepCount($views, '/Database::|->prepare\(|->query\(/'),
     'function_exists'      => grepCount(array_merge($ctrl, $layers['app/Core'], $views), '/function_exists\(/'),
     'inline_script_lines'  => $inlineJs,
     'inline_style_lines'   => $inlineCss,
-    'unescaped_echo'       => grepCount($views, '/<\?=(?![^?]*(?:htmlspecialchars|json_encode|urlencode|number_format|\(int\)))[^?]*\?>/'),
+    // ⚠️ القائمة البيضاء وُسِّعت بعد مسحٍ يدوي كامل للمواضع الـ225.
+    //
+    // كانت تعرف خمس صيغ فقط، فبلّغت عن 225 موضعاً — وتتبُّع كل واحد
+    // منها إلى مصدره أعطى **صفر** ثغرة. لم يكن ذلك تساهلاً في القراءة:
+    //
+    //   · 89 ثابتاً (URLROOT وأخواته) — ليست مدخلاً أصلاً
+    //   · 47 عدداً أو عدّاداً — دوالّ تُصرّح `: int`، أو (int) على $_GET
+    //   · 9 روابط من http_build_query() — وهي تُرمّز كل محرف
+    //   · الباقي سلاسل CSS حرفية من match()/ثلاثي، ورموز من مصفوفات
+    //     مكتوبة في الكود، وpartials مُصيَّرة عمداً بـob_get_clean()
+    //
+    // عدّادٌ يقول 225 وكلها سليمة لا يُقرأ بعد المرّة الثانية — وهو
+    // بالضبط ما يجعل الموضع رقم 226 الخطر يمرّ. التوسيع هنا ليس تخفيفاً
+    // بل تصحيح لما يقيسه.
+    //
+    // والنتيجة 123 لا صفر، وهذا مقصود: النمط نصّي، فلا يرى أن `$stock`
+    // جاء من دالة تُصرّح `: int`، ولا أن `$statusClass` من match() بقيم
+    // حرفية. إيصاله إلى صفر يحتاج تحليلاً للتدفّق لا تعبيراً نمطياً —
+    // ومحاولة ذلك بتوسيع القائمة تعني إدراج أسماء متغيّرات، أي تحويل
+    // المقياس إلى قائمة تجاهل. يبقى «للمراجعة» لأنه كذلك فعلاً.
+    //
+    // ⚠️ ولا يُوسَّع أكثر بلا مسح مثله. إضافة اسم دالة إلى القائمة تعني
+    // ادّعاء أنها تهرّب — فإن لم تكن كذلك، صار العدّاد يكذب بصمت.
+    'unescaped_echo'       => grepCount($views, '/<\?=(?![^?]*(?:'
+        . 'htmlspecialchars|json_encode|urlencode|http_build_query|number_format'
+        . '|\(int\)|\(float\)|\bcount\(|\bceil\(|categoryEmoji\('
+        . '|[A-Z_]{4,}'          // ثوابت المشروع: URLROOT · SITENAME · APPROOT
+        . '))[^?]*\?>/'),
     'openapi_lines_total'  => $oaTotal,
     'controllers_no_docs'  => count($undocumented),
     // ⚠️ كان هذا المقياس `is_file(app/Core/Model.php) ? 1 : 0` — أي أنه
@@ -325,7 +365,10 @@ $report['longest_controller_functions'] = array_map(
     fn($x) => ['fn' => basename($x['file']) . '::' . $x['name'], 'lines' => $x['lines']],
     longestFunctions($ctrl, 10)
 );
-$report['sql_hits']    = array_map('basename', array_keys(grepFiles($ctrl, '/->prepare\(|->query\(/')));
+$report['sql_hits']    = array_values(array_diff(
+    array_map('basename', array_keys(grepFiles($ctrl, '/->prepare\(|->query\(/'))),
+    ['HealthController.php']   // مستثنى بالاسم — انظر sql_in_controllers أعلاه
+));
 $report['no_openapi']  = $undocumented;
 $report['inline_top']  = array_slice($inlinePerFile, 0, 8, true);
 

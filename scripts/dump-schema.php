@@ -107,14 +107,25 @@ $command = escapeshellarg($binary)
     . ' > ' . escapeshellarg($temp);
 
 $status = 0;
+// ⚠️ إنذار كاذب موثَّق. الأمر مبنيّ بالكامل من ثوابت الإعداد، وكل جزء
+// متغيّر فيه يمرّ من escapeshellarg — بما فيها مسار الثنائي واسم
+// القاعدة والملفان المؤقتان (انظر البناء أعلاه سطراً سطراً). ولا مدخل
+// من الشبكة يصل إلى هنا أصلاً: هذا سكربت طرفية يرفض العمل خارج CLI.
+// nosemgrep: php.lang.security.exec-use.exec-use
 @exec($command, $ignored, $status);
 
+// ملف الخيارات يحمل كلمة مرور القاعدة، فحذفه فوراً بعد الاستعمال
+// مقصود — وهو سبب وجوده أصلاً (بدلاً من تمرير كلمة السر في سطر الأوامر
+// حيث يراها أي `ps`). المسار من tempnam() لا من مدخل، فلا شيء يوجّهه.
+// nosemgrep: php.lang.security.unlink-use.unlink-use
 unlink($optionsFile);
 
 // ── التحقّق قبل أي كتابة فوق الملف الحقيقي ───────────────────
 $dump = is_file($temp) ? (string) file_get_contents($temp) : '';
 
 if ($status !== 0 || $dump === '' || !str_contains($dump, 'CREATE TABLE')) {
+    // $temp من tempnam() لا من مدخل — كسابقتها.
+    // nosemgrep: php.lang.security.unlink-use.unlink-use
     @unlink($temp);
     fwrite(STDERR, PHP_EOL . "  ✗ فشل التوليد (كود {$status}) — المخطّط القائم لم يُمسّ." . PHP_EOL . PHP_EOL);
     exit(1);
@@ -124,6 +135,7 @@ if ($status !== 0 || $dump === '' || !str_contains($dump, 'CREATE TABLE')) {
 // هنا يجعل كل توليد على Windows يبدو تغييراً كاملاً في الـdiff.
 $dump = str_replace("\r\n", "\n", $dump);
 file_put_contents($target, $dump);
+// nosemgrep: php.lang.security.unlink-use.unlink-use
 @unlink($temp);
 
 $tables = substr_count($dump, 'CREATE TABLE');
