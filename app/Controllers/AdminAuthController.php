@@ -23,6 +23,7 @@ namespace App\Controllers;
 
 use App\Core\Controller;
 use App\Models\AdminModel;
+use App\Services\AdminSessionOpener;
 use OpenApi\Attributes as OA;
 
 /**
@@ -39,25 +40,6 @@ class AdminAuthController extends Controller
 
     /** كم كوداً خاطئاً تحتمله الحالة المعلّقة قبل أن تُلغى. */
     private const MAX_2FA_ATTEMPTS = 5;
-
-    /**
-     * بصمة الطلب لإيميلات تنبيه الدخول: الوقت وعنوان IP والمتصفح.
-     *
-     * دالة واحدة لأن الثلاثة كانت تُجمَع بيدها في موضعين متطابقين —
-     * وكلاهما كان يحقن HTTP_USER_AGENT في HTML مباشرةً. تُرجَع كمصفوفة
-     * نائبات لا كنصّ: القيم تُهرَّب في Mailer::template، فيستحيل أن
-     * ينسى موضع ثالث تهريبها.
-     *
-     * @return array<string, string>
-     */
-    private static function requestFingerprint(): array
-    {
-        return [
-            'time' => date('Y-m-d H:i:s'),
-            'ip'   => $_SERVER['REMOTE_ADDR'] ?? 'unknown',
-            'ua'   => $_SERVER['HTTP_USER_AGENT'] ?? 'unknown',
-        ];
-    }
 
     /**
      * يُنهي الحالة المعلّقة بين كلمة المرور والكود.
@@ -217,44 +199,13 @@ class AdminAuthController extends Controller
                 $this->respond(true, 'Enter your 2FA code.', ['requires_2fa' => true]);
             }
             // إذا كانت 2FA غير مفعّلة نكمل بفتح الجلسة العادي أسفل هذا السطر
-
-            \App\Core\Throttle::clear('admin-login', \App\Core\Throttle::clientIp());
-
-            session_regenerate_id(true);
-
-            $_SESSION['admin_id']    = (int)$admin['id'];
-            $_SESSION['admin_name']  = $admin['full_name'] ?? $admin['name'] ?? 'Admin';
-            $_SESSION['admin_email'] = $admin['email'];
-            $_SESSION['admin_role']  = $admin['role'] ?? 'B';
-            $_SESSION['last_active'] = time();
-
-            // تحميل صلاحيات الأدمن وحفظها بالجلسة (نظام A/B/C/D)
-            loadAdminPermissions((int)$admin['id']);
-
-            AdminModel::updateActivity((int)$admin['id']);
-
-            // تسجيل عملية الدخول بـ audit log
-            AdminModel::logAction((int)$admin['id'], 'login');
-
-            // [EMAIL_ALERT_HOOK] — هنا سيُضاف إرسال إيميل تنبيه عند IP/جهاز جديد
-
-            // ⚠️ الجهاز/المتصفح نائبة لا قيمة محقونة: HTTP_USER_AGENT
-            // ترويسة يتحكّم بها المرسِل كلياً، وكان حقنها المباشر يوصل
-            // HTML يكتبه المهاجم إلى صندوق بريد الأدمن.
-            \App\Core\Mailer::queue(
-                $admin['email'],
-                $admin['full_name'] ?? 'Admin',
-                'تسجيل دخول جديد لحسابك',
-                \App\Core\Mailer::template(
-                    'تسجيل دخول جديد',
-                    'تم تسجيل دخول جديد لحساب الأدمن الخاص بك.<br><br>'
-                    . '<b>الوقت:</b> {time}<br>'
-                    . '<b>عنوان IP:</b> {ip}<br>'
-                    . '<b>الجهاز/المتصفح:</b> {ua}<br><br>'
-                    . 'إذا لم تكن أنت، غيّر كلمة المرور فورًا وتواصل مع الدعم.',
-                    self::requestFingerprint()
-                )
-            );
+            //
+            // كل ما كان مكتوباً هنا — تدوير المعرّف، والهوية، والصلاحيات،
+            // وسجلّ التدقيق، ومسح الخنق، وإيميل التنبيه — صار في
+            // AdminSessionOpener، لأنه كان مكرَّراً حرفياً في
+            // verify2FALogin. وما يُنسى في إحدى نسختين لا يظهر كخطأ بل
+            // كفجوة صامتة: مسار دخول بلا تدوير معرّف، أو بلا صلاحيات.
+            AdminSessionOpener::open($admin);
 
             unset($_SESSION['csrf_token']);
             generateCsrfToken();
@@ -398,39 +349,10 @@ class AdminAuthController extends Controller
             $this->respond(false, 'Invalid code. Please try again.');
         }
 
-        // نجاح — فتح الجلسة الكاملة (نفس الكود المستخدم بعد نجاح كلمة المرور)
-        session_regenerate_id(true);
-
-        $_SESSION['admin_id']    = (int)$admin['id'];
-        $_SESSION['admin_name']  = $admin['full_name'] ?? $admin['name'] ?? 'Admin';
-        $_SESSION['admin_email'] = $admin['email'];
-        $_SESSION['admin_role']  = $admin['role'] ?? 'B';
-        $_SESSION['last_active'] = time();
-
-        loadAdminPermissions((int)$admin['id']);
-        AdminModel::updateActivity((int)$admin['id']);
-        AdminModel::logAction((int)$admin['id'], 'login');
-
-        \App\Core\Mailer::queue(
-            $admin['email'],
-            $admin['full_name'] ?? 'Admin',
-            'تسجيل دخول جديد لحسابك',
-            \App\Core\Mailer::template(
-                'تسجيل دخول جديد',
-                'تم تسجيل دخول جديد لحساب الأدمن الخاص بك.<br><br>'
-                . '<b>الوقت:</b> {time}<br>'
-                . '<b>عنوان IP:</b> {ip}<br>'
-                . '<b>الجهاز/المتصفح:</b> {ua}<br><br>'
-                . 'إذا لم تكن أنت، غيّر كلمة المرور فورًا وتواصل مع الدعم.',
-                self::requestFingerprint()
-            )
-        );
+        // نجاح — نفس ما يجري بعد كلمة المرور وحدها، بالخدمة نفسها.
+        AdminSessionOpener::open($admin);
 
         $this->clearPending2FA();
-        // الدخول اكتمل، فلا معنى لأن يدفع صاحبه ثمن محاولاته الفاشلة في
-        // المرّة القادمة — من نحرس منه لا يصل إلى هذا السطر أصلاً.
-        \App\Core\Throttle::clear('admin-2fa', \App\Core\Throttle::clientIp());
-        \App\Core\Throttle::clear('admin-login', \App\Core\Throttle::clientIp());
         unset($_SESSION['csrf_token']);
         generateCsrfToken();
         $this->respond(true, 'Welcome, ' . $_SESSION['admin_name'], [
