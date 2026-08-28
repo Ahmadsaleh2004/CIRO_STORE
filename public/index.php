@@ -287,11 +287,20 @@ $r->post('/admin/branding/save',            [AdminBrandingController::class, 'sa
 $r->get('/admin/branding/products/search',  [AdminBrandingController::class, 'searchProducts'])
     ->middleware('perm:can_manage_branding');
 
-// ── Admin Backup (Role A فقط) ────────────────────────────────
-$r->get('/admin/backup',          [BackupController::class, 'index']);
-$r->post('/admin/backup/create',  [BackupController::class, 'create']);
-$r->get('/admin/backup/download', [BackupController::class, 'download']);
-$r->post('/admin/backup/delete',  [BackupController::class, 'delete']);
+// ── Admin Backup (الروت وحده — رتبة A) ───────────────────────
+//
+// كانت هذه المسارات الأربعة بلا حارس مُعلَن إطلاقاً، والشرط مكتوباً
+// بيده أربع مرّات في الجسم كـ`getCurrentAdminId() !== 1` — أي أن حقّ
+// تنزيل قاعدة البيانات كاملةً كان معلَّقاً بموضعٍ في طابور المعرّفات لا
+// بشخص. الحارس `root` يعتمد رتبة A، وهي هوية لا موضع.
+$r->get('/admin/backup',          [BackupController::class, 'index'])
+    ->middleware('root');
+$r->post('/admin/backup/create',  [BackupController::class, 'create'])
+    ->middleware('root');
+$r->get('/admin/backup/download', [BackupController::class, 'download'])
+    ->middleware('root');
+$r->post('/admin/backup/delete',  [BackupController::class, 'delete'])
+    ->middleware('root');
 
 // ── Admin Notifications ────────────────────────────────────────
 $r->get('/admin/notifications/list',           [AdminNotificationController::class, 'list']);
