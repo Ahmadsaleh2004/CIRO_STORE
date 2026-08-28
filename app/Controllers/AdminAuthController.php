@@ -41,6 +41,25 @@ class AdminAuthController extends Controller
     private const MAX_2FA_ATTEMPTS = 5;
 
     /**
+     * بصمة الطلب لإيميلات تنبيه الدخول: الوقت وعنوان IP والمتصفح.
+     *
+     * دالة واحدة لأن الثلاثة كانت تُجمَع بيدها في موضعين متطابقين —
+     * وكلاهما كان يحقن HTTP_USER_AGENT في HTML مباشرةً. تُرجَع كمصفوفة
+     * نائبات لا كنصّ: القيم تُهرَّب في Mailer::template، فيستحيل أن
+     * ينسى موضع ثالث تهريبها.
+     *
+     * @return array<string, string>
+     */
+    private static function requestFingerprint(): array
+    {
+        return [
+            'time' => date('Y-m-d H:i:s'),
+            'ip'   => $_SERVER['REMOTE_ADDR'] ?? 'unknown',
+            'ua'   => $_SERVER['HTTP_USER_AGENT'] ?? 'unknown',
+        ];
+    }
+
+    /**
      * يُنهي الحالة المعلّقة بين كلمة المرور والكود.
      *
      * المفاتيح الثلاثة تُمسح معاً دائماً: بقاء أحدها بلا الآخرين كان
@@ -219,22 +238,22 @@ class AdminAuthController extends Controller
 
             // [EMAIL_ALERT_HOOK] — هنا سيُضاف إرسال إيميل تنبيه عند IP/جهاز جديد
 
-            // إرسال إيميل تنبيه دخول للأدمن
-            $ip = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
-            $ua = $_SERVER['HTTP_USER_AGENT'] ?? 'unknown';
-            $time = date('Y-m-d H:i:s');
-
-            \App\Core\Mailer::send(
+            // ⚠️ الجهاز/المتصفح نائبة لا قيمة محقونة: HTTP_USER_AGENT
+            // ترويسة يتحكّم بها المرسِل كلياً، وكان حقنها المباشر يوصل
+            // HTML يكتبه المهاجم إلى صندوق بريد الأدمن.
+            \App\Core\Mailer::queue(
                 $admin['email'],
                 $admin['full_name'] ?? 'Admin',
                 'تسجيل دخول جديد لحسابك',
-                \App\Core\Mailer::template('تسجيل دخول جديد', "
-                    تم تسجيل دخول جديد لحساب الأدمن الخاص بك.<br><br>
-                    <b>الوقت:</b> {$time}<br>
-                    <b>عنوان IP:</b> {$ip}<br>
-                    <b>الجهاز/المتصفح:</b> {$ua}<br><br>
-                    إذا لم تكن أنت، غيّر كلمة المرور فورًا وتواصل مع الدعم.
-                ")
+                \App\Core\Mailer::template(
+                    'تسجيل دخول جديد',
+                    'تم تسجيل دخول جديد لحساب الأدمن الخاص بك.<br><br>'
+                    . '<b>الوقت:</b> {time}<br>'
+                    . '<b>عنوان IP:</b> {ip}<br>'
+                    . '<b>الجهاز/المتصفح:</b> {ua}<br><br>'
+                    . 'إذا لم تكن أنت، غيّر كلمة المرور فورًا وتواصل مع الدعم.',
+                    self::requestFingerprint()
+                )
             );
 
             unset($_SESSION['csrf_token']);
@@ -253,7 +272,7 @@ class AdminAuthController extends Controller
         if ($attemptsNow === 3) {
             $adminRow = AdminModel::findByEmail($email);
             if ($adminRow) {
-                \App\Core\Mailer::send(
+                \App\Core\Mailer::queue(
                     $adminRow['email'],
                     $adminRow['full_name'] ?? 'Admin',
                     'تنبيه: محاولات دخول فاشلة متكررة',
@@ -392,22 +411,19 @@ class AdminAuthController extends Controller
         AdminModel::updateActivity((int)$admin['id']);
         AdminModel::logAction((int)$admin['id'], 'login');
 
-        // إرسال إيميل تنبيه دخول للأدمن
-        $ip   = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
-        $ua   = $_SERVER['HTTP_USER_AGENT'] ?? 'unknown';
-        $time = date('Y-m-d H:i:s');
-
-        \App\Core\Mailer::send(
+        \App\Core\Mailer::queue(
             $admin['email'],
             $admin['full_name'] ?? 'Admin',
             'تسجيل دخول جديد لحسابك',
-            \App\Core\Mailer::template('تسجيل دخول جديد', "
-                تم تسجيل دخول جديد لحساب الأدمن الخاص بك.<br><br>
-                <b>الوقت:</b> {$time}<br>
-                <b>عنوان IP:</b> {$ip}<br>
-                <b>الجهاز/المتصفح:</b> {$ua}<br><br>
-                إذا لم تكن أنت، غيّر كلمة المرور فورًا وتواصل مع الدعم.
-            ")
+            \App\Core\Mailer::template(
+                'تسجيل دخول جديد',
+                'تم تسجيل دخول جديد لحساب الأدمن الخاص بك.<br><br>'
+                . '<b>الوقت:</b> {time}<br>'
+                . '<b>عنوان IP:</b> {ip}<br>'
+                . '<b>الجهاز/المتصفح:</b> {ua}<br><br>'
+                . 'إذا لم تكن أنت، غيّر كلمة المرور فورًا وتواصل مع الدعم.',
+                self::requestFingerprint()
+            )
         );
 
         $this->clearPending2FA();
@@ -532,16 +548,18 @@ class AdminAuthController extends Controller
             $resetToken = AdminModel::createPasswordReset($email, 'admin');
             if ($resetToken) {
                 $resetLink = URLROOT . '/auth/reset?token=' . $resetToken . '&email=' . urlencode($email) . '&type=admin';
-                \App\Core\Mailer::send(
+                \App\Core\Mailer::queue(
                     $admin['email'],
                     $admin['full_name'] ?? 'Admin',
                     'إعادة تعيين كلمة المرور',
-                    \App\Core\Mailer::template('إعادة تعيين كلمة المرور', "
-                        اضغط على الرابط التالي لإعادة تعيين كلمة المرور
-                        (صالح لمدة 60 دقيقة فقط):<br><br>
-                        <a href='{$resetLink}'>{$resetLink}</a><br><br>
-                        إذا لم تطلب هذا، تجاهل هذا الإيميل.
-                    ")
+                    \App\Core\Mailer::template(
+                        'إعادة تعيين كلمة المرور',
+                        'اضغط على الرابط التالي لإعادة تعيين كلمة المرور'
+                        . ' (صالح لمدة 60 دقيقة فقط):<br><br>'
+                        . '<a href="{link}">{link}</a><br><br>'
+                        . 'إذا لم تطلب هذا، تجاهل هذا الإيميل.',
+                        ['link' => $resetLink]
+                    )
                 );
             }
         }

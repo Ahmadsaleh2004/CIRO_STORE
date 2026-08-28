@@ -270,34 +270,9 @@ class BrandingModel
      */
     public static function uploadSliderImage(array $fileEntry, string $uploadDir): ?string
     {
-        if (empty($fileEntry['tmp_name']) || $fileEntry['error'] !== UPLOAD_ERR_OK) {
-            return null;
-        }
-
-        // خريطة واحدة تحكم القبول والامتداد معاً — راجع الشرح نفسه في
-        // AdminProductModel::…: قائمة منفصلة عن أذرع match تنفصل عنها
-        // بصمت، فيُحفظ الملف بامتداد خاطئ.
-        $extByMime = [
-            'image/jpeg' => 'jpg',
-            'image/png'  => 'png',
-            'image/webp' => 'webp',
-            'image/gif'  => 'gif',
-        ];
-
-        $mime = mime_content_type($fileEntry['tmp_name']);
-        if (!isset($extByMime[$mime])) {
-            return null;
-        }
-
-        $ext = $extByMime[$mime];
-
-        $filename = 'slider_' . time() . '_' . bin2hex(random_bytes(4)) . '.' . $ext;
-        $dest     = rtrim($uploadDir, '/\\') . DIRECTORY_SEPARATOR . $filename;
-
-        if (!move_uploaded_file($fileEntry['tmp_name'], $dest)) {
-            return null;
-        }
-
-        return 'images/' . $filename;
+        // كان هنا نسخة مطابقة لمنطق AdminProductModel — والتعليق فوقها
+        // كان يقول ذلك صراحةً. صارتا واحدة في App\Core\ImageUpload،
+        // والفرق الوحيد (بادئة الاسم) وسيطاً.
+        return \App\Core\ImageUpload::store($fileEntry, $uploadDir, 'slider_');
     }
 }
