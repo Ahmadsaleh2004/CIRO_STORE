@@ -1,0 +1,36 @@
+# ══════════════════════════════════════════════════════════════
+# مجلد الصور المرفوعة — لا تنفيذ هنا، بأي حال
+# ══════════════════════════════════════════════════════════════
+#
+# دفاع بالعمق لا خطّ الدفاع الأوّل. الرفع محروس أصلاً بثلاثة أشياء:
+# الامتداد يُشتقّ من محتوى الملف عبر mime_content_type لا من اسمه،
+# والاسم المحفوظ عشوائي كلياً، وX-Content-Type-Options: nosniff تمنع
+# المتصفح من تخمين النوع.
+#
+# لكن الثلاثة كلها في طبقة التطبيق أو المتصفح. هذا الملف يقول للخادم
+# نفسه: مهما وصل إلى هنا، لا يُنفَّذ. الحالة التي يغطّيها هي إعداد
+# خاطئ في مكان آخر — AddHandler موروث، أو مُعالِج PHP مربوط بامتداد
+# غير متوقَّع — وهي حالات لا يراها من يقرأ كود الرفع.
+
+# ── منع تنفيذ PHP بكل صيغه ────────────────────────────────────
+<FilesMatch "\.(?i:php|php[0-9]?|phtml|phps|phar|inc|hh)$">
+    Require all denied
+</FilesMatch>
+
+# مُعالِجات PHP تُنزَع صراحةً: Require all denied تمنع الطلب، وهذه
+# تمنع التنفيذ حتى لو وصل الملف عبر include من مكان آخر.
+<IfModule mod_php.c>
+    php_flag engine off
+</IfModule>
+<IfModule mod_php7.c>
+    php_flag engine off
+</IfModule>
+<IfModule mod_php8.c>
+    php_flag engine off
+</IfModule>
+
+RemoveHandler .php .php3 .php4 .php5 .php7 .php8 .phtml .phar
+RemoveType .php .php3 .php4 .php5 .php7 .php8 .phtml .phar
+
+# ── ولا CGI ولا SSI ───────────────────────────────────────────
+Options -ExecCGI -Includes -Indexes

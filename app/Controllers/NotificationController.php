@@ -239,9 +239,23 @@ class NotificationController extends Controller
     /** التحقق من تسجيل الدخول */
     private function requireAuth(): void
     {
-        if (!isUserLoggedIn()) {
-            $this->respond(false, 'Unauthorized.');
+        if (isUserLoggedIn()) {
+            return;
         }
+
+        // 401 لا 200. كانت ترد 200 بجسم `success:false` — أي أن الطبقة
+        // التي فوق HTTP تقول «مرفوض» بينما HTTP نفسه يقول «تمّ». الأثر
+        // ليس نظرياً: مواصفة OpenAPI الخاصة بالمشروع تعلن 401 على هذه
+        // النقاط، وأي مراقبة تعدّ الأخطاء برمز الحالة ترى صفراً بينما
+        // ترتدّ الطلبات فعلاً.
+        //
+        // Middleware::requireLogin ترد 401 على النقاط المحروسة بـauth
+        // منذ المرحلة السابقة؛ هذه النقاط الخمس كانت الاستثناء الباقي.
+        if (!headers_sent()) {
+            http_response_code(401);
+        }
+
+        $this->respond(false, 'Unauthorized.');
     }
 
     // حُذفت requirePost(): كانت تفحص الطريقة وحدها، وهذا ما تفعله

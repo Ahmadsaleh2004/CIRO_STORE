@@ -548,38 +548,10 @@ class AdminProductModel
      */
     public static function uploadVariantImage(array $fileEntry, string $uploadDir): ?string
     {
-        if (empty($fileEntry['tmp_name']) || $fileEntry['error'] !== UPLOAD_ERR_OK) {
-            return null;
-        }
-
-        // خريطة واحدة تحكم القبول والامتداد معاً.
-        //
-        // كانت قائمة $allowed منفصلة عن أذرع match، ولا شيء يربطهما:
-        // إضافة 'image/avif' إلى القائمة بلا ذراع مقابل كانت تحفظ الملف
-        // بامتداد .jpg الافتراضي **بصمت** — صورة avif باسم jpg يرفضها
-        // المتصفح. الخريطة تجعل النسيان مستحيلاً: ما ليس فيها مفتاحاً
-        // يُرفض قبل أن يُسأل عن امتداده.
-        $extByMime = [
-            'image/jpeg' => 'jpg',
-            'image/png'  => 'png',
-            'image/webp' => 'webp',
-            'image/gif'  => 'gif',
-        ];
-
-        $mime = mime_content_type($fileEntry['tmp_name']);
-        if (!isset($extByMime[$mime])) {
-            return null;
-        }
-
-        $ext = $extByMime[$mime];
-
-        $filename = 'product_' . time() . '_' . bin2hex(random_bytes(4)) . '.' . $ext;
-        $dest     = rtrim($uploadDir, '/\\') . DIRECTORY_SEPARATOR . $filename;
-
-        if (!move_uploaded_file($fileEntry['tmp_name'], $dest)) {
-            return null;
-        }
-
-        return 'images/' . $filename;
+        // المنطق في App\Core\ImageUpload: كان مكتوباً هنا وفي
+        // BrandingModel::uploadSliderImage بنسختين متطابقتين لا يفصلهما
+        // إلا بادئة الاسم — فأي تشديد أمني كان يُطبَّق على واحدة وتبقى
+        // الأخرى. حدّ الحجم الجديد أظهر ذلك فوراً.
+        return \App\Core\ImageUpload::store($fileEntry, $uploadDir, 'product_');
     }
 }
