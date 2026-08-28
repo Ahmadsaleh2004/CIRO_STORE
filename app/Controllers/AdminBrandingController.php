@@ -75,6 +75,10 @@ class AdminBrandingController extends AdminController
         $q = trim($_GET['q'] ?? '');
         $products = BrandingModel::searchProducts($q);
 
+        // إنذار كاذب: القاعدة تلاحق «صدى مدخل الطلب»، والمطبوع هنا ناتج
+        // json_encode لصفوف من القاعدة تحت رأس application/json المضبوط
+        // أعلاه. لا $_GET يصل إلى المخرَج، وjson_encode تهرّب ما تُخرجه.
+        // nosemgrep: php.lang.security.injection.echoed-request.echoed-request
         echo json_encode(['success' => true, 'products' => $products], JSON_UNESCAPED_UNICODE);
         exit;
     }
@@ -148,8 +152,13 @@ class AdminBrandingController extends AdminController
             // محصور في $uploadDir بالبناء. semgrep يرى تدفّق بيانات من
             // قاعدة البيانات إلى unlink ولا يرى أثر basename.
             $disk = rtrim($uploadDir, '/\\') . DIRECTORY_SEPARATOR . basename($orphanPath);
-            // nosemgrep: php.lang.security.unlink-use.unlink-use
             if (file_exists($disk)) {
+                // ⚠️ الكتم على سطر @unlink نفسه. كان موضوعاً فوق `if`،
+                // وsemgrep يربط التعليق بالسطر التالي له مباشرةً — فكان
+                // يكتم شرط `file_exists` ولا يكتم شيئاً، والنتيجة تُبلَّغ
+                // كما لو لم يكن هناك تعليق أصلاً. (مقيس: النتيجة كانت
+                // تظهر قبل إعادة الهيكلة وبعدها بالتساوي.)
+                // nosemgrep: php.lang.security.unlink-use.unlink-use
                 @unlink($disk);
             }
         }
@@ -164,8 +173,10 @@ class AdminBrandingController extends AdminController
         foreach ($paths as $p) {
             // كسابقتها: basename تحصر الاسم داخل $uploadDir بالبناء.
             $disk = rtrim($uploadDir, '/\\') . DIRECTORY_SEPARATOR . basename($p);
-            // nosemgrep: php.lang.security.unlink-use.unlink-use
             if (file_exists($disk)) {
+                // الكتم على سطر @unlink نفسه — راجع الشرح في
+                // deleteOrphanedImages أعلاه.
+                // nosemgrep: php.lang.security.unlink-use.unlink-use
                 @unlink($disk);
             }
         }

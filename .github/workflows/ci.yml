@@ -10,6 +10,42 @@
 #
 # ما يزيده CI على الخطّافات: اختبارات على قاعدة بيانات حقيقية، وقياس
 # التغطية (لا xdebug ولا pcov على جهاز التطوير)، ومصفوفة نسختي PHP.
+#
+# ══════════════════════════════════════════════════════════════
+# تثبيت الإجراءات — قرار مقصود، لا سهو
+# ══════════════════════════════════════════════════════════════
+#
+# semgrep يبلّغ عن كل `uses: …@vN` بقاعدة mutable-action-tag: الوسم
+# مؤشّر متحرّك يملك صاحب المستودع تحريكه إلى أي كومِت، فما ينفّذه CI
+# غداً قد لا يكون ما ينفّذه اليوم. القاعدة صحيحة، والحكم عليها يختلف
+# من إجراء لآخر — ولذلك القرار هنا مفصَّل لا شامل:
+#
+#   · aquasecurity/trivy-action  →  **مثبَّت ببصمة**. كان `@master`، أي
+#     فرعاً حيّاً لا وسماً أصلاً. أخطر ما في الملف، وقد عولج.
+#
+#   · returntocorp/semgrep-action → **حُذف**. مهجور (المُصدِر انتقل إلى
+#     semgrep). استُبدل بتشغيل semgrep عبر pip بنسخة مثبَّتة.
+#
+#   · actions/checkout · actions/cache · actions/setup-node  →  تبقى
+#     بوسومها. من GitHub نفسها، والوسم يجلب تصحيحاتها الأمنية تلقائياً.
+#     تثبيتها ببصمة يبادل خطر «تحرّك الوسم» بخطر «التجمّد على نسخة
+#     قديمة بثغرة معروفة» — وهو الخطر الأكبر بلا Dependabot يتابعها.
+#
+#   · shivammathur/setup-php · gitleaks/gitleaks-action  →  تبقى
+#     بوسومها. أطراف ثالثة لكن واسعة الانتشار ومصانَة بنشاط.
+#
+# والسياق هو ما يجعل هذا القرار مقبولاً، وهو مقيس لا مفترض:
+# `permissions: contents: read` وحدها · لا `pull_request_target` (وهو
+# الفخّ الذي يمنح PR خارجياً أسرار المستودع) · ولا سرّ في الملف غير
+# GITHUB_TOKEN في خطوة واحدة. فالضرر الأقصى من إجراء مخترَق هنا: قراءة
+# كود عامّ أصلاً، وحرق دقائق CI. ليس تسريب أسرار ولا كتابة في المستودع.
+#
+# ⚠️ لو أُضيف يوماً `pull_request_target`، أو رُفعت الصلاحيات إلى
+# `contents: write`، أو دخل سرّ نشر إلى هذا الملف — يسقط هذا التحليل
+# كلّه ويجب تثبيت الإجراءات جميعاً ببصماتها.
+#
+# القرار المؤجَّل: SHA لكل شيء + Dependabot يرفع PR شهرياً بالتحديثات.
+# وهو الحلّ الكامل، ويحتاج ملف إعداد إضافي وقراراً مستقلاً.
 
 name: CI
 
@@ -51,9 +87,11 @@ jobs:
           --health-retries=10
 
     steps:
+      # nosemgrep: yaml.github-actions.security.github-actions-mutable-action-tag.github-actions-mutable-action-tag
       - uses: actions/checkout@v4
 
       - name: تهيئة PHP
+        # nosemgrep: yaml.github-actions.security.github-actions-mutable-action-tag.github-actions-mutable-action-tag
         uses: shivammathur/setup-php@v2
         with:
           php-version: ${{ matrix.php }}
@@ -62,6 +100,7 @@ jobs:
           coverage: pcov
 
       - name: ذاكرة composer المؤقتة
+        # nosemgrep: yaml.github-actions.security.github-actions-mutable-action-tag.github-actions-mutable-action-tag
         uses: actions/cache@v4
         with:
           path: ~/.composer/cache
@@ -155,8 +194,10 @@ jobs:
     name: تحليل ثابت
     runs-on: ubuntu-latest
     steps:
+      # nosemgrep: yaml.github-actions.security.github-actions-mutable-action-tag.github-actions-mutable-action-tag
       - uses: actions/checkout@v4
 
+      # nosemgrep: yaml.github-actions.security.github-actions-mutable-action-tag.github-actions-mutable-action-tag
       - uses: shivammathur/setup-php@v2
         with:
           php-version: '8.3'
@@ -184,8 +225,10 @@ jobs:
     name: مواصفة OpenAPI
     runs-on: ubuntu-latest
     steps:
+      # nosemgrep: yaml.github-actions.security.github-actions-mutable-action-tag.github-actions-mutable-action-tag
       - uses: actions/checkout@v4
 
+      # nosemgrep: yaml.github-actions.security.github-actions-mutable-action-tag.github-actions-mutable-action-tag
       - uses: shivammathur/setup-php@v2
         with:
           php-version: '8.3'
@@ -216,8 +259,10 @@ jobs:
     name: الواجهة
     runs-on: ubuntu-latest
     steps:
+      # nosemgrep: yaml.github-actions.security.github-actions-mutable-action-tag.github-actions-mutable-action-tag
       - uses: actions/checkout@v4
 
+      # nosemgrep: yaml.github-actions.security.github-actions-mutable-action-tag.github-actions-mutable-action-tag
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
@@ -275,14 +320,17 @@ jobs:
           --health-cmd="mysqladmin ping -h 127.0.0.1"
           --health-interval=10s --health-timeout=5s --health-retries=10
     steps:
+      # nosemgrep: yaml.github-actions.security.github-actions-mutable-action-tag.github-actions-mutable-action-tag
       - uses: actions/checkout@v4
 
+      # nosemgrep: yaml.github-actions.security.github-actions-mutable-action-tag.github-actions-mutable-action-tag
       - uses: shivammathur/setup-php@v2
         with:
           php-version: '8.3'
           extensions: pdo_mysql, mbstring, curl, json
           coverage: none
 
+      # nosemgrep: yaml.github-actions.security.github-actions-mutable-action-tag.github-actions-mutable-action-tag
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
@@ -324,6 +372,7 @@ jobs:
     name: فحص أمني
     runs-on: ubuntu-latest
     steps:
+      # nosemgrep: yaml.github-actions.security.github-actions-mutable-action-tag.github-actions-mutable-action-tag
       - uses: actions/checkout@v4
         with:
           # gitleaks يحتاج التاريخ كاملاً: سرّ حُذف في آخر commit يبقى
@@ -331,20 +380,38 @@ jobs:
           fetch-depth: 0
 
       - name: gitleaks — أسرار في التاريخ كله
+        # nosemgrep: yaml.github-actions.security.github-actions-mutable-action-tag.github-actions-mutable-action-tag
         uses: gitleaks/gitleaks-action@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITLEAKS_CONFIG: .gitleaks.toml
 
+      # ⚠️ كان هنا `uses: returntocorp/semgrep-action@v1` — وهو **مهجور**:
+      # المُصدِر انتقل من returntocorp إلى semgrep، والإجراء لم يعد
+      # مصانَاً. تثبيته ببصمة كان سيُخضِر البوابة ويُجمّده على كود متروك،
+      # أي يُخفي المشكلة لا يحلّها.
+      #
+      # البديل هنا هو نفس ما تفعله خطّافات pre-commit حرفياً — الأمر
+      # ذاته والقواعد ذاتها. وهذا يخدم مبدأ هذا الملف المعلن أعلاه:
+      # «كل أداة تعمل في خطّافات pre-commit تعمل هنا أيضاً». واعتماد
+      # أقلّ: حزمة pip مثبَّتة النسخة بدل إجراء طرف ثالث كامل.
+      #
+      # `--error` لازمة: بدونها يطبع semgrep النتائج ويخرج بكود 0 فيبدو
+      # ناجحاً وهو يبلّغ عن ثغرات.
       - name: semgrep — ثغرات كود
-        uses: returntocorp/semgrep-action@v1
-        with:
-          config: >-
-            p/php
-            .semgrep/
+        run: |
+          python -m pip install --disable-pip-version-check semgrep==1.145.0
+          semgrep --config p/php --config .semgrep/ --error .
 
       - name: trivy — ثغرات الاعتماديات
-        uses: aquasecurity/trivy-action@master
+        # ⚠️ مثبَّت ببصمة الكومِت لا بوسم. كان `@master` — وهو **فرع حيّ**
+        # لا وسم إطلاقاً: يتغيّر مع كل دفعة إلى المشرّع، فما ينفّذه CI
+        # غداً قد لا يكون ما ينفّذه اليوم.
+        #
+        # البصمة أدناه هي وسم v0.36.0 مفكوكاً إلى كومِته. لتحديثه:
+        #   curl -s https://api.github.com/repos/aquasecurity/trivy-action/git/ref/tags/<tag>
+        #   ثم فُكّ كائن الوسم إن كان type=tag — Actions تقبل بصمة الكومِت وحدها.
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25  # v0.36.0
         with:
           scan-type: fs
           scan-ref: .
