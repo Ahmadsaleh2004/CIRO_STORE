@@ -109,7 +109,7 @@ class AuthController extends Controller
         if ($attemptsNow === 5) {
             $userRow = UserModel::findByEmail($email);
             if ($userRow) {
-                \App\Core\Mailer::send(
+                \App\Core\Mailer::queue(
                     $userRow['email'],
                     $userRow['full_name'] ?? 'User',
                     'تنبيه: محاولات دخول فاشلة متكررة',
@@ -267,7 +267,7 @@ class AuthController extends Controller
         $verifyToken = UserModel::createEmailVerification($newUserId);
         if ($verifyToken) {
             $verifyLink = URLROOT . '/auth/verify?token=' . $verifyToken;
-            \App\Core\Mailer::send(
+            \App\Core\Mailer::queue(
                 $email,
                 $fullName,
                 'فعّل بريدك الإلكتروني',
@@ -389,7 +389,7 @@ class AuthController extends Controller
             $resetToken = UserModel::createPasswordReset($email, 'user');
             if ($resetToken) {
                 $resetLink = URLROOT . '/auth/reset?token=' . $resetToken . '&email=' . urlencode($email) . '&type=user';
-                \App\Core\Mailer::send(
+                \App\Core\Mailer::queue(
                     $email,
                     $user['full_name'] ?? 'User',
                     'إعادة تعيين كلمة المرور',

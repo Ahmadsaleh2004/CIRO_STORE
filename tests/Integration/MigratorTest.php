@@ -334,8 +334,8 @@ final class MigratorTest extends DatabaseTestCase
             }
         }
 
-        // 8 منذ 0008_throttle (جدول throttle_attempts + عمود last_totp_slice).
-        $this->assertCount(8, $real->available(), 'عدد الهجرات تغيّر — حدّث هذا الاختبار عمداً لا سهواً.');
+        // 9 منذ 0009_mail_queue (طابور البريد — SMTP خارج مسار الطلب).
+        $this->assertCount(9, $real->available(), 'عدد الهجرات تغيّر — حدّث هذا الاختبار عمداً لا سهواً.');
         $this->assertSame([], $problems, "هجرات غير مكتملة الصيغة:\n  " . implode("\n  ", $problems));
     }
 

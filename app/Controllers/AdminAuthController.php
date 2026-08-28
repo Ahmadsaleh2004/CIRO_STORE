@@ -41,13 +41,6 @@ class AdminAuthController extends Controller
     private const MAX_2FA_ATTEMPTS = 5;
 
     /**
-     * يُنهي الحالة المعلّقة بين كلمة المرور والكود.
-     *
-     * المفاتيح الثلاثة تُمسح معاً دائماً: بقاء أحدها بلا الآخرين كان
-     * سيترك حالة نصفية — معرّفاً بلا مهلة، أو عدّاداً بلا معرّف — وهي
-     * بالضبط الحالات التي يصعب التفكير فيها لاحقاً.
-     */
-    /**
      * بصمة الطلب لإيميلات تنبيه الدخول: الوقت وعنوان IP والمتصفح.
      *
      * دالة واحدة لأن الثلاثة كانت تُجمَع بيدها في موضعين متطابقين —
@@ -66,6 +59,13 @@ class AdminAuthController extends Controller
         ];
     }
 
+    /**
+     * يُنهي الحالة المعلّقة بين كلمة المرور والكود.
+     *
+     * المفاتيح الثلاثة تُمسح معاً دائماً: بقاء أحدها بلا الآخرين كان
+     * سيترك حالة نصفية — معرّفاً بلا مهلة، أو عدّاداً بلا معرّف — وهي
+     * بالضبط الحالات التي يصعب التفكير فيها لاحقاً.
+     */
     private function clearPending2FA(): void
     {
         unset(
@@ -241,7 +241,7 @@ class AdminAuthController extends Controller
             // ⚠️ الجهاز/المتصفح نائبة لا قيمة محقونة: HTTP_USER_AGENT
             // ترويسة يتحكّم بها المرسِل كلياً، وكان حقنها المباشر يوصل
             // HTML يكتبه المهاجم إلى صندوق بريد الأدمن.
-            \App\Core\Mailer::send(
+            \App\Core\Mailer::queue(
                 $admin['email'],
                 $admin['full_name'] ?? 'Admin',
                 'تسجيل دخول جديد لحسابك',
@@ -272,7 +272,7 @@ class AdminAuthController extends Controller
         if ($attemptsNow === 3) {
             $adminRow = AdminModel::findByEmail($email);
             if ($adminRow) {
-                \App\Core\Mailer::send(
+                \App\Core\Mailer::queue(
                     $adminRow['email'],
                     $adminRow['full_name'] ?? 'Admin',
                     'تنبيه: محاولات دخول فاشلة متكررة',
@@ -411,7 +411,7 @@ class AdminAuthController extends Controller
         AdminModel::updateActivity((int)$admin['id']);
         AdminModel::logAction((int)$admin['id'], 'login');
 
-        \App\Core\Mailer::send(
+        \App\Core\Mailer::queue(
             $admin['email'],
             $admin['full_name'] ?? 'Admin',
             'تسجيل دخول جديد لحسابك',
@@ -548,7 +548,7 @@ class AdminAuthController extends Controller
             $resetToken = AdminModel::createPasswordReset($email, 'admin');
             if ($resetToken) {
                 $resetLink = URLROOT . '/auth/reset?token=' . $resetToken . '&email=' . urlencode($email) . '&type=admin';
-                \App\Core\Mailer::send(
+                \App\Core\Mailer::queue(
                     $admin['email'],
                     $admin['full_name'] ?? 'Admin',
                     'إعادة تعيين كلمة المرور',
