@@ -195,6 +195,9 @@ class ContactController extends Controller
 
         $saved = ContactModel::save($userId, $fullName, $msgEmail, $msgText);
 
+        // إنذار كاذب: المطبوع منطقيّ ونصّان ثابتان مكتوبان هنا — لا شيء
+        // من الطلب يصل إلى المخرَج إطلاقاً.
+        // nosemgrep: php.lang.security.injection.echoed-request.echoed-request
         echo json_encode([
             'success' => (bool)$saved,
             'message' => $saved ? 'Your message has been sent! We will get back to you soon.' : 'Something went wrong, please try again later.',
