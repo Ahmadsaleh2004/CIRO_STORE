@@ -178,6 +178,11 @@ $activeCount = (int)(bool)$priceSort + (int)(bool)$stockSort + (int)(bool)$dateS
         <table class="table admin-table mb-0" id="productsTable">
             <thead>
                 <tr>
+                    <?php /* لم يكن للمنتجات عمود معرّف إطلاقاً — الهوية
+                             موجودة في id="product-row-N" وحدها، أي يراها
+                             الـJS ولا يراها الأدمن. وهو يحتاجها: روابط
+                             التعديل والدعم والسجلّات كلها بالمعرّف. */ ?>
+                    <th style="width:64px;">#</th>
                     <th style="width:60px;">Image</th>
                     <th>Name</th>
                     <th>Last Modified</th>
@@ -190,7 +195,7 @@ $activeCount = (int)(bool)$priceSort + (int)(bool)$stockSort + (int)(bool)$dateS
             <tbody>
             <?php if (empty($products)): ?>
                 <?php
-                $emptyColspan = 7;
+                $emptyColspan = 8;   // ثمانية منذ إضافة عمود المعرّف
                 $emptyPadding = 'py-5';   // هذا الجدول وحده يستعمل التباعد الأكبر
                 // مصطلح البحث مُهرَّب هنا لأن الـpartial يطبع النص كما هو
                 $emptyMessage = 'No products found'
@@ -201,6 +206,9 @@ $activeCount = (int)(bool)$priceSort + (int)(bool)$stockSort + (int)(bool)$dateS
                 <?php foreach ($products as $p): ?>
                 <tr id="product-row-<?= (int)$p['id'] ?>"
                     class="<?= ($p['is_visible'] ?? 1) ? '' : 'product-hidden-row' ?>">
+
+                    <!-- المعرّف — ثابت مدى حياة الصفّ، لا ترتيب عرض -->
+                    <td class="text-muted"><?= (int)$p['id'] ?></td>
 
                     <!-- صورة المنتج -->
                     <td>

@@ -7,7 +7,6 @@
  * JS المسؤول: users.js (.user-row/.delete-user-btn) + admins.js (openNotifyModal)
  */
 $totalPages = max(1, (int)ceil($total / $perPage));
-$startNum   = (($page - 1) * $perPage) + 1;
 ?>
 <!-- ── Page Header ────────────────────────────────────────── -->
 <div class="admin-page-header">
@@ -78,7 +77,12 @@ $startNum   = (($page - 1) * $perPage) + 1;
                         : ($isNotActive ? ['Not Active', 'secondary'] : ['Active', 'success']);
                 ?>
                 <tr class="user-row" data-uid="<?= (int)$u['id'] ?>">
-                    <td><?= $startNum + $i ?></td>
+                    <?php /* المعرّف الحقيقي لا ترتيب الصف: كان هنا
+                             `$startNum + $i` — عدّاد يزحف عند كل حذف،
+                             فيتغيّر «رقم» المستخدم نفسه بلا أن يتغيّر هو.
+                             جدولا الأدمنية والطلبات يعرضان معرّفهما
+                             الحقيقي أصلاً؛ هذا يلحق بهما. */ ?>
+                    <td><?= (int)$u['id'] ?></td>
                     <td>
                         <span class="fw-semibold"><?= htmlspecialchars($u['full_name']) ?></span>
                     </td>
