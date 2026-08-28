@@ -59,7 +59,9 @@
         "ext-pdo": "*",
         "ext-mbstring": "*",
         "ext-json": "*",
-        "phpmailer/phpmailer": "^7.1"
+        "phpmailer/phpmailer": "^7.1",
+        "spomky-labs/otphp": "^11.5",
+        "bacon/bacon-qr-code": "^3.1"
     },
     "require-dev": {
         "zircote/swagger-php": "^6.7",
