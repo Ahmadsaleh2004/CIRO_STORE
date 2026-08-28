@@ -2,11 +2,11 @@
 
 namespace App\Models;
 
-use App\Core\Database;
+use App\Core\Model;
 use PDO;
 use Exception;
 
-class BrandingModel
+class BrandingModel extends Model
 {
     /**
      * كل الشرائح مرتبة sort_order ASC، وكل شريحة فيها items مرتبة sort_order ASC
@@ -17,7 +17,7 @@ class BrandingModel
     public static function getFullSliderData(): array
     {
         try {
-            $db = Database::connect();
+            $db = self::db();
 
             $sliders = $db->query("SELECT * FROM home_sliders ORDER BY sort_order ASC, id ASC")
                            ->fetchAll(PDO::FETCH_ASSOC);
@@ -84,7 +84,7 @@ class BrandingModel
     public static function getActiveSlidersForHome(): array
     {
         try {
-            $db = Database::connect();
+            $db = self::db();
 
             $sliders = $db->query("SELECT id FROM home_sliders ORDER BY sort_order ASC, id ASC")
                            ->fetchAll(PDO::FETCH_ASSOC);
@@ -152,7 +152,7 @@ class BrandingModel
     public static function searchProducts(string $q, int $limit = 15): array
     {
         try {
-            $db = Database::connect();
+            $db = self::db();
             $sql = "SELECT id, name, image_path, description
                     FROM products";
             $params = [];
@@ -194,7 +194,7 @@ class BrandingModel
      */
     public static function saveAll(array $slides, int $adminId): bool
     {
-        $db = Database::connect();
+        $db = self::db();
         try {
             $db->beginTransaction();
 
@@ -251,7 +251,7 @@ class BrandingModel
     public static function collectAllImagePaths(): array
     {
         try {
-            $stmt = Database::connect()->query(
+            $stmt = self::db()->query(
                 "SELECT manual_image_path FROM home_slider_items WHERE manual_image_path IS NOT NULL"
             );
             return array_column($stmt->fetchAll(PDO::FETCH_ASSOC), 'manual_image_path');
@@ -270,34 +270,9 @@ class BrandingModel
      */
     public static function uploadSliderImage(array $fileEntry, string $uploadDir): ?string
     {
-        if (empty($fileEntry['tmp_name']) || $fileEntry['error'] !== UPLOAD_ERR_OK) {
-            return null;
-        }
-
-        // خريطة واحدة تحكم القبول والامتداد معاً — راجع الشرح نفسه في
-        // AdminProductModel::…: قائمة منفصلة عن أذرع match تنفصل عنها
-        // بصمت، فيُحفظ الملف بامتداد خاطئ.
-        $extByMime = [
-            'image/jpeg' => 'jpg',
-            'image/png'  => 'png',
-            'image/webp' => 'webp',
-            'image/gif'  => 'gif',
-        ];
-
-        $mime = mime_content_type($fileEntry['tmp_name']);
-        if (!isset($extByMime[$mime])) {
-            return null;
-        }
-
-        $ext = $extByMime[$mime];
-
-        $filename = 'slider_' . time() . '_' . bin2hex(random_bytes(4)) . '.' . $ext;
-        $dest     = rtrim($uploadDir, '/\\') . DIRECTORY_SEPARATOR . $filename;
-
-        if (!move_uploaded_file($fileEntry['tmp_name'], $dest)) {
-            return null;
-        }
-
-        return 'images/' . $filename;
+        // كان هنا نسخة مطابقة لمنطق AdminProductModel — والتعليق فوقها
+        // كان يقول ذلك صراحةً. صارتا واحدة في App\Core\ImageUpload،
+        // والفرق الوحيد (بادئة الاسم) وسيطاً.
+        return \App\Core\ImageUpload::store($fileEntry, $uploadDir, 'slider_');
     }
 }

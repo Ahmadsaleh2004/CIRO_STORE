@@ -82,6 +82,8 @@ class AuthController extends Controller
             }
 
             UserModel::logLoginAttempt($email, true);
+            // الدخول نجح — لا يدفع صاحبه ثمن محاولاته الفاشلة لاحقاً.
+            \App\Core\Throttle::clear('store-login', \App\Core\Throttle::clientIp());
             session_regenerate_id(true);
 
             $_SESSION['user_id']     = (int)$user['id'];
@@ -107,7 +109,7 @@ class AuthController extends Controller
         if ($attemptsNow === 5) {
             $userRow = UserModel::findByEmail($email);
             if ($userRow) {
-                \App\Core\Mailer::send(
+                \App\Core\Mailer::queue(
                     $userRow['email'],
                     $userRow['full_name'] ?? 'User',
                     'تنبيه: محاولات دخول فاشلة متكررة',
@@ -265,14 +267,16 @@ class AuthController extends Controller
         $verifyToken = UserModel::createEmailVerification($newUserId);
         if ($verifyToken) {
             $verifyLink = URLROOT . '/auth/verify?token=' . $verifyToken;
-            \App\Core\Mailer::send(
+            \App\Core\Mailer::queue(
                 $email,
                 $fullName,
                 'فعّل بريدك الإلكتروني',
-                \App\Core\Mailer::template('أهلًا بك', "
-                    شكرًا لتسجيلك! اضغط على الرابط لتفعيل حسابك (صالح 24 ساعة):<br><br>
-                    <a href='{$verifyLink}'>{$verifyLink}</a>
-                ")
+                \App\Core\Mailer::template(
+                    'أهلًا بك',
+                    'شكرًا لتسجيلك! اضغط على الرابط لتفعيل حسابك (صالح 24 ساعة):<br><br>'
+                    . '<a href="{link}">{link}</a>',
+                    ['link' => $verifyLink]
+                )
             );
         }
 
@@ -385,16 +389,18 @@ class AuthController extends Controller
             $resetToken = UserModel::createPasswordReset($email, 'user');
             if ($resetToken) {
                 $resetLink = URLROOT . '/auth/reset?token=' . $resetToken . '&email=' . urlencode($email) . '&type=user';
-                \App\Core\Mailer::send(
+                \App\Core\Mailer::queue(
                     $email,
                     $user['full_name'] ?? 'User',
                     'إعادة تعيين كلمة المرور',
-                    \App\Core\Mailer::template('إعادة تعيين كلمة المرور', "
-                        اضغط على الرابط التالي لإعادة تعيين كلمة المرور
-                        (صالح لمدة 60 دقيقة فقط):<br><br>
-                        <a href='{$resetLink}'>{$resetLink}</a><br><br>
-                        إذا لم تطلب هذا، تجاهل هذا الإيميل.
-                    ")
+                    \App\Core\Mailer::template(
+                        'إعادة تعيين كلمة المرور',
+                        'اضغط على الرابط التالي لإعادة تعيين كلمة المرور'
+                        . ' (صالح لمدة 60 دقيقة فقط):<br><br>'
+                        . '<a href="{link}">{link}</a><br><br>'
+                        . 'إذا لم تطلب هذا، تجاهل هذا الإيميل.',
+                        ['link' => $resetLink]
+                    )
                 );
             }
         }

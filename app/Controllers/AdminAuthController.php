@@ -23,6 +23,7 @@ namespace App\Controllers;
 
 use App\Core\Controller;
 use App\Models\AdminModel;
+use App\Services\AdminSessionOpener;
 use OpenApi\Attributes as OA;
 
 /**
@@ -34,6 +35,28 @@ use OpenApi\Attributes as OA;
  */
 class AdminAuthController extends Controller
 {
+    /** عمر الحالة المعلّقة بين كلمة المرور والكود، بالثواني. */
+    private const PENDING_2FA_TTL = 300;
+
+    /** كم كوداً خاطئاً تحتمله الحالة المعلّقة قبل أن تُلغى. */
+    private const MAX_2FA_ATTEMPTS = 5;
+
+    /**
+     * يُنهي الحالة المعلّقة بين كلمة المرور والكود.
+     *
+     * المفاتيح الثلاثة تُمسح معاً دائماً: بقاء أحدها بلا الآخرين كان
+     * سيترك حالة نصفية — معرّفاً بلا مهلة، أو عدّاداً بلا معرّف — وهي
+     * بالضبط الحالات التي يصعب التفكير فيها لاحقاً.
+     */
+    private function clearPending2FA(): void
+    {
+        unset(
+            $_SESSION['pending_2fa_admin_id'],
+            $_SESSION['pending_2fa_started_at'],
+            $_SESSION['pending_2fa_attempts']
+        );
+    }
+
     // ════════════════════════════════════════════════════════
     // GET /admin/login — عرض صفحة تسجيل الدخول
     // ════════════════════════════════════════════════════════
@@ -163,47 +186,26 @@ class AdminAuthController extends Controller
             // نخزّن الـ id بجلسة مؤقتة "pending" حتى يدخل الكود الصحيح.
             if (!empty($admin['totp_enabled']) && !empty($admin['totp_secret'])) {
                 $_SESSION['pending_2fa_admin_id'] = (int)$admin['id'];
+                // الحالة المعلّقة تُختم بوقت بدئها وعدّاد محاولاتها.
+                //
+                // بدونهما كانت تبقى مفتوحة إلى الأبد: من عبر كلمة المرور
+                // يحتفظ بالجلسة المعلّقة ويجرّب فيها بلا حدّ ولا انتهاء.
+                // الوقت يقصر النافذة، والعدّاد يقصر عدد الطلبات داخلها —
+                // وخنق الراوتر فوقهما يحدّ المصدر نفسه.
+                $_SESSION['pending_2fa_started_at'] = time();
+                $_SESSION['pending_2fa_attempts']   = 0;
                 unset($_SESSION['csrf_token']);
                 generateCsrfToken();
                 $this->respond(true, 'Enter your 2FA code.', ['requires_2fa' => true]);
             }
             // إذا كانت 2FA غير مفعّلة نكمل بفتح الجلسة العادي أسفل هذا السطر
-
-            session_regenerate_id(true);
-
-            $_SESSION['admin_id']    = (int)$admin['id'];
-            $_SESSION['admin_name']  = $admin['full_name'] ?? $admin['name'] ?? 'Admin';
-            $_SESSION['admin_email'] = $admin['email'];
-            $_SESSION['admin_role']  = $admin['role'] ?? 'B';
-            $_SESSION['last_active'] = time();
-
-            // تحميل صلاحيات الأدمن وحفظها بالجلسة (نظام A/B/C/D)
-            loadAdminPermissions((int)$admin['id']);
-
-            AdminModel::updateActivity((int)$admin['id']);
-
-            // تسجيل عملية الدخول بـ audit log
-            AdminModel::logAction((int)$admin['id'], 'login');
-
-            // [EMAIL_ALERT_HOOK] — هنا سيُضاف إرسال إيميل تنبيه عند IP/جهاز جديد
-
-            // إرسال إيميل تنبيه دخول للأدمن
-            $ip = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
-            $ua = $_SERVER['HTTP_USER_AGENT'] ?? 'unknown';
-            $time = date('Y-m-d H:i:s');
-
-            \App\Core\Mailer::send(
-                $admin['email'],
-                $admin['full_name'] ?? 'Admin',
-                'تسجيل دخول جديد لحسابك',
-                \App\Core\Mailer::template('تسجيل دخول جديد', "
-                    تم تسجيل دخول جديد لحساب الأدمن الخاص بك.<br><br>
-                    <b>الوقت:</b> {$time}<br>
-                    <b>عنوان IP:</b> {$ip}<br>
-                    <b>الجهاز/المتصفح:</b> {$ua}<br><br>
-                    إذا لم تكن أنت، غيّر كلمة المرور فورًا وتواصل مع الدعم.
-                ")
-            );
+            //
+            // كل ما كان مكتوباً هنا — تدوير المعرّف، والهوية، والصلاحيات،
+            // وسجلّ التدقيق، ومسح الخنق، وإيميل التنبيه — صار في
+            // AdminSessionOpener، لأنه كان مكرَّراً حرفياً في
+            // verify2FALogin. وما يُنسى في إحدى نسختين لا يظهر كخطأ بل
+            // كفجوة صامتة: مسار دخول بلا تدوير معرّف، أو بلا صلاحيات.
+            AdminSessionOpener::open($admin);
 
             unset($_SESSION['csrf_token']);
             generateCsrfToken();
@@ -221,7 +223,7 @@ class AdminAuthController extends Controller
         if ($attemptsNow === 3) {
             $adminRow = AdminModel::findByEmail($email);
             if ($adminRow) {
-                \App\Core\Mailer::send(
+                \App\Core\Mailer::queue(
                     $adminRow['email'],
                     $adminRow['full_name'] ?? 'Admin',
                     'تنبيه: محاولات دخول فاشلة متكررة',
@@ -302,49 +304,55 @@ class AdminAuthController extends Controller
             $this->respond(false, 'Session expired. Please log in again.');
         }
 
+        // ── حدود الحالة المعلّقة ────────────────────────────────
+        //
+        // كانت هذه الخطوة بلا أي حدّ: كلمة المرور عبرت، والكود ست خانات
+        // بنافذة ±30 ثانية — ثلاثة أكواد صالحة من مليون في كل لحظة. من
+        // يملك كلمة المرور كان يتجاوز الطبقة الثانية بحلقة تخمين، فتصير
+        // موجودة شكلاً لا فعلاً.
+        //
+        // ثلاثة حدود تعمل معاً الآن، كلٌّ يسدّ ما لا يسدّه الآخر:
+        //   · خنق الراوتر (throttle:admin-2fa) يحدّ المصدر عبر الجلسات
+        //   · المهلة أدناه تُغلق النافذة الزمنية
+        //   · العدّاد يُنهي الحالة المعلّقة نفسها
+        if (time() - (int)($_SESSION['pending_2fa_started_at'] ?? 0) > self::PENDING_2FA_TTL) {
+            $this->clearPending2FA();
+            $this->respond(false, 'Session expired. Please log in again.');
+        }
+
         $admin = AdminModel::findById($pendingId);
         if (!$admin || empty($admin['totp_enabled']) || empty($admin['totp_secret'])) {
-            unset($_SESSION['pending_2fa_admin_id']);
+            $this->clearPending2FA();
             $this->respond(false, '2FA is not enabled for this account. Please log in again.');
         }
 
-        $code = $_POST['code'] ?? '';
-        if (!\App\Core\Totp::verifyCode($admin['totp_secret'], $code)) {
+        $code  = $_POST['code'] ?? '';
+        $slice = \App\Core\Totp::verifyAndGetSlice(
+            $admin['totp_secret'],
+            $code,
+            isset($admin['last_totp_slice']) ? (int)$admin['last_totp_slice'] : null
+        );
+
+        // الاستهلاك شرط للنجاح لا أثر جانبي له: consumeTotpSlice تكتب
+        // بشرط، فترجع false حين يسبقها طلب متزامن بالكود نفسه. رفضها
+        // هنا هو ما يجعل الكود الواحد صالحاً مرّة واحدة فعلاً.
+        if ($slice === null || !AdminModel::consumeTotpSlice($pendingId, $slice)) {
+            $attempts = (int)($_SESSION['pending_2fa_attempts'] ?? 0) + 1;
+            $_SESSION['pending_2fa_attempts'] = $attempts;
+
+            if ($attempts >= self::MAX_2FA_ATTEMPTS) {
+                AdminModel::logAction($pendingId, '2fa_attempts_exceeded');
+                $this->clearPending2FA();
+                $this->respond(false, 'Too many attempts. Please log in again.');
+            }
+
             $this->respond(false, 'Invalid code. Please try again.');
         }
 
-        // نجاح — فتح الجلسة الكاملة (نفس الكود المستخدم بعد نجاح كلمة المرور)
-        session_regenerate_id(true);
+        // نجاح — نفس ما يجري بعد كلمة المرور وحدها، بالخدمة نفسها.
+        AdminSessionOpener::open($admin);
 
-        $_SESSION['admin_id']    = (int)$admin['id'];
-        $_SESSION['admin_name']  = $admin['full_name'] ?? $admin['name'] ?? 'Admin';
-        $_SESSION['admin_email'] = $admin['email'];
-        $_SESSION['admin_role']  = $admin['role'] ?? 'B';
-        $_SESSION['last_active'] = time();
-
-        loadAdminPermissions((int)$admin['id']);
-        AdminModel::updateActivity((int)$admin['id']);
-        AdminModel::logAction((int)$admin['id'], 'login');
-
-        // إرسال إيميل تنبيه دخول للأدمن
-        $ip   = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
-        $ua   = $_SERVER['HTTP_USER_AGENT'] ?? 'unknown';
-        $time = date('Y-m-d H:i:s');
-
-        \App\Core\Mailer::send(
-            $admin['email'],
-            $admin['full_name'] ?? 'Admin',
-            'تسجيل دخول جديد لحسابك',
-            \App\Core\Mailer::template('تسجيل دخول جديد', "
-                تم تسجيل دخول جديد لحساب الأدمن الخاص بك.<br><br>
-                <b>الوقت:</b> {$time}<br>
-                <b>عنوان IP:</b> {$ip}<br>
-                <b>الجهاز/المتصفح:</b> {$ua}<br><br>
-                إذا لم تكن أنت، غيّر كلمة المرور فورًا وتواصل مع الدعم.
-            ")
-        );
-
-        unset($_SESSION['pending_2fa_admin_id']);
+        $this->clearPending2FA();
         unset($_SESSION['csrf_token']);
         generateCsrfToken();
         $this->respond(true, 'Welcome, ' . $_SESSION['admin_name'], [
@@ -462,16 +470,18 @@ class AdminAuthController extends Controller
             $resetToken = AdminModel::createPasswordReset($email, 'admin');
             if ($resetToken) {
                 $resetLink = URLROOT . '/auth/reset?token=' . $resetToken . '&email=' . urlencode($email) . '&type=admin';
-                \App\Core\Mailer::send(
+                \App\Core\Mailer::queue(
                     $admin['email'],
                     $admin['full_name'] ?? 'Admin',
                     'إعادة تعيين كلمة المرور',
-                    \App\Core\Mailer::template('إعادة تعيين كلمة المرور', "
-                        اضغط على الرابط التالي لإعادة تعيين كلمة المرور
-                        (صالح لمدة 60 دقيقة فقط):<br><br>
-                        <a href='{$resetLink}'>{$resetLink}</a><br><br>
-                        إذا لم تطلب هذا، تجاهل هذا الإيميل.
-                    ")
+                    \App\Core\Mailer::template(
+                        'إعادة تعيين كلمة المرور',
+                        'اضغط على الرابط التالي لإعادة تعيين كلمة المرور'
+                        . ' (صالح لمدة 60 دقيقة فقط):<br><br>'
+                        . '<a href="{link}">{link}</a><br><br>'
+                        . 'إذا لم تطلب هذا، تجاهل هذا الإيميل.',
+                        ['link' => $resetLink]
+                    )
                 );
             }
         }

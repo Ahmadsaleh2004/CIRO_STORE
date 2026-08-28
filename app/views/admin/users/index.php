@@ -7,11 +7,10 @@
  * JS المسؤول: users.js (.user-row/.delete-user-btn) + admins.js (openNotifyModal)
  */
 $totalPages = max(1, (int)ceil($total / $perPage));
-$startNum   = (($page - 1) * $perPage) + 1;
 ?>
 <!-- ── Page Header ────────────────────────────────────────── -->
 <div class="admin-page-header">
-    <h1>👥 Manage Users <span class="badge bg-secondary fw-normal" style="font-size:.9rem;vertical-align:middle;"><?= (int)$totalUsers ?></span></h1>
+    <h1>👥 Manage Users <span class="badge bg-secondary fw-normal u-fs-90 align-middle"><?= (int)$totalUsers ?></span></h1>
     <div class="d-flex gap-2 flex-wrap">
         <?php
             $exportCsvUrl       = URLROOT . '/admin/users/export-csv';
@@ -30,8 +29,8 @@ $startNum   = (($page - 1) * $perPage) + 1;
 <!-- ── Search + Status Filter ─────────────────────────────── -->
 <form method="GET" class="d-flex gap-2 flex-wrap mb-3" action="<?= URLROOT ?>/admin/users">
     <input type="text" name="q" value="<?= htmlspecialchars($search) ?>"
-           class="form-control" style="max-width:280px;" placeholder="Search name or email...">
-    <select name="status" class="form-select" style="max-width:180px;">
+           class="form-control u-mw-280" placeholder="Search name or email...">
+    <select name="status" class="form-select u-mw-180">
         <option value="all"        <?= $status==='all'?'selected':'' ?>>All</option>
         <option value="active"     <?= $status==='active'?'selected':'' ?>>Active</option>
         <option value="not_active" <?= $status==='not_active'?'selected':'' ?>>Not Active</option>
@@ -78,7 +77,12 @@ $startNum   = (($page - 1) * $perPage) + 1;
                         : ($isNotActive ? ['Not Active', 'secondary'] : ['Active', 'success']);
                 ?>
                 <tr class="user-row" data-uid="<?= (int)$u['id'] ?>">
-                    <td><?= $startNum + $i ?></td>
+                    <?php /* المعرّف الحقيقي لا ترتيب الصف: كان هنا
+                             `$startNum + $i` — عدّاد يزحف عند كل حذف،
+                             فيتغيّر «رقم» المستخدم نفسه بلا أن يتغيّر هو.
+                             جدولا الأدمنية والطلبات يعرضان معرّفهما
+                             الحقيقي أصلاً؛ هذا يلحق بهما. */ ?>
+                    <td><?= (int)$u['id'] ?></td>
                     <td>
                         <span class="fw-semibold"><?= htmlspecialchars($u['full_name']) ?></span>
                     </td>
@@ -91,10 +95,10 @@ $startNum   = (($page - 1) * $perPage) + 1;
                             <?= $sc ?>/3
                         </span>
                     </td>
-                    <td style="color:var(--muted-text);font-size:.8rem;">
+                    <td class="u-muted u-fs-80">
                         <?= !empty($u['last_activity']) ? htmlspecialchars(date('d M Y', strtotime($u['last_activity']))) : '—' ?>
                     </td>
-                    <td style="color:var(--muted-text);font-size:.8rem;">
+                    <td class="u-muted u-fs-80">
                         <?= htmlspecialchars(date('d M Y', strtotime($u['created_at']))) ?>
                     </td>
                     <!-- data-action="stop-propagation" إلزامي — يمنع تفعيل user-row -->

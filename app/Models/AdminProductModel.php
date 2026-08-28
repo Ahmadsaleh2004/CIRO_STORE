@@ -2,7 +2,7 @@
 
 namespace App\Models;
 
-use App\Core\Database;
+use App\Core\Model;
 use Exception;
 use PDO;
 
@@ -10,7 +10,7 @@ use PDO;
  * AdminProductModel — استعلامات لوحة تحكم الأدمن الخاصة بالمنتجات فقط
  * (منفصل عن ProductModel المستخدم بواجهة المتجر العامة).
  */
-class AdminProductModel
+class AdminProductModel extends Model
 {
     /** خيارات ترتيب السعر */
     public const PRICE_SORT_OPTIONS = [
@@ -44,7 +44,7 @@ class AdminProductModel
         int $offset
     ): array {
         try {
-            $db     = Database::connect();
+            $db     = self::db();
             $where  = [];
             $params = [];
 
@@ -143,7 +143,7 @@ class AdminProductModel
     public static function countFiltered(string $search, array $categoryIds = []): int
     {
         try {
-            $db        = Database::connect();
+            $db        = self::db();
             $where     = [];
             $catParams = [];
             $params    = [];
@@ -182,7 +182,7 @@ class AdminProductModel
     public static function countAll(): int
     {
         try {
-            return (int)Database::connect()
+            return (int)self::db()
                 ->query("SELECT COUNT(*) FROM products")
                 ->fetchColumn();
         } catch (Exception $e) {
@@ -197,7 +197,7 @@ class AdminProductModel
     public static function findByIdWithCategories(int $id): ?array
     {
         try {
-            $db = Database::connect();
+            $db = self::db();
 
             $stmt = $db->prepare("SELECT * FROM products WHERE id = ? LIMIT 1");
             $stmt->execute([$id]);
@@ -269,7 +269,7 @@ class AdminProductModel
             return null;
         }
 
-        $db = Database::connect();
+        $db = self::db();
         try {
             $db->beginTransaction();
 
@@ -334,7 +334,7 @@ class AdminProductModel
             return null;
         }
 
-        $db = Database::connect();
+        $db = self::db();
         try {
             $db->beginTransaction();
 
@@ -406,7 +406,7 @@ class AdminProductModel
      */
     public static function delete(int $productId): ?bool
     {
-        $db = Database::connect();
+        $db = self::db();
         try {
             $db->beginTransaction();
             $db->prepare("DELETE FROM product_variants WHERE product_id = ?")->execute([$productId]);
@@ -440,7 +440,7 @@ class AdminProductModel
     public static function getTotalStock(int $productId): int
     {
         try {
-            $stmt = Database::connect()->prepare("
+            $stmt = self::db()->prepare("
                 SELECT COALESCE(SUM(stock_quantity), 0)
                 FROM product_variants
                 WHERE product_id = ?
@@ -476,7 +476,7 @@ class AdminProductModel
     public static function toggleVisibility(int $productId): ?int
     {
         try {
-            $db   = Database::connect();
+            $db   = self::db();
             $stmt = $db->prepare("SELECT is_visible FROM products WHERE id = ? LIMIT 1");
             $stmt->execute([$productId]);
             $current = $stmt->fetchColumn();
@@ -499,7 +499,7 @@ class AdminProductModel
     public static function getVariantImagePaths(int $productId): array
     {
         try {
-            $stmt = Database::connect()->prepare(
+            $stmt = self::db()->prepare(
                 "SELECT image_path FROM product_variants WHERE product_id = ? AND image_path IS NOT NULL"
             );
             $stmt->execute([$productId]);
@@ -548,38 +548,10 @@ class AdminProductModel
      */
     public static function uploadVariantImage(array $fileEntry, string $uploadDir): ?string
     {
-        if (empty($fileEntry['tmp_name']) || $fileEntry['error'] !== UPLOAD_ERR_OK) {
-            return null;
-        }
-
-        // خريطة واحدة تحكم القبول والامتداد معاً.
-        //
-        // كانت قائمة $allowed منفصلة عن أذرع match، ولا شيء يربطهما:
-        // إضافة 'image/avif' إلى القائمة بلا ذراع مقابل كانت تحفظ الملف
-        // بامتداد .jpg الافتراضي **بصمت** — صورة avif باسم jpg يرفضها
-        // المتصفح. الخريطة تجعل النسيان مستحيلاً: ما ليس فيها مفتاحاً
-        // يُرفض قبل أن يُسأل عن امتداده.
-        $extByMime = [
-            'image/jpeg' => 'jpg',
-            'image/png'  => 'png',
-            'image/webp' => 'webp',
-            'image/gif'  => 'gif',
-        ];
-
-        $mime = mime_content_type($fileEntry['tmp_name']);
-        if (!isset($extByMime[$mime])) {
-            return null;
-        }
-
-        $ext = $extByMime[$mime];
-
-        $filename = 'product_' . time() . '_' . bin2hex(random_bytes(4)) . '.' . $ext;
-        $dest     = rtrim($uploadDir, '/\\') . DIRECTORY_SEPARATOR . $filename;
-
-        if (!move_uploaded_file($fileEntry['tmp_name'], $dest)) {
-            return null;
-        }
-
-        return 'images/' . $filename;
+        // المنطق في App\Core\ImageUpload: كان مكتوباً هنا وفي
+        // BrandingModel::uploadSliderImage بنسختين متطابقتين لا يفصلهما
+        // إلا بادئة الاسم — فأي تشديد أمني كان يُطبَّق على واحدة وتبقى
+        // الأخرى. حدّ الحجم الجديد أظهر ذلك فوراً.
+        return \App\Core\ImageUpload::store($fileEntry, $uploadDir, 'product_');
     }
 }

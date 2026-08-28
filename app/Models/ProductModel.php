@@ -2,11 +2,11 @@
 
 namespace App\Models;
 
-use App\Core\Database;
+use App\Core\Model;
 use PDO;
 use Exception;
 
-class ProductModel
+class ProductModel extends Model
 {
     /**
      * جلب كافة المنتجات المتاحة للعرض من قاعدة البيانات
@@ -14,7 +14,7 @@ class ProductModel
     public static function findVisible(): array
     {
         try {
-            $db = Database::connect();
+            $db = self::db();
             $stmt = $db->query("SELECT * FROM products WHERE is_visible = 1 OR is_visible IS NULL ORDER BY id DESC");
             return $stmt->fetchAll();
         } catch (Exception $e) {
@@ -29,7 +29,7 @@ class ProductModel
     public static function countVisible(): int
     {
         try {
-            $db = Database::connect();
+            $db = self::db();
             $stmt = $db->query("SELECT COUNT(*) FROM products WHERE is_visible = 1 OR is_visible IS NULL");
             return (int)$stmt->fetchColumn();
         } catch (Exception $e) {
@@ -44,7 +44,7 @@ class ProductModel
     public static function findVisiblePaginated(int $limit, int $offset): array
     {
         try {
-            $db = Database::connect();
+            $db = self::db();
             $stmt = $db->prepare("
                 SELECT p.*, GROUP_CONCAT(DISTINCT c.name ORDER BY c.name) AS categories
                 FROM products p
@@ -71,7 +71,7 @@ class ProductModel
     public static function findById(int $id): ?array
     {
         try {
-            $db = Database::connect();
+            $db = self::db();
             $stmt = $db->prepare("SELECT * FROM products WHERE id = ? LIMIT 1");
             $stmt->execute([$id]);
             $result = $stmt->fetch();
@@ -88,7 +88,7 @@ class ProductModel
     public static function getVariants(int $productId): array
     {
         try {
-            $db = Database::connect();
+            $db = self::db();
             $stmt = $db->prepare("SELECT * FROM product_variants WHERE product_id = ?");
             $stmt->execute([$productId]);
             return $stmt->fetchAll();
@@ -104,7 +104,7 @@ class ProductModel
     public static function getReviews(int $productId): array
     {
         try {
-            $db = Database::connect();
+            $db = self::db();
             $stmt = $db->prepare("
                 SELECT pr.*, u.full_name 
                 FROM product_reviews pr
@@ -126,7 +126,7 @@ class ProductModel
     public static function getUserReview(int $productId, int $userId): ?array
     {
         try {
-            $db = Database::connect();
+            $db = self::db();
             $stmt = $db->prepare("SELECT * FROM product_reviews WHERE product_id = ? AND user_id = ? LIMIT 1");
             $stmt->execute([$productId, $userId]);
             $result = $stmt->fetch();
@@ -143,7 +143,7 @@ class ProductModel
     public static function getRelated(int $productId, ?string $manufacturer = null): array
     {
         try {
-            $db = Database::connect();
+            $db = self::db();
 
             // 1. البحث عن منتجات تشترك في نفس التصنيف
             $stmt = $db->prepare("
@@ -177,7 +177,7 @@ class ProductModel
     public static function findStockByIds(array $ids): array
     {
         try {
-            $db = Database::connect();
+            $db = self::db();
             $placeholders = implode(',', array_fill(0, count($ids), '?'));
             // ⚠️ لا نقرأ products.stock_quantity مباشرة — هذا العمود لا يُحدَّث
             // إطلاقاً من لوحة تحكم الأدمن الحالية (INSERT/UPDATE لا يشمله)، والمخزون
@@ -227,7 +227,7 @@ class ProductModel
         }
 
         try {
-            $db = Database::connect();
+            $db = self::db();
             $ex = $db->prepare("SELECT id FROM product_reviews WHERE product_id = ? AND user_id = ? LIMIT 1");
             $ex->execute([$productId, $userId]);
 
@@ -257,7 +257,7 @@ class ProductModel
     public static function getNameById(int $productId): ?string
     {
         try {
-            $stmt = Database::connect()->prepare("SELECT name FROM products WHERE id = ? LIMIT 1");
+            $stmt = self::db()->prepare("SELECT name FROM products WHERE id = ? LIMIT 1");
             $stmt->execute([$productId]);
             $name = $stmt->fetchColumn();
             return $name !== false ? (string)$name : null;
@@ -285,7 +285,7 @@ class ProductModel
 
         try {
             $placeholders = implode(',', array_fill(0, count($variantIds), '?'));
-            $stmt = Database::connect()->prepare("
+            $stmt = self::db()->prepare("
                 SELECT
                     pv.id            AS variant_id,
                     p.id             AS product_id,

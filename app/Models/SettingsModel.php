@@ -2,13 +2,13 @@
 
 namespace App\Models;
 
-use App\Core\Database;
+use App\Core\Model;
 use Exception;
 
 /**
  * SettingsModel — يغطي جدول website_settings (صف واحد ثابت id=1 دائماً)
  */
-class SettingsModel
+class SettingsModel extends Model
 {
     /** الحقول القابلة للتعديل من الفورم العام (بدون شرط صلاحية إضافية) */
     public const GENERAL_FIELDS = [
@@ -27,7 +27,7 @@ class SettingsModel
     public static function get(): array
     {
         try {
-            $stmt = Database::connect()->query("SELECT * FROM website_settings LIMIT 1");
+            $stmt = self::db()->query("SELECT * FROM website_settings LIMIT 1");
             return $stmt->fetch() ?: [];
         } catch (Exception $e) {
             error_log("SettingsModel::get Error: " . $e->getMessage());
@@ -50,7 +50,7 @@ class SettingsModel
             $values   = array_values($data);
             $values[] = 1; // WHERE id = 1
 
-            $stmt = Database::connect()->prepare(
+            $stmt = self::db()->prepare(
                 "UPDATE website_settings SET {$setParts} WHERE id = ?"
             );
             return $stmt->execute($values);

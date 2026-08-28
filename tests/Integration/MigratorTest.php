@@ -33,6 +33,18 @@ final class MigratorTest extends DatabaseTestCase
 
     protected function tearDown(): void
     {
+        // الخروج المبكّر ليس احتياطاً. parent::setUp() تتخطّى الاختبار حين
+        // لا تتوفّر قاعدة اختبار، والتخطّي استثناء — فيخرج setUp قبل إسناد
+        // $pdo و$dir، بينما tearDown تعمل على أي حال. النتيجة أن كلّ تخطٍّ
+        // كان يُبلَّغ عنه **خطأً** («typed property … before initialization»)،
+        // فتظهر ثمانية عشر نتيجة حمراء لا علاقة لها بالمهاجر على أي جهاز
+        // بلا MySQL — وحُزمة حمراء دائماً لا تحرس شيئاً، لأن الفشل الحقيقي
+        // يضيع بينها.
+        if (!isset($this->pdo)) {
+            parent::tearDown();
+            return;
+        }
+
         foreach (glob($this->dir . '/*') ?: [] as $file) {
             unlink($file);
         }
@@ -322,7 +334,59 @@ final class MigratorTest extends DatabaseTestCase
             }
         }
 
-        $this->assertCount(7, $real->available(), 'عدد الهجرات تغيّر — حدّث هذا الاختبار عمداً لا سهواً.');
+        // 9 منذ 0009_mail_queue (طابور البريد — SMTP خارج مسار الطلب).
+        $this->assertCount(9, $real->available(), 'عدد الهجرات تغيّر — حدّث هذا الاختبار عمداً لا سهواً.');
         $this->assertSame([], $problems, "هجرات غير مكتملة الصيغة:\n  " . implode("\n  ", $problems));
+    }
+
+    /**
+     * التعليق العربي يبقى تعليقاً بعد الاستخراج.
+     *
+     * هذا الاختبار يحرس عطلاً كان صامتاً تماماً: section() كانت تقسّم
+     * الأسطر بـ`preg_split('/\R/')`، و`\R` بلا معدِّل /u يطابق البايت
+     * `\x85` — وهو بايت استمرار شرعي داخل «م» (D9 85) وأخواتها. فكان كل
+     * سطر تعليق عربي يُقطع في منتصف حرف، وتصير بقيّته سطراً لا يبدأ
+     * بـ`--`، أي نصّاً عربياً يُسلَّم إلى PDO::exec كأنه SQL.
+     *
+     * ولم يظهر العطل قطّ لأن الهجرات السبع الأولى سُجِّلت بـbaseline بلا
+     * تنفيذ — فأول استدعاء حقيقي لـup() هو الذي اصطدم به.
+     *
+     * الفحص هنا على القاعدة لا على المظهر: كل سطر غير فارغ في القسم
+     * المستخرَج إمّا تعليق وإمّا SQL — ولا سطر يبدأ بحرف عربي.
+     */
+    public function testArabicCommentsSurviveSectionExtraction(): void
+    {
+        $real     = new Migrator($this->pdo, dirname(__DIR__, 2) . '/database/migrations');
+        $mangled  = [];
+
+        foreach ($real->available() as $migration) {
+            foreach (['UP', 'DOWN'] as $part) {
+                $section = $real->section($migration['path'], $part);
+
+                foreach (preg_split('/\r\n|\n|\r/', $section) ?: [] as $n => $line) {
+                    $line = ltrim($line);
+                    if ($line === '' || str_starts_with($line, '--')) {
+                        continue;
+                    }
+                    // حرف عربي في أول سطر ليس تعليقاً = تعليق مقطوع.
+                    if (preg_match('/^[\x{0600}-\x{06FF}]/u', $line)) {
+                        $mangled[] = sprintf(
+                            '%s_%s [@%s سطر %d]: %s',
+                            $migration['version'],
+                            $migration['name'],
+                            $part,
+                            $n + 1,
+                            mb_substr($line, 0, 40)
+                        );
+                    }
+                }
+            }
+        }
+
+        $this->assertSame(
+            [],
+            $mangled,
+            "تعليقات عربية انقطعت فصارت SQL:\n  " . implode("\n  ", $mangled)
+        );
     }
 }

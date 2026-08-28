@@ -6,13 +6,19 @@ use App\Core\AdminController;
 use App\Core\Middleware;
 use App\Models\BrandingModel;
 use App\Models\AdminModel;
+use App\Services\SliderFormParser;
 use OpenApi\Attributes as OA;
 
+/**
+ * AdminBrandingController — سلايدر الصفحة الرئيسية.
+ *
+ * ⚠️ حدود الشرائح والصور (MAX_SLIDES / MAX_ITEMS_PER_SLIDE) انتقلت إلى
+ * SliderFormParser مع التحقق الذي يستعملها. بقاؤها هنا كان سيعني رقمين
+ * في موضعين — وأسوأ ما فيه أن أحدهما يتغيّر وحده فيصير الحدّ المُعلَن
+ * غير الحدّ المُطبَّق.
+ */
 class AdminBrandingController extends AdminController
 {
-    private const MAX_SLIDES           = 12;  // حد أقصى مقترح — راجع 00 (اقتراح 6)
-    private const MAX_ITEMS_PER_SLIDE  = 10;
-
     #[OA\Get(
         path: '/admin/branding',
         summary: 'عرض صفحة إدارة السلايدر',
@@ -97,116 +103,46 @@ class AdminBrandingController extends AdminController
             $this->redirectWithError('Invalid CSRF token, please refresh and try again.');
             return;
         }
-
-        $rawSlides   = $_POST['slides'] ?? [];
-        $filesSlides = $_FILES['slides'] ?? [];
-
-        if (empty($rawSlides)) {
-            $this->redirectWithError('Please add at least one slide before saving.');
-            return;
-        }
-        if (count($rawSlides) > self::MAX_SLIDES) {
-            $this->redirectWithError('Too many slides (max ' . self::MAX_SLIDES . ').');
-            return;
-        }
-
         $oldImagePaths = BrandingModel::collectAllImagePaths();
         $uploadDir     = ROOTPATH . '/public/images/';
-        $newImagePaths = [];   // فقط الملفات المرفوعة حديثاً — للتنظيف عند خطأ التحقق
-        $savedImagePaths = []; // كل مسارات الصور بعد المعالجة — لمقارنة اليتيمة
 
-        $preparedSlides = [];
+        // التحضير كلّه في الخدمة: قراءة $_FILES المتداخلة، والتحقق،
+        // والرفع. كان هنا 130 سطراً تخلط ذلك بتنسيق الاستجابة، فكان كل
+        // مسار خطأ ينتهي بـheader() وexit — أي غير قابل للاختبار إطلاقاً.
+        $parsed = SliderFormParser::parse($_POST['slides'] ?? [], $_FILES['slides'] ?? [], $uploadDir);
 
-        foreach ($rawSlides as $slideIndex => $slideData) {
-            $rawItems = $slideData['items'] ?? [];
-            if (empty($rawItems)) {
-                continue; // شريحة بلا صور أصلاً = تجاهلها بصمت
-            }
-            if (count($rawItems) > self::MAX_ITEMS_PER_SLIDE) {
-                $this->redirectWithError('A slide has too many images (max ' . self::MAX_ITEMS_PER_SLIDE . ').');
-                return;
-            }
-
-            $preparedItems = [];
-
-            foreach ($rawItems as $itemIndex => $itemData) {
-                $activeMode = ($itemData['active_mode'] ?? 'manual') === 'product' ? 'product' : 'manual';
-
-                $productId          = (int)($itemData['product_id'] ?? 0) ?: null;
-                $productLinkUrl     = trim($itemData['product_link_url'] ?? '') ?: null;
-                $productDescription = trim($itemData['product_description'] ?? '') ?: null;
-
-                $manualLinkUrl     = trim($itemData['manual_link_url'] ?? '') ?: null;
-                $manualDescription = trim($itemData['manual_description'] ?? '') ?: null;
-
-                if ($this->isUnsafeUrl($productLinkUrl) || $this->isUnsafeUrl($manualLinkUrl)) {
-                    $this->cleanupNewUploads($newImagePaths, $uploadDir);
-                    $this->redirectWithError('Unsafe link URL (javascript:/data:/vbscript: are not allowed).');
-                    return;
-                }
-
-                // الصورة اليدوية: ملف جديد له أولوية، وإلا نحتفظ بالمسار القديم المُرسَل مخفياً
-                $manualImagePath = trim($itemData['existing_manual_image'] ?? '') ?: null;
-
-                $fileEntry = $this->extractFileEntry($filesSlides, $slideIndex, $itemIndex);
-                if ($fileEntry) {
-                    $uploaded = BrandingModel::uploadSliderImage($fileEntry, $uploadDir);
-                    if ($uploaded) {
-                        $manualImagePath   = $uploaded;
-                        $newImagePaths[]   = $uploaded; // رفوعات جديدة فقط — لا تُحذف أبداً صور قديمة موجودة
-                    }
-                }
-
-                // ── إلزامية: منتج مُختار أو صورة موجودة (على الأقل للوضع الفعّال) ──
-                if ($activeMode === 'product' && !$productId) {
-                    $this->cleanupNewUploads($newImagePaths, $uploadDir);
-                    $this->redirectWithError('Each slide image must have a product selected or an uploaded image.');
-                    return;
-                }
-                if ($activeMode === 'manual' && !$manualImagePath) {
-                    $this->cleanupNewUploads($newImagePaths, $uploadDir);
-                    $this->redirectWithError('Each slide image must have a product selected or an uploaded image.');
-                    return;
-                }
-
-                if ($manualImagePath) {
-                    $savedImagePaths[] = $manualImagePath;
-                }
-
-                $preparedItems[] = [
-                    'active_mode'          => $activeMode,
-                    'product_id'           => $productId,
-                    'product_link_url'     => $productLinkUrl,
-                    'product_description'  => $productDescription,
-                    'manual_image_path'    => $manualImagePath,
-                    'manual_link_url'      => $manualLinkUrl,
-                    'manual_description'   => $manualDescription,
-                ];
-            }
-
-            if (!empty($preparedItems)) {
-                $preparedSlides[] = ['items' => $preparedItems];
-            }
-        }
-
-        if (empty($preparedSlides)) {
-            $this->cleanupNewUploads($newImagePaths, $uploadDir);
-            $this->redirectWithError('Please add at least one valid slide with at least one image.');
+        // التنظيف مرّة واحدة عند أي فشل. كان cleanupNewUploads مكرَّراً
+        // في خمسة مواضع، ونسيانه في السادس يعني صوراً يتيمة على القرص.
+        if ($parsed['error'] !== null) {
+            $this->cleanupNewUploads($parsed['uploaded'], $uploadDir);
+            $this->redirectWithError($parsed['error']);
             return;
         }
 
         $adminId = getCurrentAdminId();
-        $ok = BrandingModel::saveAll($preparedSlides, $adminId);
 
-        if (!$ok) {
-            $this->cleanupNewUploads($newImagePaths, $uploadDir);
+        if (!BrandingModel::saveAll($parsed['slides'], $adminId)) {
+            $this->cleanupNewUploads($parsed['uploaded'], $uploadDir);
             $this->redirectWithError('Failed to save the slider. Please try again.');
             return;
         }
 
-        // حذف الصور اليتيمة (كانت مستخدمة قديماً ولم تعد ضمن الحفظة الجديدة)
-        $orphaned = array_diff($oldImagePaths, $savedImagePaths);
-        foreach ($orphaned as $orphanPath) {
+        $this->deleteOrphanedImages($oldImagePaths, $parsed['images'], $uploadDir);
+
+        AdminModel::logAction($adminId, 'update_branding_slider', 'branding', 0, 'Saved home slider content.');
+        $this->notifyAboutBrandingChange($adminId);
+
+        $_SESSION['flash_msg'] = '✅ Slider saved successfully.';
+        header('Location: ' . URLROOT . '/admin/branding');
+        exit;
+    }
+
+    /**
+     * يحذف الصور التي كانت مستعملة ولم تعد ضمن الحفظة الجديدة.
+     */
+    private function deleteOrphanedImages(array $oldPaths, array $keptPaths, string $uploadDir): void
+    {
+        foreach (array_diff($oldPaths, $keptPaths) as $orphanPath) {
             // basename() تجرّد أي مسار من المدخل فلا يبقى منه إلا اسم
             // الملف — لا `..` ولا شرطات ولا مسار مطلق. المسار الناتج
             // محصور في $uploadDir بالبناء. semgrep يرى تدفّق بيانات من
@@ -217,45 +153,11 @@ class AdminBrandingController extends AdminController
                 @unlink($disk);
             }
         }
-
-        AdminModel::logAction($adminId, 'update_branding_slider', 'branding', 0, 'Saved home slider content.');
-
-        $this->notifyAboutBrandingChange($adminId);
-
-        $_SESSION['flash_msg'] = '✅ Slider saved successfully.';
-        header('Location: ' . URLROOT . '/admin/branding');
-        exit;
     }
 
     // ══════════════════════════════════════════════════════════
     // Helpers خاصة
     // ══════════════════════════════════════════════════════════
-
-    /**
-     * استخراج ملف مرفوع واحد من بنية $_FILES المتداخلة العميقة:
-     * $_FILES['slides'][...][slideIndex]['items'][itemIndex]['manual_image']
-     * PHP يجمع هذه ببنية غريبة — كل مفتاح فرعي (name/type/tmp_name/error/size)
-     * يُصبح Array متداخل بنفس شكل أسماء الحقول الأصلية.
-     *
-     * @return array|null مصفوفة ملف قياسية (tmp_name/name/size/type/error) أو null
-     */
-    private function extractFileEntry(array $filesSlides, $slideIndex, $itemIndex): ?array
-    {
-        $tmp = $filesSlides['tmp_name'][$slideIndex]['items'][$itemIndex]['manual_image'] ?? null;
-        $err = $filesSlides['error'][$slideIndex]['items'][$itemIndex]['manual_image'] ?? UPLOAD_ERR_NO_FILE;
-
-        if (empty($tmp) || $err !== UPLOAD_ERR_OK) {
-            return null;
-        }
-
-        return [
-            'tmp_name' => $tmp,
-            'name'     => $filesSlides['name'][$slideIndex]['items'][$itemIndex]['manual_image']     ?? '',
-            'size'     => $filesSlides['size'][$slideIndex]['items'][$itemIndex]['manual_image']     ?? 0,
-            'type'     => $filesSlides['type'][$slideIndex]['items'][$itemIndex]['manual_image']     ?? '',
-            'error'    => $err,
-        ];
-    }
 
     private function cleanupNewUploads(array $paths, string $uploadDir): void
     {
@@ -268,26 +170,6 @@ class AdminBrandingController extends AdminController
             }
         }
     }
-
-    /**
-     * فحص أماني لروابط السلايدر: يرفض أي رابط يبدأ بـ javascript: أو data:
-     * أو vbscript: (تجاهل الحالة والمسافات البادئة) — يُستخدم كـ href بالصفحة
-     * العامة، لذا أي تنفيذ نصي عبره يشكّل XSS مباشر.
-     */
-    private function isUnsafeUrl(?string $url): bool
-    {
-        if ($url === null || $url === '') {
-            return false;
-        }
-        $lower = strtolower(ltrim($url));
-        foreach (['javascript:', 'data:', 'vbscript:'] as $scheme) {
-            if (str_starts_with($lower, $scheme)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
     private function redirectWithError(string $msg): void
     {
         $_SESSION['flash_err'] = $msg;

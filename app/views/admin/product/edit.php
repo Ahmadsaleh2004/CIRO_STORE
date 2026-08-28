@@ -98,7 +98,7 @@ $variants = $p['variants'] ?? [];
     <div id="categoryHiddenInputs"></div>
     <div class="form-text text-danger mb-3"
          id="categoryRequiredError"
-         style="display:none;">
+         class="d-none">
         Please select at least one category.
     </div>
 
@@ -109,8 +109,7 @@ $variants = $p['variants'] ?? [];
         <div class="mb-2">
             <img src="<?= htmlspecialchars(fixImagePath($p['image_path'])) ?>"
                  alt="Current image"
-                 style="height:80px;width:80px;object-fit:contain;border-radius:8px;
-                        border:1px solid var(--section-border);">
+                 class="u-thumb-80">
         </div>
         <p class="small text-muted mb-2">
             Current image shown above. Upload a new one to replace it, or leave empty to keep the current image.
@@ -134,8 +133,7 @@ $variants = $p['variants'] ?? [];
 
     <div id="variantsContainer">
         <?php foreach ($variants as $i => $v): ?>
-        <div class="variant-row card p-3 mb-3"
-             style="background:var(--bg-color);border:1px solid var(--section-border);">
+        <div class="variant-row card p-3 mb-3 u-surface-page">
 
             <!-- Hidden: variant ID + صورة موجودة -->
             <?php if (!empty($v['id'])): ?>
@@ -174,11 +172,11 @@ $variants = $p['variants'] ?? [];
                 </div>
                 <!-- Color Swatch -->
                 <div class="col-4 col-sm-2">
-                    <label class="small d-block mb-1" style="font-size:.75rem;">Swatch</label>
+                    <label class="small d-block mb-1 u-fs-75">Swatch</label>
                     <input type="color"
                            class="field-color-hex form-control form-control-sm"
                            name="variants[<?= $i ?>][color_hex]"
-                           style="height:40px;padding:3px 5px;"
+                           class="u-color-input"
                            value="<?= htmlspecialchars($v['color_hex'] ?? '#000000') ?>">
                 </div>
                 <!-- Price -->
@@ -245,9 +243,7 @@ $variants = $p['variants'] ?? [];
                     <?php if (!empty($v['image_path'])): ?>
                     <img src="<?= htmlspecialchars(fixImagePath($v['image_path'])) ?>"
                          alt="current"
-                         style="height:36px;width:36px;object-fit:contain;border-radius:4px;
-                                vertical-align:middle;margin-bottom:4px;
-                                border:1px solid var(--section-border);">
+                         class="u-variant-thumb">
                     <?php endif; ?>
                     <input type="file"
                            class="field-image form-control form-control-sm"
@@ -273,8 +269,7 @@ $variants = $p['variants'] ?? [];
 
     <!-- Template: لصفوف الألوان الجديدة المُضافة بـ JS -->
     <template id="variantRowTemplate">
-        <div class="variant-row card p-3 mb-3"
-             style="background:var(--bg-color);border:1px solid var(--section-border);">
+        <div class="variant-row card p-3 mb-3 u-surface-page">
             <div class="d-flex justify-content-between align-items-center mb-2">
                 <span class="fw-semibold small text-muted">
                     Color <span class="variant-number"></span>
@@ -292,9 +287,9 @@ $variants = $p['variants'] ?? [];
                     </div>
                 </div>
                 <div class="col-4 col-sm-2">
-                    <label class="small d-block mb-1" style="font-size:.75rem;">Swatch</label>
+                    <label class="small d-block mb-1 u-fs-75">Swatch</label>
                     <input type="color" class="field-color-hex form-control form-control-sm"
-                           style="height:40px;padding:3px 5px;" value="#000000">
+                           class="u-color-input" value="#000000">
                 </div>
                 <div class="col-4 col-sm-2">
                     <div class="float-group">

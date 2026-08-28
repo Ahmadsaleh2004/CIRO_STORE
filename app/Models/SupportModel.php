@@ -2,14 +2,14 @@
 
 namespace App\Models;
 
-use App\Core\Database;
+use App\Core\Model;
 use Exception;
 
 /**
  * SupportModel — يغطي جدول contact_messages من جهة لوحة تحكم الأدمن فقط
  * (ContactModel المستخدم بجهة المتجر العام يبقى مسؤول فقط عن ::save() لإدخال رسالة جديدة)
  */
-class SupportModel
+class SupportModel extends Model
 {
     /**
      * إجمالي عدد الرسائل (مع فلترة بحث اختيارية) — تستخدم لحساب الـ Pagination
@@ -17,7 +17,7 @@ class SupportModel
     public static function countAll(string $search = ''): int
     {
         try {
-            $db = Database::connect();
+            $db = self::db();
             if ($search !== '') {
                 $stmt = $db->prepare(
                     "SELECT COUNT(*) FROM contact_messages
@@ -41,7 +41,7 @@ class SupportModel
     public static function getPage(string $search, int $perPage, int $offset): array
     {
         try {
-            $db     = Database::connect();
+            $db     = self::db();
             $where  = '';
             $params = [];
 
@@ -73,7 +73,7 @@ class SupportModel
     public static function getMessagesForUser(int $userId, string $email): array
     {
         try {
-            $db   = Database::connect();
+            $db   = self::db();
             $stmt = $db->prepare(
                 "SELECT * FROM contact_messages
                  WHERE user_id = ? OR email = ?
@@ -93,7 +93,7 @@ class SupportModel
     public static function markAllNotified(): void
     {
         try {
-            Database::connect()->query("UPDATE contact_messages SET is_notified = 1");
+            self::db()->query("UPDATE contact_messages SET is_notified = 1");
         } catch (Exception $e) {
             error_log("SupportModel::markAllNotified Error: " . $e->getMessage());
         }
@@ -105,7 +105,7 @@ class SupportModel
     public static function delete(int $messageId): bool
     {
         try {
-            $stmt = Database::connect()->prepare("DELETE FROM contact_messages WHERE id = ?");
+            $stmt = self::db()->prepare("DELETE FROM contact_messages WHERE id = ?");
             return $stmt->execute([$messageId]);
         } catch (Exception $e) {
             error_log("SupportModel::delete Error: " . $e->getMessage());
@@ -119,7 +119,7 @@ class SupportModel
     public static function userExists(int $userId): bool
     {
         try {
-            $stmt = Database::connect()->prepare("SELECT id FROM users WHERE id = ? LIMIT 1");
+            $stmt = self::db()->prepare("SELECT id FROM users WHERE id = ? LIMIT 1");
             $stmt->execute([$userId]);
             return (bool) $stmt->fetch();
         } catch (Exception $e) {
@@ -136,7 +136,7 @@ class SupportModel
     public static function getMessageText(int $messageId): ?string
     {
         try {
-            $stmt = Database::connect()->prepare("SELECT message FROM contact_messages WHERE id = ?");
+            $stmt = self::db()->prepare("SELECT message FROM contact_messages WHERE id = ?");
             $stmt->execute([$messageId]);
             $text = $stmt->fetchColumn();
             return $text !== false ? (string)$text : null;

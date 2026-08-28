@@ -137,4 +137,206 @@ final class TotpTest extends TestCase
 
         $this->assertFalse(Totp::verifyCode($mine, $code));
     }
+
+    // ════════════════════════════════════════════════════════
+    // صورة QR — تُولَّد محلياً، والسرّ لا يغادر الخادم
+    // ════════════════════════════════════════════════════════
+
+    /**
+     * الـQR صورة مضمّنة لا رابط إلى مضيف خارجي.
+     *
+     * كان المولّد يُرجع رابطاً إلى api.qrserver.com يحمل السرّ في
+     * الـquery string — أي أن سرّ المصادقة الثنائية لكل أدمن كان يُسلَّم
+     * إلى طرف ثالث ويمرّ في سجلّاته وسجلّات أي وسيط. هذا الاختبار يمنع
+     * عودة ذلك مهما تغيّر التنفيذ.
+     */
+    public function testTheQrCodeIsAnInlineImageNotARemoteUrl(): void
+    {
+        $secret = Totp::generateSecret();
+        $src    = Totp::getQrCodeUrl($secret, 'admin@example.com');
+
+        $this->assertStringStartsWith('data:image/svg+xml;base64,', $src);
+        $this->assertDoesNotMatchRegularExpression(
+            '#https?://#i',
+            $src,
+            'صورة الـQR تشير إلى مضيف خارجي — السرّ يغادر الخادم.'
+        );
+    }
+
+    /**
+     * والأهمّ: السرّ نفسه ليس في أي موضع يمكن أن يُرسَل.
+     *
+     * الفحص على القيمة المفكوكة لا على النصّ المُرمَّز: base64 يخفي
+     * السرّ عن القراءة السريعة ولا يخفيه عن الشبكة.
+     */
+    public function testTheSecretDoesNotAppearInAnyRequestableForm(): void
+    {
+        $secret = Totp::generateSecret();
+        $src    = Totp::getQrCodeUrl($secret, 'admin@example.com');
+        $svg    = base64_decode(substr($src, strlen('data:image/svg+xml;base64,')));
+
+        $this->assertStringContainsString('<svg', $svg, 'الناتج ليس SVG صالحاً.');
+
+        // السرّ مُرمَّز داخل وحدات الـQR نفسها (مربّعات)، لا كنصّ.
+        $this->assertStringNotContainsString($secret, $svg);
+        $this->assertStringNotContainsString('otpauth://', $svg);
+    }
+
+    /**
+     * رابط otpauth يحمل ما تحتاجه تطبيقات المصادقة.
+     *
+     * يُعرض نصّاً للأدمن حين يتعذّر المسح — فلو نقصه المُصدِر أو السرّ
+     * لأضاف الأدمن حساباً لا يعمل، ولا يكتشف ذلك إلا عند أوّل دخول.
+     */
+    public function testTheProvisioningUriCarriesIssuerAndSecret(): void
+    {
+        $secret = Totp::generateSecret();
+        $uri    = Totp::provisioningUri($secret, 'admin@example.com', 'Cairo Store');
+
+        $this->assertStringStartsWith('otpauth://totp/', $uri);
+        $this->assertStringContainsString('secret=' . $secret, $uri);
+        $this->assertStringContainsString('issuer=Cairo%20Store', $uri);
+    }
+
+    /**
+     * لا مصدر في المشروع يذكر خدمة QR خارجية.
+     *
+     * الاختباران أعلاه يحرسان المولّد الحالي؛ هذا يحرس المشروع من
+     * «حلّ سريع» في موضع آخر — سطر في view أو في JS يبني الرابط بنفسه.
+     * السرّ في الـquery string لا يصير آمناً بتغيير من يكتبه.
+     */
+    public function testNoSourceReferencesAnExternalQrService(): void
+    {
+        $roots = [
+            dirname(__DIR__, 2) . '/app',
+            dirname(__DIR__, 2) . '/public/js',
+        ];
+
+        $offenders = [];
+
+        foreach ($roots as $root) {
+            $files = new \RecursiveIteratorIterator(
+                new \RecursiveDirectoryIterator($root, \FilesystemIterator::SKIP_DOTS)
+            );
+
+            foreach ($files as $file) {
+                if (!in_array($file->getExtension(), ['php', 'js'], true)) {
+                    continue;
+                }
+
+                $src = (string) file_get_contents($file->getPathname());
+
+                foreach (['qrserver.com', 'chart.googleapis.com', 'quickchart.io'] as $host) {
+                    // الذكر داخل تعليق يشرح الإصلاح مسموح؛ الممنوع بناء
+                    // رابط فعلي — أي المضيف مسبوقاً بمخطّط.
+                    if (preg_match('#https?://[^\s\'"]*' . preg_quote($host, '#') . '#i', $src)) {
+                        $offenders[] = $file->getFilename() . " → {$host}";
+                    }
+                }
+            }
+        }
+
+        $this->assertSame(
+            [],
+            $offenders,
+            "خدمة QR خارجية — السرّ يغادر الخادم:\n  " . implode("\n  ", $offenders)
+        );
+    }
+
+    // ════════════════════════════════════════════════════════
+    // منع إعادة استخدام الكود — verifyAndGetSlice
+    // ════════════════════════════════════════════════════════
+
+    /**
+     * النجاح يُرجع الشريحة لا مجرّد true.
+     *
+     * القيمة المُعادة هي ما يخزّنه المستدعي ليمنع إعادة الاستخدام، فلو
+     * أُعيدت شريحة خاطئة لصار المنع إمّا واسعاً (يرفض أكواداً صالحة)
+     * وإمّا فارغاً (لا يمنع شيئاً).
+     */
+    public function testVerifyAndGetSliceReturnsTheMatchingSlice(): void
+    {
+        $secret = Totp::generateSecret();
+        $now    = (int) floor(time() / 30);
+
+        $this->assertSame($now, Totp::verifyAndGetSlice($secret, $this->generateCodeAt($secret, $now)));
+        $this->assertSame($now - 1, Totp::verifyAndGetSlice($secret, $this->generateCodeAt($secret, $now - 1)));
+        $this->assertSame($now + 1, Totp::verifyAndGetSlice($secret, $this->generateCodeAt($secret, $now + 1)));
+    }
+
+    public function testVerifyAndGetSliceReturnsNullOnFailure(): void
+    {
+        $secret = Totp::generateSecret();
+
+        $this->assertNull(Totp::verifyAndGetSlice($secret, '000000'));
+        $this->assertNull(Totp::verifyAndGetSlice($secret, 'abcdef'));
+    }
+
+    /**
+     * الكود المستهلَك يُرفض داخل نافذته.
+     *
+     * بدون هذا يبقى الكود صالحاً تسعين ثانية كاملة، فمن يلتقطه — فوق
+     * كتف، أو من سجلّ، أو من شاشة مشارَكة — يعيد إرساله ويدخل.
+     */
+    public function testAConsumedSliceIsRejected(): void
+    {
+        $secret = Totp::generateSecret();
+        $now    = (int) floor(time() / 30);
+        $code   = $this->generateCodeAt($secret, $now);
+
+        $this->assertSame($now, Totp::verifyAndGetSlice($secret, $code, null));
+        $this->assertNull(Totp::verifyAndGetSlice($secret, $code, $now));
+    }
+
+    /**
+     * والأقدم من المستهلَك يُرفض أيضاً، لا المساواة وحدها.
+     *
+     * النافذة تحوي ثلاث شرائح. لو مُنعت المطابِقة وحدها لبقي كود
+     * الشريحة السابقة صالحاً بعد استعمال اللاحقة — أي ثغرة بحجم ثلاثين
+     * ثانية تُفتح بالضبط في اللحظة التي يُفترض أن يكون الباب فيها مغلقاً.
+     */
+    public function testASliceOlderThanTheConsumedOneIsRejected(): void
+    {
+        $secret = Totp::generateSecret();
+        $now    = (int) floor(time() / 30);
+
+        $this->assertNull(Totp::verifyAndGetSlice($secret, $this->generateCodeAt($secret, $now - 1), $now));
+    }
+
+    /**
+     * لكن الشريحة الأحدث من المستهلَكة تبقى مقبولة.
+     *
+     * الحدّ الأعلى للمنع مهمّ كالحدّ الأدنى: لو رُفض ما بعد المستهلَكة
+     * لَقُفل الحساب بعد أوّل دخول ناجح.
+     */
+    public function testANewerSliceIsStillAccepted(): void
+    {
+        $secret = Totp::generateSecret();
+        $now    = (int) floor(time() / 30);
+
+        $this->assertSame(
+            $now,
+            Totp::verifyAndGetSlice($secret, $this->generateCodeAt($secret, $now), $now - 1)
+        );
+    }
+
+    /**
+     * verifyCode القديمة تبقى غلافاً صادقاً فوق verifyAndGetSlice.
+     *
+     * ما زالت مستعملة في مسار تفعيل الـ2FA، فانحرافها عن الدالة التي
+     * تفوّض إليها كان سيعني قاعدتَي تحقّق مختلفتين في المشروع نفسه.
+     */
+    public function testVerifyCodeStaysConsistentWithVerifyAndGetSlice(): void
+    {
+        $secret = Totp::generateSecret();
+        $now    = (int) floor(time() / 30);
+
+        foreach ([$this->generateCodeAt($secret, $now), '000000', '', 'zzzzzz'] as $code) {
+            $this->assertSame(
+                Totp::verifyAndGetSlice($secret, $code) !== null,
+                Totp::verifyCode($secret, $code),
+                "انحراف بين الدالتين على المدخل [{$code}]"
+            );
+        }
+    }
 }

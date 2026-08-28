@@ -98,10 +98,10 @@ document.addEventListener('DOMContentLoaded', () => {
             Swal.fire({
                 title: escHtml(n ? n.title : ''),
                 html: `
-                    <div style="text-align:left;">
-                        <p style="white-space:pre-line;margin-bottom:1rem;">${escHtml(n ? n.message : '')}</p>
-                        <hr style="border-color:#e5e7eb;">
-                        <small style="color:#6b7280;">
+                    <div class="u-text-left">
+                        <p class="u-prewrap mb-3">${escHtml(n ? n.message : '')}</p>
+                        <hr class="u-hr-light">
+                        <small class="u-note-grey">
                             ${n && n.type ? `<strong>Type:</strong> ${escHtml(n.type)}<br>` : ''}
                             <strong>Date:</strong> ${new Date(n.created_at).toLocaleString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                         </small>

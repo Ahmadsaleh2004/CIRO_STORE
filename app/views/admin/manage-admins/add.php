@@ -62,16 +62,15 @@
                            name="new_password"
                            placeholder=" "
                            required
-                           style="padding-right:40px;">
+                           class="u-input-pad-end">
                     <label for="newAdmPassword">Password <span class="text-danger">*</span></label>
                     <button type="button"
                             id="toggleNewAdmPassword"
-                            class="btn btn-sm position-absolute"
-                            style="right:6px; top:50%; transform:translateY(-50%); border:none; background:none; padding:2px 6px;"
+                            class="btn btn-sm position-absolute u-input-action"
                             tabindex="-1"
                             aria-label="Show/Hide Password">👁</button>
                 </div>
-                <small style="color:var(--muted-text);font-size:.75rem;">
+                <small class="u-muted u-fs-75">
                     Min 8 chars — uppercase, lowercase, number, symbol
                 </small>
             </div>
@@ -166,12 +165,11 @@
                            name="confirm_current_pass"
                            placeholder=" "
                            required
-                           style="padding-right:40px;">
+                           class="u-input-pad-end">
                     <label for="newAdmCurrentPass">Your Current Password <span class="text-danger">*</span></label>
                     <button type="button"
                             id="toggleNewAdmCurrentPass"
-                            class="btn btn-sm position-absolute"
-                            style="right:6px; top:50%; transform:translateY(-50%); border:none; background:none; padding:2px 6px;"
+                            class="btn btn-sm position-absolute u-input-action"
                             tabindex="-1"
                             aria-label="Show/Hide Password">👁</button>
                 </div>
@@ -183,8 +181,7 @@
         <div class="d-flex justify-content-end">
             <button type="submit"
                     id="addAdminBtn"
-                    class="btn btn-success btn-lg px-5"
-                    style="display:none;">
+                    class="btn btn-success btn-lg px-5 d-none">
                 ✅ Add Admin
             </button>
         </div>

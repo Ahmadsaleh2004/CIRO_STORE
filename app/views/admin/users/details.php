@@ -41,39 +41,39 @@ $strikesLabel    = $strikesCount >= 3 ? 'Blocked' : ($strikesCount > 0 ? 'Warnin
                 <table class="table admin-table mb-0">
                     <tbody>
                         <tr>
-                            <td style="width:40%;color:var(--muted-text);">ID</td>
+                            <td class="u-label-cell">ID</td>
                             <td><strong><?= (int)$target['id'] ?></strong></td>
                         </tr>
                         <tr>
-                            <td style="color:var(--muted-text);">Full Name</td>
+                            <td class="u-muted">Full Name</td>
                             <td><?= htmlspecialchars($target['full_name']) ?></td>
                         </tr>
                         <tr>
-                            <td style="color:var(--muted-text);">Email</td>
+                            <td class="u-muted">Email</td>
                             <td><?= htmlspecialchars($target['email']) ?></td>
                         </tr>
                         <tr>
-                            <td style="color:var(--muted-text);">Phone</td>
-                            <td><?= !empty($target['phone_number']) ? htmlspecialchars($target['phone_number']) : '<span style="color:var(--muted-text)">—</span>' ?></td>
+                            <td class="u-muted">Phone</td>
+                            <td><?= !empty($target['phone_number']) ? htmlspecialchars($target['phone_number']) : '<span class="u-muted">—</span>' ?></td>
                         </tr>
                         <tr>
-                            <td style="color:var(--muted-text);">Country/City</td>
+                            <td class="u-muted">Country/City</td>
                             <td>
                                 <?php $location = trim(($target['city'] ?? '') . ', ' . ($target['country'] ?? ''), ', '); ?>
-                                <?= $location !== '' ? htmlspecialchars($location) : '<span style="color:var(--muted-text)">—</span>' ?>
+                                <?= $location !== '' ? htmlspecialchars($location) : '<span class="u-muted">—</span>' ?>
                             </td>
                         </tr>
                         <tr>
-                            <td style="color:var(--muted-text);">Gender</td>
-                            <td><?= !empty($target['gender']) ? htmlspecialchars(ucfirst($target['gender'])) : '<span style="color:var(--muted-text)">—</span>' ?></td>
+                            <td class="u-muted">Gender</td>
+                            <td><?= !empty($target['gender']) ? htmlspecialchars(ucfirst($target['gender'])) : '<span class="u-muted">—</span>' ?></td>
                         </tr>
                         <tr>
-                            <td style="color:var(--muted-text);">Joined</td>
+                            <td class="u-muted">Joined</td>
                             <td><?= htmlspecialchars(date('M j, Y', strtotime($target['created_at']))) ?></td>
                         </tr>
                         <tr>
-                            <td style="color:var(--muted-text);">Last Activity</td>
-                            <td><?= !empty($target['last_activity']) ? htmlspecialchars(date('M j, Y H:i', strtotime($target['last_activity']))) : '<span style="color:var(--muted-text)">—</span>' ?></td>
+                            <td class="u-muted">Last Activity</td>
+                            <td><?= !empty($target['last_activity']) ? htmlspecialchars(date('M j, Y H:i', strtotime($target['last_activity']))) : '<span class="u-muted">—</span>' ?></td>
                         </tr>
                     </tbody>
                 </table>
@@ -112,7 +112,7 @@ $strikesLabel    = $strikesCount >= 3 ? 'Blocked' : ($strikesCount > 0 ? 'Warnin
                         <div><?= htmlspecialchars($strike['reason']) ?></div>
                         <div class="reason-date"><?= htmlspecialchars(date('M j, Y H:i', strtotime($strike['created_at']))) ?></div>
                     <?php else: ?>
-                        <span style="color:var(--muted-text);">Strike #<?= $i ?> — No warning issued</span>
+                        <span class="u-muted">Strike #<?= $i ?> — No warning issued</span>
                     <?php endif; ?>
                 </div>
             </div>
@@ -128,7 +128,7 @@ $strikesLabel    = $strikesCount >= 3 ? 'Blocked' : ($strikesCount > 0 ? 'Warnin
 <div class="card p-4 mb-4">
     <h5 class="mb-3">🏠 Saved Addresses (<?= count($addresses) ?>)</h5>
     <?php if (empty($addresses)): ?>
-    <p class="text-center py-3" style="color:var(--muted-text);">No saved addresses.</p>
+    <p class="text-center py-3 u-muted">No saved addresses.</p>
     <?php else: ?>
     <div class="table-responsive">
         <table class="table admin-table mb-0">
@@ -152,7 +152,7 @@ $strikesLabel    = $strikesCount >= 3 ? 'Blocked' : ($strikesCount > 0 ? 'Warnin
                         <?php if (!empty($ad['is_default'])): ?>
                         <span class="badge bg-primary">Default</span>
                         <?php else: ?>
-                        <span style="color:var(--muted-text)">—</span>
+                        <span class="u-muted">—</span>
                         <?php endif; ?>
                     </td>
                 </tr>
@@ -169,25 +169,25 @@ $strikesLabel    = $strikesCount >= 3 ? 'Blocked' : ($strikesCount > 0 ? 'Warnin
 <div class="card p-4 mb-4">
     <h5 class="mb-3">📦 Order History</h5>
     <?php if (empty($orders)): ?>
-    <p class="text-center py-3" style="color:var(--muted-text);">No orders yet.</p>
+    <p class="text-center py-3 u-muted">No orders yet.</p>
     <?php else: ?>
     <div class="row g-3 mb-3">
         <div class="col-4">
             <div class="border rounded p-2 text-center">
                 <div class="fs-5 fw-bold"><?= count($orders) ?></div>
-                <small style="color:var(--muted-text);">Total Orders</small>
+                <small class="u-muted">Total Orders</small>
             </div>
         </div>
         <div class="col-4">
             <div class="border rounded p-2 text-center">
                 <div class="fs-5 fw-bold"><?= count($completedOrders) ?></div>
-                <small style="color:var(--muted-text);">Completed</small>
+                <small class="u-muted">Completed</small>
             </div>
         </div>
         <div class="col-4">
             <div class="border rounded p-2 text-center">
                 <div class="fs-5 fw-bold">$<?= number_format($completedTotal, 2) ?></div>
-                <small style="color:var(--muted-text);">Completed Total</small>
+                <small class="u-muted">Completed Total</small>
             </div>
         </div>
     </div>
@@ -205,13 +205,13 @@ $strikesLabel    = $strikesCount >= 3 ? 'Blocked' : ($strikesCount > 0 ? 'Warnin
 <div class="card p-4 mb-4">
     <h5 class="mb-3">💬 Support Messages (<?= count($messages) ?>)</h5>
     <?php if (empty($messages)): ?>
-    <p class="text-center py-3" style="color:var(--muted-text);">No messages sent by this user.</p>
+    <p class="text-center py-3 u-muted">No messages sent by this user.</p>
     <?php else: ?>
         <?php foreach ($messages as $m): ?>
         <div class="support-msg-card">
             <div class="d-flex justify-content-between mb-1">
                 <strong class="small">Message #<?= (int)$m['id'] ?></strong>
-                <small style="color:var(--muted-text);"><?= htmlspecialchars(date('M j, Y H:i', strtotime($m['sent_at']))) ?></small>
+                <small class="u-muted"><?= htmlspecialchars(date('M j, Y H:i', strtotime($m['sent_at']))) ?></small>
             </div>
             <p class="mb-0 msg-content"><?= htmlspecialchars($m['message']) ?></p>
         </div>
@@ -225,7 +225,7 @@ $strikesLabel    = $strikesCount >= 3 ? 'Blocked' : ($strikesCount > 0 ? 'Warnin
 <div class="card p-4 mb-4">
     <h5 class="mb-3">📜 Admin Actions Log (<?= count($auditLog) ?>)</h5>
     <?php if (empty($auditLog)): ?>
-    <p class="text-center py-3" style="color:var(--muted-text);">No admin actions recorded for this user.</p>
+    <p class="text-center py-3 u-muted">No admin actions recorded for this user.</p>
     <?php else: ?>
     <div class="table-responsive">
         <table class="table admin-table mb-0">
@@ -240,10 +240,10 @@ $strikesLabel    = $strikesCount >= 3 ? 'Blocked' : ($strikesCount > 0 ? 'Warnin
             <tbody>
                 <?php foreach ($auditLog as $log): ?>
                 <tr>
-                    <td style="white-space:nowrap;"><?= htmlspecialchars($log['admin_name'] ?? '—') ?></td>
-                    <td><code style="font-size:.78rem;"><?= htmlspecialchars($log['action']) ?></code></td>
-                    <td style="font-size:.8rem;"><?= htmlspecialchars($log['details'] ?? '—') ?></td>
-                    <td style="font-size:.78rem;color:var(--muted-text);white-space:nowrap;"><?= htmlspecialchars(date('M j, Y H:i', strtotime($log['created_at']))) ?></td>
+                    <td class="text-nowrap"><?= htmlspecialchars($log['admin_name'] ?? '—') ?></td>
+                    <td><code class="u-fs-78"><?= htmlspecialchars($log['action']) ?></code></td>
+                    <td class="u-fs-80"><?= htmlspecialchars($log['details'] ?? '—') ?></td>
+                    <td class="u-meta-78"><?= htmlspecialchars(date('M j, Y H:i', strtotime($log['created_at']))) ?></td>
                 </tr>
                 <?php endforeach; ?>
             </tbody>

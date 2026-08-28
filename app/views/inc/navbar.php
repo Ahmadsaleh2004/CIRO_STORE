@@ -77,8 +77,7 @@ $adminInStoreMode = !empty($_SESSION['admin_in_store_mode']);
                 <?php if (isset($data['userLoggedIn']) && $data['userLoggedIn']): ?>
                 <button id="notifBell" class="btn btn-outline-light position-relative"
                         aria-label="Notifications" title="Notifications" type="button">
-                    🔔 <span id="notifBadge" class="counter-badge"
-                             style="background:#ef4444;display:none;top:-4px;right:-4px;" aria-live="polite">0</span>
+                    🔔 <span id="notifBadge" class="counter-badge u-badge-dot d-none" aria-live="polite">0</span>
                 </button>
                 <?php endif; ?>
 
@@ -104,13 +103,12 @@ $adminInStoreMode = !empty($_SESSION['admin_in_store_mode']);
                         <!-- اسم المستخدم يأتي جاهزاً من الـ Controller -->
                         👤 <?= htmlspecialchars($data['userName']) ?>
                     </button>
-                    <ul class="dropdown-menu dropdown-menu-end"
-                        style="background:var(--card-bg);border:1px solid var(--section-border);">
+                    <ul class="dropdown-menu dropdown-menu-end u-surface-card">
                         <li><a class="dropdown-item" href="<?= URLROOT ?>/user/info"
-                               style="color:var(--text-color);">👤 My Info</a></li>
+                               class="u-text">👤 My Info</a></li>
                         <li><a class="dropdown-item" href="<?= URLROOT ?>/contact"
-                               style="color:var(--text-color);">💬 Contact Us</a></li>
-                        <li><hr class="dropdown-divider" style="border-color:var(--section-border);"></li>
+                               class="u-text">💬 Contact Us</a></li>
+                        <li><hr class="dropdown-divider u-border-section"></li>
                         <!-- دالة الـ logoutUser() هي دالة JS معرفة في ملفات الـ JS الثابتة -->
                         <li><a class="dropdown-item text-danger" href="#"
                                data-action="logout-user">🚪 Log Out</a></li>

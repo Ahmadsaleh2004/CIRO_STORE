@@ -133,6 +133,93 @@ class Middleware
     }
 
     /**
+     * يتحقق من أن الأدمن الحالي هو الروت — أي رتبة A.
+     *
+     * وُجدت لأن المشروع كان يحمل **ثلاثة** تعريفات متنافسة لـ«الروت»:
+     *
+     *   1. BackupController  → getCurrentAdminId() !== 1   (الروت = المعرّف 1)
+     *   2. AdminModel::getRootAdminId()  → WHERE role='A'  (الروت = أوّل صفّ A)
+     *   3. AdminModel::canManageTarget() → هرم الرتب        (A أعلى الجميع)
+     *
+     * وهي قد تتخالف. الأخطر أن الأول يربط حقّ تنزيل قاعدة البيانات
+     * كاملةً بـ**موضع** في طابور المعرّفات لا بشخص — بينما deleteAdmin
+     * كانت تزحف بالمعرّفات عند كل حذف. أي أن حذف صفّ كان كفيلاً بأن
+     * ينقل الحقّ إلى شخص آخر بصمت.
+     *
+     * التعريف هنا واحد ويطابق ما يسمّيه الكود نفسه في مواضعه:
+     * «root admin (role 'A')». والرتبة تُقرأ من الجلسة لا من القاعدة —
+     * loadAdminPermissions تضعها عند الدخول، فلا استعلام في كل طلب.
+     */
+    public static function requireRoot(): void
+    {
+        self::requireAdmin();
+
+        // isRoleA() الموجودة في auth_helper لا نسخة جديدة منها: اسمان
+        // لمفهوم واحد هما بالضبط ما أنتج التعريفات الثلاثة المتنافسة
+        // التي تحلّها هذه المرحلة.
+        if (!isRoleA()) {
+            self::denyAccess();
+        }
+    }
+
+    /**
+     * يخنق نقطة دخول: يرفض بـ429 حين يتجاوز المصدر الحدَّ خلال النافذة.
+     *
+     * الحارس يسجّل المحاولة **قبل** أن ينفّذ الكنترولر، أي أنه يعدّ
+     * الطلبات لا الإخفاقات. هذا فرق جوهري عن isRateLimited القائمة:
+     * تلك تعدّ محاولات الدخول الفاشلة، فلا ترى أصلاً من يستدعي
+     * /auth/forgot ألف مرّة — كل استدعاء منها «ناجح» من زاويتها بينما
+     * هو ألف رسالة بريد.
+     *
+     * والعدّ قبل التنفيذ يجعل الحارس يعمل حتى لو انتهى الفعل بـexit
+     * مبكّر، وهو ما تفعله معظم نقاط JSON هنا.
+     *
+     * @param string $bucket        اسم الدلو — يفصل عدّاد نقطة عن أخرى
+     * @param int    $max           أقصى عدد طلبات مسموح خلال النافذة
+     * @param int    $windowMinutes طول النافذة بالدقائق
+     */
+    public static function throttle(string $bucket, int $max, int $windowMinutes): void
+    {
+        $identifier = Throttle::clientIp();
+
+        if (Throttle::tooMany($bucket, $identifier, $max, $windowMinutes)) {
+            self::denyThrottled($bucket, $windowMinutes);
+        }
+
+        Throttle::record($bucket, $identifier);
+    }
+
+    /**
+     * يرفض الطلب المخنوق: JSON لنقاط الـAJAX، وصفحة 429 كاملة للصفحات.
+     *
+     * التفريق يتبع expectsJson() نفسها التي يستعملها requireLogin — لا
+     * فحصاً ثالثاً بصياغة رابعة، فقد كان ذلك بالضبط ما وحّدته تلك الدالة.
+     */
+    private static function denyThrottled(string $bucket, int $windowMinutes): void
+    {
+        $retryAfter = $windowMinutes * 60;
+
+        if (self::expectsJson()) {
+            if (!headers_sent()) {
+                http_response_code(429);
+                header('Retry-After: ' . $retryAfter);
+                header('Cache-Control: no-store');
+                header('Content-Type: application/json; charset=utf-8');
+            }
+            echo json_encode([
+                'success' => false,
+                'message' => 'محاولات كثيرة خلال وقت قصير. انتظر قليلاً ثم أعد المحاولة.',
+            ], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
+        ErrorPage::tooManyRequests(
+            $retryAfter,
+            'خنق الدلو [' . $bucket . '] من ' . Throttle::clientIp()
+        );
+    }
+
+    /**
      * يرجع JSON لو الطلب AJAX أو POST، أو صفحة HTML عادية لو طلب صفحة كامل.
      * يُستدعى فقط عند رفض الصلاحية (403).
      */
@@ -146,9 +233,8 @@ class Middleware
             || ($_SERVER['REQUEST_METHOD'] === 'POST')
         );
 
-        http_response_code(403);
-
         if ($isAjax) {
+            http_response_code(403);
             header('Content-Type: application/json; charset=utf-8');
             echo json_encode([
                 'success' => false,
@@ -157,9 +243,17 @@ class Middleware
             exit;
         }
 
-        echo '<div style="font-family:sans-serif;text-align:center;padding:60px">'
-           . '<h2>403 — Access Denied</h2>'
-           . '<a href="' . URLROOT . '/admin/home">← Back</a></div>';
-        exit;
+        // كان هنا <div> خام بلا <!DOCTYPE> ولا <head> ولا لايوت — وهو
+        // بالضبط النمط الذي وُجد ErrorPage ليُنهيه («المُصيّر الوحيد
+        // لصفحات الخطأ»)، لكن هذا الموضع بقي خارجه.
+        //
+        // وجهة الرجوع لوحة التحكم لا جذر الموقع: لا يصل هذا السطر إلا
+        // من عبر requireAdmin() أعلاه، أي أن الزائر أدمن بالتأكيد —
+        // وإلقاؤه في واجهة المتجر يضيّعه.
+        ErrorPage::forbidden(
+            'تخويل مرفوض على ' . ($_SERVER['REQUEST_URI'] ?? '?') . ' لأدمن #' . (getCurrentAdminId() ?? 0),
+            URLROOT . '/admin/home',
+            'العودة للوحة التحكم'
+        );
     }
 }

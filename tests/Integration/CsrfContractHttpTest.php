@@ -62,6 +62,30 @@ final class CsrfContractHttpTest extends TestCase
         if (self::request('/', 'GET') === null) {
             $this->markTestSkipped('خادم التطوير لا يستجيب على ' . self::base());
         }
+
+        self::clearThrottle();
+    }
+
+    /**
+     * يصفّر عدّاد الخنق قبل كل حالة.
+     *
+     * هذا الملف يضرب كل نقاط POST من عنوان واحد بتوكن باطل — وهو
+     * بالضبط النمط الذي يُفترض أن يوقفه Middleware::throttle. فبلا
+     * تصفير يبدأ الاختبار بقياس عقد CSRF وينتهي بقياس الخنق: تردّ
+     * النقاط 429 برسالة «محاولات كثيرة» بدل رمز csrf_invalid، فيفشل
+     * الاختبار على سلوك صحيح.
+     *
+     * الحذف مباشر على القاعدة لا عبر Throttle::clear: تلك تمسح دلواً
+     * واحداً لمصدر واحد، والمطلوب هنا أرضٌ نظيفة تماماً.
+     */
+    private static function clearThrottle(): void
+    {
+        try {
+            \App\Core\Database::connect()->exec('DELETE FROM throttle_attempts');
+        } catch (\Throwable $e) {
+            // القاعدة غير متاحة — الاختبار سيتخطّى نفسه أو يفشل لسبب
+            // أوضح من هذا. ابتلاع الاستثناء هنا يمنع رسالة مضلّلة.
+        }
     }
 
     /** @return array{status:int, body:string}|null */

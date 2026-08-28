@@ -176,8 +176,14 @@ function runHttpChecks(array $routes, string $base, int $timeout, bool $verbose)
 
         if ($r['error'] !== '') {
             $problems[] = 'curl: ' . $r['error'];
-        } elseif (!in_array($r['code'], [200, 302, 301], true)) {
-            // 302 مقبول: صفحات الأدمن تحوّل لتسجيل الدخول بدون جلسة
+        } elseif (!in_array($r['code'], [200, 302, 301, 401], true)) {
+            // 302 مقبول: **صفحة** تحوّل لتسجيل الدخول بدون جلسة.
+            //
+            // و401 مقبول لسبب مختلف: نقطة **JSON** بلا جلسة لا تحوّل —
+            // التحويل يجعل fetch يتبع الوجهة ويحاول قراءة صفحة HTML
+            // كاملة كـJSON. الرفض الصحيح هناك رمزُ حالة، لا وجهة.
+            // ظهرت الحاجة حين صحّحت /notifications/* ردّها من 200 إلى
+            // 401؛ قبلها كانت تجيب «مرفوض» بجسمٍ فوق حالةِ «تمّ».
             $problems[] = 'HTTP ' . $r['code'];
         } else {
             $problems = inspectBody($r['body'], $route, $r['code'], $r['type'] ?? '');

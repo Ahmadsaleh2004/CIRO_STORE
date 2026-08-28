@@ -2,13 +2,13 @@
 
 namespace App\Models;
 
-use App\Core\Database;
+use App\Core\Model;
 use Exception;
 
 /**
  * CategoryModel — إدارة جدول categories الديناميكي (بعد migration ENUM→VARCHAR)
  */
-class CategoryModel
+class CategoryModel extends Model
 {
     /** الأربع كاتوجريز الأساسية بترتيبها الثابت الإلزامي — لا تُغيَّر */
     public const CORE_ORDER = ['phone', 'computer', 'accessories', 'gaming'];
@@ -20,7 +20,7 @@ class CategoryModel
     public static function getAllOrdered(): array
     {
         try {
-            $stmt = Database::connect()->query("
+            $stmt = self::db()->query("
                 SELECT c.id, c.name, c.is_core,
                        COUNT(pcp.product_id) AS product_count
                 FROM categories c
@@ -61,7 +61,7 @@ class CategoryModel
     public static function nameExists(string $name): bool
     {
         try {
-            $stmt = Database::connect()->prepare(
+            $stmt = self::db()->prepare(
                 "SELECT id FROM categories WHERE LOWER(name) = LOWER(?) LIMIT 1"
             );
             $stmt->execute([trim($name)]);
@@ -82,7 +82,7 @@ class CategoryModel
     public static function suggestSimilar(string $query, int $limit = 5, ?int $excludeId = null): array
     {
         try {
-            $all   = Database::connect()->query("SELECT id, name FROM categories")->fetchAll(\PDO::FETCH_ASSOC);
+            $all   = self::db()->query("SELECT id, name FROM categories")->fetchAll(\PDO::FETCH_ASSOC);
             $query = trim($query);
 
             $scored = [];
@@ -118,7 +118,7 @@ class CategoryModel
         }
 
         try {
-            $db   = Database::connect();
+            $db   = self::db();
             $stmt = $db->prepare("INSERT INTO categories (name, is_core) VALUES (?, 0)");
             $stmt->execute([$name]);
             return (int)$db->lastInsertId();
@@ -132,7 +132,7 @@ class CategoryModel
     public static function isCore(int $id): bool
     {
         try {
-            $stmt = Database::connect()->prepare("SELECT is_core FROM categories WHERE id = ?");
+            $stmt = self::db()->prepare("SELECT is_core FROM categories WHERE id = ?");
             $stmt->execute([$id]);
             return (bool)$stmt->fetchColumn();
         } catch (Exception $e) {
@@ -159,7 +159,7 @@ class CategoryModel
             return false;
         }
 
-        $db = Database::connect();
+        $db = self::db();
         try {
             $db->beginTransaction();
 
@@ -190,7 +190,7 @@ class CategoryModel
     public static function findById(int $id): ?array
     {
         try {
-            $stmt = Database::connect()->prepare(
+            $stmt = self::db()->prepare(
                 "SELECT id, name, is_core FROM categories WHERE id = ? LIMIT 1"
             );
             $stmt->execute([$id]);

@@ -59,6 +59,10 @@ const BUNDLES = {
         'core/flash-toast.js',
         'core/theme.js',
         'core/modal-input-colors.js',
+        // يلوّن أزرار الـvariants من data-swatch عبر الـCSSOM — لون
+        // الـvariant يأتي من القاعدة فلا يصير class، ولا يجوز أن يبقى
+        // style= بعد حذف 'unsafe-inline' من style-src.
+        'store/variant-swatches.js',
         'features/cart.js',
         'features/products-catalog.js',
         'features/auth.js',

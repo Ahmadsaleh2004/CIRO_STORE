@@ -15,7 +15,7 @@
     </nav>
 
     <div class="d-flex align-items-center gap-3 mb-4">
-        <div style="font-size:3rem;">👤</div>
+        <div class="u-fs-xxl">👤</div>
         <div>
             <h1 class="fw-bold mb-0"><?= htmlspecialchars($user['full_name'] ?? '') ?></h1>
             <p class="text-muted mb-0"><?= htmlspecialchars($user['email'] ?? '') ?></p>
@@ -45,7 +45,7 @@
 
         <!-- ── تبويب بياناتي ──────────────────────────── -->
         <div class="tab-pane fade show active" id="tab-profile">
-            <div class="card p-4" style="max-width:550px;">
+            <div class="card p-4 u-mw-550">
                 <h4 class="mb-4">✏️ Edit Profile</h4>
                 <form id="profileForm" novalidate>
                     <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf) ?>">
@@ -58,7 +58,7 @@
                     <div class="float-group">
                         <input type="email" value="<?= htmlspecialchars($user['email'] ?? '') ?>"
                                placeholder=" " disabled
-                               style="opacity:.6;cursor:not-allowed;">
+                               class="u-disabled">
                         <label>Email Address <small class="text-muted">(cannot change)</small></label>
                     </div>
                     
@@ -97,7 +97,7 @@
                                placeholder=" " autocomplete="new-password" minlength="8" maxlength="128">
                         <label>New Password <small class="text-muted">(leave blank to keep current)</small></label>
                         <button type="button" class="btn btn-sm btn-link toggle-password-btn" data-target="newPassword"
-                                style="position:absolute; left:8px; top:8px;" tabindex="-1">👁</button>
+                                class="u-pin-top-left" tabindex="-1">👁</button>
                     </div>
                     
                     <!-- Current Password — always required to save -->
@@ -106,10 +106,10 @@
                                placeholder=" " required autocomplete="current-password" maxlength="128">
                         <label>Current Password <span class="text-danger">*</span> <small class="text-muted">(required to save any change)</small></label>
                         <button type="button" class="btn btn-sm btn-link toggle-password-btn" data-target="currentPassword"
-                                style="position:absolute; left:8px; top:8px;" tabindex="-1">👁</button>
+                                class="u-pin-top-left" tabindex="-1">👁</button>
                     </div>
                     
-                    <div id="profileMsg" class="alert py-2 small" style="display:none;"></div>
+                    <div id="profileMsg" class="alert py-2 small d-none"></div>
                     <button type="submit" class="btn btn-success w-100">💾 Save Changes</button>
                 </form>
             </div>
@@ -119,7 +119,7 @@
         <div class="tab-pane fade" id="tab-orders">
             <?php if (empty($orders)): ?>
                 <div class="text-center py-5">
-                    <div style="font-size:3rem;">📦</div>
+                    <div class="u-fs-xxl">📦</div>
                     <p class="text-muted mt-2">No orders yet.</p>
                     <a href="<?= URLROOT ?>/products" class="btn btn-warning">Start Shopping</a>
                 </div>
@@ -205,7 +205,7 @@
             </div>
 
             <!-- إضافة عنوان جديد -->
-            <div class="card p-4" style="max-width:600px;">
+            <div class="card p-4 u-mw-600">
                 <h5 class="mb-3">➕ Add New Address</h5>
                 <form id="addAddrForm" novalidate>
                     <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf) ?>">
@@ -243,10 +243,10 @@
                     </div>
                     <div class="d-flex align-items-center gap-2 mb-3">
                         <input type="checkbox" id="addrIsDefault" name="is_default" value="1"
-                               style="width:16px;height:16px;">
+                               class="u-w-16">
                         <label for="addrIsDefault" class="small">Set as default</label>
                     </div>
-                    <div id="addrMsg" class="alert py-2 small" style="display:none;"></div>
+                    <div id="addrMsg" class="alert py-2 small d-none"></div>
                     <button type="submit" class="btn btn-outline-success">💾 Save Address</button>
                 </form>
             </div>

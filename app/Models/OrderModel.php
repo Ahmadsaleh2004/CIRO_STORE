@@ -2,13 +2,13 @@
 
 namespace App\Models;
 
-use App\Core\Database;
+use App\Core\Model;
 use Exception;
 
 /**
  * OrderModel — يغطي جداول: orders, order_items, user_addresses
  */
-class OrderModel
+class OrderModel extends Model
 {
     // ════════════════════════════════════════════════════════
     // عناوين المستخدم
@@ -18,7 +18,7 @@ class OrderModel
     public static function getUserAddresses(int $userId): array
     {
         try {
-            $db   = Database::connect();
+            $db   = self::db();
             $stmt = $db->prepare(
                 "SELECT * FROM user_addresses WHERE user_id = ? ORDER BY is_default DESC, id ASC"
             );
@@ -34,7 +34,7 @@ class OrderModel
     public static function addAddress(int $userId, array $data): ?int
     {
         try {
-            $db = Database::connect();
+            $db = self::db();
 
             // إذا العنوان الجديد is_default → أزل الـ default من الباقي
             if (!empty($data['is_default'])) {
@@ -66,7 +66,7 @@ class OrderModel
     public static function deleteAddress(int $addressId, int $userId): bool
     {
         try {
-            $db   = Database::connect();
+            $db   = self::db();
             $stmt = $db->prepare("DELETE FROM user_addresses WHERE id=? AND user_id=?");
             return $stmt->execute([$addressId, $userId]);
         } catch (Exception $e) {
@@ -100,7 +100,7 @@ class OrderModel
             return null;
         }
 
-        $db = Database::connect();
+        $db = self::db();
 
         try {
             // فحص Idempotency — منع الطلب المكرر
@@ -183,7 +183,7 @@ class OrderModel
      */
     public static function cancelOrder(int $orderId, int $userId): bool
     {
-        $db = Database::connect();
+        $db = self::db();
 
         try {
             $db->beginTransaction();
@@ -239,7 +239,7 @@ class OrderModel
     public static function getUserOrders(int $userId): array
     {
         try {
-            $db   = Database::connect();
+            $db   = self::db();
             $stmt = $db->prepare(
                 "SELECT o.*,
                         ua.label AS address_label, ua.city, ua.country, ua.full_address
@@ -282,7 +282,7 @@ class OrderModel
     public static function getOrdersForUser(int $userId): array
     {
         try {
-            $stmt = Database::connect()->prepare("
+            $stmt = self::db()->prepare("
                 SELECT o.*,
                        (SELECT COUNT(*) FROM order_items oi WHERE oi.order_id = o.order_id) AS items_count
                 FROM orders o
@@ -304,7 +304,7 @@ class OrderModel
      */
     public static function cancelAllPendingForUser(int $userId): void
     {
-        $db = Database::connect();
+        $db = self::db();
 
         try {
             $db->beginTransaction();
@@ -355,7 +355,7 @@ class OrderModel
     public static function markAllOrdersNotified(): void
     {
         try {
-            Database::connect()->prepare("UPDATE orders SET is_notified=1")->execute();
+            self::db()->prepare("UPDATE orders SET is_notified=1")->execute();
         } catch (Exception $e) {
             error_log("OrderModel::markAllOrdersNotified Error: " . $e->getMessage());
         }
@@ -372,7 +372,7 @@ class OrderModel
      */
     public static function releaseExpiredTakenOrders(): array
     {
-        $db = Database::connect();
+        $db = self::db();
         $reverted = [];
         try {
             $db->beginTransaction();
@@ -425,7 +425,7 @@ class OrderModel
     public static function getAdminOrdersList(array $filters, int $page, int $perPage = 20): array
     {
         try {
-            $db = Database::connect();
+            $db = self::db();
 
             $search = trim((string)($filters['search'] ?? ''));
             $status = $filters['status'] ?? '';
@@ -501,7 +501,7 @@ class OrderModel
     public static function getAdminOrderDetails(int $orderId): ?array
     {
         try {
-            $stmt = Database::connect()->prepare(
+            $stmt = self::db()->prepare(
                 "SELECT o.*,
                         u.full_name AS user_name, u.email AS user_email, u.phone_number AS user_phone,
                         ua.full_address, ua.country, ua.city,
@@ -530,7 +530,7 @@ class OrderModel
     public static function getOrderItemsWithProduct(int $orderId): array
     {
         try {
-            $stmt = Database::connect()->prepare(
+            $stmt = self::db()->prepare(
                 "SELECT oi.*, p.name AS product_name,
                         COALESCE(pv.image_path, p.image_path) AS image_path,
                         COALESCE(oi.color_name_snapshot, pv.color_name) AS color_name
@@ -554,7 +554,7 @@ class OrderModel
      */
     public static function adminTakeOrder(int $orderId, int $adminId): array
     {
-        $db = Database::connect();
+        $db = self::db();
         try {
             $stmt = $db->prepare("SELECT status, user_id FROM orders WHERE order_id=? LIMIT 1");
             $stmt->execute([$orderId]);
@@ -589,7 +589,7 @@ class OrderModel
      */
     public static function adminMarkDelivered(int $orderId, int $adminId): array
     {
-        $db = Database::connect();
+        $db = self::db();
         try {
             $stmt = $db->prepare("SELECT user_id FROM orders WHERE order_id=? LIMIT 1");
             $stmt->execute([$orderId]);
@@ -622,7 +622,7 @@ class OrderModel
      */
     public static function adminCancelDelivery(int $orderId, int $adminId): array
     {
-        $db = Database::connect();
+        $db = self::db();
         try {
             $db->beginTransaction();
 
@@ -672,7 +672,7 @@ class OrderModel
      */
     public static function adminDeleteOrder(int $orderId): array
     {
-        $db = Database::connect();
+        $db = self::db();
 
         try {
             $db->beginTransaction();
@@ -717,7 +717,7 @@ class OrderModel
      */
     public static function adminReleaseOrder(int $orderId, int $adminId): array
     {
-        $db = Database::connect();
+        $db = self::db();
 
         try {
             $db->beginTransaction();
@@ -761,7 +761,7 @@ class OrderModel
     public static function getOrderUserId(int $orderId): ?int
     {
         try {
-            $stmt = Database::connect()->prepare("SELECT user_id FROM orders WHERE order_id=? LIMIT 1");
+            $stmt = self::db()->prepare("SELECT user_id FROM orders WHERE order_id=? LIMIT 1");
             $stmt->execute([$orderId]);
             $userId = $stmt->fetchColumn();
             return $userId !== false ? (int)$userId : null;
@@ -777,7 +777,7 @@ class OrderModel
     public static function getAllForCsvExport(array $filters): array
     {
         try {
-            $db = Database::connect();
+            $db = self::db();
 
             $search = trim((string)($filters['search'] ?? ''));
             $status = $filters['status'] ?? '';
@@ -842,7 +842,7 @@ class OrderModel
     public static function getOrdersHandledByAdmin(int $adminId, int $limit = 50): array
     {
         try {
-            $stmt = Database::connect()->prepare(
+            $stmt = self::db()->prepare(
                 "SELECT order_id, status, total_amount, created_at, 0 AS was_auto_released
                  FROM orders
                  WHERE taken_by_admin_id = ?

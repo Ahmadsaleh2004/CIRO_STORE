@@ -33,6 +33,30 @@ final class RouteGuardParityTest extends TestCase
     }
 
     /**
+     * يحذف تعليقات PHP ويُبقي الكود.
+     *
+     * token_get_all لا regex: تعليق داخل نصّ («// ليس تعليقاً» بين
+     * علامتَي اقتباس) وnowdoc وسلاسل متعددة الأسطر كلها تكسر أي تعبير
+     * نمطي، والمحلّل اللغوي وحده يعرف الفرق.
+     */
+    private static function stripComments(string $src): string
+    {
+        $out = '';
+        foreach (token_get_all($src) as $token) {
+            if (is_array($token)) {
+                if ($token[0] === T_COMMENT || $token[0] === T_DOC_COMMENT) {
+                    continue;
+                }
+                $out .= $token[1];
+                continue;
+            }
+            $out .= $token;
+        }
+
+        return $out;
+    }
+
+    /**
      * الصلاحية التي يعلنها كل فعل في جسمه.
      *
      * @return array<string, string> "Controller::action" => "perm:x" | "auth"
@@ -56,6 +80,8 @@ final class RouteGuardParityTest extends TestCase
 
                 if (preg_match("/Middleware::requirePermission\('([^']+)'\)/", $body, $m)) {
                     $out["{$class}::{$action}"] = 'perm:' . $m[1];
+                } elseif (str_contains($body, 'Middleware::requireRoot()')) {
+                    $out["{$class}::{$action}"] = 'root';
                 } elseif (str_contains($body, 'Middleware::requireLogin()')) {
                     $out["{$class}::{$action}"] = 'auth';
                 }
@@ -143,12 +169,151 @@ final class RouteGuardParityTest extends TestCase
 
         $extra = [];
         foreach ($inTable as $action => $guard) {
+            // الخنق مُعلَن في المسار وحده بلا مقابل في الجسم، وهذا تصميمه
+            // لا سهو فيه. قاعدة التكافؤ أعلاه تخصّ ازدواج **التخويل**
+            // (perm/auth) وهو ازدواج مؤقّت مقصود يُحذف نصفه لاحقاً؛ أمّا
+            // الخنق فوُلد في المسار من أوّل يوم: مكانه الصحيح قبل بناء
+            // الكنترولر، لأنه يعدّ الطلبات لا نتائجها — ونسخة منه داخل
+            // الجسم كانت ستعدّ الطلب مرّتين.
+            if (str_starts_with($guard, 'throttle:')) {
+                continue;
+            }
+
             if (!isset($inBody[$action])) {
                 $extra[] = "{$action} — المسار يعلن [{$guard}] ولا أثر له في جسم الفعل.";
             }
         }
 
         $this->assertSame([], $extra, "حُرّاس مُعلَنة بلا مقابل:\n  " . implode("\n  ", $extra));
+    }
+
+    /**
+     * لا تخويل معلَّق بمعرّف حرفي، ولا إعادة ترقيم للمفاتيح.
+     *
+     * يحرس عطلين انهارا معاً في المرحلة أ-2:
+     *
+     *   · BackupController كان يمنح حقّ تنزيل القاعدة كاملةً لـ
+     *     `getCurrentAdminId() !== 1` — أي لموضعٍ في طابور لا لشخص.
+     *   · AdminModel::deleteAdmin كانت تزحف بالمعرّفات عبر تسعة جداول
+     *     عند كل حذف، فتجعل ذلك الموضع متحرّكاً.
+     *
+     * أيّ منهما وحده مُحتمَل؛ اجتماعهما يعني أن حذف صفٍّ ينقل حقّ
+     * تنزيل قاعدة البيانات إلى شخص آخر بصمت. القاعدة الآن: الهوية
+     * رتبةٌ (role='A')، والمفتاح لا يتحرّك أبداً.
+     */
+    public function testNoAuthorizationIsPinnedToALiteralIdAndNoKeyIsRenumbered(): void
+    {
+        $problems = [];
+
+        $sources = array_merge(
+            glob(self::root() . '/app/Controllers/*.php') ?: [],
+            glob(self::root() . '/app/Models/*.php') ?: [],
+            glob(self::root() . '/app/Core/*.php') ?: []
+        );
+
+        foreach ($sources as $file) {
+            // التعليقات تُجرَّد قبل الفحص. النمط الممنوع مذكور نصّاً في
+            // توثيق المواضع التي أصلحته — وهذا هو الشرح الذي يمنع عودته،
+            // فلا يصحّ أن يوقع الاختبار في إيجابية كاذبة. (scripts/audit.php
+            // تعلّمت القاعدة نفسها حين قفز عدّاد <style> من 55 إلى 337
+            // بسبب تعليق واحد يشرح أين انتقلت الكتلة.)
+            $src   = self::stripComments((string) file_get_contents($file));
+            $label = basename($file);
+
+            // تخويل معلَّق بمعرّف حرفي: getCurrentAdminId() قورنت برقم.
+            if (preg_match('/getCurrentAdminId\(\)\s*[!=]==?\s*\d+/', $src)) {
+                $problems[] = "{$label} — تخويل معلَّق بمعرّف حرفي بدل رتبة.";
+            }
+
+            // إعادة ترقيم مفتاح أساسي.
+            if (preg_match('/UPDATE\s+\w+\s+SET\s+id\s*=/i', $src)) {
+                $problems[] = "{$label} — يعيد ترقيم مفتاحاً أساسياً؛ المعرّف هوية لا ترتيب.";
+            }
+
+            // AUTO_INCREMENT مُعاد ضبطه = الوجه الآخر لإعادة الترقيم،
+            // وهو أيضاً implicit commit يكسر أي transaction حوله.
+            if (str_contains($src, 'AUTO_INCREMENT =') || str_contains($src, 'AUTO_INCREMENT=')) {
+                $problems[] = "{$label} — يعيد ضبط AUTO_INCREMENT (implicit commit يكسر الـtransaction).";
+            }
+        }
+
+        $this->assertSame([], $problems, "اقتران المعرّفات عاد:\n  " . implode("\n  ", $problems));
+    }
+
+    /**
+     * كل حارس خنق مكتوب بالصيغة التي يفهمها الراوتر، وبحدود معقولة.
+     *
+     * Router::runMiddleware يرمي عند صيغة مشوّهة — لكن وقت الطلب. وخطأ
+     * مطبعي في رقم («throttle:login,5» بلا نافذة، أو نافذة صفر) يعني
+     * إمّا صفحة 500 لكل زائر، وإمّا حارساً يمرّ كل شيء. كلاهما يُكتشَف
+     * هنا لا هناك.
+     */
+    public function testEveryThrottleGuardIsWellFormed(): void
+    {
+        $problems = [];
+
+        foreach (self::guardsInRouteTable() as $action => $guard) {
+            if (!str_starts_with($guard, 'throttle:')) {
+                continue;
+            }
+
+            $args = explode(',', substr($guard, 9));
+
+            if (count($args) !== 3) {
+                $problems[] = "{$action} → [{$guard}] — الصيغة throttle:bucket,max,windowMinutes.";
+                continue;
+            }
+
+            [$bucket, $max, $window] = $args;
+
+            if (!preg_match('/^[a-z0-9-]+$/', $bucket)) {
+                $problems[] = "{$action} → اسم دلو غير صالح [{$bucket}].";
+            }
+            if ((int)$max < 1) {
+                $problems[] = "{$action} → حدّ [{$max}] لا يمنع شيئاً.";
+            }
+            if ((int)$window < 1) {
+                $problems[] = "{$action} → نافذة [{$window}] دقيقة تُفرغ العدّاد فوراً.";
+            }
+        }
+
+        $this->assertSame([], $problems, "حُرّاس خنق مشوّهة:\n  " . implode("\n  ", $problems));
+    }
+
+    /**
+     * كل نقطة دخول حسّاسة مخنوقة — لا واحدة منسيّة.
+     *
+     * القائمة مكتوبة بأسمائها عمداً بدل اشتقاقها: الاشتقاق يجيب عن
+     * «ما المخنوق؟» بينما السؤال الذي يحرس هو «ما الذي **يجب** أن
+     * يُخنق؟». من يضيف نقطة دخول جديدة ولا يخنقها لن يكسر اشتقاقاً،
+     * لكنه سيصطدم بهذه القائمة حين يضيف اسمه إليها — وهو الموضع الصحيح
+     * لاتخاذ القرار.
+     */
+    public function testEverySensitiveEntryPointIsThrottled(): void
+    {
+        $mustBeThrottled = [
+            'ContactController::send',
+            'AuthController::login',
+            'AuthController::register',
+            'AuthController::forgot',
+            'AuthController::resetSubmit',
+            'AdminAuthController::login',
+            'AdminAuthController::verify2FALogin',
+            'AdminAuthController::forgotPassword',
+            'AdminAuthController::reauth',
+        ];
+
+        $inTable = self::guardsInRouteTable();
+
+        $missing = [];
+        foreach ($mustBeThrottled as $action) {
+            $guard = $inTable[$action] ?? '';
+            if (!str_starts_with($guard, 'throttle:')) {
+                $missing[] = $action;
+            }
+        }
+
+        $this->assertSame([], $missing, "نقاط دخول حسّاسة بلا خنق:\n  " . implode("\n  ", $missing));
     }
 
     /**
@@ -165,7 +330,9 @@ final class RouteGuardParityTest extends TestCase
         foreach (self::guardsInRouteTable() as $action => $guard) {
             $known = $guard === 'auth'
                 || $guard === 'admin'
-                || str_starts_with($guard, 'perm:');
+                || $guard === 'root'
+                || str_starts_with($guard, 'perm:')
+                || str_starts_with($guard, 'throttle:');
 
             if (!$known) {
                 $unknown[] = "{$action} → [{$guard}]";

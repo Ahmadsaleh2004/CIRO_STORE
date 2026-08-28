@@ -56,7 +56,7 @@
                     <td><?= $i + 1 ?></td>
                     <td class="fw-semibold"><?= htmlspecialchars($b['filename']) ?></td>
                     <td><?= htmlspecialchars($b['size_human']) ?></td>
-                    <td style="color:var(--muted-text);font-size:.8rem;"><?= htmlspecialchars($b['date']) ?></td>
+                    <td class="u-muted u-fs-80"><?= htmlspecialchars($b['date']) ?></td>
                     <td class="text-center">
                         <div class="d-flex gap-1 justify-content-center">
                             <a class="btn btn-sm btn-outline-primary"

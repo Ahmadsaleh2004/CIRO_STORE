@@ -84,7 +84,7 @@
                     </div>
                 </div>
                 <div class="d-flex align-items-center gap-2 mb-2">
-                    <input type="checkbox" id="newAddrDefault" style="width:16px;height:16px;">
+                    <input type="checkbox" id="newAddrDefault" class="u-w-16">
                     <label for="newAddrDefault" class="small">Set as default</label>
                 </div>
                 <button type="button" class="btn btn-outline-success btn-sm" id="saveNewAddrBtn">
@@ -107,7 +107,7 @@
                     <input type="radio" name="payment_method" value="cash_on_delivery" checked class="addr-radio">
                     <span>💵 Cash on Delivery</span>
                 </label>
-                <label class="addr-label d-flex align-items-center gap-3 cursor-pointer" style="opacity:.5;pointer-events:none;">
+                <label class="addr-label d-flex align-items-center gap-3 cursor-pointer u-inert">
                     <input type="radio" name="payment_method" value="credit_card" disabled class="addr-radio">
                     <span>💳 Credit/Debit Card <small class="text-muted">(Coming Soon)</small></span>
                 </label>
@@ -128,11 +128,11 @@
                 <span>Total:</span>
                 <span id="reviewTotal">$0.00</span>
             </div>
-            <div class="mt-3 p-3 rounded" style="background:var(--card-bg);border:1px solid var(--section-border);">
+            <div class="mt-3 p-3 rounded u-surface-card">
                 <strong>📍 Delivery Address</strong>
                 <p id="reviewAddress" class="mb-0 small mt-1">—</p>
             </div>
-            <div class="mt-2 p-3 rounded" style="background:var(--card-bg);border:1px solid var(--section-border);">
+            <div class="mt-2 p-3 rounded u-surface-card">
                 <strong>💵 Payment:</strong> <span id="reviewPayment">Cash on Delivery</span>
             </div>
             <p class="small text-muted mt-2">📜 <?= htmlspecialchars($returnPolicy ?? '') ?></p>
