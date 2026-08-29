@@ -18,7 +18,7 @@ $variants = $p['variants'] ?? [];
 <?php if (!empty($formErr)): ?>
 <div class="alert alert-danger alert-dismissible fade show" role="alert">
     <?= htmlspecialchars($formErr) ?>
-    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
 </div>
 <?php endif; ?>
 
@@ -123,9 +123,9 @@ $variants = $p['variants'] ?? [];
                accept="image/jpeg,image/png,image/webp">
     </div>
 
-    <!-- ══ Colors / الألوان (صفوف موجودة + إضافة جديدة) ════════ -->
+    <!-- ══ Colors (صفوف موجودة + إضافة جديدة) ════════ -->
     <div class="d-flex justify-content-between align-items-center mb-3">
-        <h5 class="mb-0">Colors / الألوان <span class="text-danger">*</span></h5>
+        <h5 class="mb-0">Colors <span class="text-danger">*</span></h5>
         <button type="button"
                 class="btn btn-outline-success btn-sm"
                 id="addVariantBtn">+ Add Color</button>

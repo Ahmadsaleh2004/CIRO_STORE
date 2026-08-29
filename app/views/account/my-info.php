@@ -97,7 +97,7 @@
                                placeholder=" " autocomplete="new-password" minlength="8" maxlength="128">
                         <label>New Password <small class="text-muted">(leave blank to keep current)</small></label>
                         <button type="button" class="btn btn-sm btn-link toggle-password-btn" data-target="newPassword"
-                                class="u-pin-top-left" tabindex="-1">👁</button>
+                                class="u-pin-top-left" tabindex="-1" aria-label="Show password">👁</button>
                     </div>
                     
                     <!-- Current Password — always required to save -->
@@ -106,7 +106,7 @@
                                placeholder=" " required autocomplete="current-password" maxlength="128">
                         <label>Current Password <span class="text-danger">*</span> <small class="text-muted">(required to save any change)</small></label>
                         <button type="button" class="btn btn-sm btn-link toggle-password-btn" data-target="currentPassword"
-                                class="u-pin-top-left" tabindex="-1">👁</button>
+                                class="u-pin-top-left" tabindex="-1" aria-label="Show password">👁</button>
                     </div>
                     
                     <div id="profileMsg" class="alert py-2 small d-none"></div>

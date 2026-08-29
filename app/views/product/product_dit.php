@@ -159,10 +159,10 @@ usort($sortedByStock, fn($a, $b) => (int)$a['stock_quantity'] <=> (int)$b['stock
             <!-- ── Qty + Cart block ── -->
             <div id="qtyCartBlock" class="<?= $stock > 0 ? '' : 'd-none' ?>">
                 <div class="quantity-box mb-4">
-                    <button class="btn btn-outline-secondary" id="minusBtn">−</button>
+                    <button class="btn btn-outline-secondary" id="minusBtn" aria-label="Decrease quantity">−</button>
                     <input type="number" value="1" min="1" max="<?= $stock ?>"
                            id="productQty" class="form-control quantity-input qty-input-md">
-                    <button class="btn btn-outline-secondary" id="plusBtn">+</button>
+                    <button class="btn btn-outline-secondary" id="plusBtn" aria-label="Increase quantity">+</button>
                 </div>
                 <div class="d-flex gap-2">
                     <?php if ($userLoggedIn && empty($_SESSION['admin_in_store_mode'] ?? false)): ?>

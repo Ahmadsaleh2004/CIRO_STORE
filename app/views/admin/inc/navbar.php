@@ -15,7 +15,7 @@
             <span class="badge bg-warning text-dark ms-1 u-fs-60 align-middle">ADMIN</span>
         </a>
 
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#adminNav">
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#adminNav" aria-label="Toggle navigation">
             <span class="navbar-toggler-icon"></span>
         </button>
 
@@ -86,7 +86,7 @@
                     <form method="POST" action="<?= URLROOT ?>/admin/store-mode/enter" class="d-inline m-0 p-0">
                         <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf) ?>">
                         <button type="submit" class="nav-link btn btn-link p-0"
-                                title="تصفح المتجر كزائر" class="u-bare-button">🌐 Store</button>
+                                title="Browse the store as a visitor" class="u-bare-button">🌐 Store</button>
                     </form>
                 </li>
 

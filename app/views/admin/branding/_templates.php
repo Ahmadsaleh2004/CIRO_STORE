@@ -30,7 +30,7 @@
 
         <div class="d-flex justify-content-between align-items-center mb-2">
             <span class="small fw-semibold text-muted">Image <span class="item-number"></span></span>
-            <button type="button" class="btn btn-sm btn-outline-danger remove-item-btn">✕</button>
+            <button type="button" class="btn btn-sm btn-outline-danger remove-item-btn" aria-label="Remove item">✕</button>
         </div>
 
         <!-- أزرار التبديل بين التبويبين — تتحكم فقط بالعرض/الإخفاء البصري -->

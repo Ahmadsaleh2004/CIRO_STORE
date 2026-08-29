@@ -223,7 +223,7 @@ class Mailer
             <h3 style='color:#333'>{$safeTitle}</h3>
             <div style='color:#444;line-height:1.8'>{$bodyHtml}</div>
             <hr style='margin-top:30px;border:none;border-top:1px solid #eee'>
-            <p style='color:#999;font-size:12px'>هذا إيميل تلقائي، لا ترد عليه مباشرة.</p>
+            <p style='color:#999;font-size:12px'>This is an automated message — please do not reply.</p>
         </div>";
     }
 }

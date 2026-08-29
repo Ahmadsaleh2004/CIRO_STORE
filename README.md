@@ -6,7 +6,7 @@
 |---|---|
 | **PHP** | 8.2+ |
 | **قاعدة البيانات** | MySQL 8 · <!--stats:tables-->31 جدولاً<!--/stats:tables--> |
-| **الحجم** | ‏<!--stats:php-->25,446 سطر PHP<!--/stats:php--> · <!--stats:js-->6,208 JS<!--/stats:js--> · <!--stats:css-->5,470 CSS<!--/stats:css--> |
+| **الحجم** | ‏<!--stats:php-->25,444 سطر PHP<!--/stats:php--> · <!--stats:js-->6,208 JS<!--/stats:js--> · <!--stats:css-->5,470 CSS<!--/stats:css--> |
 | **الاختبارات** | <!--stats:tests-->229 اختباراً<!--/stats:tests--> (وحدة + تكامل) |
 | **توثيق الـAPI** | OpenAPI 3.0 — <!--stats:operations-->105 عملية<!--/stats:operations-->، مولَّدة من الكود |
 

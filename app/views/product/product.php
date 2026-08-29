@@ -155,12 +155,12 @@ $pageDescription = 'Browse all products at Cairo Store.';
                     <div>
                         <div class="quantity-box mb-2 d-flex justify-content-center gap-2">
                             <button class="btn btn-outline-secondary btn-sm"
-                                    data-action="change-qty" data-product-id="<?= (int)$p['id'] ?>" data-delta="-1">−</button>
+                                    data-action="change-qty" data-product-id="<?= (int)$p['id'] ?>" data-delta="-1" aria-label="Decrease quantity">−</button>
                             <input type="number" value="1" id="qty-<?= (int)$p['id'] ?>"
                                    class="form-control quantity-input qty-input-sm"
                                    min="1" max="<?= $stock ?>">
                             <button class="btn btn-outline-secondary btn-sm"
-                                    data-action="change-qty" data-product-id="<?= (int)$p['id'] ?>" data-delta="1">+</button>
+                                    data-action="change-qty" data-product-id="<?= (int)$p['id'] ?>" data-delta="1" aria-label="Increase quantity">+</button>
                         </div>
                         <?php if ($stock > 0): ?>
                         <?php if (isUser() && empty($_SESSION['admin_in_store_mode'])): ?>

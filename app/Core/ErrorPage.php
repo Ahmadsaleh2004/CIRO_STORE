@@ -97,7 +97,7 @@ final class ErrorPage
             Log::warning('unsafe_back_url', ['back_url' => $backUrl]);
             $backUrl = URLROOT . '/';
         }
-        $backLabel = $backLabel ?? 'العودة للصفحة الرئيسية';
+        $backLabel = $backLabel ?? 'Back to home';
 
         // نفس احتياط notFound(): لو غاب ملف الصفحة نطبع بديلاً مضمّناً
         // بدل استدعاء view() — وهو تكرار محتمل داخل معالج خطأ.
@@ -180,12 +180,12 @@ final class ErrorPage
             header('Cache-Control: no-store');
         }
 
-        echo '<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="UTF-8">'
+        echo '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">'
            . '<meta name="viewport" content="width=device-width,initial-scale=1">'
-           . '<title>429 — محاولات كثيرة</title></head>'
+           . '<title>429 — Too Many Requests</title></head>'
            . '<body style="font-family:system-ui,sans-serif;text-align:center;padding:60px">'
-           . '<h1>429</h1><p>محاولات كثيرة خلال وقت قصير. انتظر قليلاً ثم أعد المحاولة.</p>'
-           . '<p><a href="' . htmlspecialchars(URLROOT) . '/">العودة للصفحة الرئيسية</a></p>'
+           . '<h1>429</h1><p>Too many requests in a short time. Please wait a moment and try again.</p>'
+           . '<p><a href="' . htmlspecialchars(URLROOT) . '/">Back to home</a></p>'
            . '</body></html>';
 
         exit;
@@ -252,7 +252,7 @@ final class ErrorPage
                . '<title>' . $status . ' — Service Unavailable</title></head>'
                . '<body style="font-family:system-ui,sans-serif;text-align:center;padding:60px">'
                . '<h1>' . $status . '</h1>'
-               . '<p>الخدمة غير متاحة مؤقتاً. حاول بعد قليل.</p>'
+               . '<p>The service is temporarily unavailable. Please try again shortly.</p>'
                . '</body></html>';
         }
 

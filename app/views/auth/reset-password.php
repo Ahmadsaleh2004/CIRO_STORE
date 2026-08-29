@@ -35,9 +35,9 @@ require APPROOT . '/views/inc/head-bare.php';
     <?php if (empty($valid)): ?>
         <div class="reset-body">
             <div class="alert alert-danger reset-msg" role="alert">
-                الرابط منتهي أو غير صحيح.
+                This link has expired or is not valid.
             </div>
-            <p class="small text-muted mb-0">اطلب رابطًا جديدًا من صفحة تسجيل الدخول وسيصلك على بريدك الإلكتروني.</p>
+            <p class="small text-muted mb-0">Request a new link from the sign-in page and we will email it to you.</p>
         </div>
         <div class="reset-footer">
             <a href="<?= $isAdmin ? URLROOT . '/admin/login' : URLROOT ?>">← <?= $isAdmin ? 'Admin Login' : 'Back to Store' ?></a>
