@@ -334,8 +334,11 @@ final class MigratorTest extends DatabaseTestCase
             }
         }
 
-        // 9 منذ 0009_mail_queue (طابور البريد — SMTP خارج مسار الطلب).
-        $this->assertCount(9, $real->available(), 'عدد الهجرات تغيّر — حدّث هذا الاختبار عمداً لا سهواً.');
+        // 10 منذ 0010_order_address_snapshot (عنوان الطلب لقطة لا مرجع:
+        // كان address_id مفتاحاً حيّاً بـON DELETE SET NULL، فتعديل
+        // المستخدم لعنوانه يغيّر وجهة طلب سُلّم فعلاً، وحذفه يمحو عنوان
+        // طلبات مكتملة نهائياً).
+        $this->assertCount(10, $real->available(), 'عدد الهجرات تغيّر — حدّث هذا الاختبار عمداً لا سهواً.');
         $this->assertSame([], $problems, "هجرات غير مكتملة الصيغة:\n  " . implode("\n  ", $problems));
     }
 

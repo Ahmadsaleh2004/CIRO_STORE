@@ -26,13 +26,13 @@ final class ErrorPage
      * يرسل صفحة 404 كاملة ويوقف التنفيذ.
      *
      * @param string|null $logDetail تفصيل تشخيصي للمطوّر — يذهب إلى
-     *        error_log وحده ولا يُطبع أبداً في المتصفح. تسريب مسارات
+     *        السجلّ وحده ولا يُطبع أبداً في المتصفح. تسريب مسارات
      *        الخادم أو أسماء الملفات للزائر كشفٌ لبنية المشروع بلا فائدة.
      */
     public static function notFound(?string $logDetail = null): never
     {
         if ($logDetail !== null && $logDetail !== '') {
-            error_log('[Cairo Store] 404: ' . $logDetail);
+            Log::info('http_404', ['detail' => $logDetail]);
         }
 
         if (!headers_sent()) {
@@ -66,7 +66,7 @@ final class ErrorPage
      * الصلاحية للزائر بلا فائدة؛ الرسالة المعروضة الآن عامة والتفصيل
      * إلى السجل.
      *
-     * @param string|null $logDetail تفصيل تشخيصي — إلى error_log وحده،
+     * @param string|null $logDetail تفصيل تشخيصي — إلى السجلّ وحده،
      *        لا يُطبع في المتصفح أبداً.
      * @param string|null $backUrl   وجهة زر الرجوع. الافتراضي جذر الموقع؛
      *        تمرّره صفحات الأدمن كي لا تُلقي الأدمن في واجهة المتجر.
@@ -78,7 +78,7 @@ final class ErrorPage
         ?string $backLabel = null
     ): never {
         if ($logDetail !== null && $logDetail !== '') {
-            error_log('[Cairo Store] 403: ' . $logDetail);
+            Log::warning('http_403', ['detail' => $logDetail]);
         }
 
         if (!headers_sent()) {
@@ -94,7 +94,7 @@ final class ErrorPage
         // htmlspecialchars في الـview يهرّب المحارف ولا يمنع مخطّطاً خبيثاً.
         $backUrl   = $backUrl   ?? URLROOT . '/';
         if (!str_starts_with($backUrl, URLROOT)) {
-            error_log('[Cairo Store] 403: وجهة رجوع خارج الموقع رُفضت: ' . $backUrl);
+            Log::warning('unsafe_back_url', ['back_url' => $backUrl]);
             $backUrl = URLROOT . '/';
         }
         $backLabel = $backLabel ?? 'العودة للصفحة الرئيسية';
@@ -132,7 +132,7 @@ final class ErrorPage
     public static function methodNotAllowed(array $allowed, ?string $logDetail = null): never
     {
         if ($logDetail !== null && $logDetail !== '') {
-            error_log('[Cairo Store] 405: ' . $logDetail . ' — allowed: ' . implode(', ', $allowed));
+            Log::info('http_405', ['detail' => $logDetail, 'allowed' => implode(',', $allowed)]);
         }
 
         if (!headers_sent()) {
@@ -164,12 +164,12 @@ final class ErrorPage
      * تُرسَل بالثواني لأن الصيغة الرقمية هي ما تفهمه المكتبات.
      *
      * @param int         $retryAfterSeconds كم ثانية قبل معاودة مجدية.
-     * @param string|null $logDetail تفصيل تشخيصي — إلى error_log وحده.
+     * @param string|null $logDetail تفصيل تشخيصي — إلى السجلّ وحده.
      */
     public static function tooManyRequests(int $retryAfterSeconds, ?string $logDetail = null): never
     {
         if ($logDetail !== null && $logDetail !== '') {
-            error_log('[Cairo Store] 429: ' . $logDetail);
+            Log::warning('http_429', ['detail' => $logDetail]);
         }
 
         if (!headers_sent()) {
@@ -216,14 +216,14 @@ final class ErrorPage
      *   3. **503 لا 500 عند فشل الاتصال**: الخدمة غير متاحة مؤقتاً لا
      *      «خطأ في الخادم». الفرق يهمّ محرّكات البحث وأدوات المراقبة.
      *
-     * @param string|null $logDetail تفصيل تشخيصي — إلى error_log وحده،
+     * @param string|null $logDetail تفصيل تشخيصي — إلى السجلّ وحده،
      *        لا يُطبع في المتصفح أبداً.
      * @param int         $status    503 (غير متاح مؤقتاً) أو 500.
      */
     public static function serverError(?string $logDetail = null, int $status = 500): never
     {
         if ($logDetail !== null && $logDetail !== '') {
-            error_log('[Cairo Store] ' . $status . ': ' . $logDetail);
+            Log::error('http_' . $status, ['detail' => $logDetail]);
         }
 
         // الطرفية: لا HTML ولا ترويسات. النصّ إلى STDERR وكود خروج غير صفري.

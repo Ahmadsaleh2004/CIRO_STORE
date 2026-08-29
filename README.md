@@ -1,14 +1,14 @@
 # Cairo Store
 
-متجر إلكتروني بـPHP على بنية MVC مكتوبة يدوياً بلا إطار — 24 كنترولراً و16 مودلاً و104 مسار، مع لوحة تحكم كاملة بنظام رتب وصلاحيات.
+متجر إلكتروني بـPHP على بنية MVC مكتوبة يدوياً بلا إطار — <!--stats:controllers-->25 كنترولراً<!--/stats:controllers--> و<!--stats:models-->16 مودلاً<!--/stats:models--> و<!--stats:routes-->105 مسار<!--/stats:routes-->، مع لوحة تحكم كاملة بنظام رتب وصلاحيات.
 
 | | |
 |---|---|
 | **PHP** | 8.2+ |
-| **قاعدة البيانات** | MySQL 8 · 28 جدولاً |
-| **الحجم** | ‏24,199 سطر PHP · 5,666 JS · 5,193 CSS |
-| **الاختبارات** | 77 اختباراً (وحدة + تكامل) |
-| **توثيق الـAPI** | OpenAPI 3.0 — 104 عملية، مولَّدة من الكود |
+| **قاعدة البيانات** | MySQL 8 · <!--stats:tables-->31 جدولاً<!--/stats:tables--> |
+| **الحجم** | ‏<!--stats:php-->25,446 سطر PHP<!--/stats:php--> · <!--stats:js-->6,208 JS<!--/stats:js--> · <!--stats:css-->5,470 CSS<!--/stats:css--> |
+| **الاختبارات** | <!--stats:tests-->229 اختباراً<!--/stats:tests--> (وحدة + تكامل) |
+| **توثيق الـAPI** | OpenAPI 3.0 — <!--stats:operations-->105 عملية<!--/stats:operations-->، مولَّدة من الكود |
 
 ---
 
@@ -62,7 +62,7 @@ mysql -u root ciro_db < tests/fixtures/schema.sql
 composer migrate:baseline
 ```
 
-> **لماذا `baseline` لا `migrate`؟** الهجرات السبع القائمة لا تبني القاعدة من الصفر — كلها تعتمد على جداول (`users`, `products`, `orders`) لا وجود لها في أيٍّ منها. فالمخطّط الحقيقي وُلد قبلها ونما بها.
+> **لماذا `baseline` لا `migrate`؟** الهجرات القائمة لا تبني القاعدة من الصفر — كلها تعتمد على جداول (`users`, `products`, `orders`) لا وجود لها في أيٍّ منها. فالمخطّط الحقيقي وُلد قبلها ونما بها.
 >
 > `tests/fixtures/schema.sql` هو **خطّ الأساس** ويحوي أثرها فعلاً، فتنفيذها عليه يفشل بـ«الجدول موجود». و`baseline` تسجّلها كمطبَّقة بلا تنفيذها. أي هجرة تُضاف بعد ذلك تعمل بـ`composer migrate` عادةً.
 
@@ -121,7 +121,7 @@ npm run format     # Prettier
 | `composer images:webp` | يولّد نسخ WebP لصور المنتجات — **`<picture>` تعتمد عليها** |
 | `composer fix:blocked-orders` | إصلاح لمرّة واحدة: يلغي الطلبات المعلّقة لمستخدمين حُظروا قبل تفعيل الإلغاء التلقائي. لا يلزم تركيباً جديداً |
 
-> `composer run-script --list` يعرض الثمانية عشر أمراً مع وصف كلٍّ منها.
+> `composer run-script --list` يعرض كل الأوامر مع وصف كلٍّ منها.
 
 ### الاختبارات وقاعدة البيانات
 
@@ -160,8 +160,8 @@ php scripts/migrate.php make add_x   # ملف هجرة جديد بالرقم ا�
 ```
 app/
   Core/         الراوتر · الحُرّاس · قاعدة البيانات · الكلاسات الأب · TOTP · صفحات الخطأ
-  Controllers/  24 كنترولراً — منطق الطلب وحده
-  Models/       16 مودلاً — استعلامات static عبر PDO
+  Controllers/  منطق الطلب وحده
+  Models/       استعلامات static عبر PDO
   Services/     منطق أعمال لا يخصّ مودلاً بعينه
   helpers/      دوال عامة تُحمَّل عبر composer autoload.files
   views/        قوالب PHP — ثلاثة layouts: store · admin · bare
@@ -190,12 +190,12 @@ public/index.php → Router::dispatch()
 | الطبقة | التفصيل |
 |---|---|
 | **SQL** | استعلامات مُحضَّرة حصراً · `ATTR_EMULATE_PREPARES = false` |
-| **CSRF** | توكن 32 بايتاً · مقارنة `hash_equals` · رمز `csrf_invalid` صريح يقرأه العميل ويعيد المحاولة مرّة واحدة |
+| **CSRF** | توكن 32 بايتاً · مقارنة `hash_equals` · رمز `csrf_invalid` صريح يقرأه العميل ويعيد المحاولة مرّة واحدة · التوكن يدور عند كل تغيّر صلاحية |
 | **الجلسات** | `use_strict_mode` · `HttpOnly` · `SameSite=Lax` · `secure` مشروط بالبروتوكول · تجديد المعرّف عند الدخول · جلسة الأدمن منفصلة الاسم |
 | **كلمات السر** | bcrypt بتكلفة 12 |
 | **الصلاحيات** | رتب A > B > C > D — والمقارنة **أكبر تماماً**، فلا يدير أدمنٌ رتبتَه |
 | **‏2FA** | TOTP متوافق مع RFC 6238 (مختبَر بمتجهات المعيار المرجعية) |
-| **الترويسات** | `nosniff` · `X-Frame-Options` · `Referrer-Policy` · `Permissions-Policy` · HSTS مشروط بـHTTPS · CSP بوضع الإبلاغ |
+| **الترويسات** | `nosniff` · `X-Frame-Options` · `Referrer-Policy` · `Permissions-Policy` · HSTS مشروط بـHTTPS · CSP **مفروضة بالكامل** بلا `unsafe-inline` |
 
 ### الفحص الآلي
 
@@ -209,7 +209,9 @@ pre-commit install --hook-type pre-commit --hook-type pre-push
 
 الثلاثة تعمل في CI أيضاً. الخطّاف يحمي من ينصّبه، وCI يحمي المستودع.
 
-⚠️ CSP اليوم بوضع **الإبلاغ فقط**: 16 ملف view يحوي `<script>` مضمّناً. إخراجها إلى ملفات هو شرط تفعيلها.
+**CSP مفروضة بالكامل** — بلا `unsafe-inline` في `script-src` ولا `style-src`. كلفة ذلك كانت إخراج 14 كتلة `<script>` مضمّنة و33 معالج `onclick` و234 سمة `style` من الـviews. و`tests/Unit/SecurityHeadersTest.php` يمنع عودتها.
+
+وكل مكتبة خارجية مثبَّتة النسخة ومبصومة بـ`integrity` — راجع `VENDOR_ASSETS` في `app/helpers/assets_helper.php`.
 
 ---
 
