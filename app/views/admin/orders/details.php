@@ -34,6 +34,7 @@ if ($order['status'] === 'completed' && !empty($order['handler_admin_name'])) {
 <div class="admin-page-header d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4">
     <h1>
         🧾 Order #<?= (int)$order['order_id'] ?>
+        <?php // @escaping-safe: HTML يبنيه هذا الملف — القيم المتغيّرة مهرَّبة عند البناء ?>
         <?= $statusBadge ?>
     </h1>
     <div class="d-flex gap-2 align-items-center flex-wrap">
@@ -48,6 +49,7 @@ if ($order['status'] === 'completed' && !empty($order['handler_admin_name'])) {
     </div>
 </div>
 <?php if ($handlerLine): ?>
+<?php // @escaping-safe: HTML يبنيه هذا الملف — القيم المتغيّرة مهرَّبة عند البناء ?>
 <p class="text-muted small mb-4"><?= $handlerLine ?></p>
 <?php endif; ?>
 

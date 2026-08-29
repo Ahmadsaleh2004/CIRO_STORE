@@ -90,6 +90,7 @@
                         foreach (['B' => 'B — Admin', 'C' => 'C — Moderator', 'D' => 'D — Support'] as $val => $label):
                             if (($roleMap[$val] ?? 0) < $myRank):
                         ?>
+                        <?php // @escaping-safe: تسميات رتب حرفية في هذا الملف ?>
                         <option value="<?= $val ?>"><?= $label ?></option>
                         <?php
                             endif;

@@ -31,6 +31,7 @@
                             foreach ($roleLabels as $val => $label):
                                 if (($roleMap[$val] ?? 0) < $myRank):
                             ?>
+                            <?php // @escaping-safe: $roleLabels مصفوفة حرفية في هذا الملف ?>
                             <option value="<?= $val ?>"><?= $label ?></option>
                             <?php
                                 endif;

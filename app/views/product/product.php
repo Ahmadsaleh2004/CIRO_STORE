@@ -47,6 +47,7 @@ $pageDescription = 'Browse all products at Cairo Store.';
                         $emoji = categoryEmoji($cat['name']);
                     ?>
                     <option value="cat-<?= htmlspecialchars($cat['name']) ?>">
+                        <?php // @escaping-safe: categoryEmoji ترجع رمزاً من خريطة داخلية ?>
                         <?= $emoji ?> <?= htmlspecialchars(ucfirst($cat['name'])) ?>
                     </option>
                     <?php endforeach; ?>
@@ -94,7 +95,7 @@ $pageDescription = 'Browse all products at Cairo Store.';
             <div class="card product-card h-100 shadow border-0 position-relative" role="article">
 
                 <?php if ($discount > 0): ?>
-                <span class="discount-badge">-<?= $discount ?>%</span>
+                <span class="discount-badge">-<?= (float)$discount ?>%</span>
                 <?php endif; ?>
 
                 <?php if (!empty($isAdminProd)): ?>
