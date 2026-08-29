@@ -165,8 +165,49 @@ describe('cart.js — المرآة والخادم', () => {
         expect(added).toBe(false);
         expect(calls).toHaveLength(0);
     });
-});
+    it('النقرات السريعة على نفس اللون تُسلسَل لا تتراكم', async () => {
+        // بلاغ من الاستعمال: «كبست بسرعة على الإضافة… الرقم يضلّ يزيد».
+        //
+        // كل نقرة كانت تقرأ المرآة قبل وصول ردّ سابقتها، فترى الكمية
+        // القديمة وتمرّ من فحص المخزون في المتصفّح. عشر نقرات = عشرة
+        // طلبات متزامنة، ورقمٌ يقفز فوق المتاح ثم يرتدّ.
+        let concurrent = 0;
+        let peak = 0;
 
+        window.fetchWithCsrfRetry = vi.fn(async (url, opts) => {
+            concurrent++;
+            peak = Math.max(peak, concurrent);
+            calls.push({ url, body: JSON.parse(opts.body) });
+            await new Promise(r => setTimeout(r, 20));
+            concurrent--;
+            return cartResponse([]);
+        });
+
+        await Promise.all(Array.from({ length: 6 }, () => window.cartAdd(1, 9, 1)));
+
+        expect(calls).toHaveLength(6);
+        expect(peak, 'طلبان متزامنان على نفس الـvariant').toBe(1);
+    });
+
+    it('الألوان المختلفة تبقى متوازية', async () => {
+        let concurrent = 0;
+        let peak = 0;
+
+        window.fetchWithCsrfRetry = vi.fn(async (url, opts) => {
+            concurrent++;
+            peak = Math.max(peak, concurrent);
+            calls.push({ url, body: JSON.parse(opts.body) });
+            await new Promise(r => setTimeout(r, 20));
+            concurrent--;
+            return cartResponse([]);
+        });
+
+        // السلسلة لكل variant لا عامّة: تعديل سطر لا يمنع تعديل غيره.
+        await Promise.all([window.cartAdd(1, 9, 1), window.cartAdd(2, 10, 1), window.cartAdd(3, 11, 1)]);
+
+        expect(peak).toBeGreaterThan(1);
+    });
+});
 /**
  * شارة العدّاد في الـnavbar.
  *

@@ -116,15 +116,24 @@ final class CartModelTest extends DatabaseTestCase
         $userId = $this->makeUser();
         [$productId, $variantId] = $this->makeProduct();
 
+        // خارج المدى المقبول يُرفض قبل أن يمسّ القاعدة.
         $this->assertFalse(CartModel::add($userId, $productId, $variantId, CartModel::MAX_QTY + 1));
         $this->assertFalse(CartModel::add($userId, $productId, $variantId, 0));
         $this->assertSame(0, $this->countRows('cart_items'));
+    }
 
-        // والجمع لا يتجاوز السقف أيضاً — LEAST داخل SQL، فلا قراءة قبل
-        // الكتابة ولا سباق بين تبويبين.
+    public function testMaxQtyIsTheCeilingWhenStockIsPlentiful(): void
+    {
+        $userId = $this->makeUser();
+
+        // مخزون أوسع من MAX_QTY كي يظهر أيّ السقفين يحكم.
+        [$productId, $variantId] = $this->makeProduct(100.00, 0.00, CartModel::MAX_QTY + 50);
+
         CartModel::add($userId, $productId, $variantId, CartModel::MAX_QTY);
         CartModel::add($userId, $productId, $variantId, 10);
 
+        // السقفان معاً في LEAST داخل SQL: المخزون وMAX_QTY. هنا يفوز
+        // الثاني لأن الأوّل أوسع.
         $this->assertSame(CartModel::MAX_QTY, CartModel::getForUser($userId)[0]['quantity']);
     }
 
@@ -272,6 +281,49 @@ final class CartModelTest extends DatabaseTestCase
         [$productId, ] = $this->makeProduct();
 
         $this->assertFalse(CartModel::add($userId, $productId, 999999, 1));
+        $this->assertSame(0, $this->countRows('cart_items'));
+    }
+    // ════════════════════════════════════════════════════════
+    // السقف بالمخزون — بلاغ من الاستعمال
+    // ════════════════════════════════════════════════════════
+
+    public function testTheCartNeverHoldsMoreThanTheAvailableStock(): void
+    {
+        $userId = $this->makeUser();
+        [$productId, $variantId] = $this->makeProduct(100.00, 0.00, 5);
+
+        // «إذا كان في الآيفون منه 5 فقط وكبست بسرعة على الإضافة… الرقم
+        // يضلّ يزيد» — بلاغ من الاستعمال، أُعيد إنتاجه على خادم حيّ:
+        // عشر إضافات متوازية → السلّة تحمل 10 والمخزون 5.
+        //
+        // كان السقف MAX_QTY وحده، والحارس الوحيد ضدّ تجاوز المخزون في
+        // المتصفّح — وهو يسقط بالنقر السريع لأن كل نقرة تقرأ المرآة
+        // قبل وصول ردّ سابقتها.
+        $this->assertTrue(CartModel::add($userId, $productId, $variantId, 50));
+        $this->assertSame(5, CartModel::getForUser($userId)[0]['quantity']);
+    }
+
+    public function testRepeatedAddsStopAtTheStockCeiling(): void
+    {
+        $userId = $this->makeUser();
+        [$productId, $variantId] = $this->makeProduct(100.00, 0.00, 3);
+
+        for ($i = 0; $i < 10; $i++) {
+            CartModel::add($userId, $productId, $variantId, 1);
+        }
+
+        // السقف داخل SQL في نفس عبارة الجمع، فعشر عبارات متزامنة
+        // تنتهي كلّها عند المخزون بلا سباق.
+        $this->assertSame(3, CartModel::getForUser($userId)[0]['quantity']);
+    }
+
+    public function testAnOutOfStockVariantCannotEnterTheCart(): void
+    {
+        $userId = $this->makeUser();
+        [$productId, $variantId] = $this->makeProduct(100.00, 0.00, 0);
+
+        // سقفٌ صفر يعني سطراً بكمية صفر — حالة لا معنى لها. الرفض أوضح.
+        $this->assertFalse(CartModel::add($userId, $productId, $variantId, 1));
         $this->assertSame(0, $this->countRows('cart_items'));
     }
 }

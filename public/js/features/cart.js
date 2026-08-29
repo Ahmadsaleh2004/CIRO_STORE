@@ -67,6 +67,37 @@ async function loadCart() {
 window.loadCart = loadCart;
 
 /**
+ * تعديلات جارية لكل variant — تمنع تراكم النقرات السريعة.
+ *
+ * ⚠️ بلا هذا، كل نقرة تقرأ المرآة **قبل** أن يصل ردّ سابقتها، فترى
+ * كمية قديمة. وأثره مقيس: عشر نقرات سريعة على منتج مخزونه خمسة كانت
+ * تمرّ كلّها من فحص المخزون في المتصفّح لأن كلّاً منها ترى «صفر في
+ * السلّة».
+ *
+ * الخادم يسقّف الآن بالمخزون فلا تكذب القاعدة. لكن السلسلة هنا تمنع
+ * الوميض أيضاً — رقمٌ يقفز ثم يرتدّ — وتوفّر تسع رحلات شبكة من عشر.
+ *
+ * والمفتاح هو الـvariant لا عامّ: تعديل سطرٍ لا يمنع تعديل غيره.
+ *
+ * @type {Map<string|number, Promise<boolean>>}
+ */
+const inFlight = new Map();
+
+/** يسلسل التعديلات على نفس الـvariant، ويترك المختلفة متوازية. */
+function serialise(key, task) {
+    const previous = inFlight.get(key) ?? Promise.resolve(true);
+    // catch كي لا يُسقط فشلٌ واحد السلسلة كلّها لهذا الـvariant.
+    const next = previous.catch(() => false).then(task);
+
+    inFlight.set(key, next);
+    next.finally(() => {
+        if (inFlight.get(key) === next) inFlight.delete(key);
+    });
+
+    return next;
+}
+
+/**
  * ينفّذ تعديلاً على الخادم ويُحدّث المرآة من ردّه.
  *
  * ⚠️ المرآة تُحدَّث من **الاستجابة** لا من تخمين محلي. التحديث
@@ -100,25 +131,25 @@ async function cartMutate(path, payload) {
     }
 }
 
-/** إضافة كمية — تُجمَع مع الموجود على الخادم. */
+/** إضافة كمية — تُجمَع مع الموجود على الخادم، ومسلسَلة لكل variant. */
 async function cartAdd(productId, variantId, qty = 1) {
-    return cartMutate('/cart/add', {
+    return serialise(variantId, () => cartMutate('/cart/add', {
         product_id: Number(productId),
         variant_id: Number(variantId),
         qty:        Number(qty) || 1,
-    });
+    }));
 }
 window.cartAdd = cartAdd;
 
 /** ضبط كمية سطر ضبطاً مطلقاً — الصفر يحذفه. */
 async function cartSetQuantity(variantId, qty) {
-    return cartMutate('/cart/update', { variant_id: Number(variantId), qty: Number(qty) });
+    return serialise(variantId, () => cartMutate('/cart/update', { variant_id: Number(variantId), qty: Number(qty) }));
 }
 window.cartSetQuantity = cartSetQuantity;
 
 /** حذف سطر. */
 async function cartRemove(variantId) {
-    return cartMutate('/cart/remove', { variant_id: Number(variantId) });
+    return serialise(variantId, () => cartMutate('/cart/remove', { variant_id: Number(variantId) }));
 }
 window.cartRemove = cartRemove;
 

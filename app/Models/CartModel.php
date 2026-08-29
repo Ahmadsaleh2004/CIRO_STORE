@@ -127,18 +127,50 @@ class CartModel extends Model
         //
         // والفحص هنا لا في placeOrder وحده: الرفض المبكّر عند الإضافة
         // أصدق من رفضٍ متأخّر في آخر خطوة.
-        if (!self::variantBelongsTo($productId, $variantId)) {
+        $stock = self::stockForVariantOfProduct($productId, $variantId);
+
+        if ($stock === null) {
+            return false;
+        }
+
+        if ($stock <= 0) {
             return false;
         }
 
         try {
+            // ══════════════════════════════════════════════════════
+            // ⚠️ السقف بالمخزون لا بـMAX_QTY وحده
+            // ══════════════════════════════════════════════════════
+            //
+            // كان `LEAST(quantity + VALUES(quantity), MAX_QTY)` — أي أن
+            // السلّة تقبل مئة قطعة من منتجٍ منه خمس. والحارس الوحيد ضدّ
+            // ذلك كان في المتصفّح، وهو **يسقط بالنقر السريع**: كل نقرة
+            // تقرأ المرآة قبل أن يصل ردّ سابقتها، فترى الكمية القديمة
+            // وتمرّ من الفحص.
+            //
+            // بلاغ من الاستعمال، وأُعيد إنتاجه: عشر إضافات متوازية على
+            // منتج مخزونه 5 → **السلّة تحمل 10**. والشارة تعرض 10 لأنها
+            // صادقة — القاعدة فيها 10 فعلاً. ولا تعود إلى 5 إلا حين
+            // يفتح الزبون السلّة فتُشغَّل syncCartWithStock.
+            //
+            // ── وهذا لا يناقض «السلّة نيّة لا حجز» ───────────────────
+            //
+            // الحجز أن نمنع غيرك من الشراء لأن القطعة في سلّتك — وذلك
+            // ما زال مرفوضاً، والحجز يقع في placeOrder وحدها.
+            // أمّا هذا فسقفُ معقولية: ألّا تحمل السلّة ما لا وجود له.
+            // الفرق أن الأوّل يأخذ من غيرك، والثاني يمنعك من كذب.
+            //
+            // والحساب داخل SQL لا في PHP: الجمع والسقف في عبارة واحدة
+            // ذرّية، فعشر عبارات متزامنة تنتهي كلّها عند المخزون بلا
+            // سباق — وهو ما يفشل فيه أي فحص يقرأ ثم يكتب.
             $stmt = self::db()->prepare("
                 INSERT INTO cart_items (user_id, product_id, variant_id, quantity)
-                VALUES (?, ?, ?, ?)
-                ON DUPLICATE KEY UPDATE quantity = LEAST(quantity + VALUES(quantity), " . self::MAX_QTY . ")
+                VALUES (?, ?, ?, LEAST(?, ?, " . self::MAX_QTY . "))
+                ON DUPLICATE KEY UPDATE
+                    quantity = LEAST(quantity + VALUES(quantity), ?, " . self::MAX_QTY . ")
             ");
 
-            return $stmt->execute([$userId, $productId, $variantId, $qty]);
+            return $stmt->execute([$userId, $productId, $variantId, $qty, $stock, $stock]);
         } catch (Exception $e) {
             // أشيع سبب: variant محذوف بين عرض الصفحة والنقر — المفتاح
             // الأجنبي يرفض، وهو الرفض الصحيح.
@@ -237,14 +269,17 @@ class CartModel extends Model
      *
      * استعلام واحد بعمود واحد — أرخص من صفّ كاذب يُكتشف عند الدفع.
      */
-    private static function variantBelongsTo(int $productId, int $variantId): bool
+    private static function stockForVariantOfProduct(int $productId, int $variantId): ?int
     {
         $stmt = self::db()->prepare(
-            'SELECT 1 FROM product_variants WHERE id = ? AND product_id = ? LIMIT 1'
+            'SELECT stock_quantity FROM product_variants WHERE id = ? AND product_id = ? LIMIT 1'
         );
         $stmt->execute([$variantId, $productId]);
+        $stock = $stmt->fetchColumn();
 
-        return (bool) $stmt->fetchColumn();
+        // false تعني «لا صفّ» — إمّا الـvariant غير موجود، أو لا يخصّ
+        // هذا المنتج. الحالتان رفضٌ واحد من زاوية المستدعي.
+        return $stock === false ? null : (int) $stock;
     }
 
     /** هل يملك المستخدم سطراً بهذا الـvariant؟ */
