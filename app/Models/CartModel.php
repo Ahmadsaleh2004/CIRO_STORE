@@ -114,6 +114,23 @@ class CartModel extends Model
             return false;
         }
 
+        // ⚠️ الـvariant يجب أن يخصّ المنتج المُرسَل.
+        //
+        // المفتاحان الأجنبيان يفحص كلٌّ منهما وجود صفّه وحده، ولا شيء
+        // يربط الاثنين — فطلبٌ يقرن `product_id` بمنتج و`variant_id`
+        // بلون منتجٍ آخر يمرّ بهما معاً.
+        //
+        // والأثر مقيس على خادم حيّ: سلّة تعرض **اسم منتج وسعر منتج
+        // آخر** («Apple Watch» بسعر PS4). لا يُشترى — placeOrder يفحص
+        // الانتماء ويرفض — لكنه صفٌّ كاذب في القاعدة، وشاشةٌ تكذب على
+        // الزبون، وسلّة لا تصل الدفع أبداً بلا سبب مفهوم.
+        //
+        // والفحص هنا لا في placeOrder وحده: الرفض المبكّر عند الإضافة
+        // أصدق من رفضٍ متأخّر في آخر خطوة.
+        if (!self::variantBelongsTo($productId, $variantId)) {
+            return false;
+        }
+
         try {
             $stmt = self::db()->prepare("
                 INSERT INTO cart_items (user_id, product_id, variant_id, quantity)
@@ -213,6 +230,21 @@ class CartModel extends Model
             error_log('CartModel::countItems Error: ' . $e->getMessage());
             return 0;
         }
+    }
+
+    /**
+     * هل هذا الـvariant لهذا المنتج فعلاً؟
+     *
+     * استعلام واحد بعمود واحد — أرخص من صفّ كاذب يُكتشف عند الدفع.
+     */
+    private static function variantBelongsTo(int $productId, int $variantId): bool
+    {
+        $stmt = self::db()->prepare(
+            'SELECT 1 FROM product_variants WHERE id = ? AND product_id = ? LIMIT 1'
+        );
+        $stmt->execute([$variantId, $productId]);
+
+        return (bool) $stmt->fetchColumn();
     }
 
     /** هل يملك المستخدم سطراً بهذا الـvariant؟ */

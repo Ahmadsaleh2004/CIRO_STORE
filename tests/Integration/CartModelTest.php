@@ -253,4 +253,25 @@ final class CartModelTest extends DatabaseTestCase
         // الشارة تقول «كم قطعة» لا «كم لوناً».
         $this->assertSame(7, CartModel::countItems($userId));
     }
+    public function testAVariantFromAnotherProductIsRejected(): void
+    {
+        $userId = $this->makeUser();
+        [$firstProduct, ]      = $this->makeProduct();
+        [, $otherVariant]      = $this->makeProduct(500.00);
+
+        // المفتاحان الأجنبيان يفحص كلٌّ منهما وجود صفّه وحده، ولا شيء
+        // يربط الاثنين. وبلا هذا الفحص كانت السلّة تعرض **اسم منتج
+        // وسعر منتج آخر** — مقيس على خادم حيّ قبل الإصلاح.
+        $this->assertFalse(CartModel::add($userId, $firstProduct, $otherVariant, 1));
+        $this->assertSame(0, $this->countRows('cart_items'));
+    }
+
+    public function testANonexistentVariantIsRejected(): void
+    {
+        $userId = $this->makeUser();
+        [$productId, ] = $this->makeProduct();
+
+        $this->assertFalse(CartModel::add($userId, $productId, 999999, 1));
+        $this->assertSame(0, $this->countRows('cart_items'));
+    }
 }

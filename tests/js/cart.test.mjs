@@ -166,3 +166,83 @@ describe('cart.js — المرآة والخادم', () => {
         expect(calls).toHaveLength(0);
     });
 });
+
+/**
+ * شارة العدّاد في الـnavbar.
+ *
+ * ══════════════════════════════════════════════════════════════
+ * العطل الذي أوجد هذه المجموعة — بلاغ من الاستعمال الحقيقي
+ * ══════════════════════════════════════════════════════════════
+ *
+ * «الكارت ما بتتجاوب مع الكمية — إذا في خمس حواسيب بكون على الكارت
+ * رقم واحد، حتى لو اختلفت المنتجات.»
+ *
+ * السبب: updateCounters في js/core/ui.js كانت تقرأ السلّة من
+ * `localStorage.getItem("cart")`. وهذا صحيحٌ يوم كانت السلّة محلية،
+ * وصار عطلاً صامتاً لحظة انتقالها إلى الخادم: المفتاح لم يعد يُكتب
+ * إطلاقاً، فتجمّدت الشارة على آخر قيمة كُتبت قبل الترحيل.
+ *
+ * ولم يمسكه شيء: الشارة ليست في أي اختبار، وcomposer check كلّه على
+ * الخادم. ظهر في الاستعمال وحده.
+ */
+describe('ui.js — شارة السلّة', () => {
+    beforeEach(() => {
+        document.body.innerHTML = `
+            <div id="cartSidebar"></div>
+            <ul id="cart-items-list"></ul>
+            <span id="cart-total"></span>
+            <span id="cart-count">0</span>
+            <span id="wishlist-count">0</span>`;
+
+        window.BASE_URL = '';
+        window.escHtml  = (s) => String(s);
+        localStorage.clear();
+
+        loadScript('js/features/cart.js');
+        loadScript('js/core/ui.js');
+    });
+
+    it('تعرض مجموع الكميات لا عدد السطور', () => {
+        window.saveCart([
+            { id: 1, variant_id: 1, quantity: 5, price: 10, stock: 9, name: 'Laptop' },
+        ]);
+
+        // خمس قطع → الشارة 5. كانت تعرض 1.
+        expect(document.getElementById('cart-count').textContent).toBe('5');
+    });
+
+    it('تجمع الكميات عبر منتجات مختلفة', () => {
+        window.saveCart([
+            { id: 1, variant_id: 1, quantity: 5, price: 10, stock: 9, name: 'Laptop' },
+            { id: 2, variant_id: 2, quantity: 3, price: 20, stock: 9, name: 'Phone' },
+        ]);
+
+        expect(document.getElementById('cart-count').textContent).toBe('8');
+    });
+
+    it('تتجاهل localStorage تماماً', () => {
+        // بقايا ما قبل الترحيل: كانت هذه هي القيمة التي تتجمّد عليها
+        // الشارة إلى الأبد.
+        localStorage.setItem('cart', JSON.stringify([{ id: 99, quantity: 1 }]));
+
+        window.saveCart([
+            { id: 1, variant_id: 1, quantity: 4, price: 10, stock: 9, name: 'X' },
+        ]);
+
+        expect(document.getElementById('cart-count').textContent).toBe('4');
+    });
+
+    it('السلّة الفارغة تعطي صفراً', () => {
+        window.saveCart([]);
+
+        expect(document.getElementById('cart-count').textContent).toBe('0');
+    });
+
+    it('قائمة الأمنيات تبقى على localStorage — لم تنتقل', () => {
+        localStorage.setItem('wishlist', JSON.stringify([1, 2, 3]));
+
+        window.updateCounters();
+
+        expect(document.getElementById('wishlist-count').textContent).toBe('3');
+    });
+});

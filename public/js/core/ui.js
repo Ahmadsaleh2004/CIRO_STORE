@@ -73,14 +73,28 @@ function updateCounters() {
     const cartCount     = document.getElementById("cart-count");
 
     const wishlist = JSON.parse(localStorage.getItem("wishlist")) || [];
-    const cart     = JSON.parse(localStorage.getItem("cart"))     || [];
+
+    // ⚠️ السلّة من المرآة لا من localStorage.
+    //
+    // كانت تُقرأ من `localStorage.getItem("cart")` — وهو صحيح يوم كانت
+    // السلّة محلية، وصار **عطلاً صامتاً** لحظة انتقالها إلى الخادم:
+    // المفتاح لم يعد يُكتب إطلاقاً، فبقيت الشارة تعرض ما تجمّد فيه من
+    // قبل ولا تتحرّك مهما أُضيف أو حُذف.
+    //
+    // والأثر كما وصفه المستخدم: خمسة منتجات في السلّة والشارة تقول 1.
+    //
+    // وقائمة الأمنيات تبقى في localStorage — لم تنتقل، والقراءة أعلاه
+    // صحيحة لها.
+    const cart = (typeof window.getCartData === 'function') ? window.getCartData() : [];
 
     if (wishlistCount) {
         wishlistCount.textContent = wishlist.length;
     }
 
     if (cartCount) {
-        const total = cart.reduce((sum, item) => sum + (item.quantity || 1), 0);
+        // مجموع الكميات لا عدد السطور: الشارة تقول «كم قطعة» لا «كم
+        // منتجاً». وهذا يطابق CartModel::countItems على الخادم.
+        const total = cart.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0);
         cartCount.textContent = total;
     }
 
@@ -96,7 +110,8 @@ function highlightNavIcons() {
     const wishlistBtn = document.querySelector('a[href*="wishlist.php"]');
     const cartBtn     = document.querySelector('[data-bs-target="#cartSidebar"]');
 
-    const cart     = JSON.parse(localStorage.getItem("cart"))     || [];
+    // كسابقتها: السلّة من المرآة، والأمنيات من localStorage.
+    const cart     = (typeof window.getCartData === 'function') ? window.getCartData() : [];
     const wishlist = JSON.parse(localStorage.getItem("wishlist")) || [];
 
     if (wishlistBtn) {
