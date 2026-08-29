@@ -107,7 +107,7 @@ describe('cart.js — المرآة والخادم', () => {
         });
         globalThis.fetch = vi.fn(async () => ({ json: async () => cartResponse([]) }));
 
-        window.saveCart([
+        window.setCartMirror([
             { id: 1, variant_id: 9, quantity: 5, stock: 2, name: 'Widget' },
         ]);
 
@@ -121,7 +121,7 @@ describe('cart.js — المرآة والخادم', () => {
     });
 
     it('النافد يُحذف من الخادم لا من الشاشة وحدها', async () => {
-        window.saveCart([
+        window.setCartMirror([
             { id: 1, variant_id: 9, quantity: 1, stock: 0, name: 'Sold Out' },
         ]);
 
@@ -134,7 +134,7 @@ describe('cart.js — المرآة والخادم', () => {
     });
 
     it('السلّة السليمة لا تُطلق أي كتابة', async () => {
-        window.saveCart([
+        window.setCartMirror([
             { id: 1, variant_id: 9, quantity: 2, stock: 10, name: 'Fine' },
         ]);
 
@@ -203,7 +203,7 @@ describe('ui.js — شارة السلّة', () => {
     });
 
     it('تعرض مجموع الكميات لا عدد السطور', () => {
-        window.saveCart([
+        window.setCartMirror([
             { id: 1, variant_id: 1, quantity: 5, price: 10, stock: 9, name: 'Laptop' },
         ]);
 
@@ -212,7 +212,7 @@ describe('ui.js — شارة السلّة', () => {
     });
 
     it('تجمع الكميات عبر منتجات مختلفة', () => {
-        window.saveCart([
+        window.setCartMirror([
             { id: 1, variant_id: 1, quantity: 5, price: 10, stock: 9, name: 'Laptop' },
             { id: 2, variant_id: 2, quantity: 3, price: 20, stock: 9, name: 'Phone' },
         ]);
@@ -225,7 +225,7 @@ describe('ui.js — شارة السلّة', () => {
         // الشارة إلى الأبد.
         localStorage.setItem('cart', JSON.stringify([{ id: 99, quantity: 1 }]));
 
-        window.saveCart([
+        window.setCartMirror([
             { id: 1, variant_id: 1, quantity: 4, price: 10, stock: 9, name: 'X' },
         ]);
 
@@ -233,7 +233,7 @@ describe('ui.js — شارة السلّة', () => {
     });
 
     it('السلّة الفارغة تعطي صفراً', () => {
-        window.saveCart([]);
+        window.setCartMirror([]);
 
         expect(document.getElementById('cart-count').textContent).toBe('0');
     });

@@ -43,7 +43,13 @@ class ProductModel extends Model
     /**
      * جلب المنتجات المرئية صفحة صفحة مع أسماء الأقسام (categories)
      *
-     * @return array<string, mixed> الصفوف مع بيانات الترقيم
+     * ⚠️ تُرجع **الصفوف وحدها** لا بيانات ترقيم، خلافاً لأخواتها
+     * (UserModel::getAllForAdmin و OrderModel::getAdminOrdersList
+     * تُرجعان خريطة فيها rows وtotal). الاسم يوحي بغير ذلك — والتعليق
+     * هنا كُتب أوّل مرّة بالقياس عليهما، فكان كاذباً حتى كشفه تدقيقٌ
+     * وقت التشغيل.
+     *
+     * @return list<array<string, mixed>>
      */
     public static function findVisiblePaginated(int $limit, int $offset): array
     {
@@ -189,7 +195,12 @@ class ProductModel extends Model
      * جلب بيانات المخزون/السعر الحية لمجموعة IDs — تُستخدم من صفحة الويش ليست
      *
      * @param list<int> $ids
-     * @return array<string, array{stock_quantity: int, price: float, discount_percentage: float, price_after_discount: float, is_visible: int}> مفهرسة بمعرّف المنتج كنصّ
+     * ⚠️ المفتاح **عدد صحيح** لا نصّ رغم `(string)` في البناء: PHP
+     * يُحوّل المفاتيح النصّية العددية إلى أعداد صحيحة تلقائياً، فالصبّ
+     * هناك بلا أثر. كُتب التعليق أوّل مرّة اتّباعاً للصبّ الظاهر، وكشف
+     * تدقيقُ وقت التشغيل أنه يصف نيّةً لا واقعاً.
+     *
+     * @return array<int, array{stock_quantity: int, price: float, discount_percentage: float, price_after_discount: float, is_visible: int}> مفهرسة بمعرّف المنتج
      */
     public static function findStockByIds(array $ids): array
     {
@@ -214,7 +225,17 @@ class ProductModel extends Model
 
             $result = [];
             foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
-                $result[(string)$row['id']] = [
+                // ⚠️ لا صبّ إلى نصّ. كان هنا `(string)$row['id']` وهو
+                // **بلا أثر**: PHP يُحوّل أي مفتاح نصّي عددي إلى عدد
+                // صحيح تلقائياً، فالمفتاح كان int دائماً رغم الصبّ.
+                //
+                // وضرره أنه يُضلّل قارئين: البشر يظنّون المفاتيح نصّية،
+                // وPHPStan يستنتج ذلك أيضاً فيقبل تعليقاً كاذباً. كشفه
+                // تدقيقُ وقت التشغيل حين قارن الشكل المُعلَن بالفعلي.
+                //
+                // والعميل يقرأها بـString(variant_id) على أي حال، وهو
+                // يعمل مع الحالتين — فالحذف لا يمسّ سلوكاً.
+                $result[(int)$row['id']] = [
                     'stock_quantity'       => (int)$row['stock_quantity'],
                     'price'                => (float)$row['price'],
                     'discount_percentage'  => (float)$row['discount_percentage'],

@@ -123,18 +123,25 @@ async function cartRemove(variantId) {
 window.cartRemove = cartRemove;
 
 /**
- * أُبقيت للتوافق: بعض الملفات تنادي saveCart بمصفوفة معدَّلة.
+ * يضبط المرآة مباشرةً ويعيد الرسم — **بلا كتابة على الخادم**.
  *
- * لم تعد تكتب شيئاً — الكتابة صارت عبر النقاط أعلاه. تُحدّث المرآة
- * وتعيد الرسم فقط، كي لا ينكسر مستدعٍ لم يُحدَّث بعد.
+ * ⚠️ كان اسمها `saveCart` وكانت تكتب في localStorage. وبعد انتقال
+ * السلّة إلى الخادم بقيت بالاسم نفسه «للتوافق» وهي لا تحفظ شيئاً —
+ * اسمٌ يَعِد بما لا يفعله، وهو أسوأ من غياب الدالة: من يقرأ
+ * `saveCart(cart)` يظنّ سلّته حُفظت.
+ *
+ * ومسحٌ للمستدعين أثبت أنها بلا مستدعٍ واحد في الإنتاج: كل الكتابة
+ * تمرّ بـcartAdd و cartSetQuantity و cartRemove. فما بقي لها إلا
+ * استعمال واحد مشروع — تهيئة المرآة في الاختبارات بلا خادم — والاسم
+ * الجديد يقول ذلك.
  */
-function saveCart(updatedCart) {
-    if (Array.isArray(updatedCart)) {
-        cartCache = updatedCart;
+function setCartMirror(items) {
+    if (Array.isArray(items)) {
+        cartCache = items;
     }
     refreshCartUI();
 }
-window.saveCart = saveCart;
+window.setCartMirror = setCartMirror;
 
 function refreshCartUI() {
     if (typeof updateCounters === 'function') updateCounters();
