@@ -136,33 +136,26 @@ document.addEventListener('DOMContentLoaded', () => {
     if (plus && qty)  plus.onclick  = () => { const v=parseInt(qty.value); const max=parseInt(qty.max)||Infinity; if(v<max) qty.value=v+1; };
     if (minus && qty) minus.onclick = () => { const v=parseInt(qty.value); if(v>1) qty.value=v-1; };
 
-    document.getElementById('addCartBtn')?.addEventListener('click', () => {
+    document.getElementById('addCartBtn')?.addEventListener('click', async () => {
         if (!qty) return;
         const q = parseInt(qty.value);
         const variant = productVariants.find(v => v.id === currentVariantId);
         if (!variant || variant.stock <= 0) return;
 
-        const product = {
-            id: window.PRODUCT_ID,
-            variant_id: currentVariantId,
-            color_name: variant.color_name,
-            name: window.PRODUCT_NAME,
-            price: variant.final_price,
-            image_path: variant.image,
-            stock: variant.stock,
-        };
-        let cart = JSON.parse(localStorage.getItem('cart')||'[]');
-        const ex = cart.find(i => i.id == product.id && i.variant_id == product.variant_id);
-        const currentQtyInCart = ex ? ex.quantity : 0;
+        // ⚠️ لم يعد يُبنى كائن منتج كامل: الخادم يخزّن «ماذا وكم» فقط،
+        // والاسم واللون والسعر والصورة تُقرأ من القاعدة عند العرض.
+        // بناؤها هنا كان يعني نسخةً ثانية قد تشيخ عن أصلها.
+        const existing = (window.getCartData ? window.getCartData() : [])
+            .find(i => i.id == window.PRODUCT_ID && i.variant_id == currentVariantId);
+        const currentQtyInCart = existing ? existing.quantity : 0;
 
         if (currentQtyInCart + q > variant.stock) {
             if (typeof showToast==='function') showToast(`Only ${variant.stock - currentQtyInCart} more available!`,'error');
             return;
         }
 
-        if (ex) { ex.quantity += q; ex.stock = variant.stock; } else { cart.push({...product, quantity:q}); }
-        localStorage.setItem('cart',JSON.stringify(cart));
-        if (typeof refreshCartUI==='function') refreshCartUI();
+        if (!(await window.cartAdd(window.PRODUCT_ID, currentVariantId, q))) return;
+
         if (typeof showToast==='function')     showToast('Added to cart!','success');
         qty.value = 1;
         const cb = document.querySelector('[data-bs-target="#cartSidebar"]');

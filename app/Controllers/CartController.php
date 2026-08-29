@@ -3,13 +3,21 @@
 namespace App\Controllers;
 
 use App\Core\Controller;
+use App\Core\Middleware;
+use App\Models\CartModel;
 use App\Models\ProductModel;
 use OpenApi\Attributes as OA;
 
 /**
- * CartController — التحقق من توفر المخزون
- * السلة تُدار client-side بالكامل (JS/localStorage)
- * الـ endpoint الوحيد هنا هو فحص المخزون (منقول من handlers/check_cart_stock.php)
+ * CartController — السلّة وفحص المخزون.
+ *
+ * ⚠️ كانت السلّة تُدار في المتصفّح بالكامل (localStorage)، فلا تتبع
+ * المستخدم بين أجهزته، وتضيع بمسح بيانات المتصفّح — وضياع سلّة مليئة
+ * خسارة بيع لا إزعاج واجهة. صارت على الخادم في CartModel.
+ *
+ * ولا سلّة زائر: زرّ السلّة وزرّ «أضف للسلّة» محروسان بتسجيل الدخول في
+ * القوالب الثلاثة، وغير المسجَّل يُدفع إلى نافذة الدخول. ولذلك كل نقطة
+ * هنا تحمل حارس `auth` في جدول المسارات.
  */
 class CartController extends Controller
 {
@@ -21,8 +29,8 @@ class CartController extends Controller
     #[OA\Post(
         path: '/cart/check-stock',
         summary: 'التحقق من توفّر وأسعار الـvariants الموجودة في السلة',
-        description: 'السلة تُدار كاملة في المتصفح (localStorage)؛ هذه النقطة تتحقق من '
-                   . 'المخزون والسعر الحاليين قبل إتمام الطلب. المنتجات المخفية لا تُرجَع.',
+        description: 'تُستدعى من صفحات المنتجات وقائمة الأمنيات لتحديث بطاقاتها بالمخزون '
+                   . 'والسعر الحيَّين. المنتجات المخفية لا تُرجَع.',
         tags: ['Store - Cart'],
         requestBody: new OA\RequestBody(
             required: true,
@@ -47,8 +55,8 @@ class CartController extends Controller
                 description: <<<'TXT'
                 المخزون الحيّ للنسخ المطلوبة.
 
-                السلّة محفوظة في متصفّح الزائر، فقد تحمل أسعاراً ومخزوناً
-                قديمين. هذه النقطة تُرجع الحقيقة من القاعدة قبل الدفع.
+                بطاقةٌ معروضة على صفحة بقيت مفتوحة قد تحمل سعراً ومخزوناً
+                قديمين. هذه النقطة تُرجع الحقيقة من القاعدة.
                 TXT,
                 content: new OA\JsonContent(
                     allOf: [
@@ -89,5 +97,181 @@ class CartController extends Controller
         $results = ProductModel::findVariantsStock($variantIds);
 
         $this->respond(true, 'Stock data retrieved.', ['items' => $results]);
+    }
+
+    // ════════════════════════════════════════════════════════
+    // GET /cart — سلّة المستخدم
+    // ════════════════════════════════════════════════════════
+    #[OA\Get(
+        path: '/cart',
+        summary: 'سلّة المستخدم الحالي',
+        description: 'الأسعار والمخزون تُقرأ من القاعدة عند كل طلب لا من وقت الإضافة، '
+                   . 'فتظهر أي تغيّرات في السلّة قبل صفحة الدفع لا عندها.',
+        tags: ['Store - Cart'],
+        security: [['userSessionAuth' => []]],
+        responses: [
+            new OA\Response(response: 200, description: 'JSON — {success, items, count}'),
+            new OA\Response(response: 401, ref: '#/components/responses/SessionExpired'),
+        ]
+    )]
+    public function index(): void
+    {
+        header('Content-Type: application/json; charset=utf-8');
+        Middleware::requireLogin();
+
+        $userId = (int) $_SESSION['user_id'];
+
+        $this->respond(true, 'OK', [
+            'items' => CartModel::getForUser($userId),
+            'count' => CartModel::countItems($userId),
+        ]);
+    }
+
+    // ════════════════════════════════════════════════════════
+    // POST /cart/add
+    // ════════════════════════════════════════════════════════
+    #[OA\Post(
+        path: '/cart/add',
+        summary: 'إضافة كمية إلى السلّة (تُجمَع مع الموجود)',
+        description: 'إضافة نفس الـvariant مرّتين تُحدّث كمية سطر واحد لا تُنشئ ثانياً. '
+                   . 'ولا يُتحقَّق من المخزون هنا: السلّة نيّة لا حجز، والحجز يقع في /checkout.',
+        tags: ['Store - Cart'],
+        security: [['userSessionAuth' => []]],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                required: ['product_id', 'variant_id', 'csrf_token'],
+                properties: [
+                    new OA\Property(property: 'product_id', type: 'integer'),
+                    new OA\Property(property: 'variant_id', type: 'integer'),
+                    new OA\Property(property: 'qty', type: 'integer', default: 1, minimum: 1, maximum: 100),
+                    new OA\Property(property: 'csrf_token', type: 'string'),
+                ]
+            )
+        ),
+        responses: [new OA\Response(response: 200, description: 'JSON — {success, items, count}')]
+    )]
+    public function add(): void
+    {
+        $this->beginJsonPost();
+        Middleware::requireLogin();
+
+        $post      = $this->requestData();
+        $userId    = (int) $_SESSION['user_id'];
+        $productId = (int) ($post['product_id'] ?? 0);
+        $variantId = (int) ($post['variant_id'] ?? 0);
+        $qty       = (int) ($post['qty'] ?? 1);
+
+        if ($productId <= 0 || $variantId <= 0) {
+            $this->respond(false, 'Invalid product.');
+        }
+
+        if (!CartModel::add($userId, $productId, $variantId, $qty)) {
+            // أشيع سبب: variant لم يعد موجوداً بين عرض الصفحة والنقر،
+            // أو كمية خارج الحدّ. الرسالة واحدة للاثنين — التفصيل في
+            // السجلّ لا في الاستجابة.
+            $this->respond(false, 'Could not add this item to your cart.');
+        }
+
+        $this->respondWithCart($userId, 'Added to cart.');
+    }
+
+    // ════════════════════════════════════════════════════════
+    // POST /cart/update — ضبط كمية سطر ضبطاً مطلقاً
+    // ════════════════════════════════════════════════════════
+    #[OA\Post(
+        path: '/cart/update',
+        summary: 'ضبط كمية سطر في السلّة (الصفر يحذفه)',
+        tags: ['Store - Cart'],
+        security: [['userSessionAuth' => []]],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                required: ['variant_id', 'qty', 'csrf_token'],
+                properties: [
+                    new OA\Property(property: 'variant_id', type: 'integer'),
+                    new OA\Property(property: 'qty', type: 'integer', minimum: 0, maximum: 100),
+                    new OA\Property(property: 'csrf_token', type: 'string'),
+                ]
+            )
+        ),
+        responses: [new OA\Response(response: 200, description: 'JSON — {success, items, count}')]
+    )]
+    public function update(): void
+    {
+        $this->beginJsonPost();
+        Middleware::requireLogin();
+
+        $post      = $this->requestData();
+        $userId    = (int) $_SESSION['user_id'];
+        $variantId = (int) ($post['variant_id'] ?? 0);
+
+        if ($variantId <= 0 || !isset($post['qty'])) {
+            $this->respond(false, 'Invalid request.');
+        }
+
+        if (!CartModel::setQuantity($userId, $variantId, (int) $post['qty'])) {
+            $this->respond(false, 'Could not update this item.');
+        }
+
+        $this->respondWithCart($userId, 'Cart updated.');
+    }
+
+    // ════════════════════════════════════════════════════════
+    // POST /cart/remove
+    // ════════════════════════════════════════════════════════
+    #[OA\Post(
+        path: '/cart/remove',
+        summary: 'حذف سطر من السلّة',
+        tags: ['Store - Cart'],
+        security: [['userSessionAuth' => []]],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                required: ['variant_id', 'csrf_token'],
+                properties: [
+                    new OA\Property(property: 'variant_id', type: 'integer'),
+                    new OA\Property(property: 'csrf_token', type: 'string'),
+                ]
+            )
+        ),
+        responses: [new OA\Response(response: 200, description: 'JSON — {success, items, count}')]
+    )]
+    public function remove(): void
+    {
+        $this->beginJsonPost();
+        Middleware::requireLogin();
+
+        $userId    = (int) $_SESSION['user_id'];
+        $variantId = (int) ($this->requestData()['variant_id'] ?? 0);
+
+        if ($variantId <= 0) {
+            $this->respond(false, 'Invalid request.');
+        }
+
+        CartModel::remove($userId, $variantId);
+
+        $this->respondWithCart($userId, 'Item removed.');
+    }
+
+    /**
+     * يردّ بالسلّة كاملةً بعد أي تعديل.
+     *
+     * ── لماذا السلّة كلّها لا تأكيدٌ فقط ──────────────────────────
+     *
+     * لأن العميل بلا حالة الآن: الخادم هو المرجع الوحيد. وردّ «تمّ»
+     * وحده يجبر العميل على طلب ثانٍ ليعرف ما صارت إليه السلّة — طلبان
+     * لكل نقرة زيادة أو نقصان.
+     *
+     * والأهمّ أنه يحلّ تعارض التبويبين بلا منطق إضافي: كل استجابة تحمل
+     * الحالة الكاملة، فالتبويب الذي يعدّل يرى نتيجة تعديله ونتيجة
+     * تعديل غيره معاً.
+     */
+    private function respondWithCart(int $userId, string $message): never
+    {
+        $this->respond(true, $message, [
+            'items' => CartModel::getForUser($userId),
+            'count' => CartModel::countItems($userId),
+        ]);
     }
 }

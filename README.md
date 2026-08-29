@@ -1,14 +1,14 @@
 # Cairo Store
 
-متجر إلكتروني بـPHP على بنية MVC مكتوبة يدوياً بلا إطار — <!--stats:controllers-->25 كنترولراً<!--/stats:controllers--> و<!--stats:models-->16 مودلاً<!--/stats:models--> و<!--stats:routes-->105 مسار<!--/stats:routes-->، مع لوحة تحكم كاملة بنظام رتب وصلاحيات.
+متجر إلكتروني بـPHP على بنية MVC مكتوبة يدوياً بلا إطار — <!--stats:controllers-->25 كنترولراً<!--/stats:controllers--> و<!--stats:models-->16 مودلاً<!--/stats:models--> و<!--stats:routes-->109 مسار<!--/stats:routes-->، مع لوحة تحكم كاملة بنظام رتب وصلاحيات.
 
 | | |
 |---|---|
 | **PHP** | 8.2+ |
-| **قاعدة البيانات** | MySQL 8 · <!--stats:tables-->31 جدولاً<!--/stats:tables--> |
-| **الحجم** | ‏<!--stats:php-->25,746 سطر PHP<!--/stats:php--> · <!--stats:js-->6,208 JS<!--/stats:js--> · <!--stats:css-->5,470 CSS<!--/stats:css--> |
-| **الاختبارات** | <!--stats:tests-->229 اختباراً<!--/stats:tests--> (وحدة + تكامل) |
-| **توثيق الـAPI** | OpenAPI 3.0 — <!--stats:operations-->105 عملية<!--/stats:operations-->، مولَّدة من الكود |
+| **قاعدة البيانات** | MySQL 8 · <!--stats:tables-->32 جدولاً<!--/stats:tables--> |
+| **الحجم** | ‏<!--stats:php-->25,941 سطر PHP<!--/stats:php--> · <!--stats:js-->6,344 JS<!--/stats:js--> · <!--stats:css-->5,470 CSS<!--/stats:css--> |
+| **الاختبارات** | <!--stats:tests-->234 اختباراً<!--/stats:tests--> (وحدة + تكامل) |
+| **توثيق الـAPI** | OpenAPI 3.0 — <!--stats:operations-->109 عملية<!--/stats:operations-->، مولَّدة من الكود |
 
 ---
 

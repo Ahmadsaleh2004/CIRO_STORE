@@ -165,28 +165,29 @@ window.changeQtyDB = (id, val) => {
     if (v >= 1 && v <= max) input.value = v;
 };
 
-window.addToCartDB = (id, variantId, price, stock) => {
+// ⚠️ لم تعد تكتب في localStorage: السلّة على الخادم منذ هجرة 0011،
+// وcartAdd في js/features/cart.js هي المدخل الوحيد للكتابة.
+//
+// وفحص المخزون يبقى هنا رغم أنه فحصٌ في العميل: غرضه رسالةٌ فورية
+// («بقيت قطعتان») لا حماية. الحماية في placeOrder داخل معاملة تقفل
+// الصفّ — والسلّة نيّةٌ لا حجز.
+window.addToCartDB = async (id, variantId, price, stock) => {
     const input = document.getElementById('qty-' + id);
     const qty   = parseInt(input?.value || 1);
-    const p = window.dbProducts?.find(x => x.id == id);
-    if (!p) return;
-    let cart = JSON.parse(localStorage.getItem('cart') || '[]');
-    const ex = cart.find(i => i.id == id && i.variant_id == variantId);
-    const currentQtyInCart = ex ? ex.quantity : 0;
+    if (!window.dbProducts?.find(x => x.id == id)) return;
+
+    const existing = (window.getCartData ? window.getCartData() : [])
+        .find(i => i.id == id && i.variant_id == variantId);
+    const currentQtyInCart = existing ? existing.quantity : 0;
 
     if (currentQtyInCart + qty > stock) {
         if (typeof showToast === 'function') showToast(`Only ${stock - currentQtyInCart} more available!`, 'error');
         return;
     }
 
-    if (ex) { ex.quantity += qty; ex.stock = stock; }
-    else cart.push({
-        id, variant_id: variantId, color_name: p.color_name,
-        name: p.name, price, image_path: p.image_path, quantity: qty, stock: stock,
-    });
-    localStorage.setItem('cart', JSON.stringify(cart));
-    if (typeof refreshCartUI === 'function') refreshCartUI();
-    if (typeof showToast    === 'function') showToast('Added to cart!', 'success');
+    if (!(await window.cartAdd(id, variantId, qty))) return;
+
+    if (typeof showToast === 'function') showToast('Added to cart!', 'success');
     if (input) input.value = 1;
     const cb = document.querySelector('[data-bs-target="#cartSidebar"]');
     if (cb) { cb.classList.add('cart-bounce'); setTimeout(() => cb.classList.remove('cart-bounce'), 500); }

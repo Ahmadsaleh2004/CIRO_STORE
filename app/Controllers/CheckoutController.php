@@ -4,6 +4,7 @@ namespace App\Controllers;
 
 use App\Core\Controller;
 use App\Core\Middleware;
+use App\Models\CartModel;
 use App\Models\OrderModel;
 use App\Models\NotificationModel;
 use OpenApi\Attributes as OA;
@@ -223,6 +224,16 @@ class CheckoutController extends Controller
         }
 
         $orderId = $result['order_id'];
+
+        // ── تفريغ السلّة ─────────────────────────────────────
+        //
+        // بعد نجاح الطلب لا قبله: التفريغ المبكّر يعني أن أي فشل بعده
+        // (سعر تغيّر، مخزون نفد) يترك الزبون بلا سلّة وبلا طلب معاً.
+        //
+        // ⚠️ ولا يُفرَّغ في مسار idempotency المكرَّر أيضاً — وهو مقصود:
+        // النقرة المكرّرة تُرجع الطلب نفسه، وسلّته أُفرغت في المرّة
+        // الأولى. فالتفريغ هنا بلا أثر ثانٍ، وهذا هو الصواب.
+        CartModel::clear($userId);
 
         // إرسال إشعار للمستخدم
         NotificationModel::insert(

@@ -338,7 +338,10 @@ final class MigratorTest extends DatabaseTestCase
         // كان address_id مفتاحاً حيّاً بـON DELETE SET NULL، فتعديل
         // المستخدم لعنوانه يغيّر وجهة طلب سُلّم فعلاً، وحذفه يمحو عنوان
         // طلبات مكتملة نهائياً).
-        $this->assertCount(10, $real->available(), 'عدد الهجرات تغيّر — حدّث هذا الاختبار عمداً لا سهواً.');
+        // 11 منذ 0011_server_side_cart (السلّة تتبع المستخدم لا المتصفّح:
+        // كانت في localStorage فلا تعبر أجهزته وتضيع بمسح بيانات
+        // المتصفّح — وضياع سلّة مليئة خسارة بيع لا إزعاج واجهة).
+        $this->assertCount(11, $real->available(), 'عدد الهجرات تغيّر — حدّث هذا الاختبار عمداً لا سهواً.');
         $this->assertSame([], $problems, "هجرات غير مكتملة الصيغة:\n  " . implode("\n  ", $problems));
     }
 

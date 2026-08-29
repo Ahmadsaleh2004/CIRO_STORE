@@ -2,13 +2,136 @@
 // js/features/cart.js — محرك سلة التسوق وتزامن المخزون
 // ══════════════════════════════════════════════════════════════
 
+// ══════════════════════════════════════════════════════════════
+// طبقة التخزين — الخادم هو المرجع، والذاكرة مرآةٌ له
+// ══════════════════════════════════════════════════════════════
+//
+// كانت السلّة في localStorage بالكامل: لا تتبع المستخدم بين أجهزته،
+// وتضيع بمسح بيانات المتصفّح أو بنافذة خاصة — وضياع سلّة مليئة خسارة
+// بيع لا إزعاج واجهة. وما يضعه الناس ولا يشترونه لم يكن يصل الخادم قط.
+//
+// ── لماذا مرآة في الذاكرة لا استدعاء غير متزامن في كل موضع ──
+//
+// `getCartData()` تُستدعى من ستّة ملفات (checkout · products-catalog ·
+// product-details · wishlist · ui · هذا الملف)، وكلّها تفترضها
+// **متزامنة**. تحويلها إلى async يعني `await` في كل موضع، وكل موضع
+// نسيَ الـawait يقرأ Promise كأنه مصفوفة — عطلٌ صامت يظهر متأخّراً.
+//
+// فالمرآة تُبقي العقد كما هو: القراءة متزامنة من الذاكرة، والكتابة
+// وحدها تذهب إلى الخادم وتُحدّث المرآة من ردّه. أي أن ستّة ملفات لا
+// تتغيّر، والتغيير محصور في هذا الملف وفي مواضع الإضافة الثلاثة.
+//
+// ── والخادم يردّ بالسلّة كاملةً بعد كل تعديل ────────────────
+//
+// وهذا ما يحلّ تعارض التبويبين بلا منطق إضافي: من يعدّل يرى نتيجة
+// تعديله ونتيجة تعديل غيره في الاستجابة نفسها.
+
+/** مرآة السلّة. المصدر الحقيقي جدول cart_items على الخادم. */
+let cartCache = [];
+
+/** هل المستخدم مسجَّل؟ الزائر لا سلّة له أصلاً — الأزرار مخفيّة عنه. */
+function cartEnabled() {
+    return Boolean(document.getElementById('cartSidebar'));
+}
+
+function cartUrl(path) {
+    const base = window.BASE_URL || window.URLROOT || '';
+    return base + path;
+}
+
 function getCartData() {
-    return JSON.parse(localStorage.getItem("cart")) || [];
+    return cartCache;
 }
 window.getCartData = getCartData;
 
+/**
+ * يقرأ السلّة من الخادم ويملأ المرآة.
+ *
+ * تُستدعى عند تحميل الصفحة وبعد كل تعديل. وفشلها لا يُفرّغ المرآة:
+ * انقطاع شبكة لحظي يجب ألّا يُظهر السلّة فارغة لمن يملأها.
+ */
+async function loadCart() {
+    if (!cartEnabled()) return;
+
+    try {
+        const res  = await fetch(cartUrl('/cart'), { headers: { Accept: 'application/json' } });
+        const data = await res.json();
+        if (data.success && Array.isArray(data.items)) {
+            cartCache = data.items;
+            refreshCartUI();
+        }
+    } catch (e) {
+        console.error('cart: تعذّر جلب السلّة من الخادم', e);
+    }
+}
+window.loadCart = loadCart;
+
+/**
+ * ينفّذ تعديلاً على الخادم ويُحدّث المرآة من ردّه.
+ *
+ * ⚠️ المرآة تُحدَّث من **الاستجابة** لا من تخمين محلي. التحديث
+ * المتفائل (عدّل محلياً ثم أرسل) يعرض للزبون حالةً قد لا تكون قد
+ * وقعت — وسلّة تعرض ما ليس فيها أسوأ من سلّة بطيئة.
+ */
+async function cartMutate(path, payload) {
+    if (!cartEnabled()) return false;
+
+    try {
+        const data = await fetchWithCsrfRetry(cartUrl(path), {
+            method:  'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body:    JSON.stringify({ csrf_token: window._csrfToken || '', ...payload }),
+        });
+
+        if (Array.isArray(data.items)) {
+            cartCache = data.items;
+            refreshCartUI();
+        }
+
+        if (!data.success && data.message && typeof showToast === 'function') {
+            showToast(data.message, 'error');
+        }
+
+        return Boolean(data.success);
+    } catch (e) {
+        console.error('cart: فشل تعديل السلّة', e);
+        if (typeof showToast === 'function') showToast('Network error. Please try again.', 'error');
+        return false;
+    }
+}
+
+/** إضافة كمية — تُجمَع مع الموجود على الخادم. */
+async function cartAdd(productId, variantId, qty = 1) {
+    return cartMutate('/cart/add', {
+        product_id: Number(productId),
+        variant_id: Number(variantId),
+        qty:        Number(qty) || 1,
+    });
+}
+window.cartAdd = cartAdd;
+
+/** ضبط كمية سطر ضبطاً مطلقاً — الصفر يحذفه. */
+async function cartSetQuantity(variantId, qty) {
+    return cartMutate('/cart/update', { variant_id: Number(variantId), qty: Number(qty) });
+}
+window.cartSetQuantity = cartSetQuantity;
+
+/** حذف سطر. */
+async function cartRemove(variantId) {
+    return cartMutate('/cart/remove', { variant_id: Number(variantId) });
+}
+window.cartRemove = cartRemove;
+
+/**
+ * أُبقيت للتوافق: بعض الملفات تنادي saveCart بمصفوفة معدَّلة.
+ *
+ * لم تعد تكتب شيئاً — الكتابة صارت عبر النقاط أعلاه. تُحدّث المرآة
+ * وتعيد الرسم فقط، كي لا ينكسر مستدعٍ لم يُحدَّث بعد.
+ */
 function saveCart(updatedCart) {
-    localStorage.setItem("cart", JSON.stringify(updatedCart));
+    if (Array.isArray(updatedCart)) {
+        cartCache = updatedCart;
+    }
     refreshCartUI();
 }
 window.saveCart = saveCart;
@@ -117,10 +240,37 @@ function syncCartWithStock() {
             return acc;
         }, []);
 
-        if (removedNames.length > 0 || adjustedNames.length > 0 || stockRefreshed) {
-            localStorage.setItem('cart', JSON.stringify(updatedCart));
-            refreshCartUI();
+        // ── التصحيح يُكتب على الخادم لا محلياً ────────────────────
+        //
+        // `stockRefreshed` وحده لم يعد يستدعي كتابة: `/cart` تُرجع
+        // المخزون والسعر الحيَّين في كل قراءة، فالمرآة محدَّثة أصلاً.
+        // يبقى ما يغيّر السلّة فعلاً — حذفُ نافد، وخفضُ كمية تجاوزت
+        // المتاح — وكلاهما يمرّ بالخادم كي يبقى مصدر الحقيقة واحداً.
+        //
+        // والاستدعاءات قليلة بطبعها: لا تقع إلا حين ينفد شيء بين
+        // فتح الصفحة وفحصها.
+        const corrections = updatedCart.filter(i => i.variant_id);
+        const removedIds  = cart
+            .filter(i => i.variant_id && !updatedCart.some(u => u.variant_id === i.variant_id))
+            .map(i => i.variant_id);
 
+        Promise.all([
+            ...removedIds.map(id => cartRemove(id)),
+            ...corrections
+                .filter(i => {
+                    const info = variants[String(i.variant_id)];
+                    return info && info.stock < (cart.find(c => c.variant_id === i.variant_id)?.quantity ?? 0);
+                })
+                .map(i => cartSetQuantity(i.variant_id, i.quantity)),
+        ]).then(() => {
+            if (removedNames.length > 0 || adjustedNames.length > 0) {
+                loadCart();
+            } else if (stockRefreshed) {
+                refreshCartUI();
+            }
+        });
+
+        if (removedNames.length > 0 || adjustedNames.length > 0 || stockRefreshed) {
             if (removedNames.length > 0) {
                 if (typeof showToast === 'function') showToast(`Removed (out of stock): ${removedNames.join(', ')}`, 'error');
             }
@@ -143,29 +293,43 @@ document.addEventListener("DOMContentLoaded", () => {
             const variantId    = variantIdRaw ? parseInt(variantIdRaw) : null;
             if (!id) return;
 
-            let cart = getCartData();
-            let item = cart.find(p => p.id === id && (p.variant_id ?? null) == (variantId ?? null));
-            if (!item) return;
+            const item = getCartData().find(
+                p => p.id === id && (p.variant_id ?? null) == (variantId ?? null)
+            );
+            if (!item || !variantId) return;
 
+            // ⚠️ الكمية تُرسَل **مطلقةً** لا كفارق (+1/−1).
+            //
+            // الفارق يفترض أن ما في الشاشة هو ما في القاعدة، وهو افتراض
+            // يسقط بنقرتين سريعتين أو بتبويب ثانٍ: فارقان يصلان فيصير
+            // المجموع ثلاثة بدل اثنين. والقيمة المطلقة تجعل آخر نقرة
+            // تفوز — وهو السلوك الذي يتوقّعه من يضغط الزرّ.
             if (btn.classList.contains("plus")) {
                 const maxStock = typeof item.stock === 'number' ? item.stock : Infinity;
-                if (item.quantity < maxStock) {
-                    item.quantity++;
-                } else {
+                if (item.quantity >= maxStock) {
                     if (typeof showToast === 'function') showToast('No more stock available for this item.', 'error');
+                    return;
                 }
+                cartSetQuantity(variantId, item.quantity + 1);
             } else if (btn.classList.contains("minus")) {
-                if (item.quantity > 1) item.quantity--;
-                else cart = cart.filter(p => !(p.id === id && (p.variant_id ?? null) == (variantId ?? null)));
+                // الصفر حذفٌ على الخادم، فالنقصان من واحد يزيل السطر.
+                cartSetQuantity(variantId, item.quantity - 1);
             } else if (btn.classList.contains("remove-item")) {
-                cart = cart.filter(p => !(p.id === id && (p.variant_id ?? null) == (variantId ?? null)));
+                cartRemove(variantId);
                 if (typeof showToast === 'function') showToast('Product removed from cart', 'info');
             }
-            saveCart(cart);
         }
     });
 
-    refreshCartUI();
+    // السلّة تُجلب من الخادم أوّلاً، ثم يُفحص مخزونها.
+    //
+    // الترتيب لازم: syncCartWithStock تعمل على ما في المرآة، والمرآة
+    // فارغة قبل أن يردّ /cart. تشغيلها قبله كان سيفحص لا شيء ثم يصمت.
+    loadCart().then(() => {
+        if (getCartData().length > 0) {
+            syncCartWithStock();
+        }
+    });
 
     const offcanvasEl = document.getElementById('cartSidebar');
     if (offcanvasEl) {
@@ -175,7 +339,4 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    if (getCartData().length > 0) {
-        syncCartWithStock();
-    }
 });

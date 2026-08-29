@@ -212,12 +212,9 @@ async function renderWishlist() {
                 if (input) input.value = qty;
             }
 
-            // السعر الحيّ المجلوب للتو (بدل product.price القديم)
-            const currentPriceForCart = live.discount_percentage > 0 ? live.price_after_discount : live.price;
-
-            let cart = JSON.parse(localStorage.getItem('cart') || '[]');
             const variantId = product.variant_id ?? null;
-            const ex = cart.find(i => i.id == id && i.variant_id == variantId);
+            const ex = (window.getCartData ? window.getCartData() : [])
+                .find(i => i.id == id && i.variant_id == variantId);
             const existingQty = ex ? ex.quantity : 0;
 
             if (existingQty + qty > stock) {
@@ -234,24 +231,16 @@ async function renderWishlist() {
                 }
             }
 
-            if (ex) {
-                ex.quantity += qty;
-                ex.stock = stock;
-            } else {
-                cart.push({
-                    id,
-                    variant_id: variantId,
-                    color_name: product.color_name ?? null,
-                    name: product.name,
-                    price: currentPriceForCart,
-                    image_path: product.image_path,
-                    quantity: qty,
-                    stock: stock,
-                });
+            // ⚠️ لا سطر منتج يُبنى هنا: الخادم يخزّن «ماذا وكم»، والسعر
+            // والاسم والصورة تُقرأ من القاعدة عند العرض. ولذلك سقط حساب
+            // السعر الحيّ الذي كان هنا — لم يبقَ له مستعمل.
+            if (!variantId) {
+                if (typeof showToast === 'function') showToast('Please choose a colour first.', 'warning');
+                return;
             }
-            localStorage.setItem('cart', JSON.stringify(cart));
 
-            if (typeof refreshCartUI === 'function') refreshCartUI();
+            if (!(await window.cartAdd(id, variantId, qty))) return;
+
             if (typeof showToast    === 'function') showToast('Added to cart!', 'success');
             if (input) input.value = 1;
             const cb = document.querySelector('[data-bs-target="#cartSidebar"]');
