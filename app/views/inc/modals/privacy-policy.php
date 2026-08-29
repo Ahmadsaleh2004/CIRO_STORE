@@ -5,7 +5,7 @@
  * منقول من components/footer.php القديم (سطر 322–368)
  */
 ?>
-<!-- ══ Privacy Policy Modal ════════════════════════════════ -->
+<?php // ══ Privacy Policy Modal ════════════════════════════════ ?>
 <div class="modal fade" id="privacyModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content" class="u-policy-panel">

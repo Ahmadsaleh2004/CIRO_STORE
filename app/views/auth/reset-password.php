@@ -79,7 +79,7 @@ require APPROOT . '/views/inc/head-bare.php';
 
 <?= vendorJs("bootstrap-js") ?>
 <script src="<?= URLROOT ?>/js/core/csrf.js" defer></script>
-<!-- تمرير بيانات فقط — المنطق في js/features/reset-password.js -->
+<?php // تمرير بيانات فقط — المنطق في js/features/reset-password.js ?>
 <?= pageData(['BASE_URL' => URLROOT, 'URLROOT' => URLROOT]) ?>
 <script src="<?= URLROOT ?>/js/features/reset-password.js" defer></script>
 

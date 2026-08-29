@@ -21,23 +21,23 @@ require APPROOT . '/views/inc/head-bare.php';
 <div class="login-wrapper">
     <div class="login-card">
 
-        <!-- Logo / Header -->
+        <?php // Logo / Header ?>
         <div class="login-logo">
             <div class="lock-icon">🔐</div>
             <h1>Cairo Store</h1>
             <p>Admin Control Panel</p>
         </div>
 
-        <!-- رسالة الخطأ / النجاح -->
+        <?php // رسالة الخطأ / النجاح ?>
         <div class="alert-msg" id="alertMsg" role="alert" aria-live="polite"></div>
 
-        <!-- فورم تسجيل الدخول — إيميل + باسورد (+ حقل كود 2FA يظهر فقط عند الحاجة) -->
+        <?php // فورم تسجيل الدخول — إيميل + باسورد (+ حقل كود 2FA يظهر فقط عند الحاجة) ?>
         <form id="adminLoginForm" novalidate autocomplete="off">
 
-            <!-- CSRF -->
+            <?php // CSRF ?>
             <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(generateCsrfToken()) ?>">
 
-            <!-- الإيميل -->
+            <?php // الإيميل ?>
             <div class="form-group">
                 <label class="form-label" for="adminEmail">Email Address</label>
                 <input
@@ -53,7 +53,7 @@ require APPROOT . '/views/inc/head-bare.php';
                 >
             </div>
 
-            <!-- كلمة المرور -->
+            <?php // كلمة المرور ?>
             <div class="form-group">
                 <label class="form-label" for="adminPassword">Password</label>
                 <input
@@ -68,7 +68,7 @@ require APPROOT . '/views/inc/head-bare.php';
                 >
             </div>
 
-            <!-- حقل كود 2FA (TOTP) — يظهر فقط عندما يطلب السيرفر requires_2fa -->
+            <?php // حقل كود 2FA (TOTP) — يظهر فقط عندما يطلب السيرفر requires_2fa ?>
             <div class="form-group" id="twofaGroup" class="d-none">
                 <label class="form-label" for="adminTOTP">Authenticator Code</label>
                 <input
@@ -85,40 +85,40 @@ require APPROOT . '/views/inc/head-bare.php';
                 >
             </div>
 
-            <!-- hCaptcha — تظهر فقط بعد أول محاولة فاشلة (يتحكم فيها JS) -->
-            <!-- data-sitekey يُقرأ من admin-auth.js عبر dataset -->
+            <?php // hCaptcha — تظهر فقط بعد أول محاولة فاشلة (يتحكم فيها JS) ?>
+            <?php // data-sitekey يُقرأ من admin-auth.js عبر dataset ?>
             <div
                 id="captcha-container"
                 aria-hidden="true"
                 data-sitekey="<?= htmlspecialchars($_ENV['HCAPTCHA_SITE_KEY'] ?? '') ?>"
             >
-                <!-- Widget hCaptcha سيُحقن هنا بواسطة admin-auth.js -->
+                <?php // Widget hCaptcha سيُحقن هنا بواسطة admin-auth.js ?>
             </div>
 
-            <!-- زر الدخول -->
+            <?php // زر الدخول ?>
             <button type="submit" id="loginBtn" class="btn-login">
                 Sign In
             </button>
 
-            <!-- مؤقت الحظر -->
+            <?php // مؤقت الحظر ?>
             <p class="lockout-timer" id="lockoutTimer">
                 Access locked — try again in <span id="lockoutCountdown">30:00</span>
             </p>
         </form>
 
-        <!-- رابط العودة للمتجر — مُخفى بصرياً لأمان SEO، موجود للـ accessibility -->
+        <?php // رابط العودة للمتجر — مُخفى بصرياً لأمان SEO، موجود للـ accessibility ?>
         <a href="<?= URLROOT ?>/" class="back-link" tabindex="-1" aria-hidden="true">← Back to Store</a>
 
     </div>
 </div>
 
-<!-- Bootstrap JS فقط — لا يُحمَّل أي JS خاص بالمتجر العام -->
+<?php // Bootstrap JS فقط — لا يُحمَّل أي JS خاص بالمتجر العام ?>
 <?= vendorJs('bootstrap-js') ?>
 
-<!-- SweetAlert2 — مطلوبة لتنبيه الترحيب بعد نجاح تسجيل الدخول -->
+<?php // SweetAlert2 — مطلوبة لتنبيه الترحيب بعد نجاح تسجيل الدخول ?>
 <?= vendorJs('sweetalert2') ?>
 
-<!-- ملف JS المخصص لـ Admin Auth — لا يُحمَّل أي ملف JS آخر من المتجر -->
+<?php // ملف JS المخصص لـ Admin Auth — لا يُحمَّل أي ملف JS آخر من المتجر ?>
 <script src="<?= URLROOT ?>/js/admin/admin-auth.js" defer></script>
 
 <?php require APPROOT . '/views/inc/footer-bare.php'; ?>

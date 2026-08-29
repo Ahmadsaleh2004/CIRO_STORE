@@ -6,7 +6,7 @@
  */
 ?>
 
-<!-- ══ قالب الشريحة ═══════════════════════════════════════════════════════ -->
+<?php // ══ قالب الشريحة ═══════════════════════════════════════════════════════ ?>
 <template id="slideTemplate">
     <div class="slide-card card p-3 mb-4 u-border-section-2">
         <div class="d-flex justify-content-between align-items-center mb-3">
@@ -24,7 +24,7 @@
     </div>
 </template>
 
-<!-- ══ قالب العنصر/الصورة ═════════════════════════════════════════════════ -->
+<?php // ══ قالب العنصر/الصورة ═════════════════════════════════════════════════ ?>
 <template id="itemTemplate">
     <div class="slide-item-card card p-2 u-w-260 u-border-section-all">
 
@@ -33,7 +33,7 @@
             <button type="button" class="btn btn-sm btn-outline-danger remove-item-btn" aria-label="Remove item">✕</button>
         </div>
 
-        <!-- أزرار التبديل بين التبويبين — تتحكم فقط بالعرض/الإخفاء البصري -->
+        <?php // أزرار التبديل بين التبويبين — تتحكم فقط بالعرض/الإخفاء البصري ?>
         <div class="btn-group w-100 mb-2" role="group">
             <button type="button" class="btn btn-outline-primary btn-sm mode-toggle-btn active"
                     data-mode="product">🛍️ Product</button>
@@ -41,7 +41,7 @@
                     data-mode="manual">🖼️ Manual</button>
         </div>
 
-        <!-- ══ تبويب Product ══════════════════════════════════ -->
+        <?php // ══ تبويب Product ══════════════════════════════════ ?>
         <div class="mode-panel product-panel">
             <button type="button" class="btn btn-outline-secondary btn-sm w-100 mb-2 open-product-picker-btn">
                 🔍 Choose Product
@@ -68,7 +68,7 @@
             </button>
         </div>
 
-        <!-- ══ تبويب Manual ═══════════════════════════════════ -->
+        <?php // ══ تبويب Manual ═══════════════════════════════════ ?>
         <div class="mode-panel manual-panel d-none">
             <div class="manual-preview d-none mb-2 text-center">
                 <img class="manual-preview-img" src="" alt=""

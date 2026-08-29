@@ -6,7 +6,7 @@
  * JS المسؤول: backup.js (زر الإنشاء + أزرار الحذف)
  */
 ?>
-<!-- ── Page Header ────────────────────────────────────────── -->
+<?php // ── Page Header ────────────────────────────────────────── ?>
 <div class="admin-page-header">
     <h1>💾 Backup DB</h1>
     <div class="d-flex gap-2 flex-wrap">
@@ -30,7 +30,7 @@
 
 <input type="hidden" name="csrf_token" id="backupCsrfToken" value="<?= htmlspecialchars($csrf) ?>">
 
-<!-- ── Backups Table ──────────────────────────────────────── -->
+<?php // ── Backups Table ──────────────────────────────────────── ?>
 <div class="card p-0">
     <div class="table-responsive">
         <table class="table admin-table mb-0">

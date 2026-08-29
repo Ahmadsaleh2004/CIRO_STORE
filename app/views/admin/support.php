@@ -14,7 +14,7 @@
     </span>
 </div>
 
-<!-- ── Search Bar ─────────────────────────────────────────── -->
+<?php // ── Search Bar ─────────────────────────────────────────── ?>
 <div class="float-group mb-4">
     <form method="GET" action="<?= URLROOT ?>/admin/support" class="d-flex gap-2 flex-wrap align-items-center">
         <input
@@ -31,7 +31,7 @@
     </form>
 </div>
 
-<!-- ── Messages List ──────────────────────────────────────── -->
+<?php // ── Messages List ──────────────────────────────────────── ?>
 <?php if (empty($messages)): ?>
 <div class="text-center py-5 u-muted">
     <p class="u-fs-110">No messages found<?= $search !== '' ? ' for "' . htmlspecialchars($search) . '"' : '' ?>.</p>
@@ -94,17 +94,17 @@
 
 <?php endif; ?>
 
-<!--
-    حقل CSRF يقرأه support.js عند كل إرسال.
+<?php /*
+حقل CSRF يقرأه support.js عند كل إرسال.
     سمة name مطلوبة لا زائدة: updateCsrfToken() في js/core/csrf.js تستهدف
     input[name="csrf_token"]، فبلا الاسم كان الحقل يبقى على التوكن القديم
     بعد أي تعافٍ — ويحتاج أول إرسال يدوي تالٍ جولة تعافٍ أخرى بلا داعٍ.
     والحقل خارج أي <form> (فورم البحث أعلى الصفحة مغلق قبله)، وsupport.js
     يبني FormData يدوياً، فالاسم لا يدخل أي إرسال بغير قصد.
--->
+*/ ?>
 <input type="hidden" name="csrf_token" id="csrfTokenSupport" value="<?= htmlspecialchars($csrf) ?>">
 
-<!-- ── Pagination ─────────────────────────────────────────── -->
+<?php // ── Pagination ─────────────────────────────────────────── ?>
 <?php if ($totalPages > 1): ?>
 <nav class="mt-4" aria-label="Support messages pagination">
     <ul class="pagination justify-content-center flex-wrap">

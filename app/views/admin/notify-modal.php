@@ -46,6 +46,6 @@
     </div>
 </div>
 
-<!-- Hidden inputs لتمرير target type/id لـ JS -->
+<?php // Hidden inputs لتمرير target type/id لـ JS ?>
 <input type="hidden" id="notifyTargetType" value="">
 <input type="hidden" id="notifyTargetId"   value="">

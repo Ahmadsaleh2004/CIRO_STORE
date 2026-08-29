@@ -6,7 +6,7 @@
  * CSRF Token يأتي جاهزاً من $csrfToken الممررة عبر footer.php
  */
 ?>
-<!-- ══ Register Modal ══════════════════════════════════════ -->
+<?php // ══ Register Modal ══════════════════════════════════════ ?>
 <div class="modal fade" id="registerModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content">
@@ -22,7 +22,7 @@
                 <form id="signupForm" novalidate>
                     <input type="hidden" name="action"     value="register">
                     <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken ?? '') ?>">
-                    <input type="hidden" name="phone"      value=""><!-- يُملأ بـ auth.js -->
+                    <input type="hidden" name="phone"      value=""><?php // يُملأ بـ auth.js ?>
 
                     <div class="row">
                         <div class="col-md-6">

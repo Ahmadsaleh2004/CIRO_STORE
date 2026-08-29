@@ -6,7 +6,7 @@
  * منقول من components/footer.php القديم (سطر 369–383)
  */
 ?>
-<!-- ══ Notification Sidebar ════════════════════════════════ -->
+<?php // ══ Notification Sidebar ════════════════════════════════ ?>
 <div id="notifSidebar" role="region" aria-label="Notifications panel">
     <div class="notif-header">
         <span>🔔 Notifications</span>

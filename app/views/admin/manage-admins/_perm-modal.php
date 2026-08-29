@@ -21,7 +21,7 @@
                     <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf) ?>">
                     <input type="hidden" name="target_id"  id="permTargetId">
 
-                    <!-- Role -->
+                    <?php // Role ?>
                     <div class="float-group mb-3 u-mw-220">
                         <select name="edit_role" id="permRole">
                             <?php
@@ -41,7 +41,7 @@
                         <label>Role</label>
                     </div>
 
-                    <!-- Permissions Grid -->
+                    <?php // Permissions Grid ?>
                     <div class="perm-grid mb-3">
                         <label class="perm-item">
                             <input type="checkbox" name="perm_admins"    id="ep_admins">
@@ -81,7 +81,7 @@
                         </label>
                     </div>
 
-                    <!-- Reason -->
+                    <?php // Reason ?>
                     <div class="float-group mb-3">
                         <textarea name="edit_reason"
                                   id="editAdminReason"
@@ -91,7 +91,7 @@
                         <label>Reason for this edit <span class="text-danger">*</span></label>
                     </div>
 
-                    <!-- Password re-auth -->
+                    <?php // Password re-auth ?>
                     <div class="float-group mb-4">
                         <input type="password"
                                name="confirm_edit_pass"

@@ -35,7 +35,7 @@ $bareCss       = $bareCss       ?? [];
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <!-- منع الفهرسة — كل صفحات الـbare خاصة (مصادقة أو أخطاء) -->
+    <?php // منع الفهرسة — كل صفحات الـbare خاصة (مصادقة أو أخطاء) ?>
     <meta name="robots" content="noindex, nofollow">
 
     <title><?= htmlspecialchars($bareTitle ?? SITENAME) ?></title>

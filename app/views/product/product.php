@@ -22,7 +22,7 @@ $pageDescription = 'Browse all products at Cairo Store.';
     <div class="alert alert-success"><?= htmlspecialchars($msg) ?></div>
     <?php endif; ?>
 
-    <!-- ── Filters ───────────────────────────────────────── -->
+    <?php // ── Filters ───────────────────────────────────────── ?>
     <div class="row mb-4 g-3">
         <div class="col-md-6 col-lg-4">
             <div id="search-wrapper">
@@ -71,7 +71,7 @@ $pageDescription = 'Browse all products at Cairo Store.';
 
     <div id="results-count" class="mb-3 results-count-text"></div>
 
-    <!-- ── Products Grid ──────────────────────────────── -->
+    <?php // ── Products Grid ──────────────────────────────── ?>
     <div class="row" id="products-container">
 
         <?php foreach ($products as $p):
@@ -208,7 +208,7 @@ $pageDescription = 'Browse all products at Cairo Store.';
     </div>
 
     <?php if ($totalPages > 1): ?>
-    <!-- ── Pagination ──────────────────────────────────── -->
+    <?php // ── Pagination ──────────────────────────────────── ?>
     <nav aria-label="Products pagination" class="mt-4 d-flex justify-content-center">
         <ul class="pagination">
             <?php

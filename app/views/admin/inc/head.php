@@ -7,8 +7,10 @@
     <meta name="robots" content="noindex,nofollow">
 <?= themeBootScript() ?>
 <?= vendorCss('bootstrap-css') ?>
-    <!-- store.css أولاً (لوحة التحكم تعيد استخدام كل طبقة المتجر)
-         ثم admin.css فوقها. راجع public/css/admin.css للترتيب. -->
+    <?php /*
+store.css أولاً (لوحة التحكم تعيد استخدام كل طبقة المتجر)
+         ثم admin.css فوقها. راجع public/css/admin.css للترتيب.
+*/ ?>
 <?= cssBundle('admin') ?>
     <?= $extraHead ?? '' ?>
 </head>

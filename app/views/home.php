@@ -8,7 +8,7 @@
 
 <main id="main-content" role="main">
 
-<!-- Slider -->
+<?php // Slider ?>
 <?php
 // ⚠️ السلايدر يُصيَّر **على الخادم**، لا في المتصفح.
 //
@@ -78,7 +78,7 @@ $homeSliders = $data['homeSliders'] ?? [];
     </div>
 </section>
 
-<!-- Shop By Category -->
+<?php // Shop By Category ?>
 <section class="container py-5">
     <h2 class="section-title">Shop By Category</h2>
     <div class="d-flex justify-content-center flex-wrap gap-3">
@@ -96,7 +96,7 @@ $homeSliders = $data['homeSliders'] ?? [];
     </div>
 </section>
 
-<!-- Best Sellers -->
+<?php // Best Sellers ?>
 <section class="container py-4">
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h2 class="section-title mb-0">Best Sellers</h2>
@@ -109,7 +109,7 @@ $homeSliders = $data['homeSliders'] ?? [];
     </div>
 </section>
 
-<!-- New Arrivals -->
+<?php // New Arrivals ?>
 <section class="container py-4">
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h2 class="section-title mb-0">New Arrivals</h2>
@@ -122,7 +122,7 @@ $homeSliders = $data['homeSliders'] ?? [];
     </div>
 </section>
 
-<!-- Explore More -->
+<?php // Explore More ?>
 <section class="container py-4">
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h2 class="section-title mb-0">Explore More</h2>

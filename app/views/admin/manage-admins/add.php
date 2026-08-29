@@ -6,20 +6,20 @@
  */
 ?>
 
-<!-- ── Page Header ────────────────────────────────────────── -->
+<?php // ── Page Header ────────────────────────────────────────── ?>
 <div class="admin-page-header">
     <h1>➕ Add New Admin</h1>
     <a href="<?= URLROOT ?>/admin/admins" class="btn btn-secondary btn-sm">← Back to Manage Admins</a>
 </div>
 
-<!-- ── Error Message ──────────────────────────────────────── -->
+<?php // ── Error Message ──────────────────────────────────────── ?>
 
-<!-- ── Add Admin Form ─────────────────────────────────────── -->
+<?php // ── Add Admin Form ─────────────────────────────────────── ?>
 <div class="card p-4">
     <form method="POST" action="<?= URLROOT ?>/admin/admins/add" id="addAdminForm" novalidate>
         <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf) ?>">
 
-        <!-- ── Basic Info ──────────────────────────────────── -->
+        <?php // ── Basic Info ──────────────────────────────────── ?>
         <h5 class="mb-3">👤 Basic Info</h5>
         <div class="row g-3 mb-4">
 
@@ -77,7 +77,7 @@
 
         </div>
 
-        <!-- ── Role ────────────────────────────────────────── -->
+        <?php // ── Role ────────────────────────────────────────── ?>
         <h5 class="mb-3">🎖 Role</h5>
         <div class="row g-3 mb-4">
             <div class="col-12 col-md-4">
@@ -102,7 +102,7 @@
             </div>
         </div>
 
-        <!-- ── Permissions ─────────────────────────────────── -->
+        <?php // ── Permissions ─────────────────────────────────── ?>
         <h5 class="mb-3">🔐 Permissions</h5>
         <div class="perm-grid mb-4">
 
@@ -145,7 +145,7 @@
 
         </div>
 
-        <!-- ── Confirmation ────────────────────────────────── -->
+        <?php // ── Confirmation ────────────────────────────────── ?>
         <h5 class="mb-3">🔒 Confirmation</h5>
         <div class="row g-3 mb-4">
 
@@ -178,7 +178,7 @@
 
         </div>
 
-        <!-- ── Submit (مخفي بالبداية، يظهر بـ JS عند اكتمال الحقول) ── -->
+        <?php // ── Submit (مخفي بالبداية، يظهر بـ JS عند اكتمال الحقول) ── ?>
         <div class="d-flex justify-content-end">
             <button type="submit"
                     id="addAdminBtn"

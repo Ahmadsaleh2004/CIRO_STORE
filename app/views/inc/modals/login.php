@@ -6,7 +6,7 @@
  * CSRF Token يأتي جاهزاً من $csrfToken الممررة عبر footer.php
  */
 ?>
-<!-- ══ Login Modal ═════════════════════════════════════════ -->
+<?php // ══ Login Modal ═════════════════════════════════════════ ?>
 <div class="modal fade" id="loginModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
@@ -49,7 +49,7 @@
                     <div id="loginError" class="alert alert-danger py-2 small mb-3 d-none"></div>
                     <button type="submit" class="btn btn-dark w-100 mb-3 py-2" id="loginBtn">Sign In</button>
 
-                    <!-- زر تسجيل الدخول عبر جوجل -->
+                    <?php // زر تسجيل الدخول عبر جوجل ?>
                     <div class="modal-divider">or</div>
                     <a href="<?= URLROOT ?>/auth/google"
                        class="btn btn-outline-danger w-100 mb-3">

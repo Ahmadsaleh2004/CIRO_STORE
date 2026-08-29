@@ -36,7 +36,7 @@ require APPROOT . '/views/shared/flash-toast.php';
     </div>
 
     <div id="slidesContainer">
-        <!-- تُبنى بـ JS من $sliders عند DOMContentLoaded، وتُضاف عليها شرائح جديدة بـ addSlideBtn -->
+        <?php // تُبنى بـ JS من $sliders عند DOMContentLoaded، وتُضاف عليها شرائح جديدة بـ addSlideBtn ?>
     </div>
 
     <div class="mt-4 d-flex gap-2">
@@ -50,10 +50,10 @@ require APPROOT . '/views/shared/flash-toast.php';
 
 </form>
 
-<!-- Templates: تُستنسخ بـ JS، لا تُعرض مباشرة -->
+<?php // Templates: تُستنسخ بـ JS، لا تُعرض مباشرة ?>
 <?php include __DIR__ . '/_templates.php'; ?>
 
-<!-- بيانات السلايدرات الحالية محقونة لـ JS -->
+<?php // بيانات السلايدرات الحالية محقونة لـ JS ?>
 <?= pageData(['_existingSlidersData' => $sliders]) ?>
 
 <?php include __DIR__ . '/_product-picker-modal.php'; ?>

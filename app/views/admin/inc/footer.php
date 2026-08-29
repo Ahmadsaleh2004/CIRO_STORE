@@ -43,7 +43,7 @@
 
 <?php if (isset($extraScripts)) echo $extraScripts; ?>
 
-<!-- سايدبار إشعارات الأدمن — HTML ثابت، يربطه بالباك اند admin-notifications.js -->
+<?php // سايدبار إشعارات الأدمن — HTML ثابت، يربطه بالباك اند admin-notifications.js ?>
 <div id="adminNotifSidebar" role="region" aria-label="Admin notifications panel">
     <div class="notif-header">
         <span>🔔 Admin Notifications</span>
