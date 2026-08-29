@@ -93,12 +93,19 @@
         const addrEl  = document.getElementById('reviewAddress');
         const payEl   = document.getElementById('reviewPayment');
 
+        // ⚠️ `quantity` لا `qty`. المفتاح في السلّة اسمه quantity في
+        // المواضع الثلاثة التي تكتبها (products-catalog · product-details
+        // · wishlist)، وكان هذا السطر يقرأ `item.qty` — أي undefined.
+        // فكان `price * undefined` يساوي NaN، وشاشة المراجعة الأخيرة
+        // قبل الدفع تعرض «$NaN» في كل سطر وفي الإجمالي.
         let total = 0;
         list.innerHTML = cart.map(item => {
-            total += item.price * item.qty;
+            const qty  = Number(item.quantity) || 0;
+            const line = Number(item.price) * qty;
+            total += line;
             return `<li class="d-flex justify-content-between mb-2 small">
-            <span>${item.name}${item.color_name ? ' — ' + item.color_name : ''} × ${item.qty}</span>
-            <span>$${(item.price * item.qty).toFixed(2)}</span>
+            <span>${item.name}${item.color_name ? ' — ' + item.color_name : ''} × ${qty}</span>
+            <span>$${line.toFixed(2)}</span>
         </li>`;
         }).join('') || '<li class="text-muted">Cart is empty.</li>';
 
@@ -106,7 +113,13 @@
 
         // عرض العنوان المختار
         const addrId = getSelectedAddressId();
-        const addr   = SAVED_ADDRESSES.find(a => a.id == addrId);
+
+        // المقارنة صارمة بعد توحيد النوع. المعرّفات تصل من مصدرين
+        // مختلفين — `parseInt` من قيمة الراديو، وJSON من data-* — فكان
+        // `==` هو ما يجسر بينهما. و`getSelectedAddressId` قد تُرجع
+        // السلسلة 'new' أو null، وكلتاهما تصير NaN فلا تطابق أي معرّف،
+        // وهو السلوك المطلوب: لا عنوان محفوظاً مختاراً.
+        const addr = SAVED_ADDRESSES.find(a => Number(a.id) === Number(addrId));
         addrEl.textContent = addr
             ? [addr.label, addr.full_address, addr.city, addr.country].filter(Boolean).join(', ')
             : (document.getElementById('newAddrFull')?.value.trim() || '—');
@@ -154,6 +167,88 @@
         }
     });
 
+    // ── ترجمة السلّة إلى شكل الـAPI ──────────────────────────────
+    //
+    // السلّة تُخزَّن في localStorage بشكلها الخاص {id, quantity, …}،
+    // والـAPI موثَّق بشكل آخر {product_id, qty, …}. وكان الطرفان
+    // يتكلّمان بلا ترجمة: الخادم يقرأ product_id فيجده غائباً، فيسقط كل
+    // عنصر، فيتلقّى الزبون «Invalid items in cart» بعد ثلاث خطوات.
+    // **لم يكن أحد يستطيع إتمام طلب.**
+    //
+    // الترجمة هنا لا في الخادم عن قصد: شكل التخزين المحلي شأن العميل
+    // وحده وقد يتغيّر، وشكل الـAPI عقد منشور في OpenAPI. وتعليم الخادم
+    // قبول الاسمين كان سيثبّت التسميتين معاً إلى الأبد.
+    //
+    // ⚠️ `shown_price` هو السعر المعروض لا السعر المعتمَد. الخادم
+    // يقارنه بسعر القاعدة ويرفض الطلب عند الاختلاف — ولا يخزّنه.
+    function toOrderItems(cart) {
+        return cart.map(item => ({
+            product_id:  Number(item.id),
+            variant_id:  item.variant_id ?? null,
+            qty:         Number(item.quantity) || 0,
+            shown_price: Number(item.price),
+        }));
+    }
+
+    /**
+     * يوحّد معرّف الـvariant قبل المقارنة.
+     *
+     * القيمة تصل من ثلاثة مصادر بثلاثة أشكال: رقم من products-catalog،
+     * ونصّ من سمة data-* في صفحة المنتج، وnull من الخادم للمنتج بلا
+     * variant. والمقارنة الصارمة على هذه الأشكال تفشل بلا سبب مرئي،
+     * والمقارنة المتساهلة (==) تجعل 0 و'' وnull شيئاً واحداً. التوحيد
+     * هنا يسمح بـ=== دون أن يخلط الغياب بالصفر.
+     */
+    function variantKey(value) {
+        return (value === null || value === undefined || value === '') ? null : Number(value);
+    }
+
+    /** يطابق سطر سلّة بسطر جاء من الخادم — بالمنتج واللون معاً. */
+    function sameLine(cartItem, serverItem) {
+        return Number(cartItem.id) === Number(serverItem.product_id)
+            && variantKey(cartItem.variant_id) === variantKey(serverItem.variant_id);
+    }
+
+    /**
+     * يكتب أسعار الخادم في السلّة المحلية.
+     *
+     * الكتابة عبر window.saveCart لا عبر localStorage مباشرة: تلك
+     * تُحدّث واجهة السلّة والعدّادات معاً، وكتابة المفتاح وحده كانت
+     * ستترك الشريط الجانبي يعرض السعر القديم بعد أن قال الحوار إنه تغيّر.
+     */
+    function applyServerPrices(serverItems) {
+        if (!serverItems.length || !window.getCartData || !window.saveCart) return;
+
+        const cart = window.getCartData();
+        serverItems.forEach(si => {
+            const line = cart.find(ci => sameLine(ci, si));
+            if (line) line.price = Number(si.price);
+        });
+        window.saveCart(cart);
+    }
+
+    /** جدول «قبل ← بعد» داخل الحوار. الأسماء من القاعدة، فتُهرَّب. */
+    function buildPriceChangeHtml(serverItems) {
+        const esc = window.escHtml || (s => String(s));
+        const rows = serverItems.map(i => `
+            <li class="d-flex justify-content-between gap-3 small">
+                <span>${esc(i.name)}</span>
+                <span><s class="text-muted">$${Number(i.shown_price).toFixed(2)}</s>
+                      &nbsp;<strong>$${Number(i.price).toFixed(2)}</strong></span>
+            </li>`).join('');
+
+        return `<p class="mb-2">These prices changed while your cart was open:</p>
+                <ul class="list-unstyled text-start mb-0">${rows}</ul>`;
+    }
+
+    /** يعيد زرّ الطلب إلى حالته — كان مكرّراً حرفياً في ثلاثة مواضع. */
+    function resetPlaceButton() {
+        const btn = document.getElementById('placeOrderBtn');
+        if (!btn) return;
+        btn.disabled    = false;
+        btn.textContent = '✅ Place Order';
+    }
+
     // ── تنفيذ الطلب ──────────────────────────────────────────────
     document.getElementById('placeOrderBtn')?.addEventListener('click', async () => {
         const cart = window.getCartData ? window.getCartData() : [];
@@ -179,8 +274,26 @@
                 address_id:       addrId,
                 payment_method:   paymentMethod,
                 idempotency_key:  IDEMPOTENCY_KEY,
-                items:            cart,
+                items:            toOrderItems(cart),
             });
+
+            // ── تغيّر السعر: نحدّث السلّة ونُعيد الزبون ليقرّر ────────
+            //
+            // الخادم رفض الطلب كاملاً وأعاد الأسعار الصحيحة. الاكتشاف
+            // بـerror_code لا بنصّ الرسالة — نفس عقد csrf_invalid.
+            if (!res.success && res.error_code === 'price_changed') {
+                applyServerPrices(res.items || []);
+                resetPlaceButton();
+                goTo(3);
+                buildReview();
+                Swal.fire({
+                    icon:  'warning',
+                    title: 'Prices Updated',
+                    html:  buildPriceChangeHtml(res.items || []),
+                    confirmButtonText: 'Review Cart',
+                });
+                return;
+            }
 
             if (res.success) {
                 // ⚠️ window.clearCart غير معرَّفة في أي ملف — الحارس هنا
@@ -193,13 +306,11 @@
                     window.location.href = res.redirect || URLROOT;
                 });
             } else {
-                document.getElementById('placeOrderBtn').disabled = false;
-                document.getElementById('placeOrderBtn').textContent = '✅ Place Order';
+                resetPlaceButton();
                 Swal.fire({ icon: 'error', title: 'Error', text: res.message });
             }
         } catch {
-            document.getElementById('placeOrderBtn').disabled = false;
-            document.getElementById('placeOrderBtn').textContent = '✅ Place Order';
+            resetPlaceButton();
             Swal.fire({ icon: 'error', text: 'Network error. Please try again.' });
         }
     });

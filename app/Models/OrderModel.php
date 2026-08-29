@@ -79,15 +79,74 @@ class OrderModel extends Model
     // الطلبات
     // ════════════════════════════════════════════════════════
 
+    /** الطلب أُنشئ. */
+    public const PLACE_OK = 'ok';
+
+    /** سعر عنصر أو أكثر لم يعد يطابق ما عُرض على الزبون — الطلب مرفوض. */
+    public const PLACE_PRICE_CHANGED = 'price_changed';
+
+    /** عنصر لم يعد موجوداً أو أُخفي بعد إضافته للسلّة. */
+    public const PLACE_UNAVAILABLE = 'unavailable';
+
+    /** المخزون لم يعد يكفي أحد العناصر. */
+    public const PLACE_OUT_OF_STOCK = 'out_of_stock';
+
+    /** عطل تقني — لا ذنب للزبون ولا لسلّته. */
+    public const PLACE_ERROR = 'error';
+
     /**
-     * إنشاء طلب جديد مع تخفيض المخزون (Transaction)
+     * إنشاء طلب جديد: تسعير من القاعدة، ثم تخفيض المخزون، داخل معاملة واحدة.
      *
-     * @param int    $userId
-     * @param int    $addressId
-     * @param array  $items       [['variant_id'=>x,'product_id'=>y,'qty'=>z,'price'=>w], ...]
-     * @param string $paymentMethod
-     * @param string $idempotencyKey
-     * @return int|null  order_id في حال النجاح
+     * ══════════════════════════════════════════════════════════
+     * ⚠️ السعر لا يأتي من العميل. أبداً.
+     * ══════════════════════════════════════════════════════════
+     *
+     * كانت هذه الدالة تقرأ `$item['price']` وتجمعه في `total_amount`
+     * وتكتبه في `price_at_purchase`. والسلّة تُبنى في `localStorage`
+     * ويرسلها المتصفح كما هي — أي أن **السعر كان مُدخَلاً من المستخدم**.
+     * طلبٌ يُرسل بـ`price: 0.01` كان يمرّ بتوكن صحيح وجلسة صحيحة وحارس
+     * `auth` سليم، ويُخفّض المخزون فعلاً، ويصل الأدمن كطلب مشروع تماماً.
+     * والخنق لا يراه: الطلب واحد لا ألف.
+     *
+     * الآن كل قيمة مالية تُقرأ من القاعدة داخل المعاملة نفسها التي
+     * ستكتب المخزون — فلا نافذة بين قراءة السعر وحجز الكمية.
+     *
+     * ── ما الذي يبقى قادماً من العميل ─────────────────────────
+     *
+     * ثلاثة حقول لا رابع لها: `product_id` و`variant_id` و`qty` — أي
+     * «ماذا أريد وكم». و`shown_price` حقلٌ رابع **يُقارَن ولا يُخزَّن
+     * ولا يُحسب منه شيء**: هو ما عرضه المتصفح على الزبون، ووجوده يجيب
+     * عن سؤال واحد — هل تغيّر السعر بين لحظة العرض ولحظة الإرسال؟
+     *
+     * حتى `color_name_snapshot` صار يُقرأ من القاعدة: كان يأتي من
+     * العميل، ولقطةٌ يكتبها الطرف الذي تُوثَّق ضدّه ليست لقطة.
+     *
+     * ── لماذا الرفض لا التمرير بسعر الخادم ────────────────────
+     *
+     * قرار منتج صريح: الزبون لا يُفاجأ بمبلغ لم يوافق عليه. والدفع عند
+     * الاستلام يجعل المفاجأة عند الباب لا على الشاشة — حيث تكلفتها
+     * رفضُ استلام وشحنةٌ راجعة. فحين يختلف السعر تُلغى العملية كلّها
+     * وتُعاد الأسعار الصحيحة ليراجع الزبون سلّته ويقرّر.
+     *
+     * ── المقارنة بالقروش لا بالعشريات ─────────────────────────
+     *
+     * `0.1 + 0.2 !== 0.3` في أي حساب عشري ثنائي، و`price_after_discount`
+     * عمود محسوب بـ`round(...,2)`. المقارنة على `float` كانت سترفض
+     * طلبات سليمة بفروق لا وجود لها إلا في التمثيل. القروش أعداد صحيحة،
+     * وتساويها تساوٍ حقيقي.
+     *
+     * ── العائد ────────────────────────────────────────────────
+     *
+     * مصفوفة لا `?int`. النتيجة لم تعد ثنائية: «نجح» و«فشل» كانتا
+     * تُختصران في `null`، فيقول الكنترولر للزبون «قد تكون بعض المنتجات
+     * نفدت» عن عطل قاعدة بيانات أو عن سعر تغيّر أو عن منتج أُخفي. الرمز
+     * يفصل الحالات، والرسالة تصير صادقة.
+     *
+     * @param  array $items عناصر منظَّفة من الكنترولر:
+     *                      [['product_id'=>int,'variant_id'=>?int,
+     *                        'qty'=>int,'shown_price'=>float], ...]
+     * @return array{status:string, order_id?:int, duplicate?:bool,
+     *               items?:list<array<string,mixed>>}
      */
     public static function placeOrder(
         int $userId,
@@ -95,31 +154,137 @@ class OrderModel extends Model
         array $items,
         string $paymentMethod,
         string $idempotencyKey
-    ): ?int {
+    ): array {
         if (empty($items)) {
-            return null;
+            return ['status' => self::PLACE_ERROR];
         }
 
         $db = self::db();
 
         try {
-            // فحص Idempotency — منع الطلب المكرر
+            // ── Idempotency: قبل المعاملة عمداً ──────────────────
+            //
+            // إعادة إرسال المفتاح نفسه يجب أن تُرجع الطلب القائم لا أن
+            // تفتح معاملة وتقفل صفوف مخزون ثم تتراجع عنها. والعمود يحمل
+            // UNIQUE، فالسباق بين طلبين متزامنين يفشل عند الإدراج لا هنا.
             $dup = $db->prepare("SELECT order_id FROM orders WHERE idempotency_key=? LIMIT 1");
             $dup->execute([$idempotencyKey]);
             $existing = $dup->fetchColumn();
             if ($existing) {
-                return (int)$existing;
+                return [
+                    'status'    => self::PLACE_OK,
+                    'order_id'  => (int) $existing,
+                    'duplicate' => true,
+                ];
             }
 
             $db->beginTransaction();
 
-            // حساب الإجمالي
-            $total = 0.0;
+            // ── الترتيب قبل أي قفل ───────────────────────────────
+            //
+            // كان الفرز يجري بعد إدراج صفّ الطلب وقبل حلقة المخزون،
+            // وغرضه منع الـdeadlock بين طلبين متزامنين يقفلان الصفوف
+            // نفسها بترتيبين متعاكسين. وهو الآن يسبق **القراءة القافلة**
+            // أيضاً، لأن القفل صار يبدأ من هناك لا من UPDATE.
+            usort($items, fn($a, $b) => ($a['variant_id'] ?? 0) <=> ($b['variant_id'] ?? 0));
+
+            // ── قراءة السعر والمخزون الحقيقيين، بقفل ─────────────
+            //
+            // ⚠️ لا مسار للعنصر بلا variant — وهذا قرار مقيس لا إغفال.
+            //
+            // المتجر يفرض أن لكل منتج variant واحداً على الأقل، في
+            // موضعين صراحةً: AdminProductsController::storeAdd و
+            // ::storeEdit كلتاهما ترفضان بـ«At least one variant with a
+            // valid name and price is required». والقاعدة تؤكّده: صفر
+            // منتج من ستة عشر بلا variant.
+            //
+            // وكل مسارات الإضافة للسلّة تمرّر معرّفاً حقيقياً
+            // (data-variant-id في صفحتَي المنتج، وcart.js يحمله معه).
+            // فالعنصر بلا variant لا يأتي من واجهة المتجر إطلاقاً.
+            //
+            // البديل — تخفيض products.stock_quantity لهذه الحالة — كان
+            // سيُنشئ **مصدرَي حقيقة للمخزون** في دالة واحدة: عمود في
+            // products وآخر في product_variants، ولا شيء يوفّق بينهما.
+            // وهذا ثمن أغلى بكثير من رفض حالة لا تحدث.
+            $variantIds = [];
             foreach ($items as $item) {
-                $total += (float)$item['price'] * (int)$item['qty'];
+                if (empty($item['variant_id'])) {
+                    $db->rollBack();
+                    return ['status' => self::PLACE_UNAVAILABLE];
+                }
+                $variantIds[] = (int) $item['variant_id'];
             }
 
-            // إدراج الطلب
+            $variants = ProductModel::findVariantsForUpdate($variantIds);
+
+            // ── التسعير والتحقّق قبل كتابة أي صفّ ────────────────
+            //
+            // الحلقة كاملةً قبل أي INSERT: الرفض حينها لا يحتاج تراجعاً
+            // عن كتابةٍ حدثت، والأهمّ أنه يجمع **كل** الأسعار المتغيّرة
+            // لا أوّلها. زبون بثلاثة أسعار تغيّرت يستحق أن يراها مرّة
+            // واحدة، لا أن يعيد المحاولة ثلاث مرّات ليكتشفها واحداً واحداً.
+            $priced      = [];
+            $total       = 0.0;
+            $priceDrifts = [];
+
+            foreach ($items as $item) {
+                $productId = (int) $item['product_id'];
+                $variantId = (int) $item['variant_id'];
+                $qty       = (int) $item['qty'];
+                $shown     = (float) ($item['shown_price'] ?? -1);
+
+                $row = $variants[$variantId] ?? null;
+
+                // غير موجود، أو أُخفي بعد إضافته للسلّة (الاستعلام يحمل
+                // is_visible = 1). الحالتان واحدة من زاوية الزبون: هذا
+                // العنصر لم يعد قابلاً للشراء.
+                if ($row === null) {
+                    $db->rollBack();
+                    return ['status' => self::PLACE_UNAVAILABLE];
+                }
+
+                // ⚠️ الـvariant يجب أن يخصّ المنتج المُرسَل. بلا هذا
+                // الفحص يستطيع طلبٌ أن يقرن variant رخيصاً بمنتج آخر،
+                // فيُخزَّن سطر order_items بمنتجٍ لم يُسعَّر سعرُه.
+                if ((int) $row['product_id'] !== $productId) {
+                    $db->rollBack();
+                    return ['status' => self::PLACE_UNAVAILABLE];
+                }
+
+                $unitPrice = (float) $row['price_after_discount'];
+
+                if ((int) round($unitPrice * 100) !== (int) round($shown * 100)) {
+                    $priceDrifts[] = [
+                        'product_id'  => $productId,
+                        'variant_id'  => $variantId,
+                        'name'        => $row['product_name'],
+                        'shown_price' => round($shown, 2),
+                        'price'       => round($unitPrice, 2),
+                    ];
+                    continue;
+                }
+
+                $total += $unitPrice * $qty;
+
+                $priced[] = [
+                    'product_id' => $productId,
+                    'variant_id' => $variantId,
+                    'qty'        => $qty,
+                    'unit_price' => $unitPrice,
+                    // اللقطة من القاعدة لا من العميل.
+                    'color_name' => $row['color_name'] ?? null,
+                ];
+            }
+
+            if ($priceDrifts !== []) {
+                $db->rollBack();
+                return [
+                    'status' => self::PLACE_PRICE_CHANGED,
+                    'items'  => $priceDrifts,
+                ];
+            }
+
+            // ── الكتابة ──────────────────────────────────────────
             $stmt = $db->prepare(
                 "INSERT INTO orders (user_id, address_id, total_amount, payment_method,
                                     status, idempotency_key, created_at)
@@ -128,10 +293,6 @@ class OrderModel extends Model
             $stmt->execute([$userId, $addressId, $total, $paymentMethod, $idempotencyKey]);
             $orderId = (int)$db->lastInsertId();
 
-            // فرز الـ Variants لمنع Deadlock
-            usort($items, fn($a, $b) => ($a['variant_id'] ?? 0) <=> ($b['variant_id'] ?? 0));
-
-            // إدراج عناصر الطلب + تخفيض المخزون
             $stmtItem = $db->prepare(
                 "INSERT INTO order_items
                     (order_id, product_id, variant_id, color_name_snapshot, quantity, price_at_purchase)
@@ -142,33 +303,41 @@ class OrderModel extends Model
                  WHERE id = ? AND stock_quantity >= ?"
             );
 
-            foreach ($items as $item) {
-                $variantId     = (int)($item['variant_id']     ?? 0);
-                $productId     = (int)($item['product_id']     ?? 0);
-                $qty           = (int)($item['qty']             ?? 1);
-                $price         = (float)$item['price'];
-                $colorSnapshot = $item['color_name'] ?? null;
+            foreach ($priced as $item) {
+                $stmtItem->execute([
+                    $orderId,
+                    $item['product_id'],
+                    $item['variant_id'],
+                    $item['color_name'],
+                    $item['qty'],
+                    $item['unit_price'],
+                ]);
 
-                $stmtItem->execute([$orderId, $productId, $variantId ?: null, $colorSnapshot, $qty, $price]);
-
-                if ($variantId) {
-                    $affected = $stmtStock->execute([$qty, $variantId, $qty]);
-                    if (!$stmtStock->rowCount()) {
-                        // مخزون غير كافٍ — تراجع
-                        $db->rollBack();
-                        return null;
-                    }
+                // الشرط `stock_quantity >= ?` يبقى رغم أن الصفّ مقفول
+                // ومقروء أعلاه: القفل يمنع تغيّره من طلب آخر، لا من خطأ
+                // في هذه الدالة. والشرط هو ما يجعل الحجز ذرّياً في
+                // الحالتين.
+                //
+                // ولا فرع `if ($variantId)` هنا بعد الآن: كل عنصر يصل
+                // إلى هذا السطر يحمل variant بالتأكيد — الفحص فوق
+                // يرفض ما دونه قبل قراءة سعر واحد. وكان الفرع القديم
+                // يعني أن عنصراً بلا variant **يُباع بلا أن يمسّ أي
+                // عدّاد مخزون**: مبيعات بلا حدّ لمنتج نفد.
+                $stmtStock->execute([$item['qty'], $item['variant_id'], $item['qty']]);
+                if (!$stmtStock->rowCount()) {
+                    $db->rollBack();
+                    return ['status' => self::PLACE_OUT_OF_STOCK];
                 }
             }
 
             $db->commit();
-            return $orderId;
+            return ['status' => self::PLACE_OK, 'order_id' => $orderId];
         } catch (Exception $e) {
             if ($db->inTransaction()) {
                 $db->rollBack();
             }
             error_log("OrderModel::placeOrder Error: " . $e->getMessage());
-            return null;
+            return ['status' => self::PLACE_ERROR];
         }
     }
 
