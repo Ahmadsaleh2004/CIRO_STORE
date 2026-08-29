@@ -10,9 +10,9 @@
      // وكل ما تحته يقرأ منها. نقله لاحقاً يكسر كل صفحة تمرّر بيانات. ?>
 <?= jsTag('js/core/page-data.js', false) ?>
 
-<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<?php // jQuery حُذف — غير مستعمَل. الروابط والبصمات في assets_helper.php ?>
+<?= vendorJs('bootstrap-js', false) ?>
+<?= vendorJs('sweetalert2', false) ?>
 <?php
 // حزمة واحدة بدل واحد وعشرين وسماً. القائمة هي الارتداد عند غياب
 // البناء، وترتيبها هو العقد — راجع jsBundle في assets_helper.php.

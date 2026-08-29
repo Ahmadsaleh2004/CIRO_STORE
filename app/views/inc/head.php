@@ -35,7 +35,7 @@
 <?= themeBootScript() ?>
     <!-- روابط ملفات الـ CSS الخارجية والداخلية -->
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<?= vendorCss('bootstrap-css') ?>
 
     <!-- حزمة المتجر — ملف @import واحد يجمع base/vendor/layout/
          components/animations. راجع public/css/store.css للترتيب. -->

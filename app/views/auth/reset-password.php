@@ -28,6 +28,7 @@ require APPROOT . '/views/inc/head-bare.php';
     <div class="reset-header">
         <span class="reset-icon"><?= $isAdmin ? '🔐' : '🔑' ?></span>
         <h1>Reset Password</h1>
+        <?php // @escaping-safe: SITENAME ثابت مشروع ?>
         <p><?= $isAdmin ? SITENAME . ' Admin Panel' : SITENAME ?></p>
     </div>
 
@@ -76,7 +77,7 @@ require APPROOT . '/views/inc/head-bare.php';
     <?php endif; ?>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" defer></script>
+<?= vendorJs("bootstrap-js") ?>
 <script src="<?= URLROOT ?>/js/core/csrf.js" defer></script>
 <!-- تمرير بيانات فقط — المنطق في js/features/reset-password.js -->
 <?= pageData(['BASE_URL' => URLROOT, 'URLROOT' => URLROOT]) ?>
