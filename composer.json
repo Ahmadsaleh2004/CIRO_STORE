@@ -52,9 +52,12 @@
             "@analyse",
             "@lint",
             "@audit:escaping:gate",
+            "@readme:check",
             "@test"
         ],
-        "audit:escaping:gate": "php scripts/audit-escaping.php --gate"
+        "audit:escaping:gate": "php scripts/audit-escaping.php --gate",
+        "readme:sync": "php scripts/sync-readme-stats.php",
+        "readme:check": "php scripts/sync-readme-stats.php --check"
     },
     "require": {
         "php": ">=8.2",
@@ -90,8 +93,10 @@
         "audit:escaping": "يصنّف كل <?= ?> في الـviews حسب حاجتها للهروب",
         "audit:imports": "يكشف الكلاسات المستعملة بلا استيراد وبلا تأهيل",
         "images:webp": "يولّد نسخ WebP لصور المنتجات (يعتمد عليها <picture>)",
-        "check": "البوّابة الكاملة: validate + analyse + lint + escaping-gate + test — شغّله قبل أي push",
+        "check": "البوّابة الكاملة: validate + analyse + lint + escaping-gate + readme-check + test — شغّله قبل أي push",
         "fix:blocked-orders": "إصلاح بيانات لمرّة واحدة: يلغي الطلبات المعلّقة لمستخدمين محظورين قبل تفعيل الإلغاء التلقائي",
-        "audit:escaping:gate": "بوّابة الهروب: يفشل إن ظهر إخراج غير مُهرَّب جديد في الـviews"
+        "audit:escaping:gate": "بوّابة الهروب: يفشل إن ظهر إخراج غير مُهرَّب جديد في الـviews",
+        "readme:sync": "يقيس أرقام المشروع من الكود ويكتبها في README",
+        "readme:check": "بوّابة README: يفشل إن انحرفت أرقامه عن الكود"
     }
 }
