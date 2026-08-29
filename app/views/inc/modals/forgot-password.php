@@ -5,7 +5,7 @@
  * منقول من components/footer.php القديم (سطر 288–321)
  */
 ?>
-<!-- ══ Forgot Password Modal ════════════════════════════════ -->
+<?php // ══ Forgot Password Modal ════════════════════════════════ ?>
 <div class="modal fade" id="forgotModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
@@ -20,9 +20,11 @@
             <div class="modal-body">
                 <form id="forgotForm">
                     <input type="hidden" name="action" value="forgot">
-                    <!-- بدون هذا الحقل كان AuthController::forgot() يرفض كل طلب
+                    <?php /*
+بدون هذا الحقل كان AuthController::forgot() يرفض كل طلب
                          بـ "Invalid CSRF token" قبل الوصول لإرسال الإيميل إطلاقًا.
-                         $csrfToken يعرّفه footer.php قبل تضمين المودالات. -->
+                         $csrfToken يعرّفه footer.php قبل تضمين المودالات.
+*/ ?>
                     <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken ?? '') ?>">
                     <div class="float-group">
                         <input type="email" name="email" id="forgotEmail"

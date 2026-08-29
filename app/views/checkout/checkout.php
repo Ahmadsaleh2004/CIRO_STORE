@@ -5,7 +5,7 @@
  * البيانات تأتي جاهزة من CheckoutController::index()
  */
 ?>
-<!-- كتلة <style> المضمّنة نُقلت إلى css/store/pages/checkout.css -->
+<?php // كتلة <style> المضمّنة نُقلت إلى css/store/pages/checkout.css ?>
 
 <main id="main-content" class="container py-5"
       data-checkout-urlroot="<?= URLROOT ?>"
@@ -14,7 +14,7 @@
       data-checkout-addresses='<?= htmlspecialchars(json_encode(array_values($addresses ?? []), JSON_UNESCAPED_UNICODE), ENT_QUOTES) ?>'>
     <h1 class="text-center fw-bold mb-4">🛒 Checkout</h1>
 
-    <!-- Step Bar -->
+    <?php // Step Bar ?>
     <div class="step-bar">
         <div class="step-item active" id="si-1"><div class="step-circle">1</div><div class="step-label">Address</div></div>
         <div class="step-item"        id="si-2"><div class="step-circle">2</div><div class="step-label">Payment</div></div>
@@ -24,7 +24,7 @@
     <div class="row justify-content-center">
     <div class="col-lg-8">
 
-        <!-- ── Step 1: Address ──────────────────────── -->
+        <?php // ── Step 1: Address ──────────────────────── ?>
         <div class="checkout-step active" id="step-1">
         <div class="card p-4">
             <h4 class="mb-4">📍 Delivery Address</h4>
@@ -49,7 +49,7 @@
             <p class="text-muted small mb-3">Or add a new address:</p>
             <?php endif; ?>
 
-            <!-- فورم عنوان جديد -->
+            <?php // فورم عنوان جديد ?>
             <div id="newAddrForm">
                 <div class="row g-2">
                     <div class="col-md-6">
@@ -98,7 +98,7 @@
         </div>
         </div>
 
-        <!-- ── Step 2: Payment ──────────────────────── -->
+        <?php // ── Step 2: Payment ──────────────────────── ?>
         <div class="checkout-step" id="step-2">
         <div class="card p-4">
             <h4 class="mb-4">💳 Payment Method</h4>
@@ -119,7 +119,7 @@
         </div>
         </div>
 
-        <!-- ── Step 3: Review ───────────────────────── -->
+        <?php // ── Step 3: Review ───────────────────────── ?>
         <div class="checkout-step" id="step-3">
         <div class="card p-4">
             <h4 class="mb-3">📋 Order Summary</h4>
@@ -150,9 +150,9 @@
         </div>
         </div>
 
-    </div><!-- /col -->
-    </div><!-- /row -->
+    </div><?php // /col ?>
+    </div><?php // /row ?>
 </main>
 
-<!-- منطق الصفحة في js/features/checkout.js — البيانات تصله عبر data-* على <main> -->
+<?php // منطق الصفحة في js/features/checkout.js — البيانات تصله عبر data-* على <main> ?>
 

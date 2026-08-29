@@ -6,7 +6,7 @@
  */
 ?>
 
-<!-- ── Page Header ────────────────────────────────────────── -->
+<?php // ── Page Header ────────────────────────────────────────── ?>
 <div class="admin-page-header">
     <h1>➕ Add New Product</h1>
     <a href="<?= URLROOT ?>/admin/products" class="btn btn-secondary btn-sm">← Back to Products</a>
@@ -15,7 +15,7 @@
 <?php if (!empty($formErr)): ?>
 <div class="alert alert-danger alert-dismissible fade show" role="alert">
     <?= htmlspecialchars($formErr) ?>
-    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
 </div>
 <?php endif; ?>
 
@@ -28,7 +28,7 @@
 
     <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf) ?>">
 
-    <!-- ══ Shared Info ══════════════════════════════════════════ -->
+    <?php // ══ Shared Info ══════════════════════════════════════════ ?>
     <h5 class="mb-3">Shared Info</h5>
     <div class="row g-3 mb-4">
 
@@ -62,7 +62,7 @@
 
     </div>
 
-    <!-- ══ Categories (الفرق الوحيد عن القديم: popup بدل checkboxes ظاهرة) ════ -->
+    <?php // ══ Categories (الفرق الوحيد عن القديم: popup بدل checkboxes ظاهرة) ════ ?>
     <label class="small fw-bold mb-2 d-block">
         Categories <span class="text-danger">*</span>
     </label>
@@ -79,7 +79,7 @@
         Please select at least one category.
     </div>
 
-    <!-- ══ Product Image (إجباري بصفحة Add) ════════════════════ -->
+    <?php // ══ Product Image (إجباري بصفحة Add) ════════════════════ ?>
     <div class="mb-4">
         <label class="fw-bold d-block mb-1">
             Product Image <span class="text-danger">*</span>
@@ -95,19 +95,19 @@
                required>
     </div>
 
-    <!-- ══ Colors / الألوان ══════════════════════════════════════ -->
+    <?php // ══ Colors ══════════════════════════════════════ ?>
     <div class="d-flex justify-content-between align-items-center mb-3">
-        <h5 class="mb-0">Colors / الألوان <span class="text-danger">*</span></h5>
+        <h5 class="mb-0">Colors <span class="text-danger">*</span></h5>
         <button type="button"
                 class="btn btn-outline-success btn-sm"
                 id="addVariantBtn">+ Add Color</button>
     </div>
 
     <div id="variantsContainer">
-        <!-- صفوف الألوان تُضاف تلقائياً عند DOMContentLoaded من products.js -->
+        <?php // صفوف الألوان تُضاف تلقائياً عند DOMContentLoaded من products.js ?>
     </div>
 
-    <!-- Template: مخفي، يُستنسخ بـ products.js::initAddProductForm -->
+    <?php // Template: مخفي، يُستنسخ بـ products.js::initAddProductForm ?>
     <template id="variantRowTemplate">
         <div class="variant-row card p-3 mb-3 u-surface-page">
             <div class="d-flex justify-content-between align-items-center mb-2">
@@ -120,7 +120,7 @@
                 </button>
             </div>
             <div class="row g-2">
-                <!-- Color Name -->
+                <?php // Color Name ?>
                 <div class="col-12 col-sm-4">
                     <div class="float-group">
                         <input type="text"
@@ -131,7 +131,7 @@
                         <label>Color Name <span class="text-danger">*</span></label>
                     </div>
                 </div>
-                <!-- Color Swatch -->
+                <?php // Color Swatch ?>
                 <div class="col-4 col-sm-2">
                     <label class="small d-block mb-1 u-fs-75">Swatch</label>
                     <input type="color"
@@ -139,7 +139,7 @@
                            class="u-color-input"
                            value="#000000">
                 </div>
-                <!-- Price -->
+                <?php // Price ?>
                 <div class="col-4 col-sm-2">
                     <div class="float-group">
                         <input type="number"
@@ -151,7 +151,7 @@
                         <label>Price ($) <span class="text-danger">*</span></label>
                     </div>
                 </div>
-                <!-- Discount -->
+                <?php // Discount ?>
                 <div class="col-4 col-sm-2">
                     <div class="float-group">
                         <input type="number"
@@ -164,7 +164,7 @@
                         <label>Discount %</label>
                     </div>
                 </div>
-                <!-- Stock -->
+                <?php // Stock ?>
                 <div class="col-4 col-sm-2">
                     <div class="float-group">
                         <input type="number"
@@ -175,7 +175,7 @@
                         <label>Stock</label>
                     </div>
                 </div>
-                <!-- Gender -->
+                <?php // Gender ?>
                 <div class="col-6 col-sm-3">
                     <div class="float-group">
                         <select class="field-gender">
@@ -186,7 +186,7 @@
                         <label>Gender</label>
                     </div>
                 </div>
-                <!-- Image Upload -->
+                <?php // Image Upload ?>
                 <div class="col-12 col-sm-6">
                     <label class="small d-block mb-1">
                         Color Image
@@ -196,7 +196,7 @@
                            class="field-image form-control form-control-sm"
                            accept="image/jpeg,image/png,image/webp">
                 </div>
-                <!-- Default Radio -->
+                <?php // Default Radio ?>
                 <div class="col-6 col-sm-3 d-flex align-items-center">
                     <div class="form-check mb-0">
                         <input type="radio"
@@ -210,7 +210,7 @@
         </div>
     </template>
 
-    <!-- ══ Submit ═══════════════════════════════════════════════ -->
+    <?php // ══ Submit ═══════════════════════════════════════════════ ?>
     <div class="mt-4 d-flex gap-2 flex-wrap">
         <button type="submit"
                 name="save_product"
@@ -232,5 +232,5 @@
 </form>
 </div>
 
-<!-- ── Category Picker Modal ─────────────────────────────── -->
+<?php // ── Category Picker Modal ─────────────────────────────── ?>
 <?php include __DIR__ . '/_category-picker-modal.php'; ?>

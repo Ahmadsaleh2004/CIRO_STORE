@@ -16,7 +16,7 @@ usort($sortedByStock, fn($a, $b) => (int)$a['stock_quantity'] <=> (int)$b['stock
 
 <main id="main-content" class="container py-5">
 
-    <!-- ── Breadcrumb ── -->
+    <?php // ── Breadcrumb ── ?>
     <nav class="store-breadcrumb mb-4">
         <a href="<?= URLROOT ?>">🏠 Home</a>
         <span class="sep">/</span>
@@ -25,10 +25,10 @@ usort($sortedByStock, fn($a, $b) => (int)$a['stock_quantity'] <=> (int)$b['stock
         <span class="current"><?= htmlspecialchars($p['name']) ?></span>
     </nav>
 
-    <!-- ── Product Detail ─────────────────────────────── -->
+    <?php // ── Product Detail ─────────────────────────────── ?>
     <div class="row g-5 align-items-center mb-5">
 
-        <!-- Gallery -->
+        <?php // Gallery ?>
         <div class="col-lg-6">
             <div class="zoom-wrapper position-relative">
                 <?php if ($discount > 0): ?>
@@ -44,11 +44,11 @@ usort($sortedByStock, fn($a, $b) => (int)$a['stock_quantity'] <=> (int)$b['stock
             </div>
         </div>
 
-        <!-- Info -->
+        <?php // Info ?>
         <div class="col-lg-6">
             <h1 class="fw-bold mb-2"><?= htmlspecialchars($p['name']) ?></h1>
 
-            <!-- Rating -->
+            <?php // Rating ?>
             <div class="d-flex align-items-center gap-2 mb-3">
                 <span class="rating-stars-yellow">
                     <?php for ($i = 1; $i <= 5; $i++) echo $i <= $avgRating ? '★' : '☆'; ?>
@@ -58,7 +58,7 @@ usort($sortedByStock, fn($a, $b) => (int)$a['stock_quantity'] <=> (int)$b['stock
                 </small>
             </div>
 
-            <!-- Price -->
+            <?php // Price ?>
             <div class="price-box mb-3">
                 <span class="new-price">$<?= number_format($finalPrice, 2) ?></span>
                 <?php if ($discount > 0): ?>
@@ -67,7 +67,7 @@ usort($sortedByStock, fn($a, $b) => (int)$a['stock_quantity'] <=> (int)$b['stock
             </div>
 
             <?php if (count($variants) > 1): ?>
-            <!-- ── Color Swatches ─────────────────────────── -->
+            <?php // ── Color Swatches ─────────────────────────── ?>
             <div class="mb-3" id="colorSwatches">
                 <label class="fw-bold d-block mb-2">Color: <span id="selectedColorName">
                     <?= htmlspecialchars($selectedVariant['color_name']) ?></span></label>
@@ -89,7 +89,7 @@ usort($sortedByStock, fn($a, $b) => (int)$a['stock_quantity'] <=> (int)$b['stock
                 </div>
             </div>
 
-            <!-- ── "Show all colors" Accordion ── -->
+            <?php // ── "Show all colors" Accordion ── ?>
             <div class="mb-4">
                 <button type="button" class="btn btn-link p-0 text-decoration-none fw-bold" id="toggleAllColorsBtn"
                         aria-expanded="false" aria-controls="allColorsPanel">
@@ -127,7 +127,7 @@ usort($sortedByStock, fn($a, $b) => (int)$a['stock_quantity'] <=> (int)$b['stock
 
             <p class="product-description mb-4"><?= htmlspecialchars($p['description'] ?? '') ?></p>
 
-            <!-- Specs -->
+            <?php // Specs ?>
             <div class="product-specs mb-4 p-3 rounded">
                 <div class="row g-2">
                     <?php if (!empty($p['manufacturer'])): ?>
@@ -151,18 +151,20 @@ usort($sortedByStock, fn($a, $b) => (int)$a['stock_quantity'] <=> (int)$b['stock
                 </div>
             </div>
 
-            <!-- Stock badge — نفس getStockBadge() التي تستعملها قائمة المنتجات،
-                 مع الفرع الأخضر الذي تخصّ به صفحة التفاصيل وحدها -->
+            <?php /*
+Stock badge — نفس getStockBadge() التي تستعملها قائمة المنتجات،
+                 مع الفرع الأخضر الذي تخصّ به صفحة التفاصيل وحدها
+*/ ?>
             <?php $sb = getStockBadge($stock, true); ?>
             <div class="mb-3"><span class="badge <?= $sb['class'] ?> fs-6" id="stockBadge"><?= htmlspecialchars($sb['label']) ?></span></div>
 
-            <!-- ── Qty + Cart block ── -->
+            <?php // ── Qty + Cart block ── ?>
             <div id="qtyCartBlock" class="<?= $stock > 0 ? '' : 'd-none' ?>">
                 <div class="quantity-box mb-4">
-                    <button class="btn btn-outline-secondary" id="minusBtn">−</button>
+                    <button class="btn btn-outline-secondary" id="minusBtn" aria-label="Decrease quantity">−</button>
                     <input type="number" value="1" min="1" max="<?= $stock ?>"
                            id="productQty" class="form-control quantity-input qty-input-md">
-                    <button class="btn btn-outline-secondary" id="plusBtn">+</button>
+                    <button class="btn btn-outline-secondary" id="plusBtn" aria-label="Increase quantity">+</button>
                 </div>
                 <div class="d-flex gap-2">
                     <?php if ($userLoggedIn && empty($_SESSION['admin_in_store_mode'] ?? false)): ?>
@@ -180,7 +182,7 @@ usort($sortedByStock, fn($a, $b) => (int)$a['stock_quantity'] <=> (int)$b['stock
                 </div>
             </div>
 
-            <!-- ── Notify Me block ── -->
+            <?php // ── Notify Me block ── ?>
             <div id="notifyBlock" class="<?= $stock > 0 ? 'd-none' : '' ?>">
                 <?php if ($alreadyRequested): ?>
                 <div class="alert alert-success py-2">✅ We'll notify you when this product is back in stock!</div>
@@ -209,7 +211,7 @@ usort($sortedByStock, fn($a, $b) => (int)$a['stock_quantity'] <=> (int)$b['stock
 
     <hr class="my-5">
 
-    <!-- ── Reviews ────────────────────────────────────── -->
+    <?php // ── Reviews ────────────────────────────────────── ?>
     <h2 class="section-title">⭐ Reviews & Ratings</h2>
 
     <?php if ($userLoggedIn && empty($_SESSION['admin_in_store_mode'] ?? false)): ?>
@@ -273,7 +275,7 @@ usort($sortedByStock, fn($a, $b) => (int)$a['stock_quantity'] <=> (int)$b['stock
 
     <hr class="my-5">
 
-    <!-- ── Related ────────────────────────────────────── -->
+    <?php // ── Related ────────────────────────────────────── ?>
     <?php if (!empty($related)): ?>
     <h2 class="section-title">You May Also Like</h2>
     <div class="row">

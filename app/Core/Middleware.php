@@ -208,7 +208,7 @@ class Middleware
             }
             echo json_encode([
                 'success' => false,
-                'message' => 'محاولات كثيرة خلال وقت قصير. انتظر قليلاً ثم أعد المحاولة.',
+                'message' => 'Too many requests in a short time. Please wait a moment and try again.',
             ], JSON_UNESCAPED_UNICODE);
             exit;
         }
@@ -253,7 +253,7 @@ class Middleware
         ErrorPage::forbidden(
             'تخويل مرفوض على ' . ($_SERVER['REQUEST_URI'] ?? '?') . ' لأدمن #' . (getCurrentAdminId() ?? 0),
             URLROOT . '/admin/home',
-            'العودة للوحة التحكم'
+            'Back to dashboard'
         );
     }
 }

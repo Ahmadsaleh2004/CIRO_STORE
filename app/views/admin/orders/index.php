@@ -9,12 +9,14 @@
  */
 ?>
 
-<!-- ── Page Header ────────────────────────────────────────── -->
-<!-- الترويسة تحمل العنوان وأزرار الإجراءات فقط — نفس نمط
+<?php // ── Page Header ────────────────────────────────────────── ?>
+<?php /*
+الترويسة تحمل العنوان وأزرار الإجراءات فقط — نفس نمط
      users/index.php و manage-admins/index.php و product/index.php.
      البحث والفلترة انتقلا لصف مستقل تحت الرسائل (انظر أدناه).
      ملاحظة: .admin-page-header معرّف أصلاً كـ flex + space-between +
-     wrap + gap في admin.css، فلا حاجة لتكرار كلاسات Bootstrap هنا. -->
+     wrap + gap في admin.css، فلا حاجة لتكرار كلاسات Bootstrap هنا.
+*/ ?>
 <div class="admin-page-header">
     <h1>📦 Manage Orders <span class="badge bg-secondary fw-normal u-fs-90 align-middle"><?= (int)$totalOrders ?></span></h1>
     <div class="d-flex gap-2 flex-wrap">
@@ -26,16 +28,18 @@
     </div>
 </div>
 
-<!-- ── Flash Messages ─────────────────────────────────────── -->
+<?php // ── Flash Messages ─────────────────────────────────────── ?>
 <?php require APPROOT . '/views/shared/flash-messages.php'; ?>
 
-<!-- ── Search + Status Filter ─────────────────────────────── -->
-<!-- صف واحد مسطّح بنفس بنية users/index.php بالضبط. تجنّبنا وضع فورم
+<?php // ── Search + Status Filter ─────────────────────────────── ?>
+<?php /*
+صف واحد مسطّح بنفس بنية users/index.php بالضبط. تجنّبنا وضع فورم
      داخل div خارجي لأن التداخل يجعل الفورم عنصر flex ضيّقًا فيلتف الصف
      إلى سطرين (قيس فعليًا: 77px بدل 38px).
      الـ <select> بلا خاصية name عمدًا: التنقّل يتم فورًا عبر
      filterStatus() في orders.js، والحقل المخفي status هو الذي يحفظ
-     الفلتر عند البحث النصي — فلو حمل name لتكرّرت القيمة وتعارضت. -->
+     الفلتر عند البحث النصي — فلو حمل name لتكرّرت القيمة وتعارضت.
+*/ ?>
 <form method="GET" action="<?= URLROOT ?>/admin/orders" class="d-flex gap-2 flex-wrap mb-3">
     <?php if ($filter): ?>
         <input type="hidden" name="status" value="<?= htmlspecialchars($filter) ?>">
@@ -55,7 +59,7 @@
     <?php endif; ?>
 </form>
 
-<!-- ── Orders Table ───────────────────────────────────────── -->
+<?php // ── Orders Table ───────────────────────────────────────── ?>
 <div class="card p-0">
     <div class="table-responsive">
         <table class="table admin-table mb-0">
@@ -124,7 +128,7 @@
     </div>
 </div>
 
-<!-- ── Pagination ─────────────────────────────────────────── -->
+<?php // ── Pagination ─────────────────────────────────────────── ?>
 <?php if ($totalPages > 1):
     // بناء query string الفلاتر للـ pagination — يحافظ على q/status عند التنقل
     $paginationBase = http_build_query(array_filter([

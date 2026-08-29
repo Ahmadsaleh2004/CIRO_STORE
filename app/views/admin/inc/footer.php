@@ -43,7 +43,7 @@
 
 <?php if (isset($extraScripts)) echo $extraScripts; ?>
 
-<!-- سايدبار إشعارات الأدمن — HTML ثابت، يربطه بالباك اند admin-notifications.js -->
+<?php // سايدبار إشعارات الأدمن — HTML ثابت، يربطه بالباك اند admin-notifications.js ?>
 <div id="adminNotifSidebar" role="region" aria-label="Admin notifications panel">
     <div class="notif-header">
         <span>🔔 Admin Notifications</span>
@@ -52,7 +52,7 @@
             <button id="adminNotifClose" class="btn btn-sm btn-outline-theme" aria-label="Close">✕</button>
         </div>
     </div>
-    <ul id="adminNotifList" class="notif-list"><li class="notif-empty">لا يوجد إشعارات بعد</li></ul>
+    <ul id="adminNotifList" class="notif-list"><li class="notif-empty">No notifications yet</li></ul>
     <div class="p-2">
         <button id="adminNotifDeleteAll" class="btn btn-sm btn-outline-danger w-100">🗑️ Delete All</button>
     </div>

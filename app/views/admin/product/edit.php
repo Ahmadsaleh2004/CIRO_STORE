@@ -9,7 +9,7 @@ $p        = $product;
 $variants = $p['variants'] ?? [];
 ?>
 
-<!-- ── Page Header ────────────────────────────────────────── -->
+<?php // ── Page Header ────────────────────────────────────────── ?>
 <div class="admin-page-header">
     <h1>✏️ Edit: <?= htmlspecialchars($p['name']) ?></h1>
     <a href="<?= URLROOT ?>/admin/products" class="btn btn-secondary btn-sm">← Back to Products</a>
@@ -18,7 +18,7 @@ $variants = $p['variants'] ?? [];
 <?php if (!empty($formErr)): ?>
 <div class="alert alert-danger alert-dismissible fade show" role="alert">
     <?= htmlspecialchars($formErr) ?>
-    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
 </div>
 <?php endif; ?>
 
@@ -32,7 +32,7 @@ $variants = $p['variants'] ?? [];
     <input type="hidden" name="csrf_token"  value="<?= htmlspecialchars($csrf) ?>">
     <input type="hidden" name="product_id"  value="<?= (int)$p['id'] ?>">
 
-    <!-- ══ Shared Info ══════════════════════════════════════════ -->
+    <?php // ══ Shared Info ══════════════════════════════════════════ ?>
     <h5 class="mb-3">Shared Info</h5>
     <div class="row g-3 mb-4">
 
@@ -85,7 +85,7 @@ $variants = $p['variants'] ?? [];
 
     </div>
 
-    <!-- ══ Categories ═══════════════════════════════════════════ -->
+    <?php // ══ Categories ═══════════════════════════════════════════ ?>
     <label class="small fw-bold mb-2 d-block">
         Categories <span class="text-danger">*</span>
     </label>
@@ -102,7 +102,7 @@ $variants = $p['variants'] ?? [];
         Please select at least one category.
     </div>
 
-    <!-- ══ Product Image (اختياري بصفحة Edit) ══════════════════ -->
+    <?php // ══ Product Image (اختياري بصفحة Edit) ══════════════════ ?>
     <div class="mb-4">
         <label class="fw-bold d-block mb-1">Product Image</label>
         <?php if (!empty($p['image_path'])): ?>
@@ -123,9 +123,9 @@ $variants = $p['variants'] ?? [];
                accept="image/jpeg,image/png,image/webp">
     </div>
 
-    <!-- ══ Colors / الألوان (صفوف موجودة + إضافة جديدة) ════════ -->
+    <?php // ══ Colors (صفوف موجودة + إضافة جديدة) ════════ ?>
     <div class="d-flex justify-content-between align-items-center mb-3">
-        <h5 class="mb-0">Colors / الألوان <span class="text-danger">*</span></h5>
+        <h5 class="mb-0">Colors <span class="text-danger">*</span></h5>
         <button type="button"
                 class="btn btn-outline-success btn-sm"
                 id="addVariantBtn">+ Add Color</button>
@@ -135,7 +135,7 @@ $variants = $p['variants'] ?? [];
         <?php foreach ($variants as $i => $v): ?>
         <div class="variant-row card p-3 mb-3 u-surface-page">
 
-            <!-- Hidden: variant ID + صورة موجودة -->
+            <?php // Hidden: variant ID + صورة موجودة ?>
             <?php if (!empty($v['id'])): ?>
             <input type="hidden"
                    class="field-id"
@@ -157,7 +157,7 @@ $variants = $p['variants'] ?? [];
             </div>
 
             <div class="row g-2">
-                <!-- Color Name -->
+                <?php // Color Name ?>
                 <div class="col-12 col-sm-4">
                     <div class="float-group">
                         <input type="text"
@@ -170,7 +170,7 @@ $variants = $p['variants'] ?? [];
                         <label>Color Name <span class="text-danger">*</span></label>
                     </div>
                 </div>
-                <!-- Color Swatch -->
+                <?php // Color Swatch ?>
                 <div class="col-4 col-sm-2">
                     <label class="small d-block mb-1 u-fs-75">Swatch</label>
                     <input type="color"
@@ -179,7 +179,7 @@ $variants = $p['variants'] ?? [];
                            class="u-color-input"
                            value="<?= htmlspecialchars($v['color_hex'] ?? '#000000') ?>">
                 </div>
-                <!-- Price -->
+                <?php // Price ?>
                 <div class="col-4 col-sm-2">
                     <div class="float-group">
                         <input type="number"
@@ -193,7 +193,7 @@ $variants = $p['variants'] ?? [];
                         <label>Price ($) <span class="text-danger">*</span></label>
                     </div>
                 </div>
-                <!-- Discount -->
+                <?php // Discount ?>
                 <div class="col-4 col-sm-2">
                     <div class="float-group">
                         <input type="number"
@@ -207,7 +207,7 @@ $variants = $p['variants'] ?? [];
                         <label>Discount %</label>
                     </div>
                 </div>
-                <!-- Stock -->
+                <?php // Stock ?>
                 <div class="col-4 col-sm-2">
                     <div class="float-group">
                         <input type="number"
@@ -219,7 +219,7 @@ $variants = $p['variants'] ?? [];
                         <label>Stock</label>
                     </div>
                 </div>
-                <!-- Gender -->
+                <?php // Gender ?>
                 <div class="col-6 col-sm-3">
                     <div class="float-group">
                         <select class="field-gender"
@@ -235,7 +235,7 @@ $variants = $p['variants'] ?? [];
                         <label>Gender</label>
                     </div>
                 </div>
-                <!-- Image — Replace (optional) -->
+                <?php // Image — Replace (optional) ?>
                 <div class="col-12 col-sm-6">
                     <label class="small d-block mb-1">
                         Replace Image
@@ -251,7 +251,7 @@ $variants = $p['variants'] ?? [];
                            name="variants[<?= $i ?>][image]"
                            accept="image/jpeg,image/png,image/webp">
                 </div>
-                <!-- Default Radio -->
+                <?php // Default Radio ?>
                 <div class="col-6 col-sm-3 d-flex align-items-center">
                     <div class="form-check mb-0">
                         <input type="radio"
@@ -268,7 +268,7 @@ $variants = $p['variants'] ?? [];
         <?php endforeach; ?>
     </div>
 
-    <!-- Template: لصفوف الألوان الجديدة المُضافة بـ JS -->
+    <?php // Template: لصفوف الألوان الجديدة المُضافة بـ JS ?>
     <template id="variantRowTemplate">
         <div class="variant-row card p-3 mb-3 u-surface-page">
             <div class="d-flex justify-content-between align-items-center mb-2">
@@ -338,7 +338,7 @@ $variants = $p['variants'] ?? [];
         </div>
     </template>
 
-    <!-- ══ Submit ═══════════════════════════════════════════════ -->
+    <?php // ══ Submit ═══════════════════════════════════════════════ ?>
     <div class="mt-4 d-flex gap-2 flex-wrap">
         <button type="submit"
                 name="save_product"
@@ -355,10 +355,10 @@ $variants = $p['variants'] ?? [];
 </form>
 </div>
 
-<!-- بيانات الكاتوجريز الحالية للمنتج — تُقرأ من category-picker.js -->
+<?php // بيانات الكاتوجريز الحالية للمنتج — تُقرأ من category-picker.js ?>
 <?= pageData([
     '_currentCategoryIds' => array_map('intval', $p['category_ids'] ?? []),
 ]) ?>
 
-<!-- ── Category Picker Modal ─────────────────────────────── -->
+<?php // ── Category Picker Modal ─────────────────────────────── ?>
 <?php include __DIR__ . '/_category-picker-modal.php'; ?>

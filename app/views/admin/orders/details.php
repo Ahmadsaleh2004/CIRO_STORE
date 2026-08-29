@@ -30,7 +30,7 @@ if ($order['status'] === 'completed' && !empty($order['handler_admin_name'])) {
 }
 ?>
 
-<!-- ── Page Header + Take Button ──────────────────────────── -->
+<?php // ── Page Header + Take Button ──────────────────────────── ?>
 <div class="admin-page-header d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4">
     <h1>
         🧾 Order #<?= (int)$order['order_id'] ?>
@@ -54,12 +54,14 @@ if ($order['status'] === 'completed' && !empty($order['handler_admin_name'])) {
 <?php endif; ?>
 
 <div class="row g-4">
-    <!-- ════════════════════════════════════════════════════════
+    <?php /*
+════════════════════════════════════════════════════════
          العمود الأيسر (الرئيسي) — col-lg-8
-         ════════════════════════════════════════════════════════ -->
+         ════════════════════════════════════════════════════════
+*/ ?>
     <div class="col-12 col-lg-8">
 
-        <!-- 📋 Order Information -->
+        <?php // 📋 Order Information ?>
         <div class="card p-4 mb-4">
             <h5 class="mb-3">📋 Order Information</h5>
             <div class="table-responsive">
@@ -78,7 +80,7 @@ if ($order['status'] === 'completed' && !empty($order['handler_admin_name'])) {
             </div>
         </div>
 
-        <!-- 🛍️ Items Ordered -->
+        <?php // 🛍️ Items Ordered ?>
         <div class="card p-4 mb-4">
             <h5 class="mb-3">🛍️ Items Ordered (<?= count($items) ?>)</h5>
             <?php if (empty($items)): ?>
@@ -122,7 +124,7 @@ if ($order['status'] === 'completed' && !empty($order['handler_admin_name'])) {
             <?php endif; ?>
         </div>
 
-        <!-- 📍 Shipping Details -->
+        <?php // 📍 Shipping Details ?>
         <div class="card p-4 mb-4">
             <h5 class="mb-3">📍 Shipping Details</h5>
             <div class="table-responsive">
@@ -152,7 +154,7 @@ if ($order['status'] === 'completed' && !empty($order['handler_admin_name'])) {
             </div>
         </div>
 
-        <!-- 🚨 Report an Issue -->
+        <?php // 🚨 Report an Issue ?>
         <div class="card p-4 mb-4">
             <h5 class="mb-3">🚨 Report an Issue</h5>
             <textarea id="reportReason" class="form-control mb-2" rows="3"
@@ -162,12 +164,14 @@ if ($order['status'] === 'completed' && !empty($order['handler_admin_name'])) {
 
     </div>
 
-    <!-- ════════════════════════════════════════════════════════
+    <?php /*
+════════════════════════════════════════════════════════
          العمود الأيمن (الجانبي) — col-lg-4
-         ════════════════════════════════════════════════════════ -->
+         ════════════════════════════════════════════════════════
+*/ ?>
     <div class="col-12 col-lg-4">
 
-        <!-- 👤 Client -->
+        <?php // 👤 Client ?>
         <div class="card p-4 mb-4">
             <h5 class="mb-3">👤 Client</h5>
             <div class="table-responsive">
@@ -200,7 +204,7 @@ if ($order['status'] === 'completed' && !empty($order['handler_admin_name'])) {
                class="btn btn-sm btn-outline-warning mt-3">View Profile</a>
         </div>
 
-        <!-- ⚙️ Delivery Actions -->
+        <?php // ⚙️ Delivery Actions ?>
         <div class="card p-4 mb-4">
             <h5 class="mb-3">⚙️ Delivery Actions</h5>
             <?php if ($order['status'] === 'taken'): ?>

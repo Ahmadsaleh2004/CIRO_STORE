@@ -11,7 +11,7 @@
     <h1>📊 Dashboard</h1>
 </div>
 
-<!-- ── Stats ──────────────────────────────────────────────── -->
+<?php // ── Stats ──────────────────────────────────────────────── ?>
 <div class="row g-3 mb-4">
     <div class="col-6 col-lg-3">
         <div class="stat-card">
@@ -57,7 +57,7 @@
     </div>
 </div>
 
-<!-- ── Charts ─────────────────────────────────────────────── -->
+<?php // ── Charts ─────────────────────────────────────────────── ?>
 <div class="row g-4 mb-4">
     <div class="col-lg-8">
         <div class="chart-card">
@@ -95,7 +95,7 @@
     </div>
 </div>
 
-<!-- ── Best Sellers ───────────────────────────────────────── -->
+<?php // ── Best Sellers ───────────────────────────────────────── ?>
 <div class="card p-4">
     <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
         <h5 class="mb-0">⭐ Best Selling Products</h5>

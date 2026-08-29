@@ -47,7 +47,7 @@ $csrfToken = generateCsrfToken();
         </div>
     </div>
 
-    <!-- ══ Partials ════════════════════════════════════════════ -->
+    <?php // ══ Partials ════════════════════════════════════════════ ?>
     <?php require __DIR__ . '/modals/cart.php'; ?>
     <?php require __DIR__ . '/modals/login.php'; ?>
     <?php require __DIR__ . '/modals/register.php'; ?>
@@ -59,7 +59,7 @@ $csrfToken = generateCsrfToken();
     <?php endif; ?>
 
 
-    <!-- ══ Scripts ═════════════════════════════════════════════ -->
+    <?php // ══ Scripts ═════════════════════════════════════════════ ?>
     <?php // ⚠️ أوّلاً وبلا defer: ينسخ جزيرة بيانات الصفحة إلى window،
          // وكل ما تحته يقرأ منها. نقله لاحقاً يكسر كل صفحة تمرّر بيانات. ?>
     <?= jsTag('js/core/page-data.js', false) ?>
@@ -80,7 +80,7 @@ $csrfToken = generateCsrfToken();
     <?= vendorJs('bootstrap-js', false) ?>
     <?= vendorJs('sweetalert2') ?>
 
-    <!-- Core JS -->
+    <?php // Core JS ?>
     <?php
     // حزمة واحدة بدل ثلاثة عشر وسماً. راجع jsBundle في
     // assets_helper.php — القائمة هنا هي الارتداد عند غياب البناء،

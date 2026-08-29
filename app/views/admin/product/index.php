@@ -8,7 +8,7 @@
  */
 ?>
 
-<!-- ── Page Header ────────────────────────────────────────── -->
+<?php // ── Page Header ────────────────────────────────────────── ?>
 <div class="admin-page-header">
     <h1>📦 Manage Products <span class="badge bg-secondary fw-normal u-fs-90 align-middle"><?= (int)$totalProducts ?></span></h1>
     <div class="d-flex gap-2 flex-wrap align-items-center">
@@ -28,10 +28,10 @@
     </div>
 </div>
 
-<!-- ── Flash Messages ─────────────────────────────────────── -->
+<?php // ── Flash Messages ─────────────────────────────────────── ?>
 <?php require APPROOT . '/views/shared/flash-messages.php'; ?>
 
-<!-- ── Sort & Filter Dropdown ──────────────────────────────── -->
+<?php // ── Sort & Filter Dropdown ──────────────────────────────── ?>
 <?php
 $activeCount = (int)(bool)$priceSort + (int)(bool)$stockSort + (int)(bool)$dateSort + count($categoryIds);
 ?>
@@ -55,7 +55,7 @@ $activeCount = (int)(bool)$priceSort + (int)(bool)$stockSort + (int)(bool)$dateS
 
         <input type="hidden" name="q" value="<?= htmlspecialchars($search) ?>">
 
-        <!-- القسم 1: السعر (radio) -->
+        <?php // القسم 1: السعر (radio) ?>
         <p class="fw-bold small mb-1">💰 Price</p>
         <div class="mb-3">
             <div class="form-check">
@@ -74,7 +74,7 @@ $activeCount = (int)(bool)$priceSort + (int)(bool)$stockSort + (int)(bool)$dateS
             <?php endforeach; ?>
         </div>
 
-        <!-- القسم 2: الكمية (radio) -->
+        <?php // القسم 2: الكمية (radio) ?>
         <p class="fw-bold small mb-1">📦 Stock</p>
         <div class="mb-3">
             <div class="form-check">
@@ -93,7 +93,7 @@ $activeCount = (int)(bool)$priceSort + (int)(bool)$stockSort + (int)(bool)$dateS
             <?php endforeach; ?>
         </div>
 
-        <!-- القسم 3: التاريخ (radio) -->
+        <?php // القسم 3: التاريخ (radio) ?>
         <p class="fw-bold small mb-1">🕒 Date</p>
         <div class="mb-3">
             <div class="form-check">
@@ -114,7 +114,7 @@ $activeCount = (int)(bool)$priceSort + (int)(bool)$stockSort + (int)(bool)$dateS
 
         <hr class="filter-divider">
 
-        <!-- القسم 4: الكاتوجريز (checkbox — OR) -->
+        <?php // القسم 4: الكاتوجريز (checkbox — OR) ?>
         <p class="fw-bold small mb-1">🏷️ Categories <span class="text-muted fw-normal">(any match)</span></p>
         <div class="mb-3">
             <?php foreach ($categories as $c): ?>
@@ -142,7 +142,7 @@ $activeCount = (int)(bool)$priceSort + (int)(bool)$stockSort + (int)(bool)$dateS
     </form>
 </div>
 
-<!-- ── Search + Count ─────────────────────────────────────── -->
+<?php // ── Search + Count ─────────────────────────────────────── ?>
 <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
     <form method="GET" class="d-flex gap-2">
         <?php if ($priceSort):  ?><input type="hidden" name="price_sort" value="<?= htmlspecialchars($priceSort) ?>"><?php endif; ?>
@@ -172,7 +172,7 @@ $activeCount = (int)(bool)$priceSort + (int)(bool)$stockSort + (int)(bool)$dateS
     </small>
 </div>
 
-<!-- ── Products Table ─────────────────────────────────────── -->
+<?php // ── Products Table ─────────────────────────────────────── ?>
 <div class="card p-0 mb-4">
     <div class="table-responsive">
         <table class="table admin-table mb-0" id="productsTable">
@@ -207,10 +207,10 @@ $activeCount = (int)(bool)$priceSort + (int)(bool)$stockSort + (int)(bool)$dateS
                 <tr id="product-row-<?= (int)$p['id'] ?>"
                     class="<?= ($p['is_visible'] ?? 1) ? '' : 'product-hidden-row' ?>">
 
-                    <!-- المعرّف — ثابت مدى حياة الصفّ، لا ترتيب عرض -->
+                    <?php // المعرّف — ثابت مدى حياة الصفّ، لا ترتيب عرض ?>
                     <td class="text-muted"><?= (int)$p['id'] ?></td>
 
-                    <!-- صورة المنتج -->
+                    <?php // صورة المنتج ?>
                     <td>
                         <img src="<?= htmlspecialchars(fixImagePath($p['image_path'] ?? '')) ?>"
                              alt="<?= htmlspecialchars($p['name']) ?>"
@@ -218,7 +218,7 @@ $activeCount = (int)(bool)$priceSort + (int)(bool)$stockSort + (int)(bool)$dateS
                              loading="lazy">
                     </td>
 
-                    <!-- اسم المنتج -->
+                    <?php // اسم المنتج ?>
                     <td>
                         <a href="<?= URLROOT ?>/admin/products/edit?id=<?= (int)$p['id'] ?>"
                            class="fw-semibold text-decoration-none u-text">
@@ -234,7 +234,7 @@ $activeCount = (int)(bool)$priceSort + (int)(bool)$stockSort + (int)(bool)$dateS
                         <?php endif; ?>
                     </td>
 
-                    <!-- آخر تعديل -->
+                    <?php // آخر تعديل ?>
                     <td class="u-meta-80">
                         <?php if (!empty($p['last_modified_by_name'])): ?>
                             <span class="u-text fw-medium">
@@ -248,7 +248,7 @@ $activeCount = (int)(bool)$priceSort + (int)(bool)$stockSort + (int)(bool)$dateS
                         <?php endif; ?>
                     </td>
 
-                    <!-- السعر -->
+                    <?php // السعر ?>
                     <td class="text-nowrap">
                         <span class="fw-semibold u-accent">
                             $<?= number_format((float)($p['price'] ?? 0), 2) ?>
@@ -260,7 +260,7 @@ $activeCount = (int)(bool)$priceSort + (int)(bool)$stockSort + (int)(bool)$dateS
                         <?php endif; ?>
                     </td>
 
-                    <!-- المخزون -->
+                    <?php // المخزون ?>
                     <td>
                         <?php
                         $stock       = (int)($p['total_stock'] ?? $p['stock_quantity'] ?? 0);
@@ -278,7 +278,7 @@ $activeCount = (int)(bool)$priceSort + (int)(bool)$stockSort + (int)(bool)$dateS
                         </span>
                     </td>
 
-                    <!-- الرؤية + toggle -->
+                    <?php // الرؤية + toggle ?>
                     <td>
                         <button class="btn btn-sm toggle-vis-btn
                                        <?= ($p['is_visible'] ?? 1) ? 'btn-outline-secondary' : 'btn-outline-warning' ?>"
@@ -288,7 +288,7 @@ $activeCount = (int)(bool)$priceSort + (int)(bool)$stockSort + (int)(bool)$dateS
                         </button>
                     </td>
 
-                    <!-- Actions -->
+                    <?php // Actions ?>
                     <td>
                         <a href="<?= URLROOT ?>/admin/products/edit?id=<?= (int)$p['id'] ?>"
                            class="btn btn-sm btn-outline-primary me-1"
@@ -307,7 +307,7 @@ $activeCount = (int)(bool)$priceSort + (int)(bool)$stockSort + (int)(bool)$dateS
     </div>
 </div>
 
-<!-- ── Pagination ─────────────────────────────────────────── -->
+<?php // ── Pagination ─────────────────────────────────────────── ?>
 <?php if ($totalPages > 1):
     // بناء query string الفلاتر للـ pagination — يحافظ على كل الفلاتر عند التنقل
     $paginationBase = http_build_query(array_filter([
@@ -364,8 +364,8 @@ $activeCount = (int)(bool)$priceSort + (int)(bool)$stockSort + (int)(bool)$dateS
 </nav>
 <?php endif; ?>
 
-<!-- ── CSRF hidden (يُستخدم بـ AJAX من products.js) ─────── -->
+<?php // ── CSRF hidden (يُستخدم بـ AJAX من products.js) ─────── ?>
 <input type="hidden" id="productsCsrf" value="<?= htmlspecialchars($csrf) ?>">
 
-<!-- ── Category Picker Modal ─────────────────────────────── -->
+<?php // ── Category Picker Modal ─────────────────────────────── ?>
 <?php include __DIR__ . '/_category-picker-modal.php'; ?>

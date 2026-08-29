@@ -23,7 +23,7 @@ $broadcastTargetType = $broadcastTargetType ?? 'admin';
                 <form id="broadcastForm" data-target-type="<?= $broadcastTargetType ?>" novalidate>
                     <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf) ?>">
 
-                    <!-- Title -->
+                    <?php // Title ?>
                     <div class="float-group mb-3">
                         <input type="text"
                                id="adminBroadTitle"
@@ -32,7 +32,7 @@ $broadcastTargetType = $broadcastTargetType ?? 'admin';
                         <label for="adminBroadTitle">Broadcast Title <span class="text-danger">*</span></label>
                     </div>
 
-                    <!-- Body -->
+                    <?php // Body ?>
                     <div class="float-group mb-4">
                         <textarea id="adminBroadBody"
                                   name="body"
@@ -42,7 +42,7 @@ $broadcastTargetType = $broadcastTargetType ?? 'admin';
                     </div>
 
                     <?php if ($broadcastTargetType === 'user'): ?>
-                    <!-- User Status Filter -->
+                    <?php // User Status Filter ?>
                     <h6 class="mb-2">👤 Send to users with status (at least one of):</h6>
                     <div class="perm-grid mb-4">
                         <label class="perm-item">
@@ -59,7 +59,7 @@ $broadcastTargetType = $broadcastTargetType ?? 'admin';
                         </label>
                     </div>
                     <?php else: ?>
-                    <!-- Permissions Filter -->
+                    <?php // Permissions Filter ?>
                     <h6 class="mb-2">🔐 Send to admins who have (at least one of):</h6>
                     <div class="perm-grid mb-4">
                         <label class="perm-item">
@@ -109,7 +109,7 @@ $broadcastTargetType = $broadcastTargetType ?? 'admin';
                         </label>
                     </div>
 
-                    <!-- Ranks Filter -->
+                    <?php // Ranks Filter ?>
                     <h6 class="mb-2">🎖 AND role is one of:</h6>
                     <div class="perm-grid mb-4">
                         <label class="perm-item">
@@ -132,10 +132,12 @@ $broadcastTargetType = $broadcastTargetType ?? 'admin';
                                    value="D" class="broad-filter">
                             <span>D — Support</span>
                         </label>
-                    </div><!-- ← كان ناقصًا: بدونه يبقى #broadcastModal مفتوحًا
+                    </div><?php /*
+← كان ناقصًا: بدونه يبقى #broadcastModal مفتوحًا
                          فيبتلع كل ما يُضمَّن بعده (وأهمه #permModal في
                          manage-admins/index.php)، فيرث display:none منه
-                         وينهار حجمه إلى 0×0 رغم فتحه بنجاح. -->
+                         وينهار حجمه إلى 0×0 رغم فتحه بنجاح.
+*/ ?>
                     <?php endif; ?>
 
                     <button type="submit"
