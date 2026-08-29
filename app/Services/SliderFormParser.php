@@ -29,8 +29,8 @@ final class SliderFormParser
     public const MAX_ITEMS_PER_SLIDE = 10;
 
     /**
-     * @param  array  $rawSlides   $_POST['slides']
-     * @param  array  $filesSlides $_FILES['slides']
+     * @param  list<array<string, mixed>> $rawSlides   $_POST['slides']
+     * @param  array<string, mixed> $filesSlides $_FILES['slides']
      * @param  string $uploadDir   المجلد المطلق لحفظ الصور
      * @return array{slides: list<array>, images: list<string>, uploaded: list<string>, error: string|null}
      *         `slides` الشرائح الجاهزة · `images` كل مسارات الصور بعد
@@ -164,6 +164,11 @@ final class SliderFormParser
      *
      * أي أن الخصائص الخمس تُقرأ من خمسة مسارات متوازية، لا من مصفوفة
      * واحدة. هذا هو سبب وجود هذه الدالة أصلاً.
+     *
+     * @param array<string, mixed> $filesSlides
+     * @param int $slideIndex
+     * @param int $itemIndex
+     * @return array<string, mixed>|null
      */
     public static function extractFileEntry(array $filesSlides, $slideIndex, $itemIndex): ?array
     {

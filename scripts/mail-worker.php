@@ -41,6 +41,9 @@ if (PHP_SAPI !== 'cli') {
 $argvList = $argv ?? [];
 
 /** يقرأ قيمة خيار على شكل --key=value. */
+/**
+ * @param list<string> $args
+ */
 function optionValue(array $args, string $name, ?string $default = null): ?string
 {
     foreach ($args as $arg) {
@@ -52,6 +55,9 @@ function optionValue(array $args, string $name, ?string $default = null): ?strin
 }
 
 /** ملخّص الطابور حسب الحالة. */
+/**
+ * @return array<string, int>
+ */
 function queueSummary(): array
 {
     $rows = Database::connect()

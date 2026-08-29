@@ -15,6 +15,9 @@ class OrderModel extends Model
     // ════════════════════════════════════════════════════════
 
     /** جلب عناوين مستخدم */
+    /**
+     * @return list<array<string, mixed>>
+     */
     public static function getUserAddresses(int $userId): array
     {
         try {
@@ -72,6 +75,9 @@ class OrderModel extends Model
     }
 
     /** إضافة عنوان جديد */
+    /**
+     * @param array<string, mixed> $data
+     */
     public static function addAddress(int $userId, array $data): ?int
     {
         try {
@@ -183,7 +189,8 @@ class OrderModel extends Model
      * نفدت» عن عطل قاعدة بيانات أو عن سعر تغيّر أو عن منتج أُخفي. الرمز
      * يفصل الحالات، والرسالة تصير صادقة.
      *
-     * @param  array $items عناصر منظَّفة من الكنترولر:
+     * @param  list<array{product_id: int, variant_id: int|null, qty: int, shown_price: float}> $items
+     *         عناصر منظَّفة من الكنترولر:
      *                      [['product_id'=>int,'variant_id'=>?int,
      *                        'qty'=>int,'shown_price'=>float], ...]
      * @return array{status:string, order_id?:int, duplicate?:bool,
@@ -468,6 +475,8 @@ class OrderModel extends Model
 
     /**
      * جلب طلبات المستخدم مع العناصر
+     *
+     * @return list<array<string, mixed>>
      */
     public static function getUserOrders(int $userId): array
     {
@@ -511,6 +520,8 @@ class OrderModel extends Model
     /**
      * كل طلبات يوزر مع عدد عناصر كل طلب، الأحدث أولًا.
      * يستخدمها UserModel::addStrike() وصفحة user-details لعرض السجل.
+     *
+     * @return list<array<string, mixed>>
      */
     public static function getOrdersForUser(int $userId): array
     {
@@ -653,7 +664,9 @@ class OrderModel extends Model
      * قائمة الطلبات لصفحة admin/orders مع فلترة + بحث + ترقيم صفحات.
      * ترتيب العرض: not_taken أولاً، ثم taken، ثم cancelled، ثم completed، والأحدث أولاً داخل كل مجموعة.
      *
-     * @param array $filters ['status' => string, 'search' => string] (اختياريان)
+     * @param array<string, mixed> $filters ['status' => string, 'search' => string] (اختياريان)
+     * @param array<string, mixed> $filters
+     * @return array<string, mixed> الصفوف مع بيانات الترقيم
      */
     public static function getAdminOrdersList(array $filters, int $page, int $perPage = 20): array
     {
@@ -730,6 +743,8 @@ class OrderModel extends Model
 
     /**
      * كل بيانات طلب واحد لصفحة تفاصيل الطلب (admin/orders/details)
+     *
+     * @return array<string, mixed>|null
      */
     public static function getAdminOrderDetails(int $orderId): ?array
     {
@@ -759,6 +774,8 @@ class OrderModel extends Model
      * عناصر طلب واحد مع المنتج واللون (variant) — نفس JOIN المستخدم بـ getUserOrders()
      * لضمان عرض صورة/اسم اللون الصحيح بدل صورة المنتج العامة فقط.
      * name اللون من color_name_snapshot (وقت الشراء) مع fallback للحالي pv.color_name.
+     *
+     * @return list<array<string, mixed>>
      */
     public static function getOrderItemsWithProduct(int $orderId): array
     {
@@ -783,7 +800,7 @@ class OrderModel extends Model
     /**
      * أخذ طلب من قائمة not_taken (تعيين الحالة taken للأدمن الحالي).
      *
-     * @return array ['success'=>bool, 'message'=>string, 'targetUserId'=>int|null]
+     * @return array{success: bool, message: string, targetUserId: int|null}
      */
     public static function adminTakeOrder(int $orderId, int $adminId): array
     {
@@ -818,7 +835,7 @@ class OrderModel extends Model
     /**
      * إنهاء تسليم طلب (completed) مع تسجيل الأدمن كمنفّذ العملية لو كان الحقل فارغًا.
      *
-     * @return array ['success'=>bool, 'message'=>string, 'targetUserId'=>int|null]
+     * @return array{success: bool, message: string, targetUserId: int|null}
      */
     public static function adminMarkDelivered(int $orderId, int $adminId): array
     {
@@ -851,7 +868,7 @@ class OrderModel extends Model
      * إلغاء تسليم طلب (cancelled) مع إرجاع مخزون الألوان (variants) بشكل صحيح،
      * يحترم عمود stock_restored لمنع الإرجاع المضاعف — نفس منطق cancelOrder().
      *
-     * @return array ['success'=>bool, 'message'=>string, 'targetUserId'=>int|null]
+     * @return array{success: bool, message: string, targetUserId: int|null}
      */
     public static function adminCancelDelivery(int $orderId, int $adminId): array
     {
@@ -901,7 +918,7 @@ class OrderModel extends Model
      * من لوحة الأدمن. يرفض أي طلب بغير هاتين الحالتين — يحفظ سجل التدقيق
      * للطلبات المُلْغاة عبر cancelAllPendingForUser() / adminCancelDelivery() (Soft Cancel).
      *
-     * @return array ['success'=>bool, 'message'=>string]
+     * @return array{success: bool, message: string}
      */
     public static function adminDeleteOrder(int $orderId): array
     {
@@ -946,7 +963,7 @@ class OrderModel extends Model
      * not just at the controller/UI level, to prevent any admin from releasing
      * an order someone else is holding by crafting the request directly).
      *
-     * @return array ['success'=>bool, 'message'=>string, 'targetUserId'=>?int]
+     * @return array{success: bool, message: string, targetUserId: int|null}
      */
     public static function adminReleaseOrder(int $orderId, int $adminId): array
     {
@@ -1006,6 +1023,9 @@ class OrderModel extends Model
 
     /**
      * كل الطلبات المطابقة للفلترة (بدون pagination) لتصدير CSV — نفس منطق getAdminOrdersList().
+     *
+     * @param array<string, mixed> $filters
+     * @return list<array<string, mixed>>
      */
     public static function getAllForCsvExport(array $filters): array
     {
@@ -1071,6 +1091,8 @@ class OrderModel extends Model
      *       لأن حالتها الحالية بالجدول orders قد تكون تغيّرت منذ ذلك الحين (أخذها أدمن آخر
      *       لاحقاً مثلاً)، فلا يصح عرض بادج الحالة العادي لها.
      * تُستخدم بصفحة تفاصيل الأدمن (manage-admins/details).
+     *
+     * @return list<array<string, mixed>>
      */
     public static function getOrdersHandledByAdmin(int $adminId, int $limit = 50): array
     {

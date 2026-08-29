@@ -33,6 +33,9 @@ class AdminProductModel extends Model
     /**
      * قائمة منتجات صفحة Manage Products — بحث + فلترة متعددة الكاتوجريز + ترتيب مركّب.
      * الأولوية: سعر → كمية → تاريخ.
+     *
+     * @param list<int> $categoryIds
+     * @return array<string, mixed> الصفوف مع بيانات الترقيم
      */
     public static function getPaginated(
         string $search,
@@ -139,6 +142,8 @@ class AdminProductModel extends Model
 
     /**
      * عدد المنتجات بعد تطبيق الفلاتر — لحساب عدد صفحات الـ Pagination
+     *
+     * @param list<int> $categoryIds
      */
     public static function countFiltered(string $search, array $categoryIds = []): int
     {
@@ -193,6 +198,8 @@ class AdminProductModel extends Model
 
     /**
      * جلب منتج واحد + كاتوجريزه (IDs) + متغيراته — لصفحة Edit
+     *
+     * @return array<string, mixed>|null
      */
     public static function findByIdWithCategories(int $id): ?array
     {
@@ -230,6 +237,8 @@ class AdminProductModel extends Model
     /**
      * مزامنة كاتوجريز منتج ضمن transaction مفتوحة — لا تُستدعى مستقلة.
      * تحذف القديم وتكتب الجديد. $categoryIds يجب أن يحتوي عنصراً واحداً على الأقل.
+     *
+     * @param list<int> $categoryIds
      */
     public static function syncCategories(\PDO $db, int $productId, array $categoryIds): void
     {
@@ -252,9 +261,9 @@ class AdminProductModel extends Model
      * ⚠️ التحقق من وجود صورة يجب أن يتم قبل استدعاء هذه الدالة —
      * لا تُفتح transaction لعملية رح تفشل أكيد.
      *
-     * @param array $data        حقول products (name, description, country_of_origin, manufacturer...)
-     * @param array $variants    كل variant: [color_name, color_hex, price, discount, stock, gender, image_path, is_default, sort_order]
-     * @param array $categoryIds مصفوفة IDs (واحد على الأقل)
+     * @param array<string, mixed> $data حقول products (name, description, country_of_origin, manufacturer...)
+     * @param list<array<string, mixed>> $variants كل variant: [color_name, color_hex, price, discount, stock, gender, image_path, is_default, sort_order]
+     * @param list<int> $categoryIds مصفوفة IDs (واحد على الأقل)
      * @param int   $adminId     ID الأدمن المُنشئ
      * @return int|null          ID المنتج الجديد أو null عند الفشل
      */
@@ -311,9 +320,9 @@ class AdminProductModel extends Model
      * تحديث منتج موجود مع variants وكاتوجريزه في transaction واحدة.
      *
      * @param int   $productId   ID المنتج
-     * @param array $data        حقول products للتحديث
-     * @param array $variants    كل variant مع بياناتها
-     * @param array $categoryIds مصفوفة IDs
+     * @param array<string, mixed> $data حقول products للتحديث
+     * @param list<array<string, mixed>> $variants كل variant مع بياناتها
+     * @param list<int> $categoryIds مصفوفة IDs
      * @param int   $adminId     ID الأدمن المعدِّل
      *
      * القيمة المُرجَعة ثلاثية كما في delete():
@@ -495,6 +504,8 @@ class AdminProductModel extends Model
 
     /**
      * جلب مسارات صور variants لمنتج معيّن — لحذفها من القرص قبل حذف المنتج.
+     *
+     * @return list<string> مسارات صور الـvariants
      */
     public static function getVariantImagePaths(int $productId): array
     {
@@ -512,6 +523,8 @@ class AdminProductModel extends Model
 
     /**
      * إدخال batch من variants ضمن transaction مفتوحة.
+     *
+     * @param list<array<string, mixed>> $variants صفوف الـvariants كما يبنيها ProductVariantUploader
      */
     private static function insertVariants(\PDO $db, int $productId, array $variants): void
     {
@@ -542,9 +555,10 @@ class AdminProductModel extends Model
      * رفع صورة variant واحدة على القرص وإرجاع المسار النسبي.
      * يُستدعى من الكنترولر لكل variant قبل استدعاء create()/update().
      *
-     * @param array  $fileEntry  مصفوفة ملف واحدة من $_FILES
+     * @param array<string, mixed> $fileEntry مصفوفة ملف واحدة من $_FILES
      * @param string $uploadDir  المجلد المطلق (مع trailing slash)
      * @return string|null       المسار النسبي (images/xxx.jpg) أو null
+     * @param array<string, mixed> $fileEntry مدخل واحد من $_FILES
      */
     public static function uploadVariantImage(array $fileEntry, string $uploadDir): ?string
     {

@@ -23,6 +23,8 @@ class SettingsModel extends Model
 
     /**
      * جلب صف الإعدادات الحالي (صف واحد فقط id=1)
+     *
+     * @return array<string, mixed>
      */
     public static function get(): array
     {
@@ -38,6 +40,8 @@ class SettingsModel extends Model
     /**
      * تحديث الإعدادات. $data مصفوفة [field => value] مُفلترة مسبقاً من الكونترولر
      * (فقط الحقول المسموحة حسب صلاحيات الأدمن — راجع AdminSiteSettingsController::save()).
+     *
+     * @param array<string, mixed> $data
      */
     public static function update(array $data): bool
     {

@@ -47,6 +47,9 @@ $check  = in_array('--check', $argv, true);
 $readme = $root . '/README.md';
 
 /** يعدّ أسطر مجموعة ملفات. */
+/**
+ * @param list<string> $files
+ */
 function countLines(array $files): int
 {
     $total = 0;

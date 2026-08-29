@@ -11,6 +11,9 @@
  *  2) لون "both" وله مخزون > 0
  *  3) أي لون له مخزون > 0
  *  4) is_default=1 أو أول لون بالقائمة
+ *
+ * @param list<array<string, mixed>> $variants
+ * @return array<string, mixed>|null
  */
 function pickDisplayVariant(array $variants, ?string $visitorGender): ?array
 {

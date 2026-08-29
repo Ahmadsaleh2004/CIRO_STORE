@@ -36,7 +36,7 @@ final class AdminSessionOpener
      *   2. الصلاحيات بعد الهوية، لأنها تُقرأ بالمعرّف.
      *   3. البريد أخيراً وعبر الطابور — لا ينتظره الداخل.
      *
-     * @param array $admin صفّ الأدمن كما تُرجعه AdminModel
+     * @param array<string, mixed> $admin صفّ الأدمن كما تُرجعه AdminModel
      */
     public static function open(array $admin): void
     {
@@ -86,6 +86,8 @@ final class AdminSessionOpener
      * القيم نائبات لا نصّ محقون: HTTP_USER_AGENT ترويسة يتحكّم بها
      * المرسِل كلياً، وحقنها المباشر كان يوصل HTML يكتبه المهاجم إلى
      * صندوق بريد الأدمن. Mailer::template تهرّب كل نائبة.
+     *
+     * @param array<string, mixed> $admin
      */
     private static function sendLoginAlert(array $admin): void
     {

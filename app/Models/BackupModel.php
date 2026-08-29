@@ -19,7 +19,7 @@ class BackupModel extends Model
 
     /**
      * إنشاء نسخة جديدة.
-     * @return array ['success'=>bool, 'filename'=>?string, 'message'=>string]
+     * @return array{success: bool, filename: string|null, message: string}
      */
     public static function createBackup(): array
     {
@@ -53,6 +53,8 @@ class BackupModel extends Model
 
     /**
      * محاولة تشغيل mysqldump — يجرب عدّة مسارات شائعة للـ binary.
+     *
+     * @return array{success: bool, message?: string} — success وحده مضمون؛ الرسالة تُرفَق عند الفشل
      */
     private static function tryMysqldump(string $path): array
     {
@@ -201,6 +203,8 @@ class BackupModel extends Model
 
     /**
      * قائمة النسخ الموجودة (الاسم، الحجم بالبايت + بصيغة مقروءة، التاريخ).
+     *
+     * @return list<array<string, mixed>>
      */
     public static function listBackups(): array
     {

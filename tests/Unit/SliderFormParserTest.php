@@ -22,6 +22,9 @@ final class SliderFormParserTest extends TestCase
     private const DIR = '/tmp/does-not-matter';
 
     /** شريحة صالحة واحدة بصورة موجودة مسبقاً. */
+    /**
+     * @return list<array<string, mixed>>
+     */
     private function validSlides(): array
     {
         return [

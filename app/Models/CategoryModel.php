@@ -16,6 +16,8 @@ class CategoryModel extends Model
     /**
      * كل الكاتوجريز مرتبة: الأساسية أولاً بترتيب CORE_ORDER، ثم الباقي أبجدياً.
      * كل صف يتضمن product_count (عدد المنتجات المرتبطة فعلياً عبر product_category_pivot).
+     *
+     * @return list<array<string, mixed>>
      */
     public static function getAllOrdered(): array
     {
@@ -78,6 +80,8 @@ class CategoryModel extends Model
      * يُستخدم بحالتين: (أ) أثناء الكتابة بحقل "إضافة كاتوجري" لمنع التكرار،
      * (ب) عند حذف كاتوجري لاقتراح وجهة النقل.
      * يرجع مصفوفة مرتبة تنازلياً حسب نسبة التشابه (similar_text %).
+     *
+     * @return list<array<string, mixed>>
      */
     public static function suggestSimilar(string $query, int $limit = 5, ?int $excludeId = null): array
     {
@@ -187,6 +191,9 @@ class CategoryModel extends Model
     }
 
     /** يجلب اسم كاتوجري واحدة بالـ id — يُستخدم برسائل التأكيد بالواجهة */
+    /**
+     * @return array<string, mixed>|null
+     */
     public static function findById(int $id): ?array
     {
         try {

@@ -21,6 +21,9 @@ class AdminModel extends Model
     // ════════════════════════════════════════════════════════
     // جلب أدمن بالإيميل من جدول admins فقط
     // ════════════════════════════════════════════════════════
+    /**
+     * @return array<string, mixed>|null صفّ admins كما يعيده fetch()
+     */
     public static function findByEmail(string $email): ?array
     {
         try {
@@ -110,6 +113,9 @@ class AdminModel extends Model
     // ════════════════════════════════════════════════════════
     // جلب أدمن بالـ ID من جدول admins
     // ════════════════════════════════════════════════════════
+    /**
+     * @return array<string, mixed>|null صفّ admins كما يعيده fetch()
+     */
     public static function findById(int $id): ?array
     {
         try {
@@ -127,6 +133,9 @@ class AdminModel extends Model
     // ════════════════════════════════════════════════════════
     // جلب صلاحيات أدمن من جدول admin_permissions
     // ════════════════════════════════════════════════════════
+    /**
+     * @return array<string, mixed> صفّ admin_permissions، أو [] إن لم يوجد
+     */
     public static function getPermissions(int $adminId): array
     {
         try {
@@ -165,6 +174,9 @@ class AdminModel extends Model
     // ════════════════════════════════════════════════════════
     // تحديث بيانات أدمن (الاسم / الهاتف / كلمة المرور إن وُجدت)
     // ════════════════════════════════════════════════════════
+    /**
+     * @param array<string, mixed> $data
+     */
     public static function updateProfile(int $adminId, array $data): bool
     {
         try {
@@ -234,6 +246,9 @@ class AdminModel extends Model
     // ════════════════════════════════════════════════════════
 
     /** كل الأدمنية + صلاحياتهم (LEFT JOIN)، مرتبين حسب تاريخ الإضافة */
+    /**
+     * @return list<array<string, mixed>>
+     */
     public static function getAllWithPermissions(): array
     {
         try {
@@ -255,6 +270,9 @@ class AdminModel extends Model
     }
 
     /** نفس الاستعلام أعلاه بس لأدمن واحد (لصفحة admin-details) */
+    /**
+     * @return array<string, mixed>|null
+     */
     public static function getByIdWithPermissions(int $id): ?array
     {
         try {
@@ -322,6 +340,9 @@ class AdminModel extends Model
     /**
      * إنشاء أدمن جديد + صلاحياته بمعاملة واحدة (transaction)
      * يرجع الـ id الجديد أو null عند الفشل
+     *
+     * @param array<string, mixed> $data
+     * @param array<string, bool> $perms خريطة «اسم الصلاحية ← ممنوحة». ليست قائمة أسماء — راجع findByPermsAndRanks التي تستقبل قائمة، والفرق مقصود.
      */
     public static function createAdmin(array $data, array $perms): ?int
     {
@@ -413,6 +434,9 @@ class AdminModel extends Model
     }
 
     /** تحديث الرتبة + الصلاحيات معًا في معاملة واحدة */
+    /**
+     * @param array<string, bool> $perms خريطة «اسم الصلاحية ← ممنوحة». ليست قائمة أسماء — راجع findByPermsAndRanks التي تستقبل قائمة، والفرق مقصود.
+     */
     public static function updatePermissions(int $id, ?string $newRole, array $perms, int $editorAdminId): bool
     {
         $db = self::db();
@@ -483,6 +507,16 @@ class AdminModel extends Model
     /**
      * أدمنية يتوفر فيهم: أي صلاحية من $perms AND رتبة من $ranks (لـ Broadcast)
      * يرجع مصفوفة من الـ IDs
+     *
+     * ⚠️ `$perms` هنا **قائمة أسماء** لا خريطة — بخلاف createAdmin و
+     * updatePermissions اللتين تستقبلان `array<string, bool>`. الاسم
+     * واحد والشكل مختلف، وهو فرق لا يظهر في توقيع `array` المجرّد.
+     * (كتبتُ هنا خطأً `array<string, bool>` أوّل مرّة، فأمسكه PHPStan
+     * فوراً بعشرة أخطاء في مواضع الاستدعاء — وهو غرض هذا المستوى.)
+     *
+     * @param list<string> $perms
+     * @param list<string> $ranks
+     * @return list<int> معرّفات الأدمنية المطابقين
      */
     public static function findByPermsAndRanks(array $perms, array $ranks): array
     {
@@ -628,6 +662,9 @@ class AdminModel extends Model
     // سجل أفعال أدمن معيّن من admin_audit_log (لصفحة details)
     // ════════════════════════════════════════════════════════
 
+    /**
+     * @return list<array<string, mixed>>
+     */
     public static function getAuditLogForAdmin(int $adminId, int $limit = 50): array
     {
         try {
@@ -649,6 +686,9 @@ class AdminModel extends Model
     /**
      * سجل تدقيق مفلتر: فقط target_type ضمن القائمة المُعطاة.
      * تُستخدم لأقسام Admin Details المتخصصة (Orders/User/Product/Branding/Support/Site Config).
+     *
+     * @param list<string> $targetTypes
+     * @return list<array<string, mixed>>
      */
     public static function getAuditLogByTypes(int $adminId, array $targetTypes, int $limit = 50): array
     {
@@ -676,6 +716,9 @@ class AdminModel extends Model
      * سجل تدقيق مفلتر بالاستبعاد: كل شيء ما عدا target_type المذكرة، بالإضافة لأي صف
      * target_type فيه NULL (تسجيل دخول/خروج، تحديث بروفايل، تفعيل/تعطيل 2FA... إلخ).
      * تُستخدم لقسم "Admin Actions Log" العام، بعد ما صار عنده أقسام متخصصة منفصلة.
+     *
+     * @param list<string> $excludeTypes
+     * @return list<array<string, mixed>>
      */
     public static function getAuditLogExcludingTypes(int $adminId, array $excludeTypes, int $limit = 50): array
     {
@@ -707,6 +750,8 @@ class AdminModel extends Model
     /**
      * كل أفعال أي أدمن كانت على target_type='user' AND target_id=$userId
      * (لصفحة user-details — سجل نشاط الأدمنية على هاد المستخدم)
+     *
+     * @return list<array<string, mixed>>
      */
     public static function getAuditLogForUser(int $userId, int $limit = 50): array
     {
@@ -732,6 +777,9 @@ class AdminModel extends Model
     // تصدير CSV — Role A فقط (نفس تقييد القديم)
     // ════════════════════════════════════════════════════════
 
+    /**
+     * @return list<array<string, mixed>>
+     */
     public static function getAllForCsvExport(): array
     {
         try {

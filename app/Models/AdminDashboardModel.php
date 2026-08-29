@@ -77,6 +77,9 @@ class AdminDashboardModel extends Model
     }
 
     /** مبيعات آخر 30 يوم — لرسم الـ Chart. */
+    /**
+     * @return list<array<string, mixed>>
+     */
     public static function getSalesLast30Days(): array
     {
         $db = self::db();
@@ -89,6 +92,9 @@ class AdminDashboardModel extends Model
     }
 
     /** توزيع المستخدمين: نشط / غير نشط / محظور (3 إنذارات فأكثر). */
+    /**
+     * @return array<string, mixed>
+     */
     public static function getUsersActivityBreakdown(): array
     {
         $db = self::db();
@@ -114,6 +120,9 @@ class AdminDashboardModel extends Model
     }
 
     /** أفضل 12 منتج مبيعًا، مع دعم بحث اختياري بالاسم. */
+    /**
+     * @return list<array<string, mixed>>
+     */
     public static function getBestSellingProducts(string $search = ''): array
     {
         $db     = self::db();

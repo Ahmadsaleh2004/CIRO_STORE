@@ -14,11 +14,17 @@ class Router
      */
     private array $groupStack = [];
 
+    /**
+     * @param callable|array{class-string, string} $handler كنترولر وفعله، أو دالة
+     */
     public function get(string $path, callable|array $handler): Route
     {
         return $this->addRoute('GET', $path, $handler);
     }
 
+    /**
+     * @param callable|array{class-string, string} $handler كنترولر وفعله، أو دالة
+     */
     public function post(string $path, callable|array $handler): Route
     {
         return $this->addRoute('POST', $path, $handler);
@@ -30,17 +36,25 @@ class Router
      * بين «أنشئ» و«عدّل» و«احذف»، ويضيع نصف معنى الـHTTP.
      *
      * المشروع اليوم كله GET/POST، فالإضافة لا تغيّر سلوكاً قائماً.
+     *
+     * @param callable|array{class-string, string} $handler كنترولر وفعله، أو دالة
      */
     public function put(string $path, callable|array $handler): Route
     {
         return $this->addRoute('PUT', $path, $handler);
     }
 
+    /**
+     * @param callable|array{class-string, string} $handler كنترولر وفعله، أو دالة
+     */
     public function patch(string $path, callable|array $handler): Route
     {
         return $this->addRoute('PATCH', $path, $handler);
     }
 
+    /**
+     * @param callable|array{class-string, string} $handler كنترولر وفعله، أو دالة
+     */
     public function delete(string $path, callable|array $handler): Route
     {
         return $this->addRoute('DELETE', $path, $handler);
@@ -113,6 +127,9 @@ class Router
         return $this->routes;
     }
 
+    /**
+     * @param callable|array{class-string, string} $handler كنترولر وفعله، أو دالة
+     */
     private function addRoute(string $method, string $path, callable|array $handler): Route
     {
         $prefix = '';

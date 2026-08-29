@@ -15,7 +15,7 @@
  */
 
 /**
- * @param array $p صفّ المنتج، ويُقرأ منه:
+ * @param array<string, mixed> $p صفّ المنتج، ويُقرأ منه:
  *                sales_count · date_added · _display.stock_quantity
  *                (أو stock_quantity عند غياب المتغيّر المعروض)
  */

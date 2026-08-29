@@ -37,6 +37,8 @@ class SupportModel extends Model
 
     /**
      * جلب صفحة من الرسائل مع اسم المستخدم (LEFT JOIN users) مرتبة تنازلياً بتاريخ الإرسال
+     *
+     * @return array<string, mixed>
      */
     public static function getPage(string $search, int $perPage, int $offset): array
     {
@@ -69,6 +71,8 @@ class SupportModel extends Model
 
     /**
      * رسائل الدعم يلي بعتها يوزر معيّن (بالـ user_id أو بنفس إيميله لو ما كان مسجّل وقتها)
+     *
+     * @return list<array<string, mixed>>
      */
     public static function getMessagesForUser(int $userId, string $email): array
     {

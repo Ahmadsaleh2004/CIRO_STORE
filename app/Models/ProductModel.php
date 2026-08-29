@@ -10,6 +10,8 @@ class ProductModel extends Model
 {
     /**
      * جلب كافة المنتجات المتاحة للعرض من قاعدة البيانات
+     *
+     * @return list<array<string, mixed>>
      */
     public static function findVisible(): array
     {
@@ -40,6 +42,8 @@ class ProductModel extends Model
 
     /**
      * جلب المنتجات المرئية صفحة صفحة مع أسماء الأقسام (categories)
+     *
+     * @return array<string, mixed> الصفوف مع بيانات الترقيم
      */
     public static function findVisiblePaginated(int $limit, int $offset): array
     {
@@ -67,6 +71,8 @@ class ProductModel extends Model
 
     /**
      * جلب منتج واحد بواسطة الـ ID
+     *
+     * @return array<string, mixed>|null
      */
     public static function findById(int $id): ?array
     {
@@ -84,6 +90,8 @@ class ProductModel extends Model
 
     /**
      * جلب خيارات/أنواع المنتج (Variants)
+     *
+     * @return list<array<string, mixed>>
      */
     public static function getVariants(int $productId): array
     {
@@ -100,6 +108,8 @@ class ProductModel extends Model
 
     /**
      * جلب كافة التقييمات الخاصة بمنتج معين مع أسماء المستخدمين
+     *
+     * @return list<array<string, mixed>>
      */
     public static function getReviews(int $productId): array
     {
@@ -122,6 +132,8 @@ class ProductModel extends Model
 
     /**
      * جلب تقييم مستخدم محدد لمنتج معين
+     *
+     * @return array<string, mixed>|null
      */
     public static function getUserReview(int $productId, int $userId): ?array
     {
@@ -139,6 +151,8 @@ class ProductModel extends Model
 
     /**
      * جلب المنتجات المشابهة (بناءً على التصنيف أو الشركة المصنعة)
+     *
+     * @return list<array<string, mixed>>
      */
     public static function getRelated(int $productId, ?string $manufacturer = null): array
     {
@@ -173,6 +187,9 @@ class ProductModel extends Model
     }
     /**
      * جلب بيانات المخزون/السعر الحية لمجموعة IDs — تُستخدم من صفحة الويش ليست
+     *
+     * @param list<int> $ids
+     * @return array<string, array{stock_quantity: int, price: float, discount_percentage: float, price_after_discount: float, is_visible: int}> مفهرسة بمعرّف المنتج كنصّ
      */
     public static function findStockByIds(array $ids): array
     {
@@ -214,6 +231,8 @@ class ProductModel extends Model
 
     /**
      * إضافة/تحديث تقييم مستخدم لمنتج (Upsert) — تُرجع مصفوفة ['ok' => bool, 'message' => string]
+     *
+     * @return array{ok: bool, message: string}
      */
     public static function saveReview(int $productId, int $userId, int $rating, string $comment): array
     {

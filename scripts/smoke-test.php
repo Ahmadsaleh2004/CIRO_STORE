@@ -76,6 +76,9 @@ function paint(string $s, string $color): string
 }
 
 // ── 1. استخراج راوتات GET من index.php ─────────────────────────────
+/**
+ * @return list<string>
+ */
 function extractGetRoutes(string $indexFile): array
 {
     $src = file_get_contents($indexFile);
@@ -90,6 +93,9 @@ function extractGetRoutes(string $indexFile): array
 }
 
 // ── 2. طلب HTTP واحد ───────────────────────────────────────────────
+/**
+ * @return array{body: string, code: int, type: string, error: string}
+ */
 function fetch(string $url, int $timeout): array
 {
     $ch = curl_init($url);
@@ -239,6 +245,10 @@ function checkSecurityHeaders(string $base, int $timeout): array
 }
 
 // ── 4. تشغيل فحص HTTP ──────────────────────────────────────────────
+/**
+ * @param list<string> $routes
+ * @return list<array<string, mixed>>
+ */
 function runHttpChecks(array $routes, string $base, int $timeout, bool $verbose): array
 {
     $results = [];
@@ -351,6 +361,10 @@ function changedPhpFiles(string $root): ?array
     return array_keys($files);
 }
 
+/**
+ * @param list<string> $files
+ * @return array<string, mixed>
+ */
 function runLintChecks(array $files): array
 {
     $failures = [];
