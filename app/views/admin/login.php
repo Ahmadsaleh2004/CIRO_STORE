@@ -113,13 +113,10 @@ require APPROOT . '/views/inc/head-bare.php';
 </div>
 
 <!-- Bootstrap JS فقط — لا يُحمَّل أي JS خاص بالمتجر العام -->
-<script
-    src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
-    defer
-></script>
+<?= vendorJs('bootstrap-js') ?>
 
 <!-- SweetAlert2 — مطلوبة لتنبيه الترحيب بعد نجاح تسجيل الدخول -->
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11" defer></script>
+<?= vendorJs('sweetalert2') ?>
 
 <!-- ملف JS المخصص لـ Admin Auth — لا يُحمَّل أي ملف JS آخر من المتجر -->
 <script src="<?= URLROOT ?>/js/admin/admin-auth.js" defer></script>

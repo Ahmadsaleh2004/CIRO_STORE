@@ -227,6 +227,7 @@ $variants = $p['variants'] ?? [];
                             <?php foreach (['both' => 'Both', 'male' => 'Male', 'female' => 'Female'] as $val => $lbl): ?>
                             <option value="<?= $val ?>"
                                     <?= ($v['gender_category'] ?? 'both') === $val ? 'selected' : '' ?>>
+                                <?php // @escaping-safe: $lbl من مصفوفة حرفية في حلقة هذا الملف ?>
                                 <?= $lbl ?>
                             </option>
                             <?php endforeach; ?>

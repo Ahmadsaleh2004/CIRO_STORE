@@ -2363,28 +2363,41 @@ paths:
       tags:
         - 'Store - Checkout'
       summary: 'إنشاء الطلب من محتويات السلة'
-      description: 'السلة تُرسَل من المتصفح، ويُعاد التحقق من المخزون والسعر على الخادم قبل الحفظ — لا يُوثق بالسعر القادم من العميل.'
+      description: 'العميل يرسل **ماذا وكم** فقط. كل قيمة مالية تُقرأ من قاعدة البيانات داخل المعاملة نفسها التي تحجز المخزون. وحقل shown_price يُقارَن ولا يُخزَّن: إن اختلف عن سعر القاعدة يُرفض الطلب كاملاً ويردّ الخادم error_code=price_changed مع الأسعار الصحيحة.'
       operationId: b9a528bfe771ba04bed8dc5cf05bef51
       requestBody:
         required: true
         content:
-          application/x-www-form-urlencoded:
+          application/json:
             schema:
               required:
-                - cart
+                - items
+                - address_id
+                - idempotency_key
                 - csrf_token
               properties:
-                cart:
-                  description: 'JSON لمحتويات السلة'
-                  type: string
+                items:
+                  type: array
+                  items: { required: [product_id, qty], properties: { product_id: { type: integer }, variant_id: { type: integer, nullable: true }, qty: { type: integer, maximum: 100, minimum: 1 }, shown_price: { description: 'السعر الذي عُرض على الزبون — للمقارنة وحدها، لا يُخزَّن ولا يُحسب منه شيء', type: number, format: float } }, type: object }
                 address_id:
                   type: integer
+                payment_method:
+                  type: string
+                  default: cash_on_delivery
+                idempotency_key:
+                  type: string
                 csrf_token:
                   type: string
               type: object
       responses:
         '200':
-          description: 'JSON — {success, message, order_id?, redirect?}'
+          description: 'نتيجة العملية. النجاح يحمل order_id وredirect. والفشل يحمل error_code من: price_changed · unavailable · out_of_stock · error · csrf_invalid. وprice_changed وحده يحمل معه items بالأسعار الصحيحة.'
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - { $ref: '#/components/schemas/ApiResponse' }
+                  - { $ref: '#/components/schemas/ApiError' }
       security:
         -
           userSessionAuth: []
@@ -2529,7 +2542,7 @@ paths:
       tags:
         - 'Store - Pages'
       summary: 'فحص صحّة التطبيق'
-      description: "تُرجع 200 حين يكون التطبيق قادراً على خدمة الطلبات فعلاً، و503\nحين لا يكون. الفحص ينفّذ استعلاماً حقيقياً على قاعدة البيانات\nلا مجرّد ردّ ثابت — فحاوية تردّ 200 وقاعدتها ساقطة ليست سليمة.\n\nعامة بلا مصادقة بالضرورة: فاحص الصحّة لا يملك جلسة. ولذلك لا\nتكشف نسخاً ولا أسماء ولا مسارات — التفاصيل في السجلّ وحده."
+      description: "تُرجع 200 حين يكون التطبيق قادراً على خدمة الطلبات فعلاً، و503\r\nحين لا يكون. الفحص ينفّذ استعلاماً حقيقياً على قاعدة البيانات\r\nلا مجرّد ردّ ثابت — فحاوية تردّ 200 وقاعدتها ساقطة ليست سليمة.\r\n\r\nعامة بلا مصادقة بالضرورة: فاحص الصحّة لا يملك جلسة. ولذلك لا\r\nتكشف نسخاً ولا أسماء ولا مسارات — التفاصيل في السجلّ وحده."
       operationId: 0f6f4acf921ee6317a01dfda0e60a1ec
       responses:
         '200':

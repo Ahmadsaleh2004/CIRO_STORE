@@ -27,5 +27,5 @@
 $emptyPadding = $emptyPadding ?? 'py-4';
 ?>
 <tr>
-    <td colspan="<?= (int)$emptyColspan ?>" class="text-center <?= htmlspecialchars($emptyPadding) ?> u-muted"><?= $emptyMessage ?? 'No records found.' ?></td>
+    <td colspan="<?= (int)$emptyColspan ?>" class="text-center <?= htmlspecialchars($emptyPadding) ?> u-muted"><?= htmlspecialchars($emptyMessage ?? 'No records found.') ?></td>
 </tr>

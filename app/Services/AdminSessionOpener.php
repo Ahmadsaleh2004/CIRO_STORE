@@ -44,6 +44,12 @@ final class AdminSessionOpener
 
         session_regenerate_id(true);
 
+        // التوكن يتبع المعرّف. regenerate_id تُبقي محتوى الجلسة — ومنه
+        // csrf_token — فتوكنُ صفحة دخول الأدمن (وهي صفحة عامّة يصلها
+        // أي أحد) كان يبقى صالحاً بحرفه داخل جلسة أدمن كاملة الصلاحية.
+        // هنا أخطر موضع لهذا التوريث في المشروع كلّه.
+        rotateCsrfToken();
+
         $_SESSION['admin_id']    = $adminId;
         $_SESSION['admin_name']  = $admin['full_name'] ?? $admin['name'] ?? 'Admin';
         $_SESSION['admin_email'] = $admin['email'];

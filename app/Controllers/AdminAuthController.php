@@ -131,20 +131,18 @@ class AdminAuthController extends Controller
         header('Content-Type: application/json; charset=utf-8');
 
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            unset($_SESSION['csrf_token']);
-            generateCsrfToken();
+            rotateCsrfToken();
             $this->respond(false, 'Method not allowed.');
         }
 
         // CSRF
         $token = $_POST['csrf_token'] ?? '';
         // استُثني من beginJsonPost: يدوّر توكن CSRF عند كل فشل
-        // (unset + generateCsrfToken) قبل الردّ. البوابة الموحّدة ترد
-        // مباشرةً بلا تدوير، فالتحويل يُسقط التدوير على أحسّ مسار
-        // في المشروع — دخول الأدمن.
+        // (rotateCsrfToken) قبل الردّ. البوابة الموحّدة ترد مباشرةً بلا
+        // تدوير، فالتحويل يُسقط التدوير على أحسّ مسار في المشروع —
+        // دخول الأدمن.
         if (!verifyCsrfToken($token)) {
-            unset($_SESSION['csrf_token']);
-            generateCsrfToken();
+            rotateCsrfToken();
             $this->respondCsrfFailure();
         }
 
@@ -152,15 +150,13 @@ class AdminAuthController extends Controller
         $pass  = $_POST['password'] ?? '';
 
         if (!$email || !$pass) {
-            unset($_SESSION['csrf_token']);
-            generateCsrfToken();
+            rotateCsrfToken();
             $this->respond(false, 'Please enter your email and password.');
         }
 
         // ── Rate Limiting (3 محاولات / 30 دقيقة) ────────────────
         if (AdminModel::isRateLimited($email)) {
-            unset($_SESSION['csrf_token']);
-            generateCsrfToken();
+            rotateCsrfToken();
             $this->respond(false, 'Too many failed attempts. Access is locked for 30 minutes.');
         }
 
@@ -169,8 +165,7 @@ class AdminAuthController extends Controller
         if ($failedAttempts >= 1) {
             $captchaResponse = $_POST['h-captcha-response'] ?? '';
             if (!$this->verifyCaptcha($captchaResponse)) {
-                unset($_SESSION['csrf_token']);
-                generateCsrfToken();
+                rotateCsrfToken();
                 $this->respond(false, 'Captcha verification failed. Please try again.');
             }
         }
@@ -194,8 +189,7 @@ class AdminAuthController extends Controller
                 // وخنق الراوتر فوقهما يحدّ المصدر نفسه.
                 $_SESSION['pending_2fa_started_at'] = time();
                 $_SESSION['pending_2fa_attempts']   = 0;
-                unset($_SESSION['csrf_token']);
-                generateCsrfToken();
+                rotateCsrfToken();
                 $this->respond(true, 'Enter your 2FA code.', ['requires_2fa' => true]);
             }
             // إذا كانت 2FA غير مفعّلة نكمل بفتح الجلسة العادي أسفل هذا السطر
@@ -207,8 +201,7 @@ class AdminAuthController extends Controller
             // كفجوة صامتة: مسار دخول بلا تدوير معرّف، أو بلا صلاحيات.
             AdminSessionOpener::open($admin);
 
-            unset($_SESSION['csrf_token']);
-            generateCsrfToken();
+            rotateCsrfToken();
             $this->respond(true, 'Welcome, ' . $_SESSION['admin_name'], [
                 'redirect' => URLROOT . '/admin/home',
             ]);
@@ -236,8 +229,7 @@ class AdminAuthController extends Controller
             }
         }
 
-        unset($_SESSION['csrf_token']);
-        generateCsrfToken();
+        rotateCsrfToken();
         $this->respond(false, 'Email or password is incorrect.', [
             'show_captcha'    => $attemptsNow >= 1,
             'failed_attempts' => $attemptsNow,
@@ -292,15 +284,13 @@ class AdminAuthController extends Controller
         $token = $_POST['csrf_token'] ?? '';
         // استُثني من beginJsonPost: يدوّر التوكن عند الفشل مثل login().
         if (!verifyCsrfToken($token)) {
-            unset($_SESSION['csrf_token']);
-            generateCsrfToken();
+            rotateCsrfToken();
             $this->respondCsrfFailure();
         }
 
         $pendingId = (int)($_SESSION['pending_2fa_admin_id'] ?? 0);
         if ($pendingId <= 0) {
-            unset($_SESSION['csrf_token']);
-            generateCsrfToken();
+            rotateCsrfToken();
             $this->respond(false, 'Session expired. Please log in again.');
         }
 
@@ -353,8 +343,7 @@ class AdminAuthController extends Controller
         AdminSessionOpener::open($admin);
 
         $this->clearPending2FA();
-        unset($_SESSION['csrf_token']);
-        generateCsrfToken();
+        rotateCsrfToken();
         $this->respond(true, 'Welcome, ' . $_SESSION['admin_name'], [
             'redirect' => URLROOT . '/admin/home',
         ]);
@@ -458,8 +447,7 @@ class AdminAuthController extends Controller
         $token = $_POST['csrf_token'] ?? '';
         // استُثني من beginJsonPost: يدوّر التوكن عند الفشل مثل login().
         if (!verifyCsrfToken($token)) {
-            unset($_SESSION['csrf_token']);
-            generateCsrfToken();
+            rotateCsrfToken();
             $this->respondCsrfFailure();
         }
 
@@ -648,13 +636,11 @@ class AdminAuthController extends Controller
         // ($extra['csrf_token']) كي يواصل admin-auth.js بلا جلب إضافي.
         // سلوك خاص لا تملكه البوابة الموحّدة.
         if (!verifyCsrfToken($token)) {
-            unset($_SESSION['csrf_token']);
-            generateCsrfToken();
             // التوكن الجديد يُعاد في الاستجابة كي يواصل store-reauth.js
             // بلا جلب إضافي — وهذه النقطة تمرّ بـfetchWithCsrfRetry فعلاً،
             // فبلا error_code كانت ستفقد إعادة المحاولة بعد حذف مطابقة
             // نصّ الرسالة من csrf.js.
-            $this->respondCsrfFailure(['csrf_token' => $_SESSION['csrf_token']]);
+            $this->respondCsrfFailure(['csrf_token' => rotateCsrfToken()]);
         }
 
         $adminId = (int)($_SESSION['admin_id'] ?? 0);
@@ -665,11 +651,9 @@ class AdminAuthController extends Controller
         }
 
         if (!AdminModel::verifyPassword($adminId, $pass)) {
-            unset($_SESSION['csrf_token']);
-            generateCsrfToken();
             AdminModel::logAction($adminId, 'store_mode_reauth_failed');
             $this->respond(false, 'Incorrect password.', [
-                'csrf_token' => $_SESSION['csrf_token'],
+                'csrf_token' => rotateCsrfToken(),
             ]);
         }
 

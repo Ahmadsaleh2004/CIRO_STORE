@@ -107,7 +107,19 @@
     #
     # ⚠️ لا تُعِد أي `style="…"` إلى view. اختبار
     # tests/Unit/InlineStyleTest.php يرفض ذلك عند البناء لا عند النشر.
-    Header always set Content-Security-Policy "default-src 'self'; script-src 'self' 'sha256-n33GJ973YEUTpbG1xOj611JYTc5wI4V+8xmEtfPaLjk=' https://cdn.jsdelivr.net https://code.jquery.com https://js.hcaptcha.com https://*.hcaptcha.com; style-src 'self' https://cdn.jsdelivr.net https://*.hcaptcha.com; img-src 'self' data:; font-src 'self' data: https://cdn.jsdelivr.net; connect-src 'self' https://*.hcaptcha.com; frame-src https://*.hcaptcha.com; form-action 'self'; frame-ancestors 'self'; base-uri 'self'; object-src 'none'"
+    #
+    # ⚠️ `code.jquery.com` أُسقط من script-src. كان مسموحاً به لأن كل
+    # صفحة تُحمّل jQuery — وقد حُذف الوسم بعد أن ثبت أنه **غير مستعمَل
+    # إطلاقاً**: صفر `$(` وصفر `jQuery` في public/js وapp/views.
+    #
+    # والإسقاط ليس تنظيفاً تجميلياً: كل مضيف في هذه اللائحة نطاقٌ
+    # يستطيع تنفيذ جافاسكربت على كل صفحة في المتجر ولوحة التحكّم،
+    # بما فيها صفحة الدفع. مضيفٌ لا يخدم شيئاً يجب ألّا يملك ذلك.
+    #
+    # وما بقي من مضيفات صار مقيّداً بـintegrity في الوسوم نفسها —
+    # راجع app/views/inc/footer.php. فالسماح بالمضيف لم يعد يعني
+    # الثقة بأي ملف يرسله.
+    Header always set Content-Security-Policy "default-src 'self'; script-src 'self' 'sha256-n33GJ973YEUTpbG1xOj611JYTc5wI4V+8xmEtfPaLjk=' https://cdn.jsdelivr.net https://js.hcaptcha.com https://*.hcaptcha.com; style-src 'self' https://cdn.jsdelivr.net https://*.hcaptcha.com; img-src 'self' data:; font-src 'self' data: https://cdn.jsdelivr.net; connect-src 'self' https://*.hcaptcha.com; frame-src https://*.hcaptcha.com; form-action 'self'; frame-ancestors 'self'; base-uri 'self'; object-src 'none'"
 
 
 </IfModule>

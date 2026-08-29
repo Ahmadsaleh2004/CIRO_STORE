@@ -64,9 +64,21 @@ $csrfToken = generateCsrfToken();
          // وكل ما تحته يقرأ منها. نقله لاحقاً يكسر كل صفحة تمرّر بيانات. ?>
     <?= jsTag('js/core/page-data.js', false) ?>
 
-    <script src="https://code.jquery.com/jquery-3.7.1.min.js" defer></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11" defer></script>
+    <?php
+    /*
+     * ⚠️ jQuery حُذف من هنا. كان يُحمَّل على **كل صفحة** ولا يُستعمل في
+     * سطر واحد — مفحوص: صفر `$(` وصفر `jQuery` في public/js وapp/views
+     * جميعاً. الكود كلّه vanilla. فكان الوسم يكلّف طلب شبكة على كل
+     * صفحة، ويُبقي `code.jquery.com` مسموحاً به في CSP — أي نطاقاً
+     * يستطيع تنفيذ جافاسكربت على صفحة الدفع — مقابل لا شيء.
+     *
+     * الروابط والبصمات في VENDOR_ASSETS داخل assets_helper.php.
+     * bootstrap بلا defer عمداً: هذا هو السلوك القائم، وبعض الصفحات
+     * تنشئ مودالات فور تحميلها.
+     */
+    ?>
+    <?= vendorJs('bootstrap-js', false) ?>
+    <?= vendorJs('sweetalert2') ?>
 
     <!-- Core JS -->
     <?php

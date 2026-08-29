@@ -76,10 +76,7 @@ require APPROOT . '/views/inc/head-bare.php';
 </div>
 
 <!-- Bootstrap JS — يُحمَّل فعلياً عبر CDN -->
-<script
-    src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
-    defer
-></script>
+<?= vendorJs('bootstrap-js') ?>
 
 <!-- csrf.js + theme.js — تُحمَّل بمسارات مطلقة عبر URLROOT (لا مسارات نسبية تتكسر) -->
 <script src="<?= URLROOT ?>/js/core/theme.js" defer></script>

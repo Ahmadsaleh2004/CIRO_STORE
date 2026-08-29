@@ -308,4 +308,72 @@ class ProductModel extends Model
             return [];
         }
     }
+
+    /**
+     * نفس بيانات findVariantsStock لكن **بقفل للكتابة**، ومفهرسة بمعرّف
+     * الـvariant — للاستعمال داخل معاملة إنشاء الطلب وحدها.
+     *
+     * ── لماذا نسخة ثانية بدل وسيط `$forUpdate` ────────────────────
+     *
+     * لأن الاثنتين تخدمان عقدين مختلفين. findVariantsStock تُستدعى من
+     * نقطة عامة (/cart/check-stock) خارج أي معاملة، و`FOR UPDATE` هناك
+     * بلا معنى: بلا معاملة يُفكّ القفل فوراً. أسوأ من ذلك، لو صارت
+     * الدالة الواحدة تقفل أحياناً، لصار سلوكها معلّقاً بسياق المُستدعي
+     * — وهو ما لا يراه من يقرأ سطر النداء.
+     *
+     * ⚠️ لا تستدعِ هذه خارج معاملة مفتوحة. القفل يمتدّ حتى COMMIT أو
+     * ROLLBACK؛ وبلا معاملة يسقط في نفس اللحظة فتحصل على تكلفة القفل
+     * بلا فائدته.
+     *
+     * القفل يشمل صفوف `products` أيضاً لأن الاستعلام يضمّها — وMariaDB
+     * لا تدعم `FOR UPDATE OF` التي كانت ستحصر القفل في `pv` وحدها،
+     * وCI يعمل على MySQL 8. الصياغة المجرّدة تعمل على الاثنين، والاتّساع
+     * مقبول: الطلب يقرأ هذه الصفوف ليكتب مخزونها بعد سطور.
+     *
+     * الفهرسة بمعرّف الـvariant لا قائمة مسطّحة: المستدعي يبحث عن سطر
+     * بعينه لكل عنصر سلّة، والبحث الخطّي في حلقة هو ما يجعل طلباً من
+     * عشرين عنصراً يمسح المصفوفة عشرين مرة.
+     *
+     * @param  int[] $variantIds
+     * @return array<int,array<string,mixed>> مفهرسة بـvariant_id
+     */
+    public static function findVariantsForUpdate(array $variantIds): array
+    {
+        $variantIds = array_values(array_filter(array_map('intval', $variantIds)));
+        if (!$variantIds) {
+            return [];
+        }
+
+        $placeholders = implode(',', array_fill(0, count($variantIds), '?'));
+
+        // بلا try/catch عن قصد — خلافاً لأخوات هذه الدالة.
+        //
+        // تلك تبتلع الاستثناء وتُرجع [] لأنها تخدم عرضاً: قائمة فارغة
+        // تعني «لا بيانات» ولا ضرر. أمّا هنا فالقائمة الفارغة تعني
+        // «لا سعر معروف»، وابتلاعُها داخل معاملة يحوّل عطلاً تقنياً إلى
+        // «سعرك تغيّر» — رسالة كاذبة تُخفي العطل عن السجلّ وعن الزبون.
+        // الاستثناء يصعد إلى placeOrder التي تتراجع وتسجّل السبب الحقيقي.
+        $stmt = self::db()->prepare("
+            SELECT
+                pv.id            AS variant_id,
+                p.id             AS product_id,
+                p.name           AS product_name,
+                pv.color_name,
+                pv.price_after_discount,
+                pv.stock_quantity
+            FROM product_variants pv
+            JOIN products p ON p.id = pv.product_id
+            WHERE pv.id IN ({$placeholders})
+              AND p.is_visible = 1
+            FOR UPDATE
+        ");
+        $stmt->execute($variantIds);
+
+        $byId = [];
+        foreach ($stmt->fetchAll() as $row) {
+            $byId[(int) $row['variant_id']] = $row;
+        }
+
+        return $byId;
+    }
 }

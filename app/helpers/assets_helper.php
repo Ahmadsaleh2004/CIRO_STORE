@@ -125,6 +125,87 @@ function cssBundle(string $bundle = 'store'): string
  * @param string $path مسار نسبي تحت public/ مثل 'js/core/utils.js'
  * @param bool   $defer
  */
+/**
+ * المكتبات الخارجية: النسخة والبصمة، معرَّفتان مرّة واحدة.
+ *
+ * ── لماذا هنا لا في الـviews ──────────────────────────────────
+ *
+ * كان الوسم مكتوباً بيده في **سبعة** مواضع: layout المتجر ولوحة
+ * التحكّم وصفحتا head، وثلاث صفحات bare مستقلّة (admin/login و
+ * store-reauth و auth/reset-password). ورقم النسخة مكرّر في كلٍّ منها.
+ *
+ * والتكرار هنا ليس قبحاً بل خطر أمني مباشر: إضافة `integrity` أو
+ * ترقية نسخة تُطبَّق على ستّة مواضع ويُنسى السابع — وهو بالضبط ما كان
+ * قائماً فعلاً قبل هذه المرحلة: `head-bare.php` وحده كان يحمل بصمة،
+ * والستّة الباقية بلا شيء. ولأن الوسوم متفرّقة، لم يكن أحد يرى الفرق.
+ *
+ * الآن النسخة والبصمة في ثابت واحد، والترقية تعديل سطرين.
+ *
+ * ── تجديد البصمة عند ترقية نسخة ───────────────────────────────
+ *
+ *   curl -sL <url> | openssl dgst -sha384 -binary | openssl base64 -A
+ *
+ * ⚠️ بصمة خاطئة تعني أن المتصفح **يرفض الملف بصمت** — لا خطأ في
+ * الصفحة، فقط مكتبة غائبة ومودالات لا تفتح. غيّر الاثنين معاً دائماً.
+ *
+ * @var array<string, array{url: string, sri: string}>
+ */
+const VENDOR_ASSETS = [
+    'bootstrap-css' => [
+        'url' => 'https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css',
+        'sri' => 'sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH',
+    ],
+    'bootstrap-js' => [
+        'url' => 'https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js',
+        'sri' => 'sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz',
+    ],
+
+    // ⚠️ كان `sweetalert2@11` — نطاقاً مفتوحاً يجلب أي إصدار 11.x
+    // يُنشر غداً، أياً كان محتواه، على صفحة الدفع ولوحة التحكّم معاً.
+    // الرقم هنا هو ما كان النطاق يحلّه وقت التثبيت، فلا تغيير في
+    // السلوك — التغيير أن السلوك صار **معروفاً**.
+    'sweetalert2' => [
+        'url' => 'https://cdn.jsdelivr.net/npm/sweetalert2@11.26.25/dist/sweetalert2.all.min.js',
+        'sri' => 'sha384-nLoOnA/BDh8A/jxqtckg4DumuCGOBYUnNJLZdQz/zfYNp3wcjGSoWTAzgko06G/2',
+    ],
+];
+
+/**
+ * وسم <script> لمكتبة خارجية، مبصوم.
+ *
+ * `crossorigin="anonymous"` لازم لا زينة: بدونه لا يقرأ المتصفح
+ * الاستجابة عبر الأصول، فلا يستطيع التحقّق من البصمة أصلاً — ويصير
+ * `integrity` سطراً بلا أثر.
+ *
+ * @throws \InvalidArgumentException على مفتاح غير معروف — خطأ برمجي
+ *         لا حالة وقت تشغيل، والفشل الصاخب أفضل من وسم صامت ناقص.
+ */
+function vendorJs(string $key, bool $defer = true): string
+{
+    $asset = VENDOR_ASSETS[$key] ?? null;
+    if ($asset === null) {
+        throw new \InvalidArgumentException("Unknown vendor asset [{$key}].");
+    }
+
+    return '<script src="' . $asset['url'] . '"'
+        . ' integrity="' . $asset['sri'] . '"'
+        . ' crossorigin="anonymous"'
+        . ($defer ? ' defer' : '') . '></script>' . "\n";
+}
+
+/** وسم <link> لورقة أنماط خارجية، مبصوم. */
+function vendorCss(string $key): string
+{
+    $asset = VENDOR_ASSETS[$key] ?? null;
+    if ($asset === null) {
+        throw new \InvalidArgumentException("Unknown vendor asset [{$key}].");
+    }
+
+    return '<link rel="stylesheet" href="' . $asset['url'] . '"'
+        . ' integrity="' . $asset['sri'] . '"'
+        . ' crossorigin="anonymous">' . "\n";
+}
+
 function jsTag(string $path, bool $defer = true): string
 {
     static $stamps = [];

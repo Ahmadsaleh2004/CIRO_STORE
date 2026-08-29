@@ -87,6 +87,7 @@ $homeSliders = $data['homeSliders'] ?? [];
         ?>
         <a href="<?= URLROOT ?>/products?cat=<?= urlencode($cat['name']) ?>"
            class="btn btn-outline-dark px-4 py-2">
+            <?php // @escaping-safe: categoryEmoji ترجع رمزاً من خريطة داخلية ?>
             <?= $emoji ?> <?= htmlspecialchars(ucfirst($cat['name'])) ?>
         </a>
         <?php endforeach; ?>

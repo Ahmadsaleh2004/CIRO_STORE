@@ -37,6 +37,7 @@ foreach ($countryPrefixes as $pfx) {
 <div class="input-group">
     <select name="phone_country_code" class="form-select phone-code-select">
         <?php foreach ($countryPrefixes as $pfx): ?>
+        <?php // @escaping-safe: $countryPrefixes مصفوفة حرفية في هذا الملف ?>
         <option value="<?= $pfx ?>" <?= $detectedCode === $pfx ? 'selected' : '' ?>><?= $pfx ?></option>
         <?php endforeach; ?>
     </select>

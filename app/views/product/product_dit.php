@@ -32,7 +32,7 @@ usort($sortedByStock, fn($a, $b) => (int)$a['stock_quantity'] <=> (int)$b['stock
         <div class="col-lg-6">
             <div class="zoom-wrapper position-relative">
                 <?php if ($discount > 0): ?>
-                <span class="discount-badge badge-zindex" id="discountBadge">-<?= $discount ?>%</span>
+                <span class="discount-badge badge-zindex" id="discountBadge">-<?= (float)$discount ?>%</span>
                 <?php endif; ?>
                 <?php $mainWebp = getWebpPath($imgSrc); ?>
                 <picture>

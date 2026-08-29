@@ -121,6 +121,7 @@ if ($adminId === 1) {
             <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf) ?>">
             <button type="submit" class="home-tile w-100 u-bare-button">
                 <div class="tile-icon u-tone-<?= htmlspecialchars($tiles[0]['tone']) ?>">
+                    <?php // @escaping-safe: $tiles مصفوفة نصوص حرفية معرَّفة في هذا الملف ?>
                     <?= $tiles[0]['icon'] ?>
                 </div>
                 <span class="tile-label"><?= htmlspecialchars($tiles[0]['label']) ?></span>
@@ -129,6 +130,7 @@ if ($adminId === 1) {
         <?php else: ?>
         <a class="home-tile" href="<?= htmlspecialchars($tiles[0]['href']) ?>">
             <div class="tile-icon u-tone-<?= htmlspecialchars($tiles[0]['tone']) ?>">
+                <?php // @escaping-safe: $tiles مصفوفة نصوص حرفية معرَّفة في هذا الملف ?>
                 <?= $tiles[0]['icon'] ?>
             </div>
             <span class="tile-label"><?= htmlspecialchars($tiles[0]['label']) ?></span>
@@ -146,6 +148,7 @@ if ($adminId === 1) {
                 <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf) ?>">
                 <button type="submit" class="home-tile h-100 w-100 u-bare-button">
                     <div class="tile-icon u-tone-<?= htmlspecialchars($tile['tone']) ?>">
+                        <?php // @escaping-safe: $tiles مصفوفة نصوص حرفية معرَّفة في هذا الملف ?>
                         <?= $tile['icon'] ?>
                     </div>
                     <span class="tile-label"><?= htmlspecialchars($tile['label']) ?></span>
@@ -154,6 +157,7 @@ if ($adminId === 1) {
             <?php else: ?>
             <a class="home-tile h-100" href="<?= htmlspecialchars($tile['href']) ?>">
                 <div class="tile-icon u-tone-<?= htmlspecialchars($tile['tone']) ?>">
+                    <?php // @escaping-safe: $tiles مصفوفة نصوص حرفية معرَّفة في هذا الملف ?>
                     <?= $tile['icon'] ?>
                 </div>
                 <span class="tile-label"><?= htmlspecialchars($tile['label']) ?></span>

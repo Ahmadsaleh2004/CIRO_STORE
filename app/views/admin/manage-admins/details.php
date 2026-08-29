@@ -146,6 +146,7 @@ function renderAuditRowsTable(array $rows): void
                 <?php foreach ($permMap as $key => [$icon, $label]): ?>
                 <div class="perm-item <?= empty($target[$key]) ? 'u-dimmed' : '' ?>">
                     <input type="checkbox" <?= !empty($target[$key]) ? 'checked' : '' ?> disabled>
+                    <?php // @escaping-safe: $icon و$label من خريطة حرفية في هذا الملف ?>
                     <span><?= $icon ?> <?= $label ?></span>
                 </div>
                 <?php endforeach; ?>

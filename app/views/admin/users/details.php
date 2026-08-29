@@ -104,6 +104,7 @@ $strikesLabel    = $strikesCount >= 3 ? 'Blocked' : ($strikesCount > 0 ? 'Warnin
                         data-active="<?= $active ? '1' : '0' ?>"
                         data-user-id="<?= (int)$target['id'] ?>"
                         title="<?= $active ? 'Click to remove this strike' : 'Click to add a strike' ?>">
+                    <?php // @escaping-safe: رمز حرفي أو $i عدّاد صحيح ?>
                     <?= $active ? '❌' : $i ?>
                 </button>
                 <div class="strike-reason">

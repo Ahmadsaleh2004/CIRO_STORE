@@ -163,6 +163,81 @@ function inspectBody(string $body, string $route, int $code, string $contentType
     return $problems;
 }
 
+// ── 3ب. الترويسات الأمنية على استجابة حيّة ─────────────────────────
+/**
+ * الترويسات التي يجب أن تحملها **كل** استجابة.
+ *
+ * لا تكفي مطابقة الاسم: `Content-Security-Policy: default-src *` ترويسة
+ * موجودة وبلا قيمة. فلكلٍّ نصٌّ يجب أن يظهر داخلها.
+ *
+ * HSTS ليست هنا عمداً: `.htaccess` يشترطها بـ`env=HTTPS`، وفحص الدخان
+ * يعمل على http محلياً. إرسالها على http بلا معنى، وغيابها هناك سلامة
+ * لا عطل.
+ */
+const REQUIRED_HEADERS = [
+    'x-content-type-options'    => 'nosniff',
+    'x-frame-options'           => 'SAMEORIGIN',
+    'referrer-policy'           => 'strict-origin',
+    'permissions-policy'        => 'camera=()',
+    'content-security-policy'   => "default-src 'self'",
+];
+
+/**
+ * يتحقّق أن الخادم الحيّ يرسل الترويسات الأمنية فعلاً.
+ *
+ * ── لماذا فحصٌ حيّ لا قراءةُ ملف ──────────────────────────────
+ *
+ * لأن الترويسات كلّها معلَّقة على `.htaccess`، وهو ملف **قد لا يُقرأ
+ * إطلاقاً**: على nginx أو Caddy لا وجود له، وعلى Apache بلا
+ * `AllowOverride All` يُتجاهَل، وبلا `mod_headers` تُتجاهَل كتلته.
+ * وفي الحالات الثلاث يعمل الموقع تماماً — بلا CSP ولا nosniff ولا
+ * حماية من التأطير، وبلا رسالة خطأ واحدة تدلّ على ذلك.
+ *
+ * صنف العطل هذا لا يُمسك بقراءة الكود: الكود سليم. يُمسك بسؤال
+ * الخادم نفسه.
+ *
+ * (وهناك اختبار مرافق — tests/Unit/SecurityHeadersTest.php — يحرس
+ * محتوى `.htaccess` نفسه فيمسك الحذف العرضي بلا حاجة إلى خادم. الاثنان
+ * يغطّيان عطلين مختلفين: هذا يفحص ما يصل الزائر، وذاك ما نعِد به.)
+ *
+ * @return string[] قائمة المشاكل (فارغة = سليم)
+ */
+function checkSecurityHeaders(string $base, int $timeout): array
+{
+    $ch = curl_init($base . '/');
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_FOLLOWLOCATION => false,
+        CURLOPT_TIMEOUT        => $timeout,
+        CURLOPT_USERAGENT      => 'STORE-smoke-test/1.0',
+        CURLOPT_HEADER         => true,
+        CURLOPT_NOBODY         => false,
+    ]);
+    $raw        = curl_exec($ch);
+    $headerSize = (int) curl_getinfo($ch, CURLINFO_HEADER_SIZE);
+    $err        = curl_error($ch);
+    curl_close($ch);
+
+    if ($raw === false || $err !== '') {
+        return ['curl: ' . ($err !== '' ? $err : 'لا استجابة')];
+    }
+
+    $headerBlob = strtolower(substr((string) $raw, 0, $headerSize));
+
+    $problems = [];
+    foreach (REQUIRED_HEADERS as $name => $needle) {
+        if (!str_contains($headerBlob, $name . ':')) {
+            $problems[] = "ترويسة غائبة: {$name}";
+            continue;
+        }
+        if (!str_contains($headerBlob, strtolower($needle))) {
+            $problems[] = "ترويسة {$name} موجودة لكن بلا «{$needle}»";
+        }
+    }
+
+    return $problems;
+}
+
 // ── 4. تشغيل فحص HTTP ──────────────────────────────────────────────
 function runHttpChecks(array $routes, string $base, int $timeout, bool $verbose): array
 {
@@ -331,6 +406,22 @@ if (!$SKIPHTTP) {
         : paint("  ✗ فشل {$failed} من " . count($results) . "\n\n", 'red');
 
     if ($failed > 0) {
+        $exitCode = 1;
+    }
+
+    // ── الترويسات الأمنية ──────────────────────────────────────
+    echo paint("  ── الترويسات الأمنية ──\n", 'bold');
+
+    $headerProblems = checkSecurityHeaders($BASE, $TIMEOUT);
+
+    foreach ($headerProblems as $problem) {
+        echo '  ' . paint('✗', 'red') . '  ' . paint($problem, 'red') . "\n";
+    }
+
+    if ($headerProblems === []) {
+        echo paint('  ✓ ' . count(REQUIRED_HEADERS) . " ترويسة حاضرة على استجابة حيّة\n\n", 'green');
+    } else {
+        echo paint("  ✗ الخادم لا يرسل الحماية التي يَعِد بها .htaccess\n\n", 'red');
         $exitCode = 1;
     }
 }
