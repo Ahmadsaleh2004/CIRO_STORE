@@ -19,7 +19,7 @@ CREATE TABLE `admin_audit_log` (
   KEY `idx_admin` (`admin_id`),
   KEY `idx_created` (`created_at`),
   CONSTRAINT `fk_audit_admin` FOREIGN KEY (`admin_id`) REFERENCES `admins` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=425 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=426 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `admin_login_attempts`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -33,7 +33,7 @@ CREATE TABLE `admin_login_attempts` (
   PRIMARY KEY (`id`),
   KEY `idx_admin_attempts_email` (`email`),
   KEY `idx_admin_attempts_time` (`attempted_at`)
-) ENGINE=InnoDB AUTO_INCREMENT=18 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=21 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `admin_notifications`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -225,7 +225,7 @@ CREATE TABLE `mail_queue` (
   `sent_at` datetime DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `idx_status_id` (`status`,`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `notifications`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -246,7 +246,7 @@ CREATE TABLE `notifications` (
   KEY `fk_notif_admin` (`sender_admin_id`),
   CONSTRAINT `fk_notif_admin` FOREIGN KEY (`sender_admin_id`) REFERENCES `admins` (`id`) ON DELETE SET NULL,
   CONSTRAINT `fk_notif_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=89 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=90 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `order_expiry_log`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -283,7 +283,7 @@ CREATE TABLE `order_items` (
   CONSTRAINT `fk_oi_order` FOREIGN KEY (`order_id`) REFERENCES `orders` (`order_id`) ON DELETE CASCADE,
   CONSTRAINT `fk_oi_product` FOREIGN KEY (`product_id`) REFERENCES `products` (`id`) ON DELETE CASCADE,
   CONSTRAINT `fk_oi_variant` FOREIGN KEY (`variant_id`) REFERENCES `product_variants` (`id`) ON DELETE SET NULL
-) ENGINE=InnoDB AUTO_INCREMENT=80 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=82 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `orders`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -293,6 +293,8 @@ CREATE TABLE `orders` (
   `user_id` int(10) unsigned NOT NULL,
   `idempotency_key` varchar(64) DEFAULT NULL,
   `address_id` int(10) unsigned DEFAULT NULL,
+  `address_snapshot` text DEFAULT NULL,
+  `address_phone_snapshot` varchar(30) DEFAULT NULL,
   `total_amount` decimal(10,2) NOT NULL,
   `payment_method` varchar(50) NOT NULL DEFAULT 'cash_on_delivery',
   `status` enum('not_taken','taken','completed','cancelled') NOT NULL DEFAULT 'not_taken',
@@ -311,7 +313,7 @@ CREATE TABLE `orders` (
   CONSTRAINT `fk_ord_address` FOREIGN KEY (`address_id`) REFERENCES `user_addresses` (`id`) ON DELETE SET NULL,
   CONSTRAINT `fk_ord_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
   CONSTRAINT `fk_order_taken_admin` FOREIGN KEY (`taken_by_admin_id`) REFERENCES `admins` (`id`) ON DELETE SET NULL
-) ENGINE=InnoDB AUTO_INCREMENT=124 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=125 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `password_resets`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -327,7 +329,7 @@ CREATE TABLE `password_resets` (
   PRIMARY KEY (`id`),
   KEY `idx_email_type` (`email`,`user_type`),
   KEY `idx_token_hash` (`token_hash`)
-) ENGINE=InnoDB AUTO_INCREMENT=24 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=26 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `product_age_group_pivot`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -484,7 +486,7 @@ CREATE TABLE `throttle_attempts` (
   `attempted_at` datetime NOT NULL DEFAULT current_timestamp(),
   PRIMARY KEY (`id`),
   KEY `idx_bucket_identifier_time` (`bucket`,`identifier`,`attempted_at`)
-) ENGINE=InnoDB AUTO_INCREMENT=51 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=188 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `user_addresses`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -502,7 +504,7 @@ CREATE TABLE `user_addresses` (
   PRIMARY KEY (`id`),
   KEY `idx_user` (`user_id`),
   CONSTRAINT `fk_addr_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=10 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=11 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `user_strikes`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;

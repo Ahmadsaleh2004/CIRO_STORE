@@ -30,6 +30,47 @@ class OrderModel extends Model
         }
     }
 
+    /**
+     * يبني لقطة نصّية للعنوان لحظة الطلب.
+     *
+     * تُستدعى من داخل معاملة placeOrder، فالصفّ مقروء في نفس النافذة
+     * التي تُكتب فيها بقيّة الطلب — لا نافذة يتغيّر العنوان خلالها بين
+     * القراءة والكتابة.
+     *
+     * العنوان الغائب (حُذف بين اختيار الزبون وضغطه «أكّد») يُرجع null
+     * لا نصّاً فارغاً: «العنوان غير مسجَّل» حقيقة مختلفة عن «العنوان
+     * معروف وهو فراغ»، والتمييز بينهما هو كل قيمة اللقطة.
+     *
+     * @return array{text: ?string, phone: ?string}
+     */
+    private static function addressSnapshot(int $addressId): array
+    {
+        $stmt = self::db()->prepare(
+            "SELECT label, full_address, city, country, phone_number
+             FROM user_addresses WHERE id = ? LIMIT 1"
+        );
+        $stmt->execute([$addressId]);
+        $row = $stmt->fetch();
+
+        if (!$row) {
+            return ['text' => null, 'phone' => null];
+        }
+
+        // array_filter يُسقط الفارغ فلا تظهر فواصل معلّقة لعنوان بلا
+        // مدينة أو بلا تسمية.
+        $parts = array_filter([
+            $row['label']        ?? '',
+            $row['full_address'] ?? '',
+            $row['city']         ?? '',
+            $row['country']      ?? '',
+        ], static fn ($p): bool => trim((string) $p) !== '');
+
+        return [
+            'text'  => $parts === [] ? null : implode(', ', $parts),
+            'phone' => ($row['phone_number'] ?? '') !== '' ? $row['phone_number'] : null,
+        ];
+    }
+
     /** إضافة عنوان جديد */
     public static function addAddress(int $userId, array $data): ?int
     {
@@ -284,13 +325,36 @@ class OrderModel extends Model
                 ];
             }
 
+            // ── لقطة العنوان ─────────────────────────────────────
+            //
+            // العنوان يُنسخ نصّاً في صفّ الطلب لا يُشار إليه وحسب.
+            //
+            // كان address_id مفتاحاً حيّاً بـON DELETE SET NULL، أي أن
+            // عنوان الطلب ليس ملكاً للطلب: تعديلُ المستخدم لعنوانه
+            // يغيّر وجهة طلبٍ **سُلّم فعلاً** بأثر رجعي، وحذفُه يمحو
+            // عنوان طلبات مكتملة نهائياً ولا نسخة في أي مكان.
+            //
+            // وهذا صنف خطأ لا يظهر في اختبار وظيفي ولا في أي شاشة —
+            // يظهر يوم يُسأل «أين أُرسل هذا الطلب؟» فلا يكون للسؤال
+            // جواب. المفتاح يبقى للربط، واللقطة هي المرجع التاريخي.
+            $snapshot = self::addressSnapshot($addressId);
+
             // ── الكتابة ──────────────────────────────────────────
             $stmt = $db->prepare(
-                "INSERT INTO orders (user_id, address_id, total_amount, payment_method,
+                "INSERT INTO orders (user_id, address_id, address_snapshot,
+                                    address_phone_snapshot, total_amount, payment_method,
                                     status, idempotency_key, created_at)
-                 VALUES (?, ?, ?, ?, 'not_taken', ?, NOW())"
+                 VALUES (?, ?, ?, ?, ?, ?, 'not_taken', ?, NOW())"
             );
-            $stmt->execute([$userId, $addressId, $total, $paymentMethod, $idempotencyKey]);
+            $stmt->execute([
+                $userId,
+                $addressId,
+                $snapshot['text'],
+                $snapshot['phone'],
+                $total,
+                $paymentMethod,
+                $idempotencyKey,
+            ]);
             $orderId = (int)$db->lastInsertId();
 
             $stmtItem = $db->prepare(

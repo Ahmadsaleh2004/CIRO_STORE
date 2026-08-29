@@ -245,6 +245,67 @@ final class OrderPricingTest extends DatabaseTestCase
         $this->assertSame(0, $this->countRows('orders'));
     }
 
+    // ════════════════════════════════════════════════════════
+    // لقطة العنوان
+    // ════════════════════════════════════════════════════════
+
+    public function testTheOrderKeepsItsOwnCopyOfTheAddress(): void
+    {
+        $userId    = $this->makeUser();
+        $addressId = $this->makeAddress($userId);
+        [$productId, $variantId] = $this->makeProductWithVariant(100.00, 0.00, 5);
+
+        $result = $this->place($userId, $addressId, [[
+            'product_id'  => $productId,
+            'variant_id'  => $variantId,
+            'qty'         => 1,
+            'shown_price' => 100.00,
+        ]]);
+        $this->assertSame(OrderModel::PLACE_OK, $result['status']);
+
+        // المستخدم يعدّل عنوانه بعد الطلب — وهو تصرّف عادي تماماً.
+        $stmt = $this->pdo->prepare('UPDATE user_addresses SET full_address = ? WHERE id = ?');
+        $stmt->execute(['عنوان جديد تماماً', $addressId]);
+
+        $stmt = $this->pdo->prepare('SELECT address_snapshot FROM orders WHERE order_id = ?');
+        $stmt->execute([$result['order_id']]);
+        $snapshot = (string) $stmt->fetchColumn();
+
+        // بلا اللقطة كان السجلّ يقول إن الشحنة ذهبت إلى مكان لم تذهب
+        // إليه قط — بأثر رجعي، وبلا أي أثر للتغيير.
+        $this->assertStringContainsString('1 Test Street', $snapshot);
+        $this->assertStringNotContainsString('عنوان جديد', $snapshot);
+    }
+
+    public function testDeletingTheAddressDoesNotEraseItFromPastOrders(): void
+    {
+        $userId    = $this->makeUser();
+        $addressId = $this->makeAddress($userId);
+        [$productId, $variantId] = $this->makeProductWithVariant(100.00, 0.00, 5);
+
+        $result = $this->place($userId, $addressId, [[
+            'product_id'  => $productId,
+            'variant_id'  => $variantId,
+            'qty'         => 1,
+            'shown_price' => 100.00,
+        ]]);
+
+        $stmt = $this->pdo->prepare('DELETE FROM user_addresses WHERE id = ?');
+        $stmt->execute([$addressId]);
+
+        $stmt = $this->pdo->prepare(
+            'SELECT address_id, address_snapshot FROM orders WHERE order_id = ?'
+        );
+        $stmt->execute([$result['order_id']]);
+        $order = $stmt->fetch();
+
+        // المفتاح يصير NULL بحكم ON DELETE SET NULL — وهذا هو السلوك
+        // القديم كاملاً: طلب مكتمل يفقد عنوانه نهائياً ولا نسخة في أي
+        // مكان. اللقطة هي ما ينجو.
+        $this->assertNull($order['address_id']);
+        $this->assertStringContainsString('1 Test Street', (string) $order['address_snapshot']);
+    }
+
     public function testAnItemWithoutAVariantIsRejected(): void
     {
         $userId    = $this->makeUser();
