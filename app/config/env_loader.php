@@ -59,6 +59,20 @@ function loadEnv(string $path): void
  * تُقرأ `$_ENV[$key] ?? (getenv($key) ?: $default)` — أي أن ?? تُرجع
  * "" الفارغة كقيمة صالحة وتتخطّى الافتراضي تماماً. لم يظهر العطل لأن
  * أحداً لم يكن يستدعي الدالة إطلاقاً (صفر مستدعٍ، مفحوص).
+ *
+ * ── لماذا @template لا mixed ─────────────────────────────────
+ *
+ * العائد ليس `mixed` بل **أحد شيئين بالضبط**: نصّ المتغيّر إن وُجد، أو
+ * القيمة الافتراضية كما هي. و`mixed` تُضيّع نصف هذه المعلومة، فيصير
+ * `env('DB_PORT', 3306)` من زاوية المحلّل «شيءٌ ما» بينما هو
+ * `string|int` يقيناً.
+ *
+ * والقالب يحفظ نوع الافتراضي: من مرّر `null` يستقبل `string|null`،
+ * ومن مرّر `'production'` يستقبل `string` — بلا فحص زائد عند المستدعي.
+ *
+ * @template TDefault
+ * @param  TDefault $default
+ * @return string|TDefault
  */
 function env(string $key, $default = null)
 {

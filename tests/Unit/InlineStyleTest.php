@@ -21,6 +21,9 @@ use PHPUnit\Framework\TestCase;
  */
 final class InlineStyleTest extends TestCase
 {
+    /**
+     * @return list<string>
+     */
     private static function viewFiles(): array
     {
         $root  = dirname(__DIR__, 2) . '/app/views';

@@ -30,8 +30,8 @@ class ProductVariantUploader
      * يتجاهل أي صف بلا اسم لون أو بسعر ≤ 0 — هذه صفوف فارغة يتركها
      * الفورم عند إضافة حقول ثم عدم ملئها.
      *
-     * @param  array  $postVariants  $_POST['variants']
-     * @param  array  $filesVariants $_FILES['variants']
+     * @param  list<array<string, mixed>> $postVariants  $_POST['variants']
+     * @param  array<string, mixed> $filesVariants $_FILES['variants']
      * @param  string $uploadDir     مجلد الوجهة على القرص
      * @param  int    $defaultIndex  ترتيب الـvariant الافتراضي كما أرسله الفورم
      * @return array<int,array<string,mixed>>
@@ -87,6 +87,8 @@ class ProductVariantUploader
      *
      * $_FILES لمدخل مصفوفي يأتي بشكلين حسب عمق التسمية في الفورم، لذا
      * الفحص يتعامل مع القيمة كنص أو كمصفوفة متداخلة.
+     *
+     * @param array<string, mixed> $filesVariants بنية $_FILES["variants"] المتشعّبة
      */
     public static function hasAnyImage(array $filesVariants): bool
     {
@@ -114,6 +116,8 @@ class ProductVariantUploader
     /**
      * يحذف من القرص الصور التي رُفعت للتوّ — تُستدعى عند فشل الحفظ كي
      * لا تتراكم ملفات يتيمة لا يشير إليها أي صف في قاعدة البيانات.
+     *
+     * @param list<array<string, mixed>> $parsedVariants
      */
     public static function cleanup(array $parsedVariants, string $uploadDir): void
     {
@@ -148,6 +152,9 @@ class ProductVariantUploader
      *
      * نتعامل هنا مع الشكلين معاً: المتداخل (الواقع الحالي) والمسطّح
      * (لو تغيّر اسم الحقل مستقبلاً إلى variants_image[]).
+     *
+     * @param array<string, mixed> $filesVariants بنية $_FILES["variants"] المتشعّبة
+     * @return array<string, mixed>|null
      */
     private static function extractFileEntry(array $filesVariants, int $idx): ?array
     {

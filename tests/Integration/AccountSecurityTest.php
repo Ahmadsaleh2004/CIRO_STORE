@@ -26,6 +26,9 @@ use Tests\Support\DatabaseTestCase;
  */
 final class AccountSecurityTest extends DatabaseTestCase
 {
+    /**
+     * @return array{id: int, email: string}
+     */
     private function makeUser(string $email = ''): array
     {
         $email = $email !== '' ? $email : 'user' . uniqid() . '@example.com';

@@ -21,6 +21,7 @@
  * والنصوص والأصناف مكرّرة بين اللغتين عمداً — لا سبيل لتفادي ذلك في
  * مشروع بلا خطوة بناء تشارك الثوابت. **إن غيّرت شيئاً هنا فغيّره هناك
  * أيضاً.**
+ * @return array<string, mixed>
  */
 function getStockBadge(int $stock, bool $showInStock = false): ?array
 {

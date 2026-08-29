@@ -12,7 +12,7 @@ class BrandingModel extends Model
      * كل الشرائح مرتبة sort_order ASC، وكل شريحة فيها items مرتبة sort_order ASC
      * مع JOIN مع products لاسم/صورة/وصف المنتج الحالي (لتعبئة فورم التعديل).
      *
-     * @return array[] مصفوفة شرائح كل واحدة: {id, sort_order, updated_by_admin_id, items[]}
+     * @return list<array<string, mixed>> مصفوفة شرائح كل واحدة: {id, sort_order, updated_by_admin_id, items[]}
      */
     public static function getFullSliderData(): array
     {
@@ -79,7 +79,7 @@ class BrandingModel extends Model
      * محسوبة حسب active_mode داخل الـ SQL نفسه. يتجاهل العناصر غير المكتملة
      * (Product بلا منتج فعلي، أو Manual بلا صورة).
      *
-     * @return array[] مصفوفة شرائح كل واحدة: {id, items: [{image_path, link_url, description}]}
+     * @return list<array<string, mixed>> مصفوفة شرائح كل واحدة: {id, items: [{image_path, link_url, description}]}
      */
     public static function getActiveSlidersForHome(): array
     {
@@ -147,7 +147,7 @@ class BrandingModel extends Model
      *
      * @param string $q     كلمة البحث (فارغة = كل المنتجات)
      * @param int    $limit عدد النتائج الأقصى
-     * @return array[] [{id, name, image, description, link}]
+     * @return list<array<string, mixed>> [{id, name, image, description, link}]
      */
     public static function searchProducts(string $q, int $limit = 15): array
     {
@@ -187,7 +187,7 @@ class BrandingModel extends Model
      * الحفظ الكامل (Full Replace): يحذف كل الشرائح القديمة (CASCADE على
      * home_slider_items) ثم يُدرج كل شيء من جديد بترتيب الفورم — Transaction واحدة.
      *
-     * @param array[] $slides  مصفوفة مُنظّفة وجاهزة: [{items: [{active_mode, product_id,
+     * @param list<array<string, mixed>> $slides  مصفوفة مُنظّفة وجاهزة: [{items: [{active_mode, product_id,
      *                        product_link_url, product_description, manual_image_path,
      *                        manual_link_url, manual_description}]}]
      * @param int     $adminId أدمن الحفظ الحالي (updated_by_admin_id + audit)
@@ -264,7 +264,7 @@ class BrandingModel extends Model
      * رفع صورة سلايدر واحدة — نسخة مطابقة لمنطق AdminProductModel::uploadVariantImage()
      * لكن بادئة اسم الملف `slider_` بدل `product_` لتمييز صور السلايدر بمجلد الصور.
      *
-     * @param array  $fileEntry مصفوفة ملف واحدة من $_FILES
+     * @param array<string, mixed> $fileEntry مصفوفة ملف واحدة من $_FILES
      * @param string $uploadDir المجلد المطلق (مع trailing slash)
      * @return string|null      المسار النسبي (images/slider_xxx.jpg) أو null عند فشل التحقق/الرفع
      */

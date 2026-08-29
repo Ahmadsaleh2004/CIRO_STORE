@@ -13,6 +13,8 @@ class AdminNotificationModel extends Model
 {
     /**
      * جلب قائمة الإشعارات لأدمن معيّن، الأحدث أولًا
+     *
+     * @return list<array<string, mixed>>
      */
     public static function getList(int $adminId, int $limit = 30): array
     {

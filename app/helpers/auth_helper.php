@@ -105,6 +105,9 @@ function loadAdminPermissions(int $adminId): void
 }
 
 /** صلاحيات الأدمن الحالي من الجلسة (مصفوفة فاضية إذا لم تُحمَّل بعد). */
+/**
+ * @return array<string, mixed>
+ */
 function getAdminPermissions(): array
 {
     return $_SESSION['admin_permissions'] ?? [];

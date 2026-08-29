@@ -13,7 +13,7 @@ class AboutModel extends Model
     /**
      * يُرجع معلومات المتجر الثابتة
      *
-     * @return array
+     * @return array<string, mixed>
      */
     public function getStoreInfo(): array
     {

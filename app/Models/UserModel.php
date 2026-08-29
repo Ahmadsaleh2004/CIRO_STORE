@@ -13,6 +13,8 @@ class UserModel extends Model
 {
     /**
      * جلب مستخدم بالإيميل
+     *
+     * @return array<string, mixed>|null
      */
     public static function findByEmail(string $email): ?array
     {
@@ -30,6 +32,8 @@ class UserModel extends Model
 
     /**
      * جلب مستخدم بالـ ID
+     *
+     * @return array<string, mixed>|null
      */
     public static function findById(int $id): ?array
     {
@@ -47,6 +51,8 @@ class UserModel extends Model
 
     /**
      * جلب مستخدم بـ google_id (إذا وُجد العمود)
+     *
+     * @return array<string, mixed>|null
      */
     public static function findByGoogleId(string $googleId): ?array
     {
@@ -79,6 +85,8 @@ class UserModel extends Model
 
     /**
      * إنشاء مستخدم جديد
+     *
+     * @param array<string, mixed> $data
      */
     public static function create(array $data): ?int
     {
@@ -162,6 +170,8 @@ class UserModel extends Model
 
     /**
      * تحديث بيانات الملف الشخصي
+     *
+     * @param array<string, mixed> $data
      */
     public static function updateProfile(int $userId, array $data): bool
     {
@@ -283,6 +293,8 @@ class UserModel extends Model
      *   - not_active  = آخر نشاط أقدم من 90 يوم و strikes < 3
      *   - active      = الباقي
      * يرجع: ['rows' => array, 'total' => int]
+     *
+     * @return array<string, mixed> الصفوف مع بيانات الترقيم
      */
     public static function getAllForAdmin(
         string $search,
@@ -361,6 +373,7 @@ class UserModel extends Model
      * نفس منطق التصنيف بـ getAllForAdmin() حرفيًا — لضمان تطابق الجمهور
      * المستلم مع ما يعرضه جدول Manage Users تمامًا.
      * @return int[]
+     * @param list<string> $statuses
      */
     public static function findByStatuses(array $statuses): array
     {
@@ -402,6 +415,9 @@ class UserModel extends Model
     }
 
     /** كل أعمدة users + strikes_count ليوزر واحد (لصفحة details) */
+    /**
+     * @return array<string, mixed>|null
+     */
     public static function getByIdForAdmin(int $id): ?array
     {
         try {
@@ -420,6 +436,9 @@ class UserModel extends Model
     }
 
     /** كل صفوف user_strikes ليوزر معيّن، الأحدث أولًا */
+    /**
+     * @return list<array<string, mixed>>
+     */
     public static function getStrikes(int $userId): array
     {
         try {
@@ -553,6 +572,9 @@ class UserModel extends Model
     }
 
     /** كل الأعمدة المطلوبة لتصدير CSV + strikes_count كعمود محسوب */
+    /**
+     * @return list<array<string, mixed>>
+     */
     public static function getAllForCsvExport(): array
     {
         try {

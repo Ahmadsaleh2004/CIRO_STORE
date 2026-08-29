@@ -190,41 +190,26 @@
         }));
     }
 
-    /**
-     * يوحّد معرّف الـvariant قبل المقارنة.
-     *
-     * القيمة تصل من ثلاثة مصادر بثلاثة أشكال: رقم من products-catalog،
-     * ونصّ من سمة data-* في صفحة المنتج، وnull من الخادم للمنتج بلا
-     * variant. والمقارنة الصارمة على هذه الأشكال تفشل بلا سبب مرئي،
-     * والمقارنة المتساهلة (==) تجعل 0 و'' وnull شيئاً واحداً. التوحيد
-     * هنا يسمح بـ=== دون أن يخلط الغياب بالصفر.
-     */
-    function variantKey(value) {
-        return (value === null || value === undefined || value === '') ? null : Number(value);
-    }
-
-    /** يطابق سطر سلّة بسطر جاء من الخادم — بالمنتج واللون معاً. */
-    function sameLine(cartItem, serverItem) {
-        return Number(cartItem.id) === Number(serverItem.product_id)
-            && variantKey(cartItem.variant_id) === variantKey(serverItem.variant_id);
-    }
+    // ملاحظة: كانت هنا variantKey و sameLine — تطابقان سطر السلّة
+    // المحلية بسطر جاء من الخادم لتصحيح سعره في مكانه. سقطتا حين
+    // انتقلت السلّة إلى القاعدة: لم يعد هناك ما يُطابَق، فالخادم يُرجع
+    // السلّة كاملةً بأسعارها الحيّة وتُستبدل المرآة بها.
 
     /**
-     * يكتب أسعار الخادم في السلّة المحلية.
+     * يُحدّث السلّة بعد رفض الطلب لتغيّر سعر.
      *
-     * الكتابة عبر window.saveCart لا عبر localStorage مباشرة: تلك
-     * تُحدّث واجهة السلّة والعدّادات معاً، وكتابة المفتاح وحده كانت
-     * ستترك الشريط الجانبي يعرض السعر القديم بعد أن قال الحوار إنه تغيّر.
+     * ⚠️ صارت تُعيد الجلب من الخادم بدل الكتابة محلياً. كانت تكتب
+     * السعر في نسخة المتصفّح — وذلك كان صحيحاً يوم كانت السلّة في
+     * localStorage، وصار خطأً حين انتقلت إلى القاعدة: كتابةٌ في المرآة
+     * لا تصل الأصل، فتُظهر للزبون سعراً لا يعرفه الخادم.
+     *
+     * وإعادة الجلب أصدق من الترقيع: `/cart` تُرجع السعر الحيّ لكل سطر
+     * أصلاً، فما بعدها هو ما سيُحاسَب عليه فعلاً.
      */
-    function applyServerPrices(serverItems) {
-        if (!serverItems.length || !window.getCartData || !window.saveCart) return;
+    async function applyServerPrices(serverItems) {
+        if (!serverItems.length || !window.loadCart) return;
 
-        const cart = window.getCartData();
-        serverItems.forEach(si => {
-            const line = cart.find(ci => sameLine(ci, si));
-            if (line) line.price = Number(si.price);
-        });
-        window.saveCart(cart);
+        await window.loadCart();
     }
 
     /** جدول «قبل ← بعد» داخل الحوار. الأسماء من القاعدة، فتُهرَّب. */
@@ -251,6 +236,13 @@
 
     // ── تنفيذ الطلب ──────────────────────────────────────────────
     document.getElementById('placeOrderBtn')?.addEventListener('click', async () => {
+        // السلّة تصل من الخادم عند تحميل الصفحة. وإن لم تكن قد وصلت
+        // بعد — اتصال بطيء، أو نقرة سريعة — نجلبها الآن بدل أن نقول
+        // للزبون «سلّتك فارغة» وهي ليست كذلك.
+        if (window.getCartData && !window.getCartData().length && window.loadCart) {
+            await window.loadCart();
+        }
+
         const cart = window.getCartData ? window.getCartData() : [];
         if (!cart.length) {
             Swal.fire({ icon: 'warning', text: 'Your cart is empty.' });
@@ -282,7 +274,7 @@
             // الخادم رفض الطلب كاملاً وأعاد الأسعار الصحيحة. الاكتشاف
             // بـerror_code لا بنصّ الرسالة — نفس عقد csrf_invalid.
             if (!res.success && res.error_code === 'price_changed') {
-                applyServerPrices(res.items || []);
+                await applyServerPrices(res.items || []);
                 resetPlaceButton();
                 goTo(3);
                 buildReview();

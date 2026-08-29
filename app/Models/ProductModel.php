@@ -10,6 +10,8 @@ class ProductModel extends Model
 {
     /**
      * جلب كافة المنتجات المتاحة للعرض من قاعدة البيانات
+     *
+     * @return list<array<string, mixed>>
      */
     public static function findVisible(): array
     {
@@ -40,6 +42,14 @@ class ProductModel extends Model
 
     /**
      * جلب المنتجات المرئية صفحة صفحة مع أسماء الأقسام (categories)
+     *
+     * ⚠️ تُرجع **الصفوف وحدها** لا بيانات ترقيم، خلافاً لأخواتها
+     * (UserModel::getAllForAdmin و OrderModel::getAdminOrdersList
+     * تُرجعان خريطة فيها rows وtotal). الاسم يوحي بغير ذلك — والتعليق
+     * هنا كُتب أوّل مرّة بالقياس عليهما، فكان كاذباً حتى كشفه تدقيقٌ
+     * وقت التشغيل.
+     *
+     * @return list<array<string, mixed>>
      */
     public static function findVisiblePaginated(int $limit, int $offset): array
     {
@@ -67,6 +77,8 @@ class ProductModel extends Model
 
     /**
      * جلب منتج واحد بواسطة الـ ID
+     *
+     * @return array<string, mixed>|null
      */
     public static function findById(int $id): ?array
     {
@@ -84,6 +96,8 @@ class ProductModel extends Model
 
     /**
      * جلب خيارات/أنواع المنتج (Variants)
+     *
+     * @return list<array<string, mixed>>
      */
     public static function getVariants(int $productId): array
     {
@@ -100,6 +114,8 @@ class ProductModel extends Model
 
     /**
      * جلب كافة التقييمات الخاصة بمنتج معين مع أسماء المستخدمين
+     *
+     * @return list<array<string, mixed>>
      */
     public static function getReviews(int $productId): array
     {
@@ -122,6 +138,8 @@ class ProductModel extends Model
 
     /**
      * جلب تقييم مستخدم محدد لمنتج معين
+     *
+     * @return array<string, mixed>|null
      */
     public static function getUserReview(int $productId, int $userId): ?array
     {
@@ -139,6 +157,8 @@ class ProductModel extends Model
 
     /**
      * جلب المنتجات المشابهة (بناءً على التصنيف أو الشركة المصنعة)
+     *
+     * @return list<array<string, mixed>>
      */
     public static function getRelated(int $productId, ?string $manufacturer = null): array
     {
@@ -173,6 +193,14 @@ class ProductModel extends Model
     }
     /**
      * جلب بيانات المخزون/السعر الحية لمجموعة IDs — تُستخدم من صفحة الويش ليست
+     *
+     * @param list<int> $ids
+     * ⚠️ المفتاح **عدد صحيح** لا نصّ رغم `(string)` في البناء: PHP
+     * يُحوّل المفاتيح النصّية العددية إلى أعداد صحيحة تلقائياً، فالصبّ
+     * هناك بلا أثر. كُتب التعليق أوّل مرّة اتّباعاً للصبّ الظاهر، وكشف
+     * تدقيقُ وقت التشغيل أنه يصف نيّةً لا واقعاً.
+     *
+     * @return array<int, array{stock_quantity: int, price: float, discount_percentage: float, price_after_discount: float, is_visible: int}> مفهرسة بمعرّف المنتج
      */
     public static function findStockByIds(array $ids): array
     {
@@ -197,7 +225,17 @@ class ProductModel extends Model
 
             $result = [];
             foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
-                $result[(string)$row['id']] = [
+                // ⚠️ لا صبّ إلى نصّ. كان هنا `(string)$row['id']` وهو
+                // **بلا أثر**: PHP يُحوّل أي مفتاح نصّي عددي إلى عدد
+                // صحيح تلقائياً، فالمفتاح كان int دائماً رغم الصبّ.
+                //
+                // وضرره أنه يُضلّل قارئين: البشر يظنّون المفاتيح نصّية،
+                // وPHPStan يستنتج ذلك أيضاً فيقبل تعليقاً كاذباً. كشفه
+                // تدقيقُ وقت التشغيل حين قارن الشكل المُعلَن بالفعلي.
+                //
+                // والعميل يقرأها بـString(variant_id) على أي حال، وهو
+                // يعمل مع الحالتين — فالحذف لا يمسّ سلوكاً.
+                $result[(int)$row['id']] = [
                     'stock_quantity'       => (int)$row['stock_quantity'],
                     'price'                => (float)$row['price'],
                     'discount_percentage'  => (float)$row['discount_percentage'],
@@ -214,6 +252,8 @@ class ProductModel extends Model
 
     /**
      * إضافة/تحديث تقييم مستخدم لمنتج (Upsert) — تُرجع مصفوفة ['ok' => bool, 'message' => string]
+     *
+     * @return array{ok: bool, message: string}
      */
     public static function saveReview(int $productId, int $userId, int $rating, string $comment): array
     {

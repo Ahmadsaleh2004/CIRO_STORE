@@ -111,6 +111,9 @@ final class CsrfContractHttpTest extends TestCase
     }
 
     /** يقرأ مسارات POST من الراوتر نفسه — لا قائمة يدوية تتقادم. */
+    /**
+     * @return list<string>
+     */
     private static function postRoutes(): array
     {
         $index = file_get_contents(dirname(__DIR__, 2) . '/public/index.php');

@@ -21,6 +21,8 @@
  * ما تعلنه public/css/admin/pages/login.css صراحةً في رأسها — أنه ملف
  * مستقل لا يعتمد على tokens.css. صفحتا الأدمن المستقلتان تعلنان ملف
  * الـCSS في $bareCss مباشرة.
+ *
+ * @return list<string>
  */
 function cssBundleFiles(string $bundle): array
 {

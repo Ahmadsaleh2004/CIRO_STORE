@@ -736,6 +736,9 @@ class AuthController extends Controller
     }
 
     /** POST بسيط باستخدام cURL (بدون أي مكتبة خارجية) */
+    /**
+     * @param array<string, string> $fields
+     */
     private function httpPost(string $url, array $fields): string
     {
         $ch = curl_init($url);

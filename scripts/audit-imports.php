@@ -40,6 +40,8 @@ const BUILTIN = [
 /**
  * يستخرج من ملف: النيسبيس، الأسماء المستوردة، والكلاسات المستعملة
  * استعمالاً حقيقياً (خارج التعليقات والنصوص).
+ *
+ * @return array{ns: string, imported: array<string, true>, declared: array<string, true>, used: array<string, int>}
  */
 function analyse(string $file): array
 {
