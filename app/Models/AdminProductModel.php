@@ -558,7 +558,6 @@ class AdminProductModel extends Model
      * @param array<string, mixed> $fileEntry مصفوفة ملف واحدة من $_FILES
      * @param string $uploadDir  المجلد المطلق (مع trailing slash)
      * @return string|null       المسار النسبي (images/xxx.jpg) أو null
-     * @param array<string, mixed> $fileEntry مدخل واحد من $_FILES
      */
     public static function uploadVariantImage(array $fileEntry, string $uploadDir): ?string
     {

@@ -48,7 +48,25 @@ $csrfToken = generateCsrfToken();
     </div>
 
     <?php // ══ Partials ════════════════════════════════════════════ ?>
-    <?php require __DIR__ . '/modals/cart.php'; ?>
+    <?php
+    /*
+     * ⚠️ مودال السلّة محروس بتسجيل الدخول — وكان يُطبع للجميع.
+     *
+     * زرّ السلّة في الـnavbar محروس منذ البداية، فكان الزائر يتلقّى
+     * الشريط الجانبي كاملاً في صفحته بلا زرّ يفتحه: ترميزٌ ميّت على
+     * كل صفحة.
+     *
+     * وصار الأمر أثقل بعد انتقال السلّة إلى الخادم: cart.js يستدلّ
+     * على «هل للمستخدم سلّة؟» بوجود #cartSidebar، فكان يجدها عند
+     * الزائر ويطلب /cart في كل تحميل صفحة — طلبٌ يردّ 401 دائماً
+     * (مقيس)، وخطأٌ في طرفية كل زائر.
+     *
+     * الحارس هنا يطابق حارس الزرّ، فيتفق الاثنان على معنى واحد.
+     */
+    ?>
+    <?php if (isset($userLoggedIn) && $userLoggedIn): ?>
+        <?php require __DIR__ . '/modals/cart.php'; ?>
+    <?php endif; ?>
     <?php require __DIR__ . '/modals/login.php'; ?>
     <?php require __DIR__ . '/modals/register.php'; ?>
     <?php require __DIR__ . '/modals/forgot-password.php'; ?>

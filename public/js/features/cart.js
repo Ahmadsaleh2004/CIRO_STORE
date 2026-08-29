@@ -178,109 +178,75 @@ function renderCart() {
 }
 window.renderCart = renderCart;
 
-function syncCartWithStock() {
+/**
+ * يُصحّح السلّة بعد أن يتغيّر المخزون تحتها.
+ *
+ * ══════════════════════════════════════════════════════════════
+ * ⚠️ عطلٌ قِيس وأُصلح: التصحيح كان لا يغادر المتصفّح
+ * ══════════════════════════════════════════════════════════════
+ *
+ * النسخة السابقة كانت تبني `updatedCart` بـreduce وتُعدّل الكمية
+ * **داخل الحلقة**. و`getCartData()` تُرجع المرآة بالمرجع، فكان
+ * `item.quantity = info.stock` يكتب في المرآة نفسها. ثم تأتي المصفاة
+ * التي تقرّر ما يُرسَل إلى الخادم فتقارن:
+ *
+ *     info.stock < cart.find(...).quantity
+ *
+ * وquantity كانت قد صارت info.stock — فالشرط `x < x` كاذب دائماً،
+ * ولم يُستدعَ cartSetQuantity قطّ.
+ *
+ * الأثر: الشاشة تعرض الكمية المخفَّضة والخادم يحتفظ بالقديمة. فيصل
+ * الزبون إلى الدفع فيُرفض بـout_of_stock عن سلّة تبدو سليمة أمامه.
+ *
+ * ── ولماذا اختفى استدعاء /cart/check-stock ──────────────────
+ *
+ * لأنه صار زائداً. `/cart` تضمّ product_variants في كل قراءة فتُرجع
+ * `stock` و`price` الحيَّين مع كل سطر، وتُسقط المخفيّ والمحذوف من
+ * تلقائها. فالمرآة **هي** بيانات المخزون الطازجة — واستدعاء نقطة
+ * ثانية لجلبها كان رحلة شبكة تسأل عمّا تملكه الإجابة أصلاً.
+ *
+ * وما بقي عملٌ حقيقي: نافدٌ يُحذف، وكميةٌ تجاوزت المتاح تُخفَّض —
+ * وكلاهما يُكتب على الخادم، ثم تُعاد القراءة منه.
+ */
+async function syncCartWithStock() {
     const cart = getCartData();
     if (cart.length === 0) return;
 
-    const variantIds = cart.map(item => item.variant_id).filter(v => v !== undefined && v !== null);
-    if (variantIds.length === 0) return;
+    // القراءة قبل أي تعديل: نلتقط النيّة الأصلية للزبون كي نقارنها
+    // بالمتاح. القراءة بعد التعديل هي بالضبط ما أسقط النسخة السابقة.
+    const soldOut = cart.filter(i => i.variant_id && Number(i.stock) <= 0);
+    const excess  = cart.filter(i =>
+        i.variant_id && Number(i.stock) > 0 && Number(i.quantity) > Number(i.stock)
+    );
 
-    // fetch عارٍ عن قصد — لا fetchWithCsrfRetry: CartController::checkStock
-    // **لا تتحقق من توكن CSRF** (استعلام مخزون للقراءة)، والطلب لا يرسل
-    // توكناً أصلاً. فلا يمكن أن تُرجع «Invalid CSRF token».
-    // nosemgrep: cairo-bare-fetch-post
-    fetch(window.BASE_URL + '/cart/check-stock', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: variantIds.map(id => 'variant_ids[]=' + encodeURIComponent(id)).join('&')
-    })
-    .then(res => res.json())
-    .then(data => {
-        if (!data.success) return;
+    if (soldOut.length === 0 && excess.length === 0) return;
 
-        // تحويل data.items (array) إلى object مفهرس بـ variant_id
-        // بنفس البنية التي يتوقعها باقي الكود: variants[variantId] = {stock, visible, ...}
-        const variants = {};
-        (data.items || []).forEach(item => {
-            variants[String(item.variant_id)] = {
-                stock:   item.stock_quantity,
-                visible: true,                       // is_visible=1 مشروط بالـ SQL
-                price:   item.price_after_discount || item.price,
-            };
-        });
+    // تُلتقط الأسماء الآن: بعد loadCart تختفي السطور المحذوفة من المرآة.
+    const soldOutNames = soldOut.map(i => i.name + (i.color_name ? ` (${i.color_name})` : ''));
+    const excessNames  = excess.map(i => `${i.name} (${i.stock})`);
 
-        let removedNames = [];
-        let adjustedNames = [];
-        let stockRefreshed = false;
+    try {
+        await Promise.all([
+            ...soldOut.map(i => cartRemove(i.variant_id)),
+            ...excess.map(i => cartSetQuantity(i.variant_id, Number(i.stock))),
+        ]);
+    } catch (e) {
+        console.error('syncCartWithStock: تعذّر تصحيح السلّة', e);
+        return;
+    }
 
-        const updatedCart = cart.reduce((acc, item) => {
-            if (item.variant_id === undefined || item.variant_id === null) {
-                acc.push(item);
-                return acc;
-            }
+    // القراءة من الخادم بعد التصحيح — لا ثقة بما في الذاكرة بعد كتابة.
+    await loadCart();
 
-            const info = variants[String(item.variant_id)];
+    if (soldOutNames.length > 0 && typeof showToast === 'function') {
+        showToast(`Removed (out of stock): ${soldOutNames.join(', ')}`, 'error');
+    }
 
-            if (!info || !info.visible || info.stock <= 0) {
-                removedNames.push(item.name + (item.color_name ? ` (${item.color_name})` : ''));
-                return acc;
-            }
-
-            if (info.stock < item.quantity) {
-                item.quantity = info.stock;
-                adjustedNames.push(`${item.name} (${info.stock})`);
-            }
-
-            if (item.stock !== info.stock) {
-                item.stock = info.stock;
-                stockRefreshed = true;
-            }
-
-            acc.push(item);
-            return acc;
-        }, []);
-
-        // ── التصحيح يُكتب على الخادم لا محلياً ────────────────────
-        //
-        // `stockRefreshed` وحده لم يعد يستدعي كتابة: `/cart` تُرجع
-        // المخزون والسعر الحيَّين في كل قراءة، فالمرآة محدَّثة أصلاً.
-        // يبقى ما يغيّر السلّة فعلاً — حذفُ نافد، وخفضُ كمية تجاوزت
-        // المتاح — وكلاهما يمرّ بالخادم كي يبقى مصدر الحقيقة واحداً.
-        //
-        // والاستدعاءات قليلة بطبعها: لا تقع إلا حين ينفد شيء بين
-        // فتح الصفحة وفحصها.
-        const corrections = updatedCart.filter(i => i.variant_id);
-        const removedIds  = cart
-            .filter(i => i.variant_id && !updatedCart.some(u => u.variant_id === i.variant_id))
-            .map(i => i.variant_id);
-
-        Promise.all([
-            ...removedIds.map(id => cartRemove(id)),
-            ...corrections
-                .filter(i => {
-                    const info = variants[String(i.variant_id)];
-                    return info && info.stock < (cart.find(c => c.variant_id === i.variant_id)?.quantity ?? 0);
-                })
-                .map(i => cartSetQuantity(i.variant_id, i.quantity)),
-        ]).then(() => {
-            if (removedNames.length > 0 || adjustedNames.length > 0) {
-                loadCart();
-            } else if (stockRefreshed) {
-                refreshCartUI();
-            }
-        });
-
-        if (removedNames.length > 0 || adjustedNames.length > 0 || stockRefreshed) {
-            if (removedNames.length > 0) {
-                if (typeof showToast === 'function') showToast(`Removed (out of stock): ${removedNames.join(', ')}`, 'error');
-            }
-            if (adjustedNames.length > 0) {
-                if (typeof showToast === 'function') showToast(`Quantity adjusted to available stock: ${adjustedNames.join(', ')}`, 'info');
-            }
-        }
-    })
-    .catch(err => console.error('syncCartWithStock error:', err));
+    if (excessNames.length > 0 && typeof showToast === 'function') {
+        showToast(`Quantity adjusted to available stock: ${excessNames.join(', ')}`, 'info');
+    }
 }
+
 window.syncCartWithStock = syncCartWithStock;
 
 // تهيئة تفاعلات السلة بالـ DOM

@@ -664,8 +664,7 @@ class OrderModel extends Model
      * قائمة الطلبات لصفحة admin/orders مع فلترة + بحث + ترقيم صفحات.
      * ترتيب العرض: not_taken أولاً، ثم taken، ثم cancelled، ثم completed، والأحدث أولاً داخل كل مجموعة.
      *
-     * @param array<string, mixed> $filters ['status' => string, 'search' => string] (اختياريان)
-     * @param array<string, mixed> $filters
+     * @param array{status?: string, search?: string} $filters
      * @return array<string, mixed> الصفوف مع بيانات الترقيم
      */
     public static function getAdminOrdersList(array $filters, int $page, int $perPage = 20): array
@@ -1024,7 +1023,7 @@ class OrderModel extends Model
     /**
      * كل الطلبات المطابقة للفلترة (بدون pagination) لتصدير CSV — نفس منطق getAdminOrdersList().
      *
-     * @param array<string, mixed> $filters
+     * @param array{status?: string, search?: string} $filters
      * @return list<array<string, mixed>>
      */
     public static function getAllForCsvExport(array $filters): array
