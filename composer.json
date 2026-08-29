@@ -63,7 +63,8 @@
         "ext-json": "*",
         "phpmailer/phpmailer": "^7.1",
         "spomky-labs/otphp": "^11.5",
-        "bacon/bacon-qr-code": "^3.1"
+        "bacon/bacon-qr-code": "^3.1",
+        "sentry/sentry": "^4.31"
     },
     "require-dev": {
         "zircote/swagger-php": "^6.7",
