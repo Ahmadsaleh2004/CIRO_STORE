@@ -68,6 +68,22 @@
                 </span>
             </div>
             <div class="u-chart-box"><canvas id="salesChart"></canvas></div>
+            <?php
+            // أرقام الرسم البياني — بيانات في جزيرة JSON، لا كود.
+            //
+            // كانت تُحقن داخل كتلة <script> يبنيها الـController بضمّ
+            // النصوص، وهي كتلة تنفيذ تحجبها CSP ولا يمكن بصمها لأن
+            // محتواها يتغيّر يومياً. راجع AdminDashboardController.
+            //
+            // وموضعها هنا لا في $extraScripts: الفوتر يطبع
+            // $extraScripts بعد js/core/page-data.js المتزامن.
+            echo pageData([
+                'ADMIN_SALES_CHART' => [
+                    'labels' => $chartLabels,
+                    'values' => $chartValues,
+                ],
+            ]);
+            ?>
         </div>
     </div>
     <div class="col-lg-4">
