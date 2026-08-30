@@ -4,7 +4,7 @@
 $pageTitle = 'Products';
 $pageDescription = 'Browse all products at Cairo Store.';
 
-// productTag() انتقلت إلى app/helpers/product_tag_helper.php
+// productTag() moved to app/helpers/product_tag_helper.php
 ?>
 
 <main id="main-content" role="main">
@@ -47,7 +47,7 @@ $pageDescription = 'Browse all products at Cairo Store.';
                         $emoji = categoryEmoji($cat['name']);
                     ?>
                     <option value="cat-<?= htmlspecialchars($cat['name']) ?>">
-                        <?php // @escaping-safe: categoryEmoji ترجع رمزاً من خريطة داخلية ?>
+                        <?php // @escaping-safe: categoryEmoji returns a symbol from an internal map ?>
                         <?= $emoji ?> <?= htmlspecialchars(ucfirst($cat['name'])) ?>
                     </option>
                     <?php endforeach; ?>
@@ -234,8 +234,8 @@ $pageDescription = 'Browse all products at Cairo Store.';
 </main>
 
 <?php
-// بيانات المنتجات لبطاقات المفضّلة — يقرأها js/features/products-catalog.js
-// من window.dbProducts. الاسم والشكل لم يتغيّرا.
+// The product data for the wishlist cards — js/features/products-catalog.js reads it
+// from window.dbProducts. The name and the shape have not changed.
 ?>
 <?= pageData([
     'dbProducts' => array_values(array_map(function ($p) {

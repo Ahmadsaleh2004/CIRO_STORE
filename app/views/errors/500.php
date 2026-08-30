@@ -1,26 +1,26 @@
 <?php
 /**
  * app/views/errors/500.php
- * صفحة «الخدمة غير متاحة».
+ * The "service unavailable" page.
  *
- * تُستدعى من App\Core\ErrorPage::serverError() عبر require مباشر لا عبر
- * view() — لنفس سبب 404.php: استدعاء view() من داخل معالج خطأ يفتح باب
- * تكرار لا نهائي.
+ * Included from App\Core\ErrorPage::serverError() with a direct require rather than
+ * through view() — for the same reason as 404.php: calling view() from inside an error
+ * handler opens the door to an infinite loop.
  *
- * ⚠️ أكثر ما تُستدعى له هذه الصفحة هو **فشل الاتصال بقاعدة البيانات**،
- * فلا تضف إليها أي شيء يقرأ من القاعدة: لا إعدادات موقع، ولا هوية
- * بصرية، ولا عدّاد سلّة. head-bare.php و footer-bare.php لا يلمسان
- * القاعدة (مفحوص)، وهذا هو سبب استعمالهما هنا.
+ * ⚠️ What this page is most often rendered for is **a failed database connection**, so
+ * add nothing to it that reads from the database: no site settings, no branding, no cart
+ * counter. head-bare.php and footer-bare.php do not touch the database (verified), and
+ * that is why they are used here.
  *
- * ولا تطبع أبداً رسالة الاستثناء: رسالة PDO تحوي اسم المضيف واسم
- * القاعدة واسم المستخدم. التفصيل في سجلّ الأخطاء وحده.
+ * And it never prints the exception's message: a PDO message contains the host name,
+ * the database name and the user name. The detail goes to the error log alone.
  */
 
 $bareTitle     = 'Temporarily unavailable — ' . SITENAME;
-// كانت هنا `$bareLang = 'ar'` و`$bareDir = 'rtl'` لأن نصّ الصفحة كان
-// عربياً وحده — وهي الصفحة الوحيدة في المشروع التي كانت تقلب اتجاه
-// المستند. النصّ صار إنجليزياً كبقيّة الواجهة، والافتراضي في
-// head-bare.php (en/ltr) هو الصحيح لها الآن.
+// There used to be `$bareLang = 'ar'` and `$bareDir = 'rtl'` here, because this page's
+// text was the only Arabic text in the interface — and it was the one page in the
+// project that flipped the document's direction. The text is now English like the rest
+// of the interface, and head-bare.php's default (en/ltr) is the correct one for it.
 $bareThemeBoot = true;
 $bareCss       = ['css/store.css'];
 

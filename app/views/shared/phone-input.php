@@ -1,29 +1,31 @@
 <?php
 /**
  * app/views/shared/phone-input.php
- * حقل رقم الهاتف: قائمة رمز الدولة + الرقم المحلي.
+ * The phone number field: a country-code list plus the local number.
  *
- * كانت هذه الكتلة — منطق التقسيم والماركب معاً — منسوخة في ملفين:
- * account/my-info.php (صفحة المستخدم) و admin/my-info.php (صفحة الأدمن).
- * ست وعشرون سطراً متطابقة، لا يفرّقها إلا مصدر القيمة ومعرّف الحقل.
+ * This block — the splitting logic and the markup together — used to be copied into two
+ * files: account/my-info.php (the user's page) and admin/my-info.php (the admin's).
+ * Twenty-six identical lines, differing only in where the value came from and the
+ * field's id.
  *
- * المتغيرات:
- *   $phoneValue    string  الرقم كما هو مخزَّن (رمز الدولة ملتصق بالرقم)
- *   $phoneInputId  string  قيمة id للحقل — تعتمد عليها CSS وJS كل صفحة
+ * The variables:
+ *   $phoneValue    string  The number as stored (the country code joined to the number)
+ *   $phoneInputId  string  The field's id — each page's CSS and JavaScript depend on it
  *
- * لماذا partial لا helper؟ لأن ما يتكرر هو الماركب والمنطق معاً، والمنطق
- * لا يُستعمل خارج هذا الماركب — الكنترولر يستقبل الحقلين ويدمجهما بنفسه
- * ولا يحتاج قائمة الرموز إطلاقاً.
+ * Why a partial rather than a helper? Because what repeats is the markup and the logic
+ * together, and the logic is not used outside this markup — the controller receives the
+ * two fields and joins them itself, and needs the list of codes not at all.
  */
 
 $phoneValue   = (string)($phoneValue ?? '');
 $phoneInputId = $phoneInputId ?? 'phoneInput';
 
-// الرموز المدعومة، بالترتيب الذي تظهر به في القائمة
+// The supported codes, in the order they appear in the list
 $countryPrefixes = ['+962','+966','+971','+20','+965','+974','+973','+968','+1','+44','+90','+49'];
 
-// افصل رمز الدولة عن الرقم المحلي. أول تطابق يفوز، ولهذا يهمّ الترتيب:
-// '+962' يسبق '+96' لو أُضيف يوماً، وإلا التقط الأقصرُ الأطولَ.
+// Split the country code from the local number. The first match wins, which is why the
+// order matters: '+962' comes before '+96' should that ever be added, or the shorter
+// would swallow the longer.
 $detectedCode   = '';
 $localPhonePart = $phoneValue;
 foreach ($countryPrefixes as $pfx) {
@@ -37,7 +39,7 @@ foreach ($countryPrefixes as $pfx) {
 <div class="input-group">
     <select name="phone_country_code" class="form-select phone-code-select">
         <?php foreach ($countryPrefixes as $pfx): ?>
-        <?php // @escaping-safe: $countryPrefixes مصفوفة حرفية في هذا الملف ?>
+        <?php // @escaping-safe: $countryPrefixes is a literal array in this file ?>
         <option value="<?= $pfx ?>" <?= $detectedCode === $pfx ? 'selected' : '' ?>><?= $pfx ?></option>
         <?php endforeach; ?>
     </select>

@@ -1,11 +1,11 @@
 <?php
 /**
  * app/views/admin/inc/navbar.php
- * المتغيرات المتاحة (تأتي تلقائياً من AdminController::adminView()):
- *   $adminName  — اسم الأدمن
- *   $adminRole  — رتبته (A/B/C/D)
- *   $adminId    — معرّفه
- *   $csrf       — توكن CSRF الحالي
+ * The available variables (injected automatically by AdminController::adminView()):
+ *   $adminName  — the admin's name
+ *   $adminRole  — their rank (A/B/C/D)
+ *   $adminId    — their id
+ *   $csrf       — the current CSRF token
  */
 ?>
 <nav class="navbar custom-navbar navbar-expand-xl" id="mainNavbar">
@@ -24,7 +24,7 @@
 
                 <?php if (hasPermission('can_manage_admins')): ?>
                 <li class="nav-item">
-                    <?php // TODO: راوت /admin/admins لسا مو مسجل بـ Router.php ?>
+                    <?php // TODO: the /admin/admins route is not registered in Router.php yet ?>
                     <a class="nav-link text-warning fw-semibold" href="<?= URLROOT ?>/admin/admins">👑 Admins</a>
                 </li>
                 <?php endif; ?>
@@ -82,7 +82,7 @@
                 <?php endif; ?>
 
                 <li class="nav-item">
-                    <?php // دخول وضع تصفح المتجر كزائر — POST مع CSRF ?>
+                    <?php // Entering store-browsing mode as a visitor — a POST with CSRF ?>
                     <form method="POST" action="<?= URLROOT ?>/admin/store-mode/enter" class="d-inline m-0 p-0">
                         <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf) ?>">
                         <button type="submit" class="nav-link btn btn-link p-0 u-bare-button"
@@ -95,7 +95,7 @@
             <div class="d-flex gap-2 align-items-center flex-wrap justify-content-end mt-2 mt-lg-0">
                 <button id="theme-toggle" class="btn btn-outline-light" title="Toggle Theme">🌙</button>
 
-                <?php // جرس إشعارات الأدمن — مربوط بـ admin-notifications.js + /admin/notifications/* ?>
+                <?php // The admin notification bell — wired to admin-notifications.js and /admin/notifications/* ?>
                 <button id="adminNotifBell" class="btn btn-outline-light position-relative me-2"
                         type="button" aria-label="Admin Notifications" title="Notifications">
                     🔔 <span id="adminNotifBadge" class="counter-badge u-badge-dot d-none" aria-live="polite">0</span>
@@ -107,7 +107,7 @@
                         <span class="badge bg-dark ms-1 u-fs-60"><?= htmlspecialchars($adminRole) ?></span>
                     </button>
                     <ul class="dropdown-menu dropdown-menu-end u-surface-card">
-        <?php // My Info للأدمن — متاح الآن عبر AdminMyInfoController ?>
+        <?php // The admin's My Info — now available through AdminMyInfoController ?>
                         <li><a class="dropdown-item u-text" href="<?= URLROOT ?>/admin/my-info">👤 My Info</a></li>
                         <?php if ($adminId === 1): ?>
                         <li><a class="dropdown-item u-text" href="<?= URLROOT ?>/admin/backup">💾 Backup DB</a></li>
@@ -121,7 +121,7 @@
     </div>
 </nav>
 
-<?php // تمرير بيانات فقط — logoutAdmin() في js/admin/admin-layout/admin-navbar.js ?>
+<?php // Data only — logoutAdmin() lives in js/admin/admin-layout/admin-navbar.js ?>
 <?= pageData(['_csrfToken' => $csrf]) ?>
 
 <main id="main-content" class="container-fluid py-4 px-4">

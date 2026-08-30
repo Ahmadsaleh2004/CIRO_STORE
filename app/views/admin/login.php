@@ -1,22 +1,22 @@
 <?php
 /**
- * app/views/admin/login.php — صفحة تسجيل دخول الأدمن.
+ * app/views/admin/login.php — the admin sign-in page.
  *
- * layout: 'bare' — لا navbar المتجر ولا navbar الأدمن. كانت هذه الصفحة
- * تكتب <!DOCTYPE html> و<head> كاملين بيدها؛ صارا في inc/head-bare.php.
+ * layout: 'bare' — neither the store navbar nor the admin one. This page used to write
+ * a full <!DOCTYPE html> and <head> by hand; those now live in inc/head-bare.php.
  *
- * صفحة مستقلة عن أنظمة الأصول: ملف CSS واحد يحمل ألوانه ومتغيراته
- * بنفسه — لا store.css ولا admin.css هنا.
+ * A page independent of the asset bundles: a single CSS file carrying its own colours
+ * and variables — neither store.css nor admin.css here.
  */
 
 $bareTitle = 'Admin Login — ' . SITENAME;
 $bareCss   = ['css/admin/pages/login.css'];
 
-// هذه الصفحة تستدعي vendorJs('sweetalert2') في آخرها، وأنماطه ورقة
-// خارجية منفصلة — فالعَلَم إقرار بالاعتماد لا زينة.
+// This page calls vendorJs('sweetalert2') at its end, and its styles are a separate
+// external stylesheet — so the flag is an acknowledgement of that dependency, not decoration.
 $bareSwal  = true;
 
-// js/admin/admin-auth.js يقرأ جذر التطبيق من هذا الوسم تحديداً
+// js/admin/admin-auth.js reads the application root from this tag specifically
 $bareHead  = '<meta name="urlroot" content="' . URLROOT . '">';
 
 require APPROOT . '/views/inc/head-bare.php';
@@ -32,16 +32,16 @@ require APPROOT . '/views/inc/head-bare.php';
             <p>Admin Control Panel</p>
         </div>
 
-        <?php // رسالة الخطأ / النجاح ?>
+        <?php // The error or success message ?>
         <div class="alert-msg" id="alertMsg" role="alert" aria-live="polite"></div>
 
-        <?php // فورم تسجيل الدخول — إيميل + باسورد (+ حقل كود 2FA يظهر فقط عند الحاجة) ?>
+        <?php // The sign-in form — email and password (plus a 2FA code field, shown only when needed) ?>
         <form id="adminLoginForm" novalidate autocomplete="off">
 
             <?php // CSRF ?>
             <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(generateCsrfToken()) ?>">
 
-            <?php // الإيميل ?>
+            <?php // The email ?>
             <div class="form-group">
                 <label class="form-label" for="adminEmail">Email Address</label>
                 <input
@@ -57,7 +57,7 @@ require APPROOT . '/views/inc/head-bare.php';
                 >
             </div>
 
-            <?php // كلمة المرور ?>
+            <?php // The password ?>
             <div class="form-group">
                 <label class="form-label" for="adminPassword">Password</label>
                 <input
@@ -72,7 +72,7 @@ require APPROOT . '/views/inc/head-bare.php';
                 >
             </div>
 
-            <?php // حقل كود 2FA (TOTP) — يظهر فقط عندما يطلب السيرفر requires_2fa ?>
+            <?php // The 2FA (TOTP) code field — shown only when the server asks for requires_2fa ?>
             <div class="form-group d-none" id="twofaGroup">
                 <label class="form-label" for="adminTOTP">Authenticator Code</label>
                 <input
@@ -89,40 +89,40 @@ require APPROOT . '/views/inc/head-bare.php';
                 >
             </div>
 
-            <?php // hCaptcha — تظهر فقط بعد أول محاولة فاشلة (يتحكم فيها JS) ?>
-            <?php // data-sitekey يُقرأ من admin-auth.js عبر dataset ?>
+            <?php // hCaptcha — shown only after the first failed attempt (JavaScript controls it) ?>
+            <?php // data-sitekey is read by admin-auth.js through dataset ?>
             <div
                 id="captcha-container"
                 aria-hidden="true"
                 data-sitekey="<?= htmlspecialchars($_ENV['HCAPTCHA_SITE_KEY'] ?? '') ?>"
             >
-                <?php // Widget hCaptcha سيُحقن هنا بواسطة admin-auth.js ?>
+                <?php // The hCaptcha widget is injected here by admin-auth.js ?>
             </div>
 
-            <?php // زر الدخول ?>
+            <?php // The sign-in button ?>
             <button type="submit" id="loginBtn" class="btn-login">
                 Sign In
             </button>
 
-            <?php // مؤقت الحظر ?>
+            <?php // The lockout timer ?>
             <p class="lockout-timer" id="lockoutTimer">
                 Access locked — try again in <span id="lockoutCountdown">30:00</span>
             </p>
         </form>
 
-        <?php // رابط العودة للمتجر — مُخفى بصرياً لأمان SEO، موجود للـ accessibility ?>
+        <?php // The link back to the store — visually hidden for SEO safety, present for accessibility ?>
         <a href="<?= URLROOT ?>/" class="back-link" tabindex="-1" aria-hidden="true">← Back to Store</a>
 
     </div>
 </div>
 
-<?php // Bootstrap JS فقط — لا يُحمَّل أي JS خاص بالمتجر العام ?>
+<?php // Bootstrap JS alone — none of the public store's JavaScript is loaded ?>
 <?= vendorJs('bootstrap-js') ?>
 
-<?php // SweetAlert2 — مطلوبة لتنبيه الترحيب بعد نجاح تسجيل الدخول ?>
+<?php // SweetAlert2 — needed for the welcome alert after a successful sign-in ?>
 <?= vendorJs('sweetalert2') ?>
 
-<?php // ملف JS المخصص لـ Admin Auth — لا يُحمَّل أي ملف JS آخر من المتجر ?>
+<?php // The JavaScript file for admin auth — no other store JavaScript file is loaded ?>
 <script src="<?= URLROOT ?>/js/admin/admin-auth.js" defer></script>
 
 <?php require APPROOT . '/views/inc/footer-bare.php'; ?>

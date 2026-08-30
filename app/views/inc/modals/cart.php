@@ -1,8 +1,8 @@
 <?php
 /**
  * app/views/inc/modals/cart.php
- * Cart Sidebar (Offcanvas) — Partial فقط، يُستدعى من footer.php
- * منقول من components/footer.php القديم (سطر 67–89)
+ * Cart sidebar (offcanvas) — a partial only, included from footer.php.
+ * Moved out of the old components/footer.php (lines 67–89).
  */
 ?>
 <?php // ══ Cart Sidebar ════════════════════════════════════════ ?>

@@ -1,8 +1,8 @@
 <?php
 /**
  * app/views/inc/modals/forgot-password.php
- * Forgot Password Modal — Partial فقط، يُستدعى من footer.php
- * منقول من components/footer.php القديم (سطر 288–321)
+ * Forgot password modal — a partial only, included from footer.php.
+ * Moved out of the old components/footer.php (lines 288–321).
  */
 ?>
 <?php // ══ Forgot Password Modal ════════════════════════════════ ?>
@@ -21,9 +21,9 @@
                 <form id="forgotForm">
                     <input type="hidden" name="action" value="forgot">
                     <?php /*
-بدون هذا الحقل كان AuthController::forgot() يرفض كل طلب
-                         بـ "Invalid CSRF token" قبل الوصول لإرسال الإيميل إطلاقًا.
-                         $csrfToken يعرّفه footer.php قبل تضمين المودالات.
+Without this field, AuthController::forgot() refused every request
+                         with "Invalid CSRF token" before ever reaching the email send.
+                         $csrfToken is defined by footer.php before the modals are included.
 */ ?>
                     <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken ?? '') ?>">
                     <div class="float-group">

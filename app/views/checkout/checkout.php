@@ -1,11 +1,11 @@
 <?php
 /**
  * app/views/checkout/checkout.php
- * صفحة الدفع — 3 خطوات: العنوان → الدفع → المراجعة
- * البيانات تأتي جاهزة من CheckoutController::index()
+ * The checkout page — three steps: address → payment → review.
+ * The data arrives ready from CheckoutController::index().
  */
 ?>
-<?php // كتلة <style> المضمّنة نُقلت إلى css/store/pages/checkout.css ?>
+<?php // The inline <style> block moved to css/store/pages/checkout.css ?>
 
 <main id="main-content" class="container py-5"
       data-checkout-urlroot="<?= URLROOT ?>"
@@ -49,7 +49,7 @@
             <p class="text-muted small mb-3">Or add a new address:</p>
             <?php endif; ?>
 
-            <?php // فورم عنوان جديد ?>
+            <?php // The new-address form ?>
             <div id="newAddrForm">
                 <div class="row g-2">
                     <div class="col-md-6">
@@ -154,5 +154,5 @@
     </div><?php // /row ?>
 </main>
 
-<?php // منطق الصفحة في js/features/checkout.js — البيانات تصله عبر data-* على <main> ?>
+<?php // The page logic lives in js/features/checkout.js — the data reaches it through data-* on <main> ?>
 

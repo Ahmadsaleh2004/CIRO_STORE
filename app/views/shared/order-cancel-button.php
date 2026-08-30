@@ -1,10 +1,11 @@
 <?php
 /**
  * app/views/shared/order-cancel-button.php
- * زر إلغاء/حذف الطلب — مشترك بين واجهة المستخدم (my-info.php) ولوحة الأدمن (order-details.php).
- * المتغيرات المطلوبة قبل include:
- *   $orderId        — رقم الطلب
- *   $orderContext   — 'user' | 'admin'  (يتحكم بنص الزر ونقطة الوصول المستدعاة)
+ * The cancel/delete order button — shared between the user interface (my-info.php) and
+ * the admin panel (order-details.php).
+ * Variables required before including it:
+ *   $orderId        — the order number
+ *   $orderContext   — 'user' | 'admin' (it governs the button's text and the endpoint called)
  */
 $orderContext = $orderContext ?? 'user';
 $endpoint     = $orderContext === 'admin'

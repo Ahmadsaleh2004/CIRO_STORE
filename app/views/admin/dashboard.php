@@ -1,9 +1,9 @@
 <?php
 /**
- * app/views/admin/dashboard.php — fragment فقط (بدون DOCTYPE/html/head/body)
+ * app/views/admin/dashboard.php — a fragment only (no DOCTYPE/html/head/body).
  * Loaded by AdminController::adminView() after inc/head.php and inc/navbar.php
- * كل المتغيرات جاهزة من AdminDashboardController::index()
- * لا يحتوي على أي استعلامات أو منطق — هذا مكانه في الـ Controller والـ Model فقط.
+ * Every variable arrives ready from AdminDashboardController::index().
+ * It contains no queries and no logic — those belong in the controller and the model alone.
  */
 ?>
 
@@ -69,14 +69,14 @@
             </div>
             <div class="u-chart-box"><canvas id="salesChart"></canvas></div>
             <?php
-            // أرقام الرسم البياني — بيانات في جزيرة JSON، لا كود.
+            // The chart's figures — data in a JSON island, not code.
             //
-            // كانت تُحقن داخل كتلة <script> يبنيها الـController بضمّ
-            // النصوص، وهي كتلة تنفيذ تحجبها CSP ولا يمكن بصمها لأن
-            // محتواها يتغيّر يومياً. راجع AdminDashboardController.
+            // They used to be injected inside a <script> block the controller assembled by
+            // string concatenation — an executable block that CSP blocks and that cannot be
+            // hashed, because its contents change daily. See AdminDashboardController.
             //
-            // وموضعها هنا لا في $extraScripts: الفوتر يطبع
-            // $extraScripts بعد js/core/page-data.js المتزامن.
+            // And it belongs here rather than in $extraScripts: the footer prints
+            // $extraScripts after the synchronous js/core/page-data.js.
             echo pageData([
                 'ADMIN_SALES_CHART' => [
                     'labels' => $chartLabels,

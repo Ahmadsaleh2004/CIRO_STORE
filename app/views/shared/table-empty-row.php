@@ -1,27 +1,26 @@
 <?php
 /**
  * app/views/shared/table-empty-row.php
- * صفّ «لا توجد سجلات» داخل جدول أدمن فارغ.
+ * The "no records" row inside an empty admin table.
  *
- * كانت الكتلة مكتوبة في خمسة جداول: backup · manage-admins/index ·
- * orders/index · product/index · users/index. أربعة منها متطابقة عدا
- * قيمة colspan والنص، والخامس يختلف في التباعد.
+ * The block used to be written into five tables: backup · manage-admins/index ·
+ * orders/index · product/index · users/index. Four of them identical apart from the
+ * colspan and the text, and the fifth differing in its padding.
  *
- * المتغيرات:
- *   $emptyColspan  int     عدد الأعمدة (مطلوب — يختلف بين الجداول)
- *   $emptyMessage  string  النص المعروض
- *   $emptyPadding  string  صنف التباعد الرأسي: 'py-4' (افتراضي) أو 'py-5'
+ * The variables:
+ *   $emptyColspan  int     The column count (required — it differs per table)
+ *   $emptyMessage  string  The text to display
+ *   $emptyPadding  string  The vertical padding class: 'py-4' (the default) or 'py-5'
  *
- * ⚠️ $emptyMessage يُطبع كما هو بلا هروب: صفحة المنتجات تمرّر نصاً فيه
- * مصطلح البحث مُهرَّباً مسبقاً بـhtmlspecialchars. الهروب هنا كان
- * سيُظهر الكيانات حرفياً. مسؤولية المستدعي أن يُهرّب ما يأتي من
- * المستخدم — وقد فعلت الصفحة الوحيدة التي تفعل ذلك.
+ * ⚠️ $emptyMessage is printed as-is, unescaped: the products page passes text
+ * containing the search term already escaped with htmlspecialchars. Escaping here would
+ * have rendered the entities literally. It is the caller's responsibility to escape what
+ * comes from the user — and the one page that does so has done it.
  *
- * ملاحظة على اللون: users/index كانت تستعمل صنف Bootstrap ‏.text-muted
- * بينما البقية تستعمل المتغيّر var(--muted-text). قِستُ الاثنين في
- * المتصفح في الوضعين الفاتح والداكن فأعطيا اللون نفسه بالضبط —
- * المشروع يعيد تعريف .text-muted على النغمة نفسها — فالتوحيد على
- * المتغيّر بلا أي تغيير مرئي.
+ * A note on the colour: users/index used Bootstrap's .text-muted class while the rest
+ * used the var(--muted-text) variable. I measured both in the browser in light and dark
+ * mode and they gave exactly the same colour — the project redefines .text-muted to the
+ * same tone — so unifying on the variable changes nothing visible.
  */
 
 $emptyPadding = $emptyPadding ?? 'py-4';

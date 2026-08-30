@@ -1,15 +1,15 @@
 <?php
 
 /**
- * app/views/admin/users/details.php — fragment فقط
- * المتغيرات من AdminUsersController::details():
+ * app/views/admin/users/details.php — a fragment only.
+ * The variables from AdminUsersController::details():
  *   $target, $addresses, $orders, $strikes, $auditLog, $messages
- *   + تلقائية: $adminRole, $adminId, $csrf
- * JS: دوائر الـ strikes (.strike-btn) يتعامل معها users.js
- *     openNotifyModal من admins.js
+ *   + injected automatically: $adminRole, $adminId, $csrf
+ * JavaScript: the strike circles (.strike-btn) are handled by users.js;
+ *     openNotifyModal comes from admins.js
  */
 
-// إحصائيات الطلبات محسوبة بالـ view من $orders الممررة (بدون استعلام إضافي)
+// The order statistics are computed in the view from the $orders passed in (with no extra query)
 $completedOrders = array_filter($orders, fn($o) => ($o['status'] ?? '') === 'completed');
 $completedTotal  = array_sum(array_map(fn($o) => (float)$o['total_amount'], $completedOrders));
 $strikesCount    = (int)$target['strikes_count'];
@@ -91,8 +91,9 @@ $strikesLabel    = $strikesCount >= 3 ? 'Blocked' : ($strikesCount > 0 ? 'Warnin
 
             <div id="strikesContainer">
             <?php
-            // الأقدم أولًا — خاص بعرض الدوائر فقط عشان رقم الدائرة يطابق ترتيب الصدور 1→2→3
-            // (لا تغيّر getStrikes() نفسها — مرتبة DESC لمكان تاني)
+            // Oldest first — for the circles' display alone, so a circle's number matches the
+            // order the strikes were issued in, 1→2→3.
+            // (Do not change getStrikes() itself — it is ordered DESC for somewhere else.)
             $strikesForCircles = array_reverse($strikes);
             for ($i = 1; $i <= 3; $i++):
                 $strike = $strikesForCircles[$i - 1] ?? null;
@@ -106,7 +107,7 @@ $strikesLabel    = $strikesCount >= 3 ? 'Blocked' : ($strikesCount > 0 ? 'Warnin
                         data-active="<?= $active ? '1' : '0' ?>"
                         data-user-id="<?= (int)$target['id'] ?>"
                         title="<?= $active ? 'Click to remove this strike' : 'Click to add a strike' ?>">
-                    <?php // @escaping-safe: رمز حرفي أو $i عدّاد صحيح ?>
+                    <?php // @escaping-safe: a literal symbol, or $i, an integer counter ?>
                     <?= $active ? '❌' : $i ?>
                 </button>
                 <div class="strike-reason">
@@ -230,7 +231,7 @@ $strikesLabel    = $strikesCount >= 3 ? 'Blocked' : ($strikesCount > 0 ? 'Warnin
 
 <?php /*
 ════════════════════════════════════════════════════════
-     Section 5 — Audit Log (آخر قسم)
+     Section 5 — Audit Log (the final section)
      ════════════════════════════════════════════════════════
 */ ?>
 <div class="card p-4 mb-4">

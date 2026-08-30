@@ -1,21 +1,22 @@
 <?php
 /**
- * app/views/admin/orders/index.php — fragment فقط
- * المتغيرات من AdminOrdersController::index():
+ * app/views/admin/orders/index.php — a fragment only.
+ * The variables from AdminOrdersController::index():
  *   $orders, $totalOrders, $totalPages, $currentPage, $filter, $search,
  *   $flashMsg, $flashErr, $csrf, $adminRole, $adminId
- * JS المسؤول: orders.js (goToOrderDetails / filterStatus / deleteOrder)
- * ملاحظة: زر حذف نهائي (🗑) يظهر فقط على الطلبات بحالة completed أو cancelled.
+ * The JavaScript responsible: orders.js (goToOrderDetails / filterStatus / deleteOrder).
+ * Note: the hard-delete button (🗑) appears only on orders in the completed or cancelled
+ * state.
  */
 ?>
 
 <?php // ── Page Header ────────────────────────────────────────── ?>
 <?php /*
-الترويسة تحمل العنوان وأزرار الإجراءات فقط — نفس نمط
-     users/index.php و manage-admins/index.php و product/index.php.
-     البحث والفلترة انتقلا لصف مستقل تحت الرسائل (انظر أدناه).
-     ملاحظة: .admin-page-header معرّف أصلاً كـ flex + space-between +
-     wrap + gap في admin.css، فلا حاجة لتكرار كلاسات Bootstrap هنا.
+The header carries the title and the action buttons alone — the same pattern as
+     users/index.php, manage-admins/index.php and product/index.php.
+     Search and filtering moved to a row of their own beneath the messages (see below).
+     Note: .admin-page-header is already defined as flex + space-between + wrap + gap in
+     admin.css, so there is no need to repeat Bootstrap's classes here.
 */ ?>
 <div class="admin-page-header">
     <h1>📦 Manage Orders <span class="badge bg-secondary fw-normal u-fs-90 align-middle"><?= (int)$totalOrders ?></span></h1>
@@ -33,12 +34,12 @@
 
 <?php // ── Search + Status Filter ─────────────────────────────── ?>
 <?php /*
-صف واحد مسطّح بنفس بنية users/index.php بالضبط. تجنّبنا وضع فورم
-     داخل div خارجي لأن التداخل يجعل الفورم عنصر flex ضيّقًا فيلتف الصف
-     إلى سطرين (قيس فعليًا: 77px بدل 38px).
-     الـ <select> بلا خاصية name عمدًا: التنقّل يتم فورًا عبر
-     filterStatus() في orders.js، والحقل المخفي status هو الذي يحفظ
-     الفلتر عند البحث النصي — فلو حمل name لتكرّرت القيمة وتعارضت.
+A single flat row, with exactly the same structure as users/index.php. Putting the
+     form inside an outer div was avoided because the nesting makes the form a narrow flex
+     item, wrapping the row onto two lines (measured: 77px instead of 38px).
+     The <select> carries no name attribute deliberately: navigation happens immediately
+     through filterStatus() in orders.js, and the hidden status field is what preserves the
+     filter during a text search — so a name here would duplicate the value and conflict.
 */ ?>
 <form method="GET" action="<?= URLROOT ?>/admin/orders" class="d-flex gap-2 flex-wrap mb-3">
     <?php if ($filter): ?>
@@ -95,7 +96,7 @@
                     <td><?php
                         $orderStatus = $o['status'];
                         $badgeExtraClass = '';
-                        // هذه الصفحة وحدها تكتب "Not Taken" بتاء كبيرة
+                        // This page alone writes "Not Taken" with a capital T
                         $badgeLabel  = match($o['status']) {
                             'not_taken' => 'Not Taken',
                             'taken'     => 'Taken',
@@ -130,7 +131,7 @@
 
 <?php // ── Pagination ─────────────────────────────────────────── ?>
 <?php if ($totalPages > 1):
-    // بناء query string الفلاتر للـ pagination — يحافظ على q/status عند التنقل
+    // Build the filters' query string for the pagination — it preserves q and status while navigating
     $paginationBase = http_build_query(array_filter([
         'q'      => $search,
         'status' => $filter,

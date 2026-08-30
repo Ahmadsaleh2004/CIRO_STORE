@@ -1,13 +1,13 @@
 <?php
 /**
  * app/views/errors/404.php
- * صفحة «الصفحة غير موجودة».
+ * The "page not found" page.
  *
- * تُستدعى من Controller::renderViewNotFound() عبر require مباشر لا عبر
- * view() — استدعاء view() من داخل معالج خطأ الـview يعني تكراراً لا
- * نهائياً لو كان الملف الغائب هو هذه الصفحة نفسها.
+ * Included from Controller::renderViewNotFound() with a direct require rather than
+ * through view() — calling view() from inside the missing-view handler means an infinite
+ * loop if the missing file is this page itself.
  *
- * لا تطبع أبداً مسار الملف الغائب: المسار في سجل أخطاء PHP وحده.
+ * It never prints the missing file's path: that goes to the PHP error log alone.
  */
 
 $bareTitle     = '404 — ' . SITENAME;

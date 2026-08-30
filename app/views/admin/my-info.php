@@ -1,9 +1,10 @@
 <?php
 /**
- * app/views/admin/my-info.php — fragment فقط (بدون DOCTYPE/html/head/body)
+ * app/views/admin/my-info.php — a fragment only (no DOCTYPE/html/head/body).
  * Loaded by AdminController::adminView() after inc/head.php and inc/navbar.php
- * المتغيرات المتاحة: $adminName, $adminRole, $adminId, $csrf (من adminView) + $profile (من Controller)
- * لا يحتوي على أي منطق أو استيراد خاص باليوزر العادي.
+ * The available variables: $adminName, $adminRole, $adminId, $csrf (from adminView) plus
+ * $profile (from the controller).
+ * It contains no logic and no imports belonging to the regular user.
  */
 ?>
 
@@ -16,7 +17,7 @@
     </div>
 </div>
 
-<?php // Tab Header — تبويب واحد فقط، نشط دائمًا ?>
+<?php // Tab header — a single tab, always active ?>
 <ul class="nav nav-tabs mb-4">
     <li class="nav-item">
         <button class="nav-link info-tab-btn active u-cursor-default" type="button" disabled>
@@ -25,14 +26,14 @@
     </li>
 </ul>
 
-<?php // كارد الفورم ?>
+<?php // The form card ?>
 <div class="card p-4 u-mw-550">
     <h4 class="mb-4">✏️ Personal Information</h4>
 
     <form id="adminProfileForm" novalidate autocomplete="off">
         <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf) ?>">
 
-        <?php // رسالة النجاح / الخطأ ?>
+        <?php // The success or error message ?>
         <div id="profileMsg" class="alert py-2 small d-none"></div>
 
         <?php // Full Name ?>
@@ -57,7 +58,7 @@
             <label>Email Address <small class="text-muted">(cannot change)</small></label>
         </div>
 
-        <?php // Phone Number — نفس الـpartial المستعمل في صفحة المستخدم ?>
+        <?php // Phone number — the same partial the user's page uses ?>
         <div class="float-group mb-3">
             <?php
             $phoneValue   = $profile['phone_number'] ?? '';
@@ -78,7 +79,7 @@
             <label for="adminNewPassword">New Password <small class="text-muted">(leave blank to keep)</small></label>
         </div>
 
-        <?php // Current Password — إلزامي دائمًا ?>
+        <?php // Current password — always required ?>
         <div class="float-group mb-4">
             <input type="password"
                    id="adminCurrentPassword"
@@ -94,7 +95,7 @@
     </form>
 </div>
 
-<?php // ════════════════════ التحقق الثنائي (2FA / TOTP) ════════════════════ ?>
+<?php // ═══════════════ Two-factor authentication (2FA / TOTP) ═══════════════ ?>
 <div class="card p-4 mt-4 u-mw-550">
     <div class="d-flex align-items-center justify-content-between mb-2">
         <h4 class="mb-0">🔑 Two-Factor Authentication</h4>
@@ -111,7 +112,7 @@
     <div id="twofaMsg" class="alert py-2 small d-none"></div>
 
     <?php if (!empty($profile['totp_enabled'])): ?>
-        <?php // حالة: مفعّل → زر تعطيل مع طلب كلمة المرور الحالية ?>
+        <?php // State: enabled → a disable button asking for the current password ?>
         <form id="twofaDisableForm" novalidate autocomplete="off">
             <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf) ?>">
             <div class="float-group mb-3">
@@ -127,7 +128,7 @@
             <button type="submit" class="btn btn-warning w-100">🔓 Disable 2FA</button>
         </form>
     <?php else: ?>
-        <?php // حالة: غير مفعّل → زر تفعيل + عرض QR/secret + حقل تأكيد الكود ?>
+        <?php // State: not enabled → an enable button, the QR and secret, and a confirmation field ?>
         <div id="twofaSetup">
             <button type="button" id="twofaEnableBtn" class="btn btn-success w-100">🔐 Enable 2FA</button>
         </div>
@@ -135,11 +136,11 @@
         <div id="twofaSetupStep" class="d-none">
             <div class="text-center my-3">
                 <?php /*
-بلا سمة src: src="" يجعل المتصفح يطلب عنوان الصفحة
-                     نفسها في كل تحميل ثم يفشل. المصدر يضبطه
-                     js/admin/my-info.js عند بدء الإعداد. العنصر داخل
-                     حاوية مخفية حتى تلك اللحظة، وwidth/height يحجزان
-                     مساحته فلا يقفز التخطيط.
+No src attribute: src="" makes the browser request the page's own URL
+                     on every load and then fail. The source is set by
+                     js/admin/my-info.js when setup begins. The element sits inside a
+                     hidden container until that moment, and width/height reserve its
+                     space so the layout does not jump.
 */ ?>
                 <img id="twofaQr" alt="QR Code" width="220" height="220"
                      class="twofa-qr">
@@ -166,5 +167,5 @@
     <?php endif; ?>
 </div>
 
-<?php // منطق الصفحة في js/admin/my-info.js — يُحمَّل عبر extraScripts ?>
+<?php // The page logic lives in js/admin/my-info.js — loaded through extraScripts ?>
 

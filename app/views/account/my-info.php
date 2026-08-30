@@ -1,9 +1,10 @@
 <?php
 /**
  * app/views/account/my-info.php
- * صفحة حسابي — 3 تبويبات: بياناتي | طلباتي | عناويني
- * البيانات تأتي جاهزة من MyInfoController::index()
- * هذه صفحة اليوزر العادي حصرًا. الأدمن له صفحة منفصلة كليًا: views/admin/my-info.php
+ * The account page — three tabs: my info | my orders | my addresses.
+ * The data arrives ready from MyInfoController::index().
+ * This is the regular user's page exclusively. The admin has an entirely separate one:
+ * views/admin/my-info.php
  */
 ?>
 <main id="main-content" class="container py-5">
@@ -43,7 +44,7 @@
 
     <div class="tab-content">
 
-        <?php // ── تبويب بياناتي ──────────────────────────── ?>
+        <?php // ── The "my info" tab ─────────────────────────── ?>
         <div class="tab-pane fade show active" id="tab-profile">
             <div class="card p-4 u-mw-550">
                 <h4 class="mb-4">✏️ Edit Profile</h4>
@@ -62,7 +63,7 @@
                         <label>Email Address <small class="text-muted">(cannot change)</small></label>
                     </div>
                     
-                    <?php // Phone Number — نفس الـpartial المستعمل في صفحة الأدمن ?>
+                    <?php // Phone number — the same partial the admin page uses ?>
                     <div class="float-group mb-3">
                         <?php
                         $phoneValue   = $user['phone_number'] ?? '';
@@ -115,7 +116,7 @@
             </div>
         </div>
 
-        <?php // ── تبويب طلباتي ───────────────────────────── ?>
+        <?php // ── The "my orders" tab ───────────────────────── ?>
         <div class="tab-pane fade" id="tab-orders">
             <?php if (empty($orders)): ?>
                 <div class="text-center py-5">
@@ -169,7 +170,7 @@
             <?php endif; ?>
         </div>
 
-        <?php // ── تبويب عناويني ──────────────────────────── ?>
+        <?php // ── The "my addresses" tab ────────────────────── ?>
         <div class="tab-pane fade" id="tab-addresses">
             <div class="row g-3 mb-4">
                 <?php if (empty($addresses)): ?>
@@ -204,7 +205,7 @@
                 <?php endif; ?>
             </div>
 
-            <?php // إضافة عنوان جديد ?>
+            <?php // Add a new address ?>
             <div class="card p-4 u-mw-600">
                 <h5 class="mb-3">➕ Add New Address</h5>
                 <form id="addAddrForm" novalidate>
@@ -256,10 +257,10 @@
 </main>
 
 <?php
-// كانت هنا كتلة <script> تعرّف ثابتين ثم تنسخ أحدهما إلى window.
-// الثابتان كانا في النطاق العام أصلاً (كتلة غير مغلَّفة)، فالنتيجة
-// واحدة — و js/features/account.js يقرأ window.URLROOT_INFO و
-// window.CSRF_INFO، لا الثابتين.
+// There used to be a <script> block here defining two constants and then copying one of
+// them onto window. Both constants were already in the global scope (the block was not
+// wrapped), so the outcome is the same — and js/features/account.js reads
+// window.URLROOT_INFO and window.CSRF_INFO, not the constants.
 ?>
 <?= pageData([
     'URLROOT_INFO' => URLROOT,

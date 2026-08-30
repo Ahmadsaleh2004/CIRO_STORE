@@ -1,8 +1,8 @@
 <?php
 /**
- * app/views/admin/settings.php — fragment فقط (بدون DOCTYPE/html/head/body)
+ * app/views/admin/settings.php — a fragment only (no DOCTYPE/html/head/body).
  * Loaded by AdminController::adminView() after inc/head.php and inc/navbar.php
- * المتغيرات الجاهزة من AdminSiteSettingsController::index():
+ * The variables arriving ready from AdminSiteSettingsController::index():
  *   $settings, $canEditCheckout, $csrf
  */
 ?>
@@ -198,9 +198,10 @@
 
     <?php /*
 ══════════════════════════════════════════════
-         Block 4 — Checkout Settings (شرطي — can_manage_checkout_settings)
-         الفلترة الأمنية الفعلية تصير في الكونترولر (AdminSiteSettingsController::save)
-         هذا الإخفاء بالـ View هو UX فقط — ليس الحماية الوحيدة
+         Block 4 — Checkout Settings (conditional — can_manage_checkout_settings)
+         The real security filtering happens in the controller
+         (AdminSiteSettingsController::save). Hiding it in the view is UX alone — it is
+         not the protection.
          ══════════════════════════════════════════════
 */ ?>
     <?php if ($canEditCheckout): ?>

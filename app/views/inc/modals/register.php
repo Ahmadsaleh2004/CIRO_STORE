@@ -1,9 +1,9 @@
 <?php
 /**
  * app/views/inc/modals/register.php
- * Register Modal — Partial فقط، يُستدعى من footer.php
- * منقول من components/footer.php القديم (سطر 144–287)
- * CSRF Token يأتي جاهزاً من $csrfToken الممررة عبر footer.php
+ * Register modal — a partial only, included from footer.php.
+ * Moved out of the old components/footer.php (lines 144–287).
+ * The CSRF token arrives ready in $csrfToken, passed through footer.php.
  */
 ?>
 <?php // ══ Register Modal ══════════════════════════════════════ ?>
@@ -22,7 +22,7 @@
                 <form id="signupForm" novalidate>
                     <input type="hidden" name="action"     value="register">
                     <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken ?? '') ?>">
-                    <input type="hidden" name="phone"      value=""><?php // يُملأ بـ auth.js ?>
+                    <input type="hidden" name="phone"      value=""><?php // Filled in by auth.js ?>
 
                     <div class="row">
                         <div class="col-md-6">

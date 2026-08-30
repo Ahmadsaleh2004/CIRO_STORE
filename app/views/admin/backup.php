@@ -1,9 +1,9 @@
 <?php
 /**
- * app/views/admin/backup.php — fragment فقط
- * المتغيرات من BackupController::index():
+ * app/views/admin/backup.php — a fragment only.
+ * The variables from BackupController::index():
  *   $backups, $pageTitle, $csrf, $adminName, $adminRole, $adminId
- * JS المسؤول: backup.js (زر الإنشاء + أزرار الحذف)
+ * The JavaScript responsible: backup.js (the create button and the delete buttons).
  */
 ?>
 <?php // ── Page Header ────────────────────────────────────────── ?>
@@ -18,13 +18,13 @@
 
 <?php
 /*
- * لا كتلة flash هنا عن قصد. كانت الصفحة تستدعي
- * shared/flash-messages.php، و**لم تُنفَّذ الكتلة ولا مرة**:
- * BackupController لا يقرأ $_SESSION['flash_*'] ولا يمرّر
- * $flashMsg/$flashErr إطلاقاً (بخلاف خمسة كنترولرز أخرى تفعل).
- * ولا يوجد في المشروع أي تحويل إلى /admin/backup يضع رسالة عابرة —
- * الصفحة تُفتح بالتنقّل فقط، ونقاطها الثلاث JSON أو تنزيل ملف،
- * ونتائجها تصل المستخدم عبر توست في backup.js.
+ * No flash block here, deliberately. The page used to include
+ * shared/flash-messages.php, and **the block never once executed**: BackupController
+ * reads no $_SESSION['flash_*'] and passes no $flashMsg or $flashErr at all (unlike five
+ * other controllers, which do). Nor is there any redirect to /admin/backup anywhere in
+ * the project that sets a flash message — the page is only reached by navigation, its
+ * three endpoints return JSON or a file download, and their results reach the user
+ * through a toast in backup.js.
  */
 ?>
 

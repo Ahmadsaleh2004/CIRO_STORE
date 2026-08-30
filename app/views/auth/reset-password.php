@@ -1,15 +1,15 @@
 <?php
 /**
  * app/views/auth/reset-password.php
- * صفحة إعادة تعيين كلمة المرور — تخدم المستخدم والأدمن معاً حسب $type.
+ * The password reset page — it serves both users and admins, according to $type.
  *
- * layout: 'bare' — لا navbar ولا footer المتجر. كانت تكتب <!DOCTYPE html>
- * و<head> كاملين بيدها؛ صارا في inc/head-bare.php.
+ * layout: 'bare' — no store navbar and no store footer. It used to write a full
+ * <!DOCTYPE html> and <head> by hand; those now live in inc/head-bare.php.
  *
- * المتغيرات المتاحة: $valid (bool), $token, $email, $type
+ * The available variables: $valid (bool), $token, $email, $type
  */
 
-// CSRF يحتاج جلسة فعّالة — resetForm() لا يبدأها، فنبدأها هنا
+// CSRF needs an active session — resetForm() does not start one, so it is started here
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
@@ -28,7 +28,7 @@ require APPROOT . '/views/inc/head-bare.php';
     <div class="reset-header">
         <span class="reset-icon"><?= $isAdmin ? '🔐' : '🔑' ?></span>
         <h1>Reset Password</h1>
-        <?php // @escaping-safe: SITENAME ثابت مشروع ?>
+        <?php // @escaping-safe: SITENAME is a project constant ?>
         <p><?= $isAdmin ? SITENAME . ' Admin Panel' : SITENAME ?></p>
     </div>
 
@@ -79,7 +79,7 @@ require APPROOT . '/views/inc/head-bare.php';
 
 <?= vendorJs("bootstrap-js") ?>
 <script src="<?= URLROOT ?>/js/core/csrf.js" defer></script>
-<?php // تمرير بيانات فقط — المنطق في js/features/reset-password.js ?>
+<?php // Data only — the logic lives in js/features/reset-password.js ?>
 <?= pageData(['BASE_URL' => URLROOT, 'URLROOT' => URLROOT]) ?>
 <script src="<?= URLROOT ?>/js/features/reset-password.js" defer></script>
 

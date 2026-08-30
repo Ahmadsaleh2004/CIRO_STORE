@@ -9,8 +9,8 @@
 <?= vendorCss('bootstrap-css') ?>
 <?= vendorCss('sweetalert2-css') ?>
     <?php /*
-store.css أولاً (لوحة التحكم تعيد استخدام كل طبقة المتجر)
-         ثم admin.css فوقها. راجع public/css/admin.css للترتيب.
+store.css first (the admin panel reuses the store's entire layer),
+         then admin.css on top of it. See public/css/admin.css for the order.
 */ ?>
 <?= cssBundle('admin') ?>
     <?= $extraHead ?? '' ?>

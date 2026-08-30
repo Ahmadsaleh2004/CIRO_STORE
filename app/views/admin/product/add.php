@@ -1,7 +1,7 @@
 <?php
 /**
- * app/views/admin/product/add.php — fragment فقط
- * المتغيرات من AdminProductsController::showAdd():
+ * app/views/admin/product/add.php — a fragment only.
+ * The variables from AdminProductsController::showAdd():
  *   $categories, $formErr, $csrf
  */
 ?>
@@ -62,7 +62,7 @@
 
     </div>
 
-    <?php // ══ Categories (الفرق الوحيد عن القديم: popup بدل checkboxes ظاهرة) ════ ?>
+    <?php // ══ Categories (the only difference from before: a popup rather than visible checkboxes) ════ ?>
     <label class="small fw-bold mb-2 d-block">
         Categories <span class="text-danger">*</span>
     </label>
@@ -78,7 +78,7 @@
         Please select at least one category.
     </div>
 
-    <?php // ══ Product Image (إجباري بصفحة Add) ════════════════════ ?>
+    <?php // ══ Product image (mandatory on the add page) ═══════════════ ?>
     <div class="mb-4">
         <label class="fw-bold d-block mb-1">
             Product Image <span class="text-danger">*</span>
@@ -103,10 +103,10 @@
     </div>
 
     <div id="variantsContainer">
-        <?php // صفوف الألوان تُضاف تلقائياً عند DOMContentLoaded من products.js ?>
+        <?php // The colour rows are added automatically at DOMContentLoaded by products.js ?>
     </div>
 
-    <?php // Template: مخفي، يُستنسخ بـ products.js::initAddProductForm ?>
+    <?php // Template: hidden, cloned by products.js::initAddProductForm ?>
     <template id="variantRowTemplate">
         <div class="variant-row card p-3 mb-3 u-surface-page">
             <div class="d-flex justify-content-between align-items-center mb-2">

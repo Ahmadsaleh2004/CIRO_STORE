@@ -1,15 +1,15 @@
 <?php
 /**
- * app/views/admin/orders/details.php — fragment فقط
- * المتغيرات من AdminOrdersController::details():
+ * app/views/admin/orders/details.php — a fragment only.
+ * The variables from AdminOrdersController::details():
  *   $order, $items, $productNames, $userStrikes, $remSeconds
- *   + تلقائية: $adminRole, $adminId, $csrf
- * JS المسؤول: orders.js (takeBtn/countdown/reportBtn/deliverBtn/cancelDelBtn)
+ *   + injected automatically: $adminRole, $adminId, $csrf
+ * The JavaScript responsible: orders.js (takeBtn/countdown/reportBtn/deliverBtn/cancelDelBtn)
  */
 
-// بادج الحالة + سطر المناول
-// بادج الحالة يُبنى من shared/order-status-badge.php — تُلتقط مخرجاته
-// في متغيّر لأنه يُطبع داخل <h1> بعد سطور من هنا.
+// The status badge and the handler line.
+// The status badge is built by shared/order-status-badge.php — its output is captured
+// into a variable because it is printed inside an <h1> some lines below here.
 $orderStatus = $order['status'];
 $badgeExtraClass = 'fs-6';
 $badgeLabel  = match($order['status']) {
@@ -34,7 +34,7 @@ if ($order['status'] === 'completed' && !empty($order['handler_admin_name'])) {
 <div class="admin-page-header d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4">
     <h1>
         🧾 Order #<?= (int)$order['order_id'] ?>
-        <?php // @escaping-safe: HTML يبنيه هذا الملف — القيم المتغيّرة مهرَّبة عند البناء ?>
+        <?php // @escaping-safe: HTML built by this file — the variable values are escaped as it is built ?>
         <?= $statusBadge ?>
     </h1>
     <div class="d-flex gap-2 align-items-center flex-wrap">
@@ -49,14 +49,14 @@ if ($order['status'] === 'completed' && !empty($order['handler_admin_name'])) {
     </div>
 </div>
 <?php if ($handlerLine): ?>
-<?php // @escaping-safe: HTML يبنيه هذا الملف — القيم المتغيّرة مهرَّبة عند البناء ?>
+<?php // @escaping-safe: HTML built by this file — the variable values are escaped as it is built ?>
 <p class="text-muted small mb-4"><?= $handlerLine ?></p>
 <?php endif; ?>
 
 <div class="row g-4">
     <?php /*
 ════════════════════════════════════════════════════════
-         العمود الأيسر (الرئيسي) — col-lg-8
+         The left (main) column — col-lg-8
          ════════════════════════════════════════════════════════
 */ ?>
     <div class="col-12 col-lg-8">
@@ -166,7 +166,7 @@ if ($order['status'] === 'completed' && !empty($order['handler_admin_name'])) {
 
     <?php /*
 ════════════════════════════════════════════════════════
-         العمود الأيمن (الجانبي) — col-lg-4
+         The right (side) column — col-lg-4
          ════════════════════════════════════════════════════════
 */ ?>
     <div class="col-12 col-lg-4">
@@ -229,31 +229,31 @@ if ($order['status'] === 'completed' && !empty($order['handler_admin_name'])) {
 </div>
 
 <?php
-// بيانات الصفحة للـ JS.
+// The page's data for JavaScript.
 //
-// ⚠️ كانت تُبنى بضمّ نصوص داخل <script>:
+// ⚠️ It used to be assembled by string concatenation inside a <script>:
 //     'orderId: ' . (int)$order['order_id'] . ','
-// وهو بناء JS بالسلاسل — يعمل هنا لأن كل قيمة مُحوَّلة أو مُرمَّزة،
-// لكنه شكلٌ يكفي فيه سهوٌ واحد (قيمة نصّية تُضمّ بلا json_encode)
-// ليصير حقن سكربت. والآن البيانات بيانات، وjson_encode في pageData
-// يتولّى الترميز كلّه — بما فيه </script> عبر JSON_HEX_TAG.
+// which is building JavaScript out of strings — it works here because every value is
+// cast or encoded, but it is a shape where one oversight (a string value concatenated
+// without json_encode) becomes script injection. Now the data is data, and json_encode
+// inside pageData handles all the encoding — including </script>, through JSON_HEX_TAG.
 //
-// ⚠️⚠️ وتُطبع **هنا في جسم الـview**، لا عبر $extraScripts.
+// ⚠️⚠️ And it is printed **here in the view's body**, not through $extraScripts.
 //
-// كانت مُسنَدة إلى $extraScripts، وهو ما يجعل الجزيرة تُطبع في
-// admin/inc/footer.php **بعد** وسم js/core/page-data.js. وذلك الملف
-// متزامن لا مؤجَّل — ينفَّذ لحظة يبلغه المحلّل — فكان يمسح المستند
-// وقتها ولا يجد سوى جزيرتَي head وnavbar. جزيرة هذه الصفحة لم تكن
-// قد وُلدت بعد، فلم تصل window أبداً.
+// It used to be assigned to $extraScripts, which makes the island print in
+// admin/inc/footer.php **after** the js/core/page-data.js tag. And that file is
+// synchronous rather than deferred — it executes the moment the parser reaches it — so
+// it scanned the document at that point and found only the head and navbar islands. This
+// page's island had not been created yet, so it never reached window at all.
 //
-// والنتيجة عطلٌ كامل صامت: orders.js يستدعي initOrderDetails بشرط
-// `typeof window.ADMIN_ORDER_DETAILS !== 'undefined'` — وهو شرط لم
-// يتحقّق قط. وداخل تلك الدالة تُعرَّف window.handleTakeIt. فكان زرّ
-// «Take It» يُنقر، ويفوّض inline-actions.js الفعل، فلا يجد الدالة،
-// فيكتب سطراً في console وينتهي. لا حوار، لا طلب، لا رسالة — بدا
-// أن أخذ الطلبات معطّل في الخادم وهو سليم تماماً.
+// The result was a complete, silent outage: orders.js calls initOrderDetails on the
+// condition `typeof window.ADMIN_ORDER_DETAILS !== 'undefined'` — a condition that never
+// once held. And window.handleTakeIt is defined inside that function. So the "Take It"
+// button was clicked, inline-actions.js delegated the action, found no such function,
+// wrote a line to the console and stopped. No dialog, no request, no message — it looked
+// as though taking orders was broken on the server, while the server was perfectly sound.
 //
-// الجزيرة تسبق الفوتر هنا، فيلتقطها page-data.js كما يلتقط البقيّة.
+// Here the island precedes the footer, so page-data.js picks it up like all the others.
 echo pageData([
     'ADMIN_ORDER_DETAILS' => [
         'orderId'      => (int) $order['order_id'],

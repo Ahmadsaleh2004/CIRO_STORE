@@ -1,8 +1,8 @@
 <?php
 /**
  * app/views/home.php
- * صفحة العرض الرئيسية (Home View)
- * تستلم البيانات جاهزة من HomeController عبر مصفوفة $data
+ * The home page view.
+ * It receives its data ready from HomeController through the $data array.
  */
 ?>
 
@@ -10,20 +10,20 @@
 
 <?php // Slider ?>
 <?php
-// ⚠️ السلايدر يُصيَّر **على الخادم**، لا في المتصفح.
+// ⚠️ The slider is rendered **on the server**, not in the browser.
 //
-// كان #slider-inner فارغاً تماماً في HTML، ويملؤه
-// js/features/products-catalog.js من window.dbHomeSliders. والنتيجة
-// مقيسة: الملف كان الرابع عشر في طابور ثمانية عشر ملفاً، فيبقى مكان
-// السلايدر فارغاً **أكثر من ثانية** بعد ظهور بقية الصفحة.
+// #slider-inner used to be entirely empty in the HTML, filled by
+// js/features/products-catalog.js from window.dbHomeSliders. The result was measured:
+// that file was fourteenth in a queue of eighteen, so the slider's space stayed empty
+// for **more than a second** after the rest of the page appeared.
 //
-// وهذا أسوأ ما يمكن أن يُؤجَّل: السلايدر أول ما تقع عليه العين، وهو
-// أكبر عنصر مرئي في الصفحة (LCP).
+// And that is the worst thing to defer: the slider is the first thing the eye lands on,
+// and it is the page's largest contentful paint.
 //
-// البنية أدناه تطابق ما كان ينتجه renderSlider حرفاً بحرف — نفس
-// الأصناف ونفس التداخل — كي لا يتغيّر شيء في home-slider.css.
-// و renderSlider تبقى للتحديث الحيّ من لوحة التحكّم، لكنها لم تعد
-// المصدر الوحيد للعرض الأول.
+// The structure below matches what renderSlider produced character for character — the
+// same classes and the same nesting — so nothing in home-slider.css has to change.
+// renderSlider remains, for live updates from the admin panel, but it is no longer the
+// only source of the first render.
 $homeSliders = $data['homeSliders'] ?? [];
 ?>
 <section<?= $homeSliders === [] ? ' class="d-none"' : '' ?>>
@@ -33,7 +33,7 @@ $homeSliders = $data['homeSliders'] ?? [];
                 <?php
                 $items = $slide['items'] ?? [];
                 $count = count($items);
-                // نفس قاعدة الصنف في renderSlider — راجع home-slider.css
+                // The same class rule as in renderSlider — see home-slider.css
                 $countClass = $count >= 5 ? 'compact-count' : 'count-' . $count;
                 ?>
                 <div class="carousel-item<?= $index === 0 ? ' active' : '' ?>">
@@ -43,16 +43,16 @@ $homeSliders = $data['homeSliders'] ?? [];
                             $title = (string) ($item['title'] ?? '');
                             $desc  = (string) ($item['description'] ?? '');
                             $img   = fixImagePath($item['image_path'] ?? '');
-                            // ⚠️ الشريحة الأولى **ليست** lazy: هي أكبر
-                            // عنصر مرئي في الصفحة، وتأجيلها يؤجّل ما
-                            // يقيسه المتصفح كـLCP. الباقي lazy عن حقّ.
+                            // ⚠️ The first slide is **not** lazy: it is the page's largest
+                            // contentful paint, and deferring it defers what the browser
+                            // measures as LCP. The rest are lazy, rightly.
                             $eager = $index === 0 && $i === 0;
                             ?>
                             <?php if (!empty($item['link_url'])): ?>
                             <a href="<?= htmlspecialchars($item['link_url'], ENT_QUOTES) ?>" class="slide-item-link">
                             <?php endif; ?>
                                 <div class="slide-item">
-                                    <?php // alt يفضّل العنوان: هو ما يُعرّف الصورة، والوصف يشرحها. ?>
+                                    <?php // alt prefers the title: the title identifies the image, the description explains it ?>
                                     <img src="<?= htmlspecialchars($img, ENT_QUOTES) ?>"
                                          alt="<?= htmlspecialchars($title !== '' ? $title : $desc, ENT_QUOTES) ?>"
                                          class="slide-item-img"
@@ -92,13 +92,13 @@ $homeSliders = $data['homeSliders'] ?? [];
     <h2 class="section-title">Shop By Category</h2>
     <div class="d-flex justify-content-center flex-wrap gap-3">
         <?php
-        // الأزرار ديناميكية من CategoryModel::getAllOrdered() — الأساسية أولاً
+        // The buttons come dynamically from CategoryModel::getAllOrdered() — the core ones first
         foreach ($categories as $cat):
             $emoji = categoryEmoji($cat['name']);
         ?>
         <a href="<?= URLROOT ?>/products?cat=<?= urlencode($cat['name']) ?>"
            class="btn btn-outline-dark px-4 py-2">
-            <?php // @escaping-safe: categoryEmoji ترجع رمزاً من خريطة داخلية ?>
+            <?php // @escaping-safe: categoryEmoji returns a symbol from an internal map ?>
             <?= $emoji ?> <?= htmlspecialchars(ucfirst($cat['name'])) ?>
         </a>
         <?php endforeach; ?>
@@ -147,9 +147,9 @@ $homeSliders = $data['homeSliders'] ?? [];
 </main>
 
 <?php
-// بيانات المنتجات والسلايدر — جُهّزت في HomeController، والعرض يتولّاه
-// js/features/products-catalog.js الذي يقرأ window.dbProducts و
-// window.dbHomeSliders. الأسماء لم تتغيّر؛ تغيّر طريق وصولها فقط.
+// The product and slider data — prepared in HomeController, with the rendering handled
+// by js/features/products-catalog.js, which reads window.dbProducts and
+// window.dbHomeSliders. The names have not changed; only how they arrive has.
 ?>
 <?= pageData([
     'dbProducts'    => $data['productsJS']  ?? [],

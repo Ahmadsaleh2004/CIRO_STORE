@@ -3,8 +3,8 @@
 use App\Models\AdminModel;
 
 /**
- * app/views/admin/manage-admins/index.php — fragment فقط
- * المتغيرات من AdminManageAdminsController::index():
+ * app/views/admin/manage-admins/index.php — a fragment only.
+ * The variables from AdminManageAdminsController::index():
  *   $admins, $flashMsg, $flashErr, $csrf, $adminRole, $adminId
  */
 ?>
@@ -109,16 +109,17 @@ use App\Models\AdminModel;
                         <?php endif; ?>
                     </td>
                     <?php /*
-⚠️ `data-action="stop-propagation"` هنا **لا يمنع** تفعيل
-                     clickable-row، خلافاً لما كان مكتوباً في هذا الموضع.
+⚠️ `data-action="stop-propagation"` here **does not stop** clickable-row
+                     from firing, contrary to what this comment used to claim.
 
-                     معالجه مسجَّل على document في js/core/inline-actions.js،
-                     بينما مستمع الصفّ مسجَّل على الـ<tr> نفسه — فيسبقه
-                     ويُنقل المتصفّح قبل أن تصل النقرة إلى document أصلاً.
+                     Its handler is registered on document in js/core/inline-actions.js,
+                     while the row's listener is registered on the <tr> itself — so the row
+                     goes first and navigates the browser before the click ever reaches
+                     document.
 
-                     ما يمنع التفعيل فعلاً هو الحارس في manage-admins.js:
+                     What actually prevents it is the guard in manage-admins.js:
                      `if (e.target.closest('button, a, form, input, [data-action]')) return;`
-                     والسمة باقية هنا لأن ذلك الحارس يقرؤها ضمن ما يقرأ.
+                     The attribute stays here because that guard reads it among other things.
 */ ?>
                     <td data-action="stop-propagation">
                         <?php if (AdminModel::canManageTarget($adminRole, $adm['role'])): ?>
@@ -128,9 +129,9 @@ use App\Models\AdminModel;
                                 data-admin-name="<?= htmlspecialchars($adm['full_name'], ENT_QUOTES) ?>"
                                 data-admin-role="<?= htmlspecialchars($adm['role'], ENT_QUOTES) ?>"
                                 <?php
-                                // الصلاحيات التسع بترتيبها الذي يتوقّعه
-                                // openPermModal. الترتيب هو العقد، وكان
-                                // كذلك حين كانت وسائط استدعاء مضمّن.
+                                // The nine permissions in the order openPermModal expects.
+                                // The order is the contract, and it was the contract back when
+                                // they were the arguments of an inline call too.
                                 $permFlags = [
                                     'can_manage_admins',
                                     'can_manage_products',

@@ -1,18 +1,19 @@
 <?php
 /**
  * app/views/inc/navbar.php
- * هذا الملف يحتوي على HTML فقط للقائمة العلوية المرئية.
- * الـ Controller هو من يتحقق من حالة التسجيل ويمرر المتغيرات جاهزة (مثل $data['userLoggedIn']).
+ * This file contains the HTML for the visible top navigation and nothing else.
+ * The controller is what checks the sign-in state and passes the variables ready (such as
+ * $data['userLoggedIn']).
  */
 ?>
-<?php // نقل Skip to content و BASE_URL لداية الـ body لتنظيف ملف الـ head ?>
+<?php // "Skip to content" and BASE_URL moved to the start of the body, to keep the head file clean ?>
 <?= pageData(['BASE_URL' => URLROOT]) ?>
 <a href="#main-content" class="skip-nav">Skip to main content</a>
 
 <?php
-// قراءة وضع Store Mode من جلسة الزائر (PHPSESSID).
-// يُكتب هذا العلم من /admin/store-mode/enter في الجلستين معاً,
-// والمتجر يقرأه هنا من جلسة الزائر فقط — الجلستان منفصلتان تماماً.
+// Reading store mode from the visitor's session (PHPSESSID).
+// The flag is written by /admin/store-mode/enter into both sessions, and the store reads
+// it here from the visitor's session alone — the two sessions are entirely separate.
 if (session_status() === PHP_SESSION_NONE) {
     session_name('PHPSESSID');
     session_start();
@@ -21,7 +22,7 @@ $adminInStoreMode = !empty($_SESSION['admin_in_store_mode']);
 ?>
 
 <?php if ($adminInStoreMode): ?>
-<?php // شريط وضع المتجر — يظهر للأدمن فقط أثناء تصفحه المتجر كزائر ?>
+<?php // The store-mode bar — shown to an admin only while browsing the store as a visitor ?>
 <div class="container-fluid store-mode-bar">
     <span>👑 You are browsing the store as a guest</span>
     <a href="<?= URLROOT ?>/admin/store-mode/reauth" class="store-mode-return">
@@ -32,7 +33,7 @@ $adminInStoreMode = !empty($_SESSION['admin_in_store_mode']);
 
 <nav class="navbar custom-navbar navbar-expand-lg" id="mainNavbar">
     <div class="container">
-        <?php // استخدام URLROOT للروابط النظيفة (MVC style) ?>
+        <?php // Using URLROOT for clean links ?>
         <a class="navbar-brand fw-bold" href="<?= URLROOT ?>">🏪 Cairo Store</a>
 
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse"
@@ -44,7 +45,7 @@ $adminInStoreMode = !empty($_SESSION['admin_in_store_mode']);
         <div class="collapse navbar-collapse" id="navbarNav">
             <ul class="navbar-nav mx-auto">
                 <li class="nav-item">
-                    <?php // الـ Controller سيمرر متغير $data['activePage'] لتحديد الصفحة النشطة ?>
+                    <?php // The controller passes $data['activePage'] to mark the active page ?>
                     <a class="nav-link <?= (isset($data['activePage']) && $data['activePage'] == 'home') ? 'active fw-bold' : '' ?>" href="<?= URLROOT ?>">Home</a>
                 </li>
                 <li class="nav-item">
@@ -57,7 +58,7 @@ $adminInStoreMode = !empty($_SESSION['admin_in_store_mode']);
                     <a class="nav-link <?= (isset($data['activePage']) && $data['activePage'] == 'contact') ? 'active fw-bold' : '' ?>" href="<?= URLROOT ?>/contact">Contact Us</a>
                 </li>
 
-                <?php // إذا كان المستخدم زائر، اعرض زر Log In ?>
+                <?php // For a signed-out visitor, show the Log In button ?>
                 <?php if (!isset($data['userLoggedIn']) || !$data['userLoggedIn']): ?>
                     <li class="nav-item">
                         <a class="nav-link fw-semibold" href="#"
@@ -67,13 +68,13 @@ $adminInStoreMode = !empty($_SESSION['admin_in_store_mode']);
             </ul>
 
             <div class="d-flex gap-2 align-items-center">
-                <?php // Wishlist — متاحة للجميع ?>
+                <?php // Wishlist — available to everyone ?>
                 <a href="<?= URLROOT ?>/wishlist"
                    class="btn btn-outline-danger position-relative" aria-label="Wishlist">
                     ❤️ <span id="wishlist-count" class="counter-badge" aria-live="polite">0</span>
                 </a>
 
-                <?php // Bell الإشعارات — تظهر فقط إذا كان المستخدم مسجلاً ?>
+                <?php // The notification bell — shown only to a signed-in user ?>
                 <?php if (isset($data['userLoggedIn']) && $data['userLoggedIn']): ?>
                 <button id="notifBell" class="btn btn-outline-light position-relative"
                         aria-label="Notifications" title="Notifications" type="button">
@@ -81,7 +82,7 @@ $adminInStoreMode = !empty($_SESSION['admin_in_store_mode']);
                 </button>
                 <?php endif; ?>
 
-                <?php // Cart — تظهر فقط للمستخدم المسجل دخول ?>
+                <?php // Cart — shown only to a signed-in user ?>
                 <?php if (isset($data['userLoggedIn']) && $data['userLoggedIn']): ?>
                 <button type="button"
                     class="btn btn-outline-warning position-relative"
@@ -95,19 +96,19 @@ $adminInStoreMode = !empty($_SESSION['admin_in_store_mode']);
                 <button id="theme-toggle" class="btn btn-outline-light"
                         aria-label="Toggle theme" title="Toggle Theme">🌙</button>
 
-                <?php // Dropdown المستخدم — يظهر فقط إذا كان المستخدم مسجلاً ?>
+                <?php // The user dropdown — shown only to a signed-in user ?>
                 <?php if (isset($data['userLoggedIn']) && $data['userLoggedIn']): ?>
                 <div class="dropdown">
                     <button class="btn btn-outline-light dropdown-toggle" type="button"
                         data-bs-toggle="dropdown" aria-expanded="false">
-                        <?php // اسم المستخدم يأتي جاهزاً من الـ Controller ?>
+                        <?php // The user's name arrives ready from the controller ?>
                         👤 <?= htmlspecialchars($data['userName']) ?>
                     </button>
                     <ul class="dropdown-menu dropdown-menu-end u-surface-card">
                         <li><a class="dropdown-item u-text" href="<?= URLROOT ?>/user/info">👤 My Info</a></li>
                         <li><a class="dropdown-item u-text" href="<?= URLROOT ?>/contact">💬 Contact Us</a></li>
                         <li><hr class="dropdown-divider u-border-section"></li>
-                        <?php // دالة الـ logoutUser() هي دالة JS معرفة في ملفات الـ JS الثابتة ?>
+                        <?php // logoutUser() is a JavaScript function defined in the static JS files ?>
                         <li><a class="dropdown-item text-danger" href="#"
                                data-action="logout-user">🚪 Log Out</a></li>
                     </ul>
@@ -120,13 +121,13 @@ $adminInStoreMode = !empty($_SESSION['admin_in_store_mode']);
 
 <?php
 /**
- * كان هنا <div id="main-content"></div> فارغ يعمل مرساةً لرابط
- * «تخطَّ إلى المحتوى». حُذف لأنه كان يكرّر معرّفاً موجوداً أصلاً:
- * كل views المتجر التسعة تعلن <main id="main-content"> بنفسها،
- * فكانت كل صفحة متجر تحمل عنصرين بنفس الـid — HTML غير صالح، و
- * getElementById يُرجع الـdiv الفارغ لا المحتوى.
+ * There used to be an empty <div id="main-content"></div> here, serving as the anchor
+ * for the "skip to content" link. It was removed because it duplicated an id that
+ * already existed: all nine store views declare <main id="main-content"> themselves, so
+ * every store page carried two elements with the same id — invalid HTML, and
+ * getElementById returned the empty div rather than the content.
  *
- * رابط التخطّي في head.php ما زال يشير إلى #main-content، وصار يصل
- * إلى <main> الحقيقي — وهو المقصود منه أصلاً.
+ * The skip link in head.php still points at #main-content, and it now reaches the real
+ * <main> — which is what it was meant to do all along.
  */
 ?>

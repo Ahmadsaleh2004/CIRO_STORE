@@ -1,7 +1,7 @@
 <?php
 /**
  * app/views/checkout/confirmation.php
- * صفحة تأكيد الطلب بعد النجاح
+ * The order confirmation page, shown after a successful checkout.
  */
 ?>
 

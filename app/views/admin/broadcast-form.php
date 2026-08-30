@@ -1,9 +1,9 @@
 <?php
 /**
  * app/views/admin/broadcast-form.php
- * Modal مشترك للـ Broadcast — يُفعَّل من أي صفحة أدمن تحتاجه.
- * الإرسال عبر JS (fetch) لـ /admin/messaging/broadcast
- * data-target-type: 'admin' | 'user' — يتحدد عبر $broadcastTargetType من الـ view الأب
+ * The shared broadcast modal — opened from any admin page that needs it.
+ * Submission happens from JavaScript (fetch) to /admin/messaging/broadcast.
+ * data-target-type: 'admin' | 'user' — set through $broadcastTargetType from the parent view.
  */
 $broadcastTargetType = $broadcastTargetType ?? 'admin';
 ?>
@@ -133,10 +133,10 @@ $broadcastTargetType = $broadcastTargetType ?? 'admin';
                             <span>D — Support</span>
                         </label>
                     </div><?php /*
-← كان ناقصًا: بدونه يبقى #broadcastModal مفتوحًا
-                         فيبتلع كل ما يُضمَّن بعده (وأهمه #permModal في
-                         manage-admins/index.php)، فيرث display:none منه
-                         وينهار حجمه إلى 0×0 رغم فتحه بنجاح.
+← this was missing: without it #broadcastModal stays open and
+                         swallows everything included after it (most importantly #permModal in
+                         manage-admins/index.php), which then inherits its display:none and
+                         collapses to 0×0 despite opening successfully.
 */ ?>
                     <?php endif; ?>
 

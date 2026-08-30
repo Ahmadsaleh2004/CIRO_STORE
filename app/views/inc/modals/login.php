@@ -1,9 +1,9 @@
 <?php
 /**
  * app/views/inc/modals/login.php
- * Login Modal — Partial فقط، يُستدعى من footer.php
- * منقول من components/footer.php القديم (سطر 90–143)
- * CSRF Token يأتي جاهزاً من $csrfToken الممررة عبر footer.php
+ * Login modal — a partial only, included from footer.php.
+ * Moved out of the old components/footer.php (lines 90–143).
+ * The CSRF token arrives ready in $csrfToken, passed through footer.php.
  */
 ?>
 <?php // ══ Login Modal ═════════════════════════════════════════ ?>
@@ -47,7 +47,7 @@
                     <div id="loginError" class="alert alert-danger py-2 small mb-3 d-none"></div>
                     <button type="submit" class="btn btn-dark w-100 mb-3 py-2" id="loginBtn">Sign In</button>
 
-                    <?php // زر تسجيل الدخول عبر جوجل ?>
+                    <?php // The Google sign-in button ?>
                     <div class="modal-divider">or</div>
                     <a href="<?= URLROOT ?>/auth/google"
                        class="btn btn-outline-danger w-100 mb-3">

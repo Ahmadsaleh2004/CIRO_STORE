@@ -1,17 +1,18 @@
 <?php
 /**
  * app/views/product/show.php
- * ماركب مطابق حرفيًا لتصميم Task(1) الأصلي (نفس الكلاسات، نفس الإنجليزي، نفس تفاعل JS).
- * المتغيرات القادمة من ProductController::show():
+ * Markup matching the original Task(1) design exactly (the same classes, the same
+ * English, the same JavaScript interactions).
+ * The variables coming from ProductController::show():
  * $p, $variants, $selectedVariant, $reviews, $avgRating, $myReview, $related,
  * $price, $discount, $finalPrice, $stock, $imgSrc, $csrf, $notified, $userLoggedIn
  */
 
-// ترتيب الألوان تصاعديًا حسب المخزون (الأقرب للنفاد أولاً) — لأكورديون "Show all colors"
+// Colours sorted ascending by stock (closest to running out first) — for the "Show all colors" accordion
 $sortedByStock = $variants;
 usort($sortedByStock, fn($a, $b) => (int)$a['stock_quantity'] <=> (int)$b['stock_quantity']);
-// ملاحظة: ما بنعمل include لـ head.php / navbar.php / footer.php هون —
-// App\Core\Controller::view() بيعملهم تلقائيًا (head + navbar + هالملف + footer).
+// Note: head.php, navbar.php and footer.php are not included here —
+// App\Core\Controller::view() does that automatically (head + navbar + this file + footer).
 ?>
 
 <main id="main-content" class="container py-5">
@@ -76,11 +77,12 @@ usort($sortedByStock, fn($a, $b) => (int)$a['stock_quantity'] <=> (int)$b['stock
                     <button type="button"
                         class="btn btn-outline-secondary btn-sm color-swatch-btn <?= $v['id'] == $selectedVariant['id'] ? 'active' : '' ?>"
                         data-variant-id="<?= (int)$v['id'] ?>"
-                        <?php /* اللون يأتي من القاعدة فلا يمكن أن يصير class،
-                                 ولا أن يبقى style= بعد تشديد الـCSP. يخرج هنا
-                                 كبيان في data-swatch، وjs/store/variant-swatches.js
-                                 يكتبه في خاصية CSS مخصّصة عبر الـCSSOM — وهو ما
-                                 لا يمنعه CSP لأن القيمة لا تظهر في الترميز. */ ?>
+                        <?php /* The colour comes from the database, so it cannot become a class,
+                                 and it cannot stay a style= attribute once the CSP is
+                                 tightened. It leaves here as data in data-swatch, and
+                                 js/store/variant-swatches.js writes it into a custom CSS
+                                 property through the CSSOM — which the CSP does not block,
+                                 because the value never appears in the markup. */ ?>
                         <?= $v['color_hex'] ? 'data-swatch="' . htmlspecialchars($v['color_hex']) . '"' : '' ?>
                         <?= (int)$v['stock_quantity'] <= 0 ? 'title="Out of stock"' : '' ?>>
                         <?= htmlspecialchars($v['color_name']) ?>
@@ -152,8 +154,8 @@ usort($sortedByStock, fn($a, $b) => (int)$a['stock_quantity'] <=> (int)$b['stock
             </div>
 
             <?php /*
-Stock badge — نفس getStockBadge() التي تستعملها قائمة المنتجات،
-                 مع الفرع الأخضر الذي تخصّ به صفحة التفاصيل وحدها
+Stock badge — the same getStockBadge() the product list uses, plus the
+                 green branch that belongs to the details page alone
 */ ?>
             <?php $sb = getStockBadge($stock, true); ?>
             <div class="mb-3"><span class="badge <?= $sb['class'] ?> fs-6" id="stockBadge"><?= htmlspecialchars($sb['label']) ?></span></div>
@@ -161,14 +163,14 @@ Stock badge — نفس getStockBadge() التي تستعملها قائمة ال
             <?php // ── Qty + Cart block ── ?>
             <div id="qtyCartBlock" class="<?= $stock > 0 ? '' : 'd-none' ?>">
                 <?php /*
-`max` هنا قيمة ابتدائية فقط — المخزون المطلق قبل أن يعرف
-                 المتصفّح ما في السلّة. يعيد js/features/product-details.js
-                 ضبطها فوراً إلى (المخزون − ما في السلّة من هذه النسخة)،
-                 ثم بعد كل تغيّر في السلّة عبر حدث `cart:updated`.
+`max` here is only an initial value — the absolute stock, before the
+                 browser knows what is in the cart. js/features/product-details.js resets
+                 it immediately to (stock − this variant's quantity in the cart), and
+                 again after every cart change, through the `cart:updated` event.
 
-                 ولا يمكن حسابها هنا نهائياً: السلّة تتغيّر بعد رسم
-                 الصفحة — يُحذف سطر من السلّة الجانبية فيعود المتاح —
-                 فقيمةٌ يحسبها PHP مرّة واحدة تشيخ فوراً.
+                 It cannot be computed here once and for all: the cart changes after
+                 the page renders — a line is removed in the sidebar and the availability
+                 comes back — so a value PHP computes once goes stale immediately.
 */ ?>
                 <div class="quantity-box mb-4">
                     <button class="btn btn-outline-secondary" id="minusBtn" aria-label="Decrease quantity">−</button>
@@ -177,7 +179,7 @@ Stock badge — نفس getStockBadge() التي تستعملها قائمة ال
                     <button class="btn btn-outline-secondary" id="plusBtn" aria-label="Increase quantity">+</button>
                 </div>
 
-                <?php // يملؤه product-details.js: «لديك ٢ في السلّة — يتبقّى ٣». ?>
+                <?php // Filled in by product-details.js: "You have 2 in your cart — 3 left". ?>
                 <p id="qtyRemainingHint" class="small u-muted mb-3 d-none" aria-live="polite"></p>
                 <div class="d-flex gap-2">
                     <?php if ($userLoggedIn && empty($_SESSION['admin_in_store_mode'] ?? false)): ?>
@@ -316,9 +318,9 @@ Stock badge — نفس getStockBadge() التي تستعملها قائمة ال
 </main>
 
 <?php
-// بيانات المنتج ونسخه اللونية — يقرأها js/features/product-details.js
-// من window.PRODUCT_ID و PRODUCT_NAME و PRODUCT_VARIANTS و
-// SELECTED_VARIANT_ID. الأسماء لم تتغيّر.
+// The product's data and its colour variants — js/features/product-details.js reads them
+// from window.PRODUCT_ID, PRODUCT_NAME, PRODUCT_VARIANTS and SELECTED_VARIANT_ID. The
+// names have not changed.
 ?>
 <?= pageData([
     'PRODUCT_ID'          => (int) $p['id'],

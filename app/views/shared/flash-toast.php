@@ -1,23 +1,23 @@
 <?php
 /**
  * app/views/shared/flash-toast.php
- * رسالة عابرة تُعرَض كـtoast بعد تحميل الصفحة.
+ * A transient message shown as a toast after the page loads.
  *
- * كان النمط مكتوباً بمنطقه داخل الـviews في موضعين:
- * admin/branding/index.php (رسالتا $flashMsg و $flashErr) و
- * product/product_dit.php (رسالتا $reviewMsg و $reviewErr) — كلاهما
- * يكتب <script> يستمع لـDOMContentLoaded ويستدعي showToast.
+ * The pattern used to be written with its logic inside the views in two places:
+ * admin/branding/index.php (the $flashMsg and $flashErr messages) and
+ * product/product_dit.php (the $reviewMsg and $reviewErr messages) — both writing a
+ * <script> that listens for DOMContentLoaded and calls showToast.
  *
- * هنا لا سكربت إطلاقاً: نطبع عنصراً فارغاً يحمل النص والنوع في
- * data-*، و js/core/flash-toast.js يلتقطه ويعرضه. الـview صار يمرّر
- * بيانات لا منطقاً.
+ * Here there is no script at all: an empty element is printed carrying the text and the
+ * type in data-* attributes, and js/core/flash-toast.js picks it up and displays it. The
+ * view now passes data rather than logic.
  *
- * المتغيرات:
- *   $toastMessage  string  النص (لا يُطبع شيء إن كان فارغاً)
- *   $toastType     string  'success' (افتراضي) | 'error' | 'info'
+ * The variables:
+ *   $toastMessage  string  The text (nothing is printed if it is empty)
+ *   $toastType     string  'success' (the default) | 'error' | 'info'
  *
- * لماذا عنصر لا سمة على <body>؟ لأن الصفحة قد تعرض رسالتين معاً
- * (نجاح وخطأ)، وكل استدعاء يطبع عنصره المستقل.
+ * Why an element rather than an attribute on <body>? Because a page may show two
+ * messages at once (a success and an error), and each call prints its own element.
  */
 
 if (!empty($toastMessage)):

@@ -1,18 +1,18 @@
 <?php
 /**
  * app/views/shared/flash-messages.php
- * رسالتا النجاح والخطأ العابرتان (flash) أعلى الصفحة.
+ * The transient success and error (flash) messages at the top of the page.
  *
- * كانت هذه الكتلة منسوخة **حرفياً** في خمسة ملفات: admin/backup ·
+ * This block used to be copied **verbatim** into five files: admin/backup ·
  * admin/manage-admins/index · admin/orders/index · admin/product/index ·
- * admin/users/index — ثلاثة عشر سطراً متطابقة بايت-ببايت في كل واحد.
+ * admin/users/index — thirteen lines identical byte for byte in each one.
  *
- * المتغيرات — كلاهما اختياري، ولا يُطبع شيء إن كانا فارغين:
- *   $flashMsg  string  رسالة نجاح (alert-success)
- *   $flashErr  string  رسالة خطأ  (alert-danger)
+ * The variables — both optional, and nothing is printed if they are empty:
+ *   $flashMsg  string  A success message (alert-success)
+ *   $flashErr  string  An error message  (alert-danger)
  *
- * الهروب هنا لا في المستدعي: الرسائل تأتي من الجلسة وقد تحمل نصاً
- * أدخله المستخدم (اسم منتج، بريد، سبب رفض).
+ * The escaping lives here rather than in the caller: the messages come from the session
+ * and may carry text a user typed (a product name, an email, a reason for refusal).
  */
 ?>
 <?php if (!empty($flashMsg)): ?>

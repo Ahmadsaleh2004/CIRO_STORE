@@ -1,19 +1,18 @@
 <?php
 /**
  * app/views/shared/admin-orders-table.php
- * جدول طلبات مصغّر داخل صفحة تفاصيل (مستخدم أو أدمن).
+ * A compact orders table inside a details page (a user's or an admin's).
  *
- * كان الجدول مكتوباً مرتين بنفس البنية: admin/users/details.php
- * (طلبات المستخدم) و admin/manage-admins/details.php (الطلبات التي
- * ناولها هذا الأدمن). ثلاثة وثلاثون سطراً في كلٍّ منهما — نفس الوسوم
- * ونفس الأعمدة الأربعة — والفرق الوحيد حالة «مُحرَّر تلقائياً» التي
- * تخصّ صفحة الأدمن.
+ * The table used to be written twice with the same structure: admin/users/details.php
+ * (the user's orders) and admin/manage-admins/details.php (the orders this admin
+ * handled). Thirty-three lines in each — the same markup and the same four columns — with
+ * the only difference being the "auto-released" state, which belongs to the admin page.
  *
- * المتغيرات:
- *   $tableOrders       array  صفوف الطلبات (order_id · status ·
+ * The variables:
+ *   $tableOrders       array  The order rows (order_id · status ·
  *                             total_amount · created_at)
- *   $showAutoReleased  bool   اعرض بادج ⏱ Auto-Released للصفوف التي
- *                             تحمل was_auto_released — صفحة الأدمن فقط
+ *   $showAutoReleased  bool   Show the ⏱ Auto-Released badge on rows carrying
+ *                             was_auto_released — the admin page alone
  */
 
 $showAutoReleased = $showAutoReleased ?? false;

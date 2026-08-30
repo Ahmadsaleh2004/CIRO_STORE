@@ -1,27 +1,28 @@
 <?php
 /**
  * app/views/inc/head-bare.php
- * <head> صفحات layout الـ'bare' — الصفحات المستقلة التي لا تحمّل
- * navbar المتجر ولا navbar الأدمن.
+ * The <head> for the 'bare' layout pages — the standalone pages that load neither the
+ * store navbar nor the admin one.
  *
- * وُجد هذا الملف لأن ثلاث صفحات كانت تكتب <!DOCTYPE html> و<head>
- * كاملين بيدها: admin/login و admin/store-reauth و auth/reset-password.
- * ثلاث نسخ من نفس الوسوم، تتفرّق كلما عُدِّلت واحدة وحدها.
+ * This file exists because three pages used to write a full <!DOCTYPE html> and <head>
+ * by hand: admin/login, admin/store-reauth and auth/reset-password. Three copies of the
+ * same tags, drifting apart every time one of them was edited alone.
  *
- * المتغيرات — كلها اختيارية عدا $bareTitle:
+ * The variables — all optional except $bareTitle:
  *
- *   $bareTitle      string  عنوان الصفحة (يُهرَّب هنا)
- *   $bareLang       string  قيمة lang على <html>            (افتراضي 'en')
- *   $bareDir        string  قيمة dir على <html>             (افتراضي 'ltr')
- *   $bareBodyClass  string  كلاسات <body>                   (افتراضي '')
- *   $bareThemeBoot  bool    اطبع themeBootScript()          (افتراضي false)
- *   $bareSwal       bool    أدرج أنماط SweetAlert2          (افتراضي false)
- *   $bareCss        array   مسارات CSS نسبية لـURLROOT، بالترتيب
- *   $bareHead       string  HTML خام يُطبع آخر الترويسة (وسم meta إضافي،
- *                           أو كتلة أنماط خاصة بالصفحة)
+ *   $bareTitle      string  The page title (escaped here)
+ *   $bareLang       string  The lang value on <html>          (defaults to 'en')
+ *   $bareDir        string  The dir value on <html>           (defaults to 'ltr')
+ *   $bareBodyClass  string  Classes for <body>                (defaults to '')
+ *   $bareThemeBoot  bool    Print themeBootScript()           (defaults to false)
+ *   $bareSwal       bool    Include SweetAlert2's styles      (defaults to false)
+ *   $bareCss        array   CSS paths relative to URLROOT, in order
+ *   $bareHead       string  Raw HTML printed at the end of the head (an extra meta tag,
+ *                           or a page-specific style block)
  *
- * كل صفحات الـbare حتى الآن صفحات مصادقة، فوسم robots المانع للفهرسة
- * مطبوع هنا دائماً لا كخيار. أول صفحة bare تحتاج الفهرسة تحوّله لمتغيّر.
+ * Every bare page so far is an authentication page, so the robots tag preventing
+ * indexing is printed here unconditionally rather than as an option. The first bare page
+ * that needs indexing turns it into a variable.
  */
 
 $bareLang      = $bareLang      ?? 'en';
@@ -30,11 +31,11 @@ $bareBodyClass = $bareBodyClass ?? '';
 $bareThemeBoot = $bareThemeBoot ?? false;
 $bareCss       = $bareCss       ?? [];
 
-// صفحة bare واحدة اليوم تستدعي vendorJs('sweetalert2') — admin/login.
-// وأنماط SweetAlert صارت ورقة خارجية لا حقناً من الجافاسكربت، فمن
-// يُدرج السكربت يجب أن يُدرج الورقة، وإلّا ظهر الحوار نصّاً عارياً.
-// والعَلَم هنا بدل الإدراج الدائم كي لا تحمل صفحات الأخطاء وإعادة
-// تعيين كلمة المرور ورقةً لا تستعملها.
+// One bare page today calls vendorJs('sweetalert2') — admin/login. And SweetAlert's
+// styles are now an external stylesheet rather than an injection from JavaScript, so
+// whoever includes the script must include the sheet, or the dialog appears as bare
+// text. The flag exists instead of unconditional inclusion, so the error pages and the
+// password reset page do not carry a stylesheet they never use.
 $bareSwal      = $bareSwal      ?? false;
 ?>
 <!DOCTYPE html>
@@ -43,7 +44,7 @@ $bareSwal      = $bareSwal      ?? false;
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <?php // منع الفهرسة — كل صفحات الـbare خاصة (مصادقة أو أخطاء) ?>
+    <?php // Prevent indexing — every bare page is private (authentication or errors) ?>
     <meta name="robots" content="noindex, nofollow">
 
     <title><?= htmlspecialchars($bareTitle ?? SITENAME) ?></title>

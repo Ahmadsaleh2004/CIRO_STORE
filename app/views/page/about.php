@@ -1,7 +1,7 @@
 <?php
 /**
  * app/views/page/about.php
- * البيانات جاهزة من PageController::about()
+ * The data arrives ready from PageController::about().
  */
 ?>
 

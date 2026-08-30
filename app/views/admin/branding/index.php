@@ -1,7 +1,7 @@
 <?php
 /**
- * app/views/admin/branding/index.php — fragment فقط
- * المتغيرات: $sliders, $csrf, $flashMsg, $flashErr (من AdminBrandingController)
+ * app/views/admin/branding/index.php — a fragment only.
+ * The variables: $sliders, $csrf, $flashMsg, $flashErr (from AdminBrandingController).
  */
 ?>
  
@@ -36,7 +36,7 @@ require APPROOT . '/views/shared/flash-toast.php';
     </div>
 
     <div id="slidesContainer">
-        <?php // تُبنى بـ JS من $sliders عند DOMContentLoaded، وتُضاف عليها شرائح جديدة بـ addSlideBtn ?>
+        <?php // Built from $sliders in JavaScript at DOMContentLoaded, with new slides appended by addSlideBtn ?>
     </div>
 
     <div class="mt-4 d-flex gap-2">
@@ -50,10 +50,10 @@ require APPROOT . '/views/shared/flash-toast.php';
 
 </form>
 
-<?php // Templates: تُستنسخ بـ JS، لا تُعرض مباشرة ?>
+<?php // Templates: cloned from JavaScript, never displayed directly ?>
 <?php include __DIR__ . '/_templates.php'; ?>
 
-<?php // بيانات السلايدرات الحالية محقونة لـ JS ?>
+<?php // The current sliders' data, handed to JavaScript ?>
 <?= pageData(['_existingSlidersData' => $sliders]) ?>
 
 <?php include __DIR__ . '/_product-picker-modal.php'; ?>

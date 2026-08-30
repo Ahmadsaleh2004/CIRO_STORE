@@ -1,7 +1,7 @@
 <?php
 /**
  * app/views/page/wishlist.php
- * المحتوى بيتبني بالكامل جافاسكريبت (js/wishlist.js) من localStorage
+ * The contents are built entirely in JavaScript (js/wishlist.js) from localStorage.
  */
 ?>
 

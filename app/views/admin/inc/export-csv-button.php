@@ -1,17 +1,17 @@
 <?php
 /**
  * app/views/admin/inc/export-csv-button.php
- * زر Export CSV مشترك — يُضمَّن بأي صفحة أدمن عندها تصدير.
+ * The shared Export CSV button — included by any admin page that has an export.
  *
- * المتغيرات المطلوبة من الصفحة الأم قبل include:
- *   @var string $exportCsvUrl       الرابط الكامل للتصدير (مع URLROOT)
- *   @var bool   $exportCsvOnlyRoleA (اختياري، افتراضي true) — يحصر الزر بـ Role A
+ * The variables the parent page must set before including it:
+ *   @var string $exportCsvUrl       The full export URL (including URLROOT)
+ *   @var bool   $exportCsvOnlyRoleA (optional, defaults to true) — restricts the button to rank A
  *
- * مثال الاستخدام:
+ * Example use:
  *   <?php $exportCsvUrl = URLROOT . '/admin/admins/export-csv';
  *         include __DIR__ . '/../inc/export-csv-button.php'; ?>
  *
- * مثال مع تجاوز القيد:
+ * Example with the restriction lifted:
  *   <?php $exportCsvUrl = URLROOT . '/admin/users/export-csv';
  *         $exportCsvOnlyRoleA = false;
  *         include __DIR__ . '/../inc/export-csv-button.php'; ?>

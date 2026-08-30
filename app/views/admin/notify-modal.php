@@ -1,8 +1,9 @@
 <?php
 /**
  * app/views/admin/notify-modal.php
- * Modal مشترك لإرسال رسالة فردية — parametrized بـ target type (admin الآن،
- * user لاحقًا بنفس الملف). يُستدعى عبر JS: openNotifyModal('admin', id, name)
+ * A shared modal for sending a direct message — parameterised by target type (admin
+ * today, user later from this same file). Opened from JavaScript:
+ * openNotifyModal('admin', id, name).
  */
 ?>
 <div class="modal fade" id="notifyModal" tabindex="-1"
@@ -46,6 +47,6 @@
     </div>
 </div>
 
-<?php // Hidden inputs لتمرير target type/id لـ JS ?>
+<?php // Hidden inputs carrying the target type and id through to JavaScript ?>
 <input type="hidden" id="notifyTargetType" value="">
 <input type="hidden" id="notifyTargetId"   value="">

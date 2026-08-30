@@ -1,8 +1,8 @@
 <?php
 /**
- * app/views/admin/support.php — fragment فقط (بدون DOCTYPE/html/head/body)
+ * app/views/admin/support.php — a fragment only (no DOCTYPE/html/head/body).
  * Loaded by AdminController::adminView() after inc/head.php and inc/navbar.php
- * المتغيرات الجاهزة من AdminSupportController::index():
+ * The variables arriving ready from AdminSupportController::index():
  *   $messages, $search, $totalMessages, $currentPage, $totalPages, $csrf
  */
 ?>
@@ -94,12 +94,14 @@
 <?php endif; ?>
 
 <?php /*
-حقل CSRF يقرأه support.js عند كل إرسال.
-    سمة name مطلوبة لا زائدة: updateCsrfToken() في js/core/csrf.js تستهدف
-    input[name="csrf_token"]، فبلا الاسم كان الحقل يبقى على التوكن القديم
-    بعد أي تعافٍ — ويحتاج أول إرسال يدوي تالٍ جولة تعافٍ أخرى بلا داعٍ.
-    والحقل خارج أي <form> (فورم البحث أعلى الصفحة مغلق قبله)، وsupport.js
-    يبني FormData يدوياً، فالاسم لا يدخل أي إرسال بغير قصد.
+A CSRF field that support.js reads on every submission.
+    The name attribute is required rather than redundant: updateCsrfToken() in
+    js/core/csrf.js targets input[name="csrf_token"], so without the name the field kept
+    the stale token after any recovery — and the next manual submission then needed
+    another recovery round for no reason.
+    The field sits outside any <form> (the search form at the top of the page closes
+    before it), and support.js builds its FormData by hand, so the name enters no
+    submission unintentionally.
 */ ?>
 <input type="hidden" name="csrf_token" id="csrfTokenSupport" value="<?= htmlspecialchars($csrf) ?>">
 

@@ -1,21 +1,22 @@
 <?php
 /**
  * app/views/errors/403.php
- * صفحة «ليس لك صلاحية».
+ * The "you do not have permission" page.
  *
- * توأم views/errors/404.php، ومن نفس السبب: كان الرد على الرفض
- * `die('Unauthorized — Root admin only (ID=1)')` — نصّاً خاماً بلا
- * <head> ولا لايوت ولا طريق رجوع، ويكشف قاعدة الصلاحية للزائر.
+ * The twin of views/errors/404.php, and for the same reason: the refusal response used
+ * to be `die('Unauthorized — Root admin only (ID=1)')` — raw text with no <head>, no
+ * layout and no way back, disclosing the permission rule to the visitor.
  *
- * تُستدعى من ErrorPage::forbidden() عبر require مباشر لا عبر view():
- * استدعاء view() من داخل معالج خطأ يعني تكراراً محتملاً لو كان الخطأ
- * في الـlayout نفسه.
+ * Included from ErrorPage::forbidden() with a direct require rather than through
+ * view(): calling view() from inside an error handler risks a loop if the error is in
+ * the layout itself.
  *
- * لا تطبع أبداً سبب الرفض التفصيلي: السبب في سجل أخطاء PHP وحده.
+ * It never prints the detailed reason for the refusal: that goes to the PHP error log
+ * alone.
  *
- * المتغيرات (يضبطها ErrorPage::forbidden قبل الـrequire):
- *   $backUrl    string  رابط زر الرجوع
- *   $backLabel  string  نصّ زر الرجوع
+ * The variables (set by ErrorPage::forbidden before the require):
+ *   $backUrl    string  The back button's URL
+ *   $backLabel  string  The back button's text
  */
 
 $bareTitle     = '403 — ' . SITENAME;

@@ -3,23 +3,23 @@
 use App\Models\AdminModel;
 
 /**
- * app/views/admin/manage-admins/details.php — fragment فقط
- * المتغيرات من AdminManageAdminsController::details():
- *   $target             — بيانات الأدمن + صلاحياته
- *   $orderRows          — طلبات تولّاها هذا الأدمن (OrderModel::getOrdersHandledByAdmin)
- *   $orderAuditRows     — بلاغات مشاكل وتصدير CSV لطلبات (target_type='orders' غير المشمولة بـ orderRows)
- *   $profitTotal        — مجموع total_amount للطلبات المكتملة فقط (غير auto-released)
+ * app/views/admin/manage-admins/details.php — a fragment only.
+ * The variables from AdminManageAdminsController::details():
+ *   $target             — the admin's data and permissions
+ *   $orderRows          — orders this admin handled (OrderModel::getOrdersHandledByAdmin)
+ *   $orderAuditRows     — problem reports and order CSV exports (target_type='orders' not covered by orderRows)
+ *   $profitTotal        — the sum of total_amount over completed orders alone (not auto-released ones)
  *   $userActionRows     — target_type='user'
  *   $productActionRows  — target_type IN ('product','category')
  *   $brandingActionRows — target_type='branding'
  *   $supportActionRows  — target_type='support'
  *   $siteConfigRows     — target_type='website_settings'
- *   $auditLog           — كل شيء آخر (target_type='admin' + NULL) — لا يُفلتر حسب صلاحية
+ *   $auditLog           — everything else (target_type='admin' and NULL) — unfiltered by permission
  *   $csrf
  */
 
 /**
- * جدول سجل تدقيق عام مُعاد استخدامه لكل الأقسام المتخصصة (User/Product/Branding/Support/Site Config).
+ * A general audit-log table reused by every specialised section (User/Product/Branding/Support/Site Config).
  */
 function renderAuditRowsTable(array $rows): void
 {
@@ -148,7 +148,7 @@ function renderAuditRowsTable(array $rows): void
                 <?php foreach ($permMap as $key => [$icon, $label]): ?>
                 <div class="perm-item <?= empty($target[$key]) ? 'u-dimmed' : '' ?>">
                     <input type="checkbox" <?= !empty($target[$key]) ? 'checked' : '' ?> disabled>
-                    <?php // @escaping-safe: $icon و$label من خريطة حرفية في هذا الملف ?>
+                    <?php // @escaping-safe: $icon and $label come from a literal map in this file ?>
                     <span><?= $icon ?> <?= $label ?></span>
                 </div>
                 <?php endforeach; ?>
@@ -245,7 +245,7 @@ function renderAuditRowsTable(array $rows): void
 <?php /*
 ════════════════════════════════════════════════════════
      Section 5 — Admin Actions Log (admin_audit_log)
-     هذا متاح الآن — الجدول موجود ومسجّل بالعمليات الحالية
+     This is available now — the table exists and is populated by the current operations
      ═══════════════════════════════════════════════════════
 */ ?>
 <div class="card p-4 mb-4">

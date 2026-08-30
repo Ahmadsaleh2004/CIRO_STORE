@@ -1,22 +1,22 @@
 <?php
 /**
  * app/views/shared/order-status-badge.php
- * بادج حالة الطلب — الألوان المعتمدة في لوحة التحكم.
+ * The order status badge — the colours the admin panel settled on.
  *
- * كانت خريطة الحالة→اللون مكتوبة في خمسة ملفات: أربعة في لوحة التحكم
+ * The status→colour map used to be written out in five files: four in the admin panel
  * (orders/index · orders/details · users/details · manage-admins/details)
- * وواحد في واجهة المتجر (account/my-info).
+ * and one in the store front (account/my-info).
  *
- * المتغيرات:
- *   $orderStatus  string  قيمة العمود orders.status
- *   $badgeExtraClass string  أصناف تُضاف إلى الوسم: 'fs-6' لصفحة
- *                           تفاصيل الطلب، 'ms-2' لصفحة الزبون
- *   $badgeLabel   string  نص بديل للحالة (اتركه فارغاً للنص الافتراضي)
+ * The variables:
+ *   $orderStatus  string  The value of the orders.status column
+ *   $badgeExtraClass string  Classes added to the tag: 'fs-6' for the order details
+ *                           page, 'ms-2' for the customer's page
+ *   $badgeLabel   string  Alternative text for the status (leave it empty for the default)
  *
- * ملاحظة تاريخية: كانت صفحة الزبون تعرض الطلب الملغى بـbg-secondary
- * (رمادي) بينما صفحات الأدمن الأربع تعرضه بـbg-danger (أحمر). أُبقي
- * الاختلاف في المرحلة 5 لأنه قرار تصميم لا إعادة هيكلة، ثم اختار صاحب
- * المشروع التوحيد على الأحمر — فصار الملغى أحمر في كل مكان.
+ * A historical note: the customer's page used to show a cancelled order in bg-secondary
+ * (grey) while the four admin pages showed it in bg-danger (red). The difference was
+ * kept through phase 5 because it was a design decision rather than a refactoring, and
+ * the project's owner then chose to unify on red — so cancelled is red everywhere.
  */
 
 $badgeExtraClass = $badgeExtraClass ?? '';
@@ -27,8 +27,8 @@ $statusClass = match ($orderStatus) {
     default     => 'bg-warning text-dark',
 };
 
-// النص الافتراضي: not_taken → "Not taken". صفحة قائمة الطلبات كانت
-// تكتب "Not Taken" بتاء كبيرة؛ تُمرَّر عبر $badgeLabel للحفاظ عليها.
+// The default text: not_taken → "Not taken". The order list page wrote "Not Taken" with
+// a capital T; it is passed through $badgeLabel to preserve that.
 $label = ($badgeLabel ?? '') !== ''
     ? $badgeLabel
     : ucfirst(str_replace('_', ' ', $orderStatus));

@@ -1,12 +1,13 @@
 <?php
 /**
- * app/views/admin/branding/_templates.php — قالبا <template> للاستنساخ بـ JS
- * لا توجد أسماء name الحقيقية بداخل القوالب — تُبنى ديناميكياً عند الإرسال
- * (renameAllFieldsBeforeSubmit بـ branding.js) لأن index كل شريحة/عنصر يتغيّر.
+ * app/views/admin/branding/_templates.php — two <template> blocks cloned from JavaScript.
+ * The real name attributes are absent from the templates — they are built dynamically at
+ * submission time (renameAllFieldsBeforeSubmit in branding.js), because each slide's and
+ * item's index changes.
  */
 ?>
 
-<?php // ══ قالب الشريحة ═══════════════════════════════════════════════════════ ?>
+<?php // ══ The slide template ═════════════════════════════════════════════════ ?>
 <template id="slideTemplate">
     <div class="slide-card card p-3 mb-4 u-border-section-2">
         <div class="d-flex justify-content-between align-items-center mb-3">
@@ -24,7 +25,7 @@
     </div>
 </template>
 
-<?php // ══ قالب العنصر/الصورة ═════════════════════════════════════════════════ ?>
+<?php // ══ The item / image template ══════════════════════════════════════════ ?>
 <template id="itemTemplate">
     <div class="slide-item-card card p-2 u-w-260 u-border-section-all">
 
@@ -33,7 +34,7 @@
             <button type="button" class="btn btn-sm btn-outline-danger remove-item-btn" aria-label="Remove item">✕</button>
         </div>
 
-        <?php // أزرار التبديل بين التبويبين — تتحكم فقط بالعرض/الإخفاء البصري ?>
+        <?php // The buttons switching between the two tabs — they control visibility alone ?>
         <div class="btn-group w-100 mb-2" role="group">
             <button type="button" class="btn btn-outline-primary btn-sm mode-toggle-btn active"
                     data-mode="product">🛍️ Product</button>
@@ -41,7 +42,7 @@
                     data-mode="manual">🖼️ Manual</button>
         </div>
 
-        <?php // ══ تبويب Product ══════════════════════════════════ ?>
+        <?php // ══ The Product tab ════════════════════════════════ ?>
         <div class="mode-panel product-panel">
             <button type="button" class="btn btn-outline-secondary btn-sm w-100 mb-2 open-product-picker-btn">
                 🔍 Choose Product
@@ -54,14 +55,14 @@
             <input type="hidden" class="field-product-id" value="">
 
             <?php /*
-الصورة تعرض سطرين: العنوان فوق الوصف. والحقلان يُملآن
-                 تلقائياً عند اختيار منتج (الاسم والوصف من القاعدة)
-                 ويبقيان قابلَين للتعديل — راجع selectProduct في
+The image shows two lines: the title above the description. Both fields
+                 are filled automatically when a product is chosen (the name and
+                 description from the database) and stay editable — see selectProduct in
                  js/admin/branding.js.
 
-                 وتركُ العنوان فارغاً ليس نقصاً: القراءة تسقط إلى
-                 products.name، فالشريحة تعرض اسم منتجها دائماً.
-                 الحقل موجود ليختصر الاسم الطويل لا ليكرّره.
+                 Leaving the title empty is not an omission: the read falls back to
+                 products.name, so the slide always shows its product's name. The field
+                 exists to shorten a long name, not to repeat it.
 */ ?>
             <div class="float-group mb-2">
                 <input type="text" class="field-product-title" placeholder=" " maxlength="200">
@@ -81,7 +82,7 @@
             </button>
         </div>
 
-        <?php // ══ تبويب Manual ═══════════════════════════════════ ?>
+        <?php // ══ The Manual tab ═════════════════════════════════ ?>
         <div class="mode-panel manual-panel d-none">
             <div class="manual-preview d-none mb-2 text-center">
                 <img class="manual-preview-img u-thumb-preview" src="" alt="">
@@ -91,12 +92,12 @@
             <input type="hidden" class="field-existing-manual-image" value="">
 
             <?php /*
-⚠️ لا تعبئة تلقائية هنا — بخلاف لوحة Product.
+⚠️ No automatic filling here — unlike the Product panel.
 
-                 الصورة اليدوية ملفٌّ يرفعه الأدمن، ولا مصدر بيانات
-                 يُشتقّ منه عنوان أو وصف. فالحقلان يبقيان فارغين حتى
-                 يكتبهما، والعنوان الفارغ يعني بلا سطر عنوان — لا
-                 بديل له كما في وضع المنتج.
+                 A manual image is a file the admin uploads, with no data source to
+                 derive a title or description from. So both fields stay empty until they
+                 are typed, and an empty title means no title line at all — there is no
+                 fallback for it, as there is in product mode.
 */ ?>
             <div class="float-group mb-2">
                 <input type="text" class="field-manual-title" placeholder=" " maxlength="200">

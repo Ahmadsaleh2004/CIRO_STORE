@@ -1,7 +1,7 @@
 <?php
 /**
- * app/views/admin/manage-admins/add.php — fragment فقط
- * المتغيرات من AdminManageAdminsController::showAdd():
+ * app/views/admin/manage-admins/add.php — a fragment only.
+ * The variables from AdminManageAdminsController::showAdd():
  *   $formErr, $csrf, $adminRole
  */
 ?>
@@ -84,13 +84,13 @@
                 <div class="float-group">
                     <select name="new_role" id="newAdmRole">
                         <?php
-                        // يُظهر فقط الرتب الأدنى من رتبة الأدمن الحالي (STRICT lower only)
+                        // It shows only the ranks strictly below the current admin's
                         $roleMap = ['A' => 4, 'B' => 3, 'C' => 2, 'D' => 1];
                         $myRank  = $roleMap[$adminRole] ?? 0;
                         foreach (['B' => 'B — Admin', 'C' => 'C — Moderator', 'D' => 'D — Support'] as $val => $label):
                             if (($roleMap[$val] ?? 0) < $myRank):
                         ?>
-                        <?php // @escaping-safe: تسميات رتب حرفية في هذا الملف ?>
+                        <?php // @escaping-safe: literal rank labels in this file ?>
                         <option value="<?= $val ?>"><?= $label ?></option>
                         <?php
                             endif;
@@ -178,7 +178,7 @@
 
         </div>
 
-        <?php // ── Submit (مخفي بالبداية، يظهر بـ JS عند اكتمال الحقول) ── ?>
+        <?php // ── Submit (hidden at first; JavaScript reveals it once the fields are complete) ── ?>
         <div class="d-flex justify-content-end">
             <button type="submit"
                     id="addAdminBtn"

@@ -1,9 +1,9 @@
 <?php
 /**
  * app/views/inc/modals/notifications.php
- * Notification Sidebar — Partial فقط، يُستدعى من footer.php
- * يظهر فقط للمستخدم المسجّل (footer.php تتحقق من $userLoggedIn)
- * منقول من components/footer.php القديم (سطر 369–383)
+ * Notification sidebar — a partial only, included from footer.php.
+ * Shown to signed-in users alone (footer.php checks $userLoggedIn).
+ * Moved out of the old components/footer.php (lines 369–383).
  */
 ?>
 <?php // ══ Notification Sidebar ════════════════════════════════ ?>

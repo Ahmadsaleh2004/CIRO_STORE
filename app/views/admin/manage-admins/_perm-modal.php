@@ -1,9 +1,9 @@
 <?php
 /**
  * app/views/admin/manage-admins/_perm-modal.php
- * Modal تعديل الرتبة/الصلاحيات — يُملأ بالكامل عبر JS (openPermModal)
- * من بيانات الصف نفسه بالجدول، بدون أي طلب إضافي للسيرفر.
- * الإرسال: POST تقليدي → /admin/admins/edit → إعادة توجيه مع flash
+ * The rank and permissions edit modal — filled entirely from JavaScript (openPermModal)
+ * out of the table row's own data, with no extra request to the server.
+ * Submission: a conventional POST → /admin/admins/edit → a redirect with a flash message.
  */
 ?>
 <div class="modal fade" id="permModal" tabindex="-1"
@@ -31,7 +31,7 @@
                             foreach ($roleLabels as $val => $label):
                                 if (($roleMap[$val] ?? 0) < $myRank):
                             ?>
-                            <?php // @escaping-safe: $roleLabels مصفوفة حرفية في هذا الملف ?>
+                            <?php // @escaping-safe: $roleLabels is a literal array in this file ?>
                             <option value="<?= $val ?>"><?= $label ?></option>
                             <?php
                                 endif;

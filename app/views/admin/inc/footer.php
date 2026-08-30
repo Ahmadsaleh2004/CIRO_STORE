@@ -6,16 +6,16 @@
     (Role <?= htmlspecialchars($_SESSION['admin_role'] ?? '') ?>)
 </div>
 
-<?php // ⚠️ أوّلاً وبلا defer: ينسخ جزيرة بيانات الصفحة إلى window،
-     // وكل ما تحته يقرأ منها. نقله لاحقاً يكسر كل صفحة تمرّر بيانات. ?>
+<?php // ⚠️ First and without defer: it copies the page's data island onto window, and
+     // everything below reads from it. Moving it later breaks every page passing data. ?>
 <?= jsTag('js/core/page-data.js', false) ?>
 
-<?php // jQuery حُذف — غير مستعمَل. الروابط والبصمات في assets_helper.php ?>
+<?php // jQuery was removed — unused. The URLs and integrity hashes live in assets_helper.php ?>
 <?= vendorJs('bootstrap-js', false) ?>
 <?= vendorJs('sweetalert2', false) ?>
 <?php
-// حزمة واحدة بدل واحد وعشرين وسماً. القائمة هي الارتداد عند غياب
-// البناء، وترتيبها هو العقد — راجع jsBundle في assets_helper.php.
+// One bundle in place of twenty-one tags. The list is the fallback for when nothing is
+// built, and its order is the contract — see jsBundle in assets_helper.php.
 ?>
 <?= jsBundle('admin', [
     'js/core/inline-actions.js',
@@ -43,7 +43,7 @@
 
 <?php if (isset($extraScripts)) echo $extraScripts; ?>
 
-<?php // سايدبار إشعارات الأدمن — HTML ثابت، يربطه بالباك اند admin-notifications.js ?>
+<?php // The admin notification sidebar — static HTML, wired to the backend by admin-notifications.js ?>
 <div id="adminNotifSidebar" role="region" aria-label="Admin notifications panel">
     <div class="notif-header">
         <span>🔔 Admin Notifications</span>

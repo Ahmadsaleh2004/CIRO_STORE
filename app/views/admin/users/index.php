@@ -1,10 +1,10 @@
 <?php
 /**
- * app/views/admin/users/index.php — fragment فقط
- * المتغيرات من AdminUsersController::index():
+ * app/views/admin/users/index.php — a fragment only.
+ * The variables from AdminUsersController::index():
  *   $users, $total, $page, $perPage, $search, $status,
  *   $flashMsg, $flashErr, $csrf, $adminRole, $adminId
- * JS المسؤول: users.js (.user-row/.delete-user-btn) + admins.js (openNotifyModal)
+ * The JavaScript responsible: users.js (.user-row/.delete-user-btn) and admins.js (openNotifyModal).
  */
 $totalPages = max(1, (int)ceil($total / $perPage));
 ?>
@@ -14,7 +14,7 @@ $totalPages = max(1, (int)ceil($total / $perPage));
     <div class="d-flex gap-2 flex-wrap">
         <?php
             $exportCsvUrl       = URLROOT . '/admin/users/export-csv';
-            $exportCsvOnlyRoleA = false;   // خلافًا للأدمنية — أي أدمن عنده can_manage_users يصدّر
+            $exportCsvOnlyRoleA = false;   // Unlike the admins list — any admin holding can_manage_users can export
             include __DIR__ . '/../inc/export-csv-button.php';
         ?>
         <button class="btn btn-outline-info btn-sm"
@@ -77,11 +77,11 @@ $totalPages = max(1, (int)ceil($total / $perPage));
                         : ($isNotActive ? ['Not Active', 'secondary'] : ['Active', 'success']);
                 ?>
                 <tr class="user-row" data-uid="<?= (int)$u['id'] ?>">
-                    <?php /* المعرّف الحقيقي لا ترتيب الصف: كان هنا
-                             `$startNum + $i` — عدّاد يزحف عند كل حذف،
-                             فيتغيّر «رقم» المستخدم نفسه بلا أن يتغيّر هو.
-                             جدولا الأدمنية والطلبات يعرضان معرّفهما
-                             الحقيقي أصلاً؛ هذا يلحق بهما. */ ?>
+                    <?php /* The real id, not the row's position: this used to be
+                             `$startNum + $i` — a counter that shifts on every delete, so a
+                             user's "number" changed without the user changing at all. The
+                             admins and orders tables already show their real ids; this one
+                             now matches them. */ ?>
                     <td><?= (int)$u['id'] ?></td>
                     <td>
                         <span class="fw-semibold"><?= htmlspecialchars($u['full_name']) ?></span>
@@ -101,7 +101,7 @@ $totalPages = max(1, (int)ceil($total / $perPage));
                     <td class="u-muted u-fs-80">
                         <?= htmlspecialchars(date('d M Y', strtotime($u['created_at']))) ?>
                     </td>
-                    <?php // data-action="stop-propagation" إلزامي — يمنع تفعيل user-row ?>
+                    <?php // data-action="stop-propagation" is required — it stops user-row from firing ?>
                     <td class="text-center">
                         <div class="d-flex gap-1 justify-content-center" data-action="stop-propagation">
                             <button type="button" class="btn btn-sm btn-outline-info"
@@ -125,7 +125,7 @@ $totalPages = max(1, (int)ceil($total / $perPage));
 
 <?php // ── Pagination ─────────────────────────────────────────── ?>
 <?php if ($totalPages > 1):
-    // بناء query string الفلاتر للـ pagination — يحافظ على q/status عند التنقل
+    // Build the filters' query string for the pagination — it preserves q and status while navigating
     $paginationBase = http_build_query(array_filter([
         'q'      => $search,
         'status' => $status,

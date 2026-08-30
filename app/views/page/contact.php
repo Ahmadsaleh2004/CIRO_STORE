@@ -1,7 +1,7 @@
 <?php
 /**
  * app/views/page/contact.php
- * البيانات جاهزة من ContactController::contact()
+ * The data arrives ready from ContactController::contact().
  */
 $showLoginAlert = !$userLoggedIn;
 ?>

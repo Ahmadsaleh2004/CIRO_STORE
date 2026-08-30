@@ -1,11 +1,11 @@
 <?php
 /**
  * app/views/inc/footer.php
- * يستدعي الـ Partials + يحمّل ملفات JS
- * البيانات تأتي جاهزة من الـ Controller عبر $data (تم extract في Controller::view())
+ * It includes the partials and loads the JavaScript files.
+ * The data arrives ready from the controller through $data (extracted in Controller::view()).
  */
 
-// توليد CSRF Token لاستخدامه داخل المودالز
+// Generate a CSRF token for use inside the modals
 $csrfToken = generateCsrfToken();
 ?>
 <footer class="custom-footer mt-5">
@@ -50,41 +50,42 @@ $csrfToken = generateCsrfToken();
     <?php // ══ Partials ════════════════════════════════════════════ ?>
     <?php
     /*
-     * ⚠️ مودال السلّة محروس بتسجيل الدخول — وكان يُطبع للجميع.
+     * ⚠️ The cart modal is login-guarded — and it used to be printed for everyone.
      *
-     * زرّ السلّة في الـnavbar محروس منذ البداية، فكان الزائر يتلقّى
-     * الشريط الجانبي كاملاً في صفحته بلا زرّ يفتحه: ترميزٌ ميّت على
-     * كل صفحة.
+     * The cart button in the navbar has been guarded from the start, so a signed-out
+     * visitor received the entire sidebar on their page with no button to open it: dead
+     * markup on every page.
      *
-     * وصار الأمر أثقل بعد انتقال السلّة إلى الخادم: cart.js يستدلّ
-     * على «هل للمستخدم سلّة؟» بوجود #cartSidebar، فكان يجدها عند
-     * الزائر ويطلب /cart في كل تحميل صفحة — طلبٌ يردّ 401 دائماً
-     * (مقيس)، وخطأٌ في طرفية كل زائر.
+     * And it grew heavier once the cart moved to the server: cart.js infers "does this
+     * user have a cart?" from the presence of #cartSidebar, so it found one for a visitor
+     * and requested /cart on every page load — a request that always answered 401
+     * (measured), and an error in every visitor's console.
      *
-     * الحارس هنا يطابق حارس الزرّ، فيتفق الاثنان على معنى واحد.
+     * The guard here matches the button's guard, so the two agree on one meaning.
      */
     ?>
     <?php if (isset($userLoggedIn) && $userLoggedIn): ?>
         <?php require __DIR__ . '/modals/cart.php'; ?>
         <?php
         /*
-         * توكن CSRF إلى window._csrfToken — نفس ما تفعله لوحة التحكّم
-         * في admin/inc/navbar.php.
+         * The CSRF token onto window._csrfToken — the same thing the admin panel does in
+         * admin/inc/navbar.php.
          *
-         * ⚠️ كانت صفحات المتجر تمرّره في حقول مخفيّة وحدها، ولا شيء
-         * يضبط `window._csrfToken`. وcart.js يقرأ منه، فكان يرسل نصّاً
-         * فارغاً في كل عملية سلّة.
+         * ⚠️ The store pages used to pass it in hidden fields alone, with nothing setting
+         * `window._csrfToken`. And cart.js reads from that, so it sent an empty string on
+         * every cart operation.
          *
-         * ولم يكن ذلك عطلاً ظاهراً — شبكة أمان csrf.js تلتقط الفشل
-         * وتجلب توكناً وتُعيد الطلب — لكنه كان **ثلاثة طلبات بدل
-         * واحد** في كل إضافة أو زيادة أو حذف. مقيس في المتصفّح:
+         * That was not a visible fault — the safety net in csrf.js catches the failure,
+         * fetches a token and retries — but it meant **three requests instead of one** on
+         * every add, increment or delete. Measured in the browser:
          *
          *     POST /cart/add  →  GET /auth/csrf  →  POST /cart/add
          *
-         * وهذا الثمن يُدفع على كل نقرة، وفي أثقل لحظة: زبونٌ يملأ سلّته.
+         * And that price is paid on every click, at the heaviest moment: a customer
+         * filling their cart.
          *
-         * وللمسجَّل وحده: الزائر لا سلّة له، ولا داعي لإرسال توكن لمن
-         * لا يملك نقطة يستعمله فيها.
+         * And for signed-in users alone: a visitor has no cart, and there is no reason to
+         * send a token to somebody with no endpoint to use it on.
          */
         ?>
         <?= pageData(['_csrfToken' => $csrfToken]) ?>
@@ -100,21 +101,21 @@ $csrfToken = generateCsrfToken();
 
 
     <?php // ══ Scripts ═════════════════════════════════════════════ ?>
-    <?php // ⚠️ أوّلاً وبلا defer: ينسخ جزيرة بيانات الصفحة إلى window،
-         // وكل ما تحته يقرأ منها. نقله لاحقاً يكسر كل صفحة تمرّر بيانات. ?>
+    <?php // ⚠️ First and without defer: it copies the page's data island onto window, and
+         // everything below reads from it. Moving it later breaks every page passing data. ?>
     <?= jsTag('js/core/page-data.js', false) ?>
 
     <?php
     /*
-     * ⚠️ jQuery حُذف من هنا. كان يُحمَّل على **كل صفحة** ولا يُستعمل في
-     * سطر واحد — مفحوص: صفر `$(` وصفر `jQuery` في public/js وapp/views
-     * جميعاً. الكود كلّه vanilla. فكان الوسم يكلّف طلب شبكة على كل
-     * صفحة، ويُبقي `code.jquery.com` مسموحاً به في CSP — أي نطاقاً
-     * يستطيع تنفيذ جافاسكربت على صفحة الدفع — مقابل لا شيء.
+     * ⚠️ jQuery was removed from here. It was loaded on **every page** and used on not
+     * one line — verified: zero `$(` and zero `jQuery` across all of public/js and
+     * app/views. The code is entirely vanilla. So the tag cost a network request on every
+     * page and kept `code.jquery.com` permitted in the CSP — a domain able to execute
+     * JavaScript on the checkout page — in exchange for nothing.
      *
-     * الروابط والبصمات في VENDOR_ASSETS داخل assets_helper.php.
-     * bootstrap بلا defer عمداً: هذا هو السلوك القائم، وبعض الصفحات
-     * تنشئ مودالات فور تحميلها.
+     * The URLs and integrity hashes live in VENDOR_ASSETS, inside assets_helper.php.
+     * bootstrap without defer, deliberately: that is the existing behaviour, and some
+     * pages create modals as soon as they load.
      */
     ?>
     <?= vendorJs('bootstrap-js', false) ?>
@@ -122,9 +123,9 @@ $csrfToken = generateCsrfToken();
 
     <?php // Core JS ?>
     <?php
-    // حزمة واحدة بدل ثلاثة عشر وسماً. راجع jsBundle في
-    // assets_helper.php — القائمة هنا هي الارتداد عند غياب البناء،
-    // وترتيبها هو العقد: الملفات تتشارك النطاق العام.
+    // One bundle in place of thirteen tags. See jsBundle in assets_helper.php — the list
+    // here is the fallback for when nothing is built, and its order is the contract: the
+    // files share the global scope.
     ?>
     <?= jsBundle('store', [
         'js/core/inline-actions.js',
@@ -142,7 +143,7 @@ $csrfToken = generateCsrfToken();
         'js/shared/order-cancel.js',
     ]) ?>
 
-    <?php // إشعارات المستخدم المسجّل — حزمة منفصلة كي لا يحمّلها الزائر. ?>
+    <?php // A signed-in user's notifications — a separate bundle, so a visitor does not load it ?>
     <?php if (isset($userLoggedIn) && $userLoggedIn): ?>
     <?= jsBundle('store-auth', ['js/features/notifications.js']) ?>
     <?php endif; ?>

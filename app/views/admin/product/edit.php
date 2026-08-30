@@ -1,8 +1,8 @@
 <?php
 /**
- * app/views/admin/product/edit.php — fragment فقط
- * المتغيرات من AdminProductsController::showEdit():
- *   $product   — بيانات المنتج (مع category_ids + variants من findByIdWithCategories)
+ * app/views/admin/product/edit.php — a fragment only.
+ * The variables from AdminProductsController::showEdit():
+ *   $product   — the product's data (with category_ids and variants from findByIdWithCategories)
  *   $categories, $formErr, $csrf
  */
 $p        = $product;
@@ -101,7 +101,7 @@ $variants = $p['variants'] ?? [];
         Please select at least one category.
     </div>
 
-    <?php // ══ Product Image (اختياري بصفحة Edit) ══════════════════ ?>
+    <?php // ══ Product image (optional on the edit page) ══════════════ ?>
     <div class="mb-4">
         <label class="fw-bold d-block mb-1">Product Image</label>
         <?php if (!empty($p['image_path'])): ?>
@@ -122,7 +122,7 @@ $variants = $p['variants'] ?? [];
                accept="image/jpeg,image/png,image/webp">
     </div>
 
-    <?php // ══ Colors (صفوف موجودة + إضافة جديدة) ════════ ?>
+    <?php // ══ Colours (existing rows plus new additions) ════════ ?>
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h5 class="mb-0">Colors <span class="text-danger">*</span></h5>
         <button type="button"
@@ -134,7 +134,7 @@ $variants = $p['variants'] ?? [];
         <?php foreach ($variants as $i => $v): ?>
         <div class="variant-row card p-3 mb-3 u-surface-page">
 
-            <?php // Hidden: variant ID + صورة موجودة ?>
+            <?php // Hidden: the variant id plus its existing image ?>
             <?php if (!empty($v['id'])): ?>
             <input type="hidden"
                    class="field-id"
@@ -225,7 +225,7 @@ $variants = $p['variants'] ?? [];
                             <?php foreach (['both' => 'Both', 'male' => 'Male', 'female' => 'Female'] as $val => $lbl): ?>
                             <option value="<?= $val ?>"
                                     <?= ($v['gender_category'] ?? 'both') === $val ? 'selected' : '' ?>>
-                                <?php // @escaping-safe: $lbl من مصفوفة حرفية في حلقة هذا الملف ?>
+                                <?php // @escaping-safe: $lbl comes from a literal array in this file's loop ?>
                                 <?= $lbl ?>
                             </option>
                             <?php endforeach; ?>
@@ -266,7 +266,7 @@ $variants = $p['variants'] ?? [];
         <?php endforeach; ?>
     </div>
 
-    <?php // Template: لصفوف الألوان الجديدة المُضافة بـ JS ?>
+    <?php // Template: for the new colour rows JavaScript adds ?>
     <template id="variantRowTemplate">
         <div class="variant-row card p-3 mb-3 u-surface-page">
             <div class="d-flex justify-content-between align-items-center mb-2">
@@ -353,7 +353,7 @@ $variants = $p['variants'] ?? [];
 </form>
 </div>
 
-<?php // بيانات الكاتوجريز الحالية للمنتج — تُقرأ من category-picker.js ?>
+<?php // The product's current categories — read by category-picker.js ?>
 <?= pageData([
     '_currentCategoryIds' => array_map('intval', $p['category_ids'] ?? []),
 ]) ?>

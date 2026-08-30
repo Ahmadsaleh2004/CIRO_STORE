@@ -1,12 +1,12 @@
 <?php
 /**
  * app/views/inc/footer-bare.php
- * إغلاق صفحات layout الـ'bare'. مقابل head-bare.php.
+ * Closes the 'bare' layout pages. The counterpart to head-bare.php.
  *
- * لا يحمّل أي JS من تلقاء نفسه — صفحات الـbare مستقلة عمداً، وكل صفحة
- * تعلن سكربتاتها بنفسها: عبر $bareScripts أو بوسومها الخاصة في الجسم.
+ * It loads no JavaScript of its own — the bare pages are deliberately standalone, and
+ * each declares its own scripts: through $bareScripts, or with its own tags in the body.
  *
- *   $bareScripts  string  HTML خام يُطبع قبل </body> مباشرة
+ *   $bareScripts  string  Raw HTML printed immediately before </body>
  */
 ?>
 <?= $bareScripts ?? '' ?>

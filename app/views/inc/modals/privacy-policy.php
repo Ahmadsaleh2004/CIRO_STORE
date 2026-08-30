@@ -1,8 +1,8 @@
 <?php
 /**
  * app/views/inc/modals/privacy-policy.php
- * Privacy Policy Modal — Partial فقط، يُستدعى من footer.php
- * منقول من components/footer.php القديم (سطر 322–368)
+ * Privacy policy modal — a partial only, included from footer.php.
+ * Moved out of the old components/footer.php (lines 322–368).
  */
 ?>
 <?php // ══ Privacy Policy Modal ════════════════════════════════ ?>
@@ -37,9 +37,9 @@
             </div>
             <div class="modal-footer u-border-top">
                 <?php
-                // كان هنا **دالة JS كاملة مكتوبة داخل سمة onclick** —
-                // أربعة أسطر منطق في وسم HTML. صارت نيّةً معلَنة
-                // (accept-privacy) وجسمها في js/core/inline-actions.js.
+                // There used to be **a whole JavaScript function written inside an onclick
+                // attribute** here — four lines of logic in an HTML tag. It is now a declared
+                // intent (accept-privacy) whose body lives in js/core/inline-actions.js.
                 ?>
                 <button type="button" class="btn btn-success"
                     data-action="switch-modal"

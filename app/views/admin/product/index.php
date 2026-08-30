@@ -1,36 +1,36 @@
 <?php
 /**
- * app/views/admin/product/index.php — fragment فقط (بدون DOCTYPE/html/head/body)
- * المتغيرات من AdminProductsController::index():
+ * app/views/admin/product/index.php — a fragment only (no DOCTYPE/html/head/body).
+ * The variables from AdminProductsController::index():
  *   $products, $categories, $sortOptions, $search, $catId, $sortKey,
  *   $page, $totalPages, $total, $flashMsg, $flashErr,
- *   $adminName, $adminRole, $adminId, $csrf (من adminView تلقائياً)
+ *   $adminName, $adminRole, $adminId, $csrf (injected automatically by adminView)
  */
 ?>
 
 <?php
 // ── Page Header ───────────────────────────────────────────
 //
-// الشارة تعرض عدد **النتائج** حين يكون هناك بحث أو فلترة، والعدد
-// الكلّي فيما عدا ذلك.
+// The badge shows the **result** count when a search or a filter is active, and the
+// total count otherwise.
 //
-// وسبب هذا التفريع أن سطر «X products found» حُذف من فوق الجدول،
-// وكانت الشارة تعرض countAll() دائماً — أي أن العدد المُرشَّح اختفى
-// من الصفحة كلّها. فأصبحت الشارة تحمل الرقمين بحسب السياق بدل سطر
-// ثالث مستقلّ.
+// The reason for the branch is that the "X products found" line was removed from above
+// the table while the badge always showed countAll() — so the filtered count vanished
+// from the page entirely. The badge now carries either number according to context,
+// rather than a third separate line.
 //
-// و`X of Y` لا الرقم وحده عند الفلترة: «12» بلا مرجع لا تقول شيئاً،
-// و«12 of 340» تقول كم رشّح البحث من كم.
+// And `X of Y` rather than the number alone when filtering: "12" with no reference says
+// nothing, while "12 of 340" says how much the search narrowed, and out of how much.
 //
-// ⚠️ البحث والكاتوجريز وحدهما — لا الفرز.
+// ⚠️ The search and the categories alone — not the sort.
 //
-// سببان: `AdminProductModel::countFiltered($search, $categoryIds)`
-// لا تأخذ الفرز أصلاً، فالفرز لا يغيّر `$total` بشيء — وعرض
-// «340 of 340» لمجرّد أن الأدمن رتّب بالسعر ضجيجٌ لا خبر.
+// Two reasons: `AdminProductModel::countFiltered($search, $categoryIds)` does not take
+// the sort at all, so sorting changes `$total` not at all — and showing "340 of 340"
+// merely because the admin sorted by price is noise, not information.
 //
-// والثاني أن `$priceSort` وأختيها تكون **null** لا `''` حين لا
-// تُطلَب (راجع AdminProductsController::index)، فمقارنتها بـ`''`
-// كانت ستصدق دائماً وتُبقي الشارة في وضع الفلترة أبداً.
+// And second, `$priceSort` and its siblings are **null** rather than `''` when not
+// requested (see AdminProductsController::index), so comparing them against `''` would
+// always hold and leave the badge permanently in its filtered state.
 $isFiltered = $search !== '' || $categoryIds !== [];
 
 $countLabel = $isFiltered
@@ -64,19 +64,19 @@ $activeCount = (int)(bool)$priceSort + (int)(bool)$stockSort + (int)(bool)$dateS
 ?>
 
 <?php /*
-── صفّ الأدوات: Sort & Filter + البحث ──────────────────
+── The toolbar row: Sort & Filter plus the search ─────
 
-     كانت هاتان كتلتين فوق بعضهما: `div.dropdown mb-3` مستقلّة، ثم صفّ
-     البحث تحتها. فيقع زرّ الفرز في سطر وحده فوق حقل البحث، وهما أداتا
-     تصفية واحدة تُستعملان معاً.
+     These used to be two stacked blocks: a standalone `div.dropdown mb-3`, then the
+     search row beneath it. So the sort button sat on a line of its own above the search
+     field, when the two are one filtering tool used together.
 
-     وحُذف معهما سطر «X products found» — بطلبٍ صريح.
+     The "X products found" line was removed along with them — by explicit request.
 
-     ⚠️ وله ثمن يستحقّ التسجيل: الشارة بجانب العنوان تعرض
-     `$totalProducts` وهو `countAll()` — العدد الكلّي لا عدد نتائج
-     البحث. فالعدد المُرشَّح (`$total`) لم يعد ظاهراً في أي مكان حين
-     يكون هناك بحث أو فلترة نشطة. المتغيّر ما زال يصل الـview
-     ويستعمله ترقيم الصفحات، فإعادة عرضه سطرٌ واحد متى طُلب.
+     ⚠️ And that has a cost worth recording: the badge beside the title shows
+     `$totalProducts`, which is `countAll()` — the total, not the number of search
+     results. So the filtered count (`$total`) was no longer visible anywhere while a
+     search or filter was active. The variable still reaches the view and the pagination
+     uses it, so restoring the display is one line whenever it is wanted.
 */ ?>
 <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
 
@@ -99,7 +99,7 @@ $activeCount = (int)(bool)$priceSort + (int)(bool)$stockSort + (int)(bool)$dateS
 
         <input type="hidden" name="q" value="<?= htmlspecialchars($search) ?>">
 
-        <?php // القسم 1: السعر (radio) ?>
+        <?php // Section 1: price (radio) ?>
         <p class="fw-bold small mb-1">💰 Price</p>
         <div class="mb-3">
             <div class="form-check">
@@ -118,7 +118,7 @@ $activeCount = (int)(bool)$priceSort + (int)(bool)$stockSort + (int)(bool)$dateS
             <?php endforeach; ?>
         </div>
 
-        <?php // القسم 2: الكمية (radio) ?>
+        <?php // Section 2: quantity (radio) ?>
         <p class="fw-bold small mb-1">📦 Stock</p>
         <div class="mb-3">
             <div class="form-check">
@@ -137,7 +137,7 @@ $activeCount = (int)(bool)$priceSort + (int)(bool)$stockSort + (int)(bool)$dateS
             <?php endforeach; ?>
         </div>
 
-        <?php // القسم 3: التاريخ (radio) ?>
+        <?php // Section 3: date (radio) ?>
         <p class="fw-bold small mb-1">🕒 Date</p>
         <div class="mb-3">
             <div class="form-check">
@@ -158,7 +158,7 @@ $activeCount = (int)(bool)$priceSort + (int)(bool)$stockSort + (int)(bool)$dateS
 
         <hr class="filter-divider">
 
-        <?php // القسم 4: الكاتوجريز (checkbox — OR) ?>
+        <?php // Section 4: categories (checkboxes — OR) ?>
         <p class="fw-bold small mb-1">🏷️ Categories <span class="text-muted fw-normal">(any match)</span></p>
         <div class="mb-3">
             <?php foreach ($categories as $c): ?>
@@ -216,10 +216,10 @@ $activeCount = (int)(bool)$priceSort + (int)(bool)$stockSort + (int)(bool)$dateS
         <table class="table admin-table mb-0" id="productsTable">
             <thead>
                 <tr>
-                    <?php /* لم يكن للمنتجات عمود معرّف إطلاقاً — الهوية
-                             موجودة في id="product-row-N" وحدها، أي يراها
-                             الـJS ولا يراها الأدمن. وهو يحتاجها: روابط
-                             التعديل والدعم والسجلّات كلها بالمعرّف. */ ?>
+                    <?php /* Products had no id column at all — the identity lived in
+                             id="product-row-N" alone, which is to say JavaScript could see
+                             it and the admin could not. And they need it: the edit,
+                             support and audit links all go by id. */ ?>
                     <th class="u-w-64">#</th>
                     <th class="u-w-60">Image</th>
                     <th>Name</th>
@@ -233,9 +233,9 @@ $activeCount = (int)(bool)$priceSort + (int)(bool)$stockSort + (int)(bool)$dateS
             <tbody>
             <?php if (empty($products)): ?>
                 <?php
-                $emptyColspan = 8;   // ثمانية منذ إضافة عمود المعرّف
-                $emptyPadding = 'py-5';   // هذا الجدول وحده يستعمل التباعد الأكبر
-                // مصطلح البحث مُهرَّب هنا لأن الـpartial يطبع النص كما هو
+                $emptyColspan = 8;   // Eight, since the id column was added
+                $emptyPadding = 'py-5';   // This table alone uses the larger padding
+                // The search term is escaped here, because the partial prints the text as-is
                 $emptyMessage = 'No products found'
                     . ($search !== '' ? ' for "' . htmlspecialchars($search) . '"' : '') . '.';
                 require APPROOT . '/views/shared/table-empty-row.php';
@@ -245,10 +245,10 @@ $activeCount = (int)(bool)$priceSort + (int)(bool)$stockSort + (int)(bool)$dateS
                 <tr id="product-row-<?= (int)$p['id'] ?>"
                     class="<?= ($p['is_visible'] ?? 1) ? '' : 'product-hidden-row' ?>">
 
-                    <?php // المعرّف — ثابت مدى حياة الصفّ، لا ترتيب عرض ?>
+                    <?php // The id — fixed for the row's lifetime, not a display position ?>
                     <td class="text-muted"><?= (int)$p['id'] ?></td>
 
-                    <?php // صورة المنتج ?>
+                    <?php // The product image ?>
                     <td>
                         <img src="<?= htmlspecialchars(fixImagePath($p['image_path'] ?? '')) ?>"
                              alt="<?= htmlspecialchars($p['name']) ?>"
@@ -256,7 +256,7 @@ $activeCount = (int)(bool)$priceSort + (int)(bool)$stockSort + (int)(bool)$dateS
                              loading="lazy">
                     </td>
 
-                    <?php // اسم المنتج ?>
+                    <?php // The product name ?>
                     <td>
                         <a href="<?= URLROOT ?>/admin/products/edit?id=<?= (int)$p['id'] ?>"
                            class="fw-semibold text-decoration-none u-text">
@@ -272,7 +272,7 @@ $activeCount = (int)(bool)$priceSort + (int)(bool)$stockSort + (int)(bool)$dateS
                         <?php endif; ?>
                     </td>
 
-                    <?php // آخر تعديل ?>
+                    <?php // Last modified ?>
                     <td class="u-meta-80">
                         <?php if (!empty($p['last_modified_by_name'])): ?>
                             <span class="u-text fw-medium">
@@ -286,7 +286,7 @@ $activeCount = (int)(bool)$priceSort + (int)(bool)$stockSort + (int)(bool)$dateS
                         <?php endif; ?>
                     </td>
 
-                    <?php // السعر ?>
+                    <?php // Price ?>
                     <td class="text-nowrap">
                         <span class="fw-semibold u-accent">
                             $<?= number_format((float)($p['price'] ?? 0), 2) ?>
@@ -298,12 +298,12 @@ $activeCount = (int)(bool)$priceSort + (int)(bool)$stockSort + (int)(bool)$dateS
                         <?php endif; ?>
                     </td>
 
-                    <?php // المخزون ?>
+                    <?php // Stock ?>
                     <td>
                         <?php
                         $stock       = (int)($p['total_stock'] ?? $p['stock_quantity'] ?? 0);
                         $minVariant  = $p['min_variant_stock'];
-                        // إن لم يوجد أي variant (حالة نادرة)، اعتمد على المجموع نفسه كبديل آمن
+                        // With no variant at all (a rare case), fall back to the total itself
                         $colorSource = ($minVariant !== null) ? (int)$minVariant : $stock;
                         $stockClass = match(true) {
                             $colorSource === 0         => 'bg-danger',
@@ -316,7 +316,7 @@ $activeCount = (int)(bool)$priceSort + (int)(bool)$stockSort + (int)(bool)$dateS
                         </span>
                     </td>
 
-                    <?php // الرؤية + toggle ?>
+                    <?php // Visibility, and its toggle ?>
                     <td>
                         <button class="btn btn-sm toggle-vis-btn
                                        <?= ($p['is_visible'] ?? 1) ? 'btn-outline-secondary' : 'btn-outline-warning' ?>"
@@ -347,7 +347,7 @@ $activeCount = (int)(bool)$priceSort + (int)(bool)$stockSort + (int)(bool)$dateS
 
 <?php // ── Pagination ─────────────────────────────────────────── ?>
 <?php if ($totalPages > 1):
-    // بناء query string الفلاتر للـ pagination — يحافظ على كل الفلاتر عند التنقل
+    // Build the filters' query string for the pagination — it preserves every filter while navigating
     $paginationBase = http_build_query(array_filter([
         'q'          => $search,
         'price_sort' => $priceSort,
@@ -402,7 +402,7 @@ $activeCount = (int)(bool)$priceSort + (int)(bool)$stockSort + (int)(bool)$dateS
 </nav>
 <?php endif; ?>
 
-<?php // ── CSRF hidden (يُستخدم بـ AJAX من products.js) ─────── ?>
+<?php // ── The hidden CSRF field (used over AJAX by products.js) ─── ?>
 <input type="hidden" id="productsCsrf" value="<?= htmlspecialchars($csrf) ?>">
 
 <?php // ── Category Picker Modal ─────────────────────────────── ?>
