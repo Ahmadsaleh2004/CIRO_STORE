@@ -1,7 +1,7 @@
 <?php
 /**
  * app/views/admin/dashboard.php — fragment فقط (بدون DOCTYPE/html/head/body)
- * يُحمَّل من AdminController::adminView() بعد inc/head.php و inc/navbar.php
+ * Loaded by AdminController::adminView() after inc/head.php and inc/navbar.php
  * كل المتغيرات جاهزة من AdminDashboardController::index()
  * لا يحتوي على أي استعلامات أو منطق — هذا مكانه في الـ Controller والـ Model فقط.
  */

@@ -7,9 +7,9 @@ use App\Models\UserModel;
 use OpenApi\Attributes as OA;
 
 /**
- * AuthController — تسجيل الدخول / التسجيل / الخروج / نسيت كلمة المرور / Google OAuth
- * منقول ومُحوَّل من handlers/auth_handler.php القديم
- * كل الطلبات ترجع JSON (تستدعيها auth.js عبر fetch)
+ * AuthController — login / registration / logout / password reset / Google OAuth.
+ * Moved and converted from the old handlers/auth_handler.php.
+ * Every request returns JSON (auth.js calls them through fetch).
  */
 class AuthController extends Controller
 {
@@ -18,10 +18,10 @@ class AuthController extends Controller
     // ════════════════════════════════════════════════════════
     #[OA\Post(
         path: '/auth/login',
-        summary: 'تسجيل دخول مستخدم',
-        description: 'محمي بحدّ محاولات (Rate limiting): بعد 5 محاولات فاشلة يُقفل الدخول '
-                   . '15 دقيقة ويُرسَل تنبيه أمني بالبريد. يشترط تفعيل البريد، ويرفض الحساب '
-                   . 'الموقوف بثلاث مخالفات.',
+        summary: 'Log a user in',
+        description: 'Rate limited: after five failed attempts, login is locked for 15 minutes '
+                   . 'and a security alert is emailed. A verified email address is required, and '
+                   . 'an account suspended on three strikes is refused.',
         tags: ['Store - Auth'],
         requestBody: new OA\RequestBody(
             required: true,
@@ -46,7 +46,7 @@ class AuthController extends Controller
     )]
     public function login(): void
     {
-        // تأكد من وجود جلسة PHPSESSID قبل أي عملية CSRF أو session read/write
+        // Make sure a PHPSESSID session exists before any CSRF work or session read/write
         if (session_status() === PHP_SESSION_NONE) {
             session_start();
         }
@@ -65,30 +65,30 @@ class AuthController extends Controller
             $this->respond(false, 'Too many failed attempts. Please wait 15 minutes and try again.');
         }
 
-        // --- فحص المستخدم العادي ---
+        // --- Regular user check ---
         $user = UserModel::findByEmail($email);
 
         if ($user && password_verify($pass, $user['password'])) {
-            // فحص تفعيل الإيميل قبل السماح بالدخول
+            // Check email verification before allowing the login
             if (empty($user['email_verified_at'])) {
                 $this->respond(false, 'Please verify your email before logging in. Check your inbox.', [
                     'needs_verification' => true,
                 ]);
             }
 
-            // فحص الحظر (3 strikes)
+            // Check the block (3 strikes)
             if (UserModel::getStrikesCount((int)$user['id']) >= 3) {
                 $this->respond(false, 'Your account has been suspended due to multiple violations. Please contact support.');
             }
 
             UserModel::logLoginAttempt($email, true);
-            // الدخول نجح — لا يدفع صاحبه ثمن محاولاته الفاشلة لاحقاً.
+            // The login succeeded — its owner should not pay for earlier failed attempts.
             \App\Core\Throttle::clear('store-login', \App\Core\Throttle::clientIp());
             session_regenerate_id(true);
 
-            // التوكن يتبع المعرّف. regenerate_id تُبقي محتوى الجلسة —
-            // ومنه csrf_token — فيبقى توكنُ ما قبل المصادقة صالحاً
-            // لجلسة مصادَقة. راجع rotateCsrfToken في csrf_helper.php.
+            // The token follows the id. regenerate_id keeps the session contents —
+            // csrf_token among them — so a pre-authentication token would stay valid for
+            // an authenticated session. See rotateCsrfToken in csrf_helper.php.
             $freshCsrf = rotateCsrfToken();
 
             $_SESSION['user_id']     = (int)$user['id'];
@@ -98,17 +98,18 @@ class AuthController extends Controller
 
             UserModel::updateActivity((int)$user['id']);
 
-            // توجيه بعد تسجيل الدخول
+            // Redirect after login
             $redirectAfter = $_SESSION['redirect_after_login'] ?? URLROOT;
             unset($_SESSION['redirect_after_login']);
 
             $this->respond(true, 'Welcome, ' . $user['full_name'], [
                 'redirect' => $redirectAfter,
                 'type'     => 'user',
-                // js/core/csrf.js يلتقط csrf_token من أي استجابة ويحدّث
-                // كل حقول الصفحة به. إرساله هنا يجعل التدوير بلا تكلفة:
-                // بدونه يكتشف العميل بطلان توكنه بطلبٍ فاشل ثم يعيد
-                // المحاولة — طلبان بدل واحد بعد كل تسجيل دخول.
+                // js/core/csrf.js picks csrf_token out of any response and updates every
+                // field on the page with it. Sending it here makes the rotation free:
+                // without it the client discovers its token is stale through a failed
+                // request and then retries — two requests instead of one after every
+                // login.
                 'csrf_token' => $freshCsrf,
             ]);
         }
@@ -122,12 +123,12 @@ class AuthController extends Controller
                 \App\Core\Mailer::queue(
                     $userRow['email'],
                     $userRow['full_name'] ?? 'User',
-                    'تنبيه: محاولات دخول فاشلة متكررة',
-                    \App\Core\Mailer::template('تنبيه أمني', "
-                        تم رصد 5 محاولات دخول فاشلة متتالية على حسابك.<br>
-                        تم قفل الدخول مؤقتًا لمدة 15 دقيقة كإجراء حماية.<br><br>
-                        إذا لم تكن أنت، ننصحك بتغيير كلمة المرور فورًا من خيار
-                        \"نسيت كلمة المرور\".
+                    'Alert: repeated failed sign-in attempts',
+                    \App\Core\Mailer::template('Security alert', "
+                        Five consecutive failed sign-in attempts were detected on your account.<br>
+                        Sign-in has been locked for 15 minutes as a protective measure.<br><br>
+                        If this was not you, we recommend changing your password immediately
+                        through the \"Forgot password\" option.
                     ")
                 );
             }
@@ -141,10 +142,11 @@ class AuthController extends Controller
     // ════════════════════════════════════════════════════════
     #[OA\Post(
         path: '/auth/register',
-        summary: 'إنشاء حساب مستخدم جديد',
-        description: 'قيود التحقق: البريد يجب أن ينتهي بـ@gmail.com، وكلمة المرور 8 محارف '
-                   . 'على الأقل بحرف كبير وصغير ورقم ورمز، والعمر 13 سنة فأكثر، والبريد '
-                   . 'والهاتف غير مسجَّلين مسبقاً، والموافقة على سياسة الخصوصية إلزامية.',
+        summary: 'Create a new user account',
+        description: 'Validation rules: the email must end in @gmail.com; the password must be at '
+                   . 'least 8 characters with an upper-case letter, a lower-case letter, a digit '
+                   . 'and a symbol; the user must be 13 or older; the email and phone must not '
+                   . 'already be registered; and agreeing to the privacy policy is mandatory.',
         tags: ['Store - Auth'],
         requestBody: new OA\RequestBody(
             required: true,
@@ -172,7 +174,7 @@ class AuthController extends Controller
         responses: [
             new OA\Response(
                 response: 200,
-                description: 'نتيجة العملية. الحقل success يفصل النجاح عن الفشل — كود HTTP يبقى 200 في الحالتين. وعند فشل CSRF يحمل الجسم error_code=csrf_invalid.',
+                description: 'Operation result. The success field separates success from failure — the HTTP status stays 200 either way. On CSRF failure the body carries error_code=csrf_invalid.',
                 content: new OA\JsonContent(oneOf: [
                     new OA\Schema(ref: '#/components/schemas/ApiResponse'),
                     new OA\Schema(ref: '#/components/schemas/ApiError'),
@@ -188,7 +190,7 @@ class AuthController extends Controller
 
         $this->beginJsonPost();
 
-        // جمع البيانات
+        // Gather the input
         $fullName    = trim($_POST['full_name']       ?? '');
         $email       = trim(strtolower($_POST['email'] ?? ''));
         $pass        = $_POST['password']              ?? '';
@@ -232,12 +234,12 @@ class AuthController extends Controller
             $this->respond(false, 'You must agree to the Privacy Policy.');
         }
 
-        // التحقق من رقم الهاتف
+        // Validate the phone number
         if (empty($phone)) {
             $this->respond(false, 'Phone number is required.');
         }
 
-        // التحقق من العمر 13+
+        // Validate the age (13+)
         if (!$birthDate) {
             $this->respond(false, 'Birth date is required.');
         }
@@ -247,7 +249,7 @@ class AuthController extends Controller
             $this->respond(false, 'You must be at least 13 years old to register.');
         }
 
-        // التحقق من التكرار
+        // Check for duplicates
         if (UserModel::findByEmail($email)) {
             $this->respond(false, 'This email is already registered. Please sign in.');
         }
@@ -256,7 +258,7 @@ class AuthController extends Controller
             $this->respond(false, 'This phone number is already registered with another account.');
         }
 
-        // إنشاء الحساب
+        // Create the account
         $hash    = password_hash($pass, PASSWORD_BCRYPT, ['cost' => 12]);
         $newUserId = UserModel::create([
             'full_name'  => $fullName,
@@ -273,17 +275,17 @@ class AuthController extends Controller
             $this->respond(false, 'Something went wrong, please try again.');
         }
 
-        // إرسال رابط تفعيل الإيميل
+        // Send the email verification link
         $verifyToken = UserModel::createEmailVerification($newUserId);
         if ($verifyToken) {
             $verifyLink = URLROOT . '/auth/verify?token=' . $verifyToken;
             \App\Core\Mailer::queue(
                 $email,
                 $fullName,
-                'فعّل بريدك الإلكتروني',
+                'Verify your email address',
                 \App\Core\Mailer::template(
-                    'أهلًا بك',
-                    'شكرًا لتسجيلك! اضغط على الرابط لتفعيل حسابك (صالح 24 ساعة):<br><br>'
+                    'Welcome',
+                    'Thanks for signing up! Follow this link to activate your account (valid for 24 hours):<br><br>'
                     . '<a href="{link}">{link}</a>',
                     ['link' => $verifyLink]
                 )
@@ -298,13 +300,13 @@ class AuthController extends Controller
     // ════════════════════════════════════════════════════════
     #[OA\Post(
         path: '/auth/logout',
-        summary: 'تسجيل خروج المستخدم وإنهاء الجلسة',
+        summary: 'Log the user out and end the session',
         tags: ['Store - Auth'],
         security: [['userSessionAuth' => []]],
         responses: [
             new OA\Response(
                 response: 200,
-                description: 'نتيجة العملية. الحقل success يفصل النجاح عن الفشل — كود HTTP يبقى 200 في الحالتين. وعند فشل CSRF يحمل الجسم error_code=csrf_invalid.',
+                description: 'Operation result. The success field separates success from failure — the HTTP status stays 200 either way. On CSRF failure the body carries error_code=csrf_invalid.',
                 content: new OA\JsonContent(oneOf: [
                     new OA\Schema(ref: '#/components/schemas/ApiResponse'),
                     new OA\Schema(ref: '#/components/schemas/ApiError'),
@@ -318,16 +320,17 @@ class AuthController extends Controller
             session_start();
         }
 
-        // التحقق قبل التدمير — ولسبب أمني لا تنظيمي: بدونه كان أي موقع
-        // خارجي يستطيع تسجيل خروج زائرك بمجرد `<img src=".../auth/logout">`
-        // أو فورم مخفي، لأن المتصفح يرسل كوكي الجلسة تلقائياً. الأثر
-        // إزعاج لا سرقة بيانات، لكنه CSRF قائم بلا مبرّر.
+        // Verify before destroying — for a security reason, not a tidiness one:
+        // without it any external site could sign your visitor out with nothing more
+        // than `<img src=".../auth/logout">` or a hidden form, because the browser
+        // sends the session cookie automatically. The impact is annoyance rather than
+        // data theft, but it is a real CSRF hole with no justification.
         //
-        // beginJsonPost تقرأ التوكن عبر requestData() قبل أي مساس
-        // بالجلسة، فترتيب الاستدعاء هنا ليس تفصيلاً.
+        // beginJsonPost reads the token through requestData() before touching the
+        // session at all, so the call order here is not incidental.
         $this->beginJsonPost();
 
-        // مسح الجلسة بالكامل
+        // Clear the session entirely
         $_SESSION = [];
         if (ini_get('session.use_cookies')) {
             $p = session_get_cookie_params();
@@ -351,9 +354,9 @@ class AuthController extends Controller
     // ════════════════════════════════════════════════════════
     #[OA\Post(
         path: '/auth/forgot',
-        summary: 'طلب رابط إعادة تعيين كلمة المرور',
-        description: 'الرسالة المُرجَعة واحدة سواء وُجد البريد أم لا — كي لا تكشف النقطة '
-                   . 'أي البُرد مسجَّلة.',
+        summary: 'Request a password reset link',
+        description: 'The message returned is the same whether the email exists or not, so the '
+                   . 'endpoint does not disclose which addresses are registered.',
         tags: ['Store - Auth'],
         requestBody: new OA\RequestBody(
             required: true,
@@ -371,7 +374,7 @@ class AuthController extends Controller
         responses: [
             new OA\Response(
                 response: 200,
-                description: 'نتيجة العملية. الحقل success يفصل النجاح عن الفشل — كود HTTP يبقى 200 في الحالتين. وعند فشل CSRF يحمل الجسم error_code=csrf_invalid.',
+                description: 'Operation result. The success field separates success from failure — the HTTP status stays 200 either way. On CSRF failure the body carries error_code=csrf_invalid.',
                 content: new OA\JsonContent(oneOf: [
                     new OA\Schema(ref: '#/components/schemas/ApiResponse'),
                     new OA\Schema(ref: '#/components/schemas/ApiError'),
@@ -402,29 +405,29 @@ class AuthController extends Controller
                 \App\Core\Mailer::queue(
                     $email,
                     $user['full_name'] ?? 'User',
-                    'إعادة تعيين كلمة المرور',
+                    'Reset your password',
                     \App\Core\Mailer::template(
-                        'إعادة تعيين كلمة المرور',
-                        'اضغط على الرابط التالي لإعادة تعيين كلمة المرور'
-                        . ' (صالح لمدة 60 دقيقة فقط):<br><br>'
+                        'Reset your password',
+                        'Follow this link to reset your password'
+                        . ' (valid for 60 minutes only):<br><br>'
                         . '<a href="{link}">{link}</a><br><br>'
-                        . 'إذا لم تطلب هذا، تجاهل هذا الإيميل.',
+                        . 'If you did not request this, ignore this email.',
                         ['link' => $resetLink]
                     )
                 );
             }
         }
 
-        // نُظهر نجاح دائمًا لمنع تعداد الإيميلات المسجّلة
+        // Always report success, to prevent enumeration of registered addresses
         $this->respond(true, 'If this email is registered, you will receive a reset link shortly.');
     }
 
-    // GET /auth/reset — عرض فورم تغيير كلمة المرور (صفحة، مو JSON)
+    // GET /auth/reset — render the password change form (a page, not JSON)
     #[OA\Get(
         path: '/auth/reset',
-        summary: 'صفحة إعادة تعيين كلمة المرور',
-        description: 'صفحة مستقلة لا تحمّل layout المتجر. تخدم المستخدم والأدمن معاً '
-                   . 'حسب نوع التوكن.',
+        summary: 'Password reset page',
+        description: 'A standalone page that does not load the store layout. It serves both '
+                   . 'users and admins, according to the token type.',
         tags: ['Store - Auth'],
         parameters: [
             new OA\Parameter(name: 'token', in: 'query', required: true, schema: new OA\Schema(type: 'string')),
@@ -445,8 +448,9 @@ class AuthController extends Controller
             ? \App\Models\AdminModel::validatePasswordResetToken($email, $token, 'admin')
             : UserModel::validatePasswordResetToken($email, $token, 'user');
 
-        // 'bare': صفحة مستقلة بلا navbar ولا footer المتجر — لا تُحمَّل
-        // هنا أصول المتجر كاملة لأن الوصول إليها بلا جلسة وبتوكن فقط.
+        // 'bare': a standalone page with no store navbar and no store footer — the
+        // full store assets are not loaded here, because this is reached without a
+        // session, on a token alone.
         $this->view('auth/reset-password', [
             'valid' => $valid,
             'token' => $token,
@@ -455,10 +459,10 @@ class AuthController extends Controller
         ], 'bare');
     }
 
-    // POST /auth/reset — تنفيذ تغيير كلمة المرور
+    // POST /auth/reset — perform the password change
     #[OA\Post(
         path: '/auth/reset',
-        summary: 'حفظ كلمة المرور الجديدة بعد التحقق من التوكن',
+        summary: 'Save the new password once the token checks out',
         tags: ['Store - Auth'],
         requestBody: new OA\RequestBody(
             required: true,
@@ -478,7 +482,7 @@ class AuthController extends Controller
         responses: [
             new OA\Response(
                 response: 200,
-                description: 'نتيجة العملية. الحقل success يفصل النجاح عن الفشل — كود HTTP يبقى 200 في الحالتين. وعند فشل CSRF يحمل الجسم error_code=csrf_invalid.',
+                description: 'Operation result. The success field separates success from failure — the HTTP status stays 200 either way. On CSRF failure the body carries error_code=csrf_invalid.',
                 content: new OA\JsonContent(oneOf: [
                     new OA\Schema(ref: '#/components/schemas/ApiResponse'),
                     new OA\Schema(ref: '#/components/schemas/ApiError'),
@@ -513,11 +517,12 @@ class AuthController extends Controller
 
         $hash = password_hash($newPassword, PASSWORD_BCRYPT, ['cost' => 12]);
 
-        // الحساب قد يكون حُذف بين طلب الرابط واستعماله — الرمز يبقى صالحاً
-        // في password_resets بعد حذف صاحبه. بلا هذا الفحص كان
-        // (int)$user['id'] يقرأ من null فيطبع PHP تحذيراً **قبل** جسم
-        // الاستجابة، فتصل الواجهة صفحة خطأ لا JSON وتسقط عند json()
-        // برسالة عامة «Something went wrong» لا تصف شيئاً.
+        // The account may have been deleted between requesting the link and using it —
+        // the token stays valid in password_resets after its owner is gone. Without
+        // this check, (int)$user['id'] read from null and PHP printed a warning
+        // **before** the response body, so the front end received an error page rather
+        // than JSON and fell over at json() with a generic "Something went wrong" that
+        // described nothing.
         if ($isAdmin) {
             $admin = \App\Models\AdminModel::findByEmail($email);
             if (!$admin) {
@@ -538,16 +543,16 @@ class AuthController extends Controller
     }
 
     // ════════════════════════════════════════════════════════
-    // GET /auth/verify — تفعيل الإيميل عبر الرابط
+    // GET /auth/verify — verify the email address through the link
     #[OA\Get(
         path: '/auth/verify',
-        summary: 'تفعيل البريد عبر الرابط المُرسَل بعد التسجيل',
+        summary: 'Verify the email address using the link sent after registration',
         tags: ['Store - Auth'],
         parameters: [
             new OA\Parameter(name: 'token', in: 'query', required: true, schema: new OA\Schema(type: 'string')),
         ],
         responses: [
-            new OA\Response(response: 302, description: 'تحويل للرئيسية مع رسالة نجاح أو خطأ'),
+            new OA\Response(response: 302, description: 'Redirect home with a success or error message'),
         ]
     )]
     public function verifyEmail(): void
@@ -562,17 +567,17 @@ class AuthController extends Controller
         exit;
     }
 
-    // GET /auth/csrf — توليد CSRF Token جديد (للـ retry التلقائي)
+    // GET /auth/csrf — issue a fresh CSRF token (for the automatic retry)
     // ════════════════════════════════════════════════════════
     #[OA\Get(
         path: '/auth/csrf',
-        summary: 'جلب توكن CSRF جديد لنماذج المتجر',
-        description: 'النقطة الوحيدة التي لا تتطلّب توكناً — منها يُجلب.',
+        summary: 'Fetch a fresh CSRF token for the store forms',
+        description: 'The one endpoint that requires no token — it is where the token comes from.',
         tags: ['Store - Auth'],
         responses: [
             new OA\Response(
                 response: 200,
-                description: 'نتيجة العملية. الحقل success يفصل النجاح عن الفشل — كود HTTP يبقى 200 في الحالتين. وعند فشل CSRF يحمل الجسم error_code=csrf_invalid.',
+                description: 'Operation result. The success field separates success from failure — the HTTP status stays 200 either way. On CSRF failure the body carries error_code=csrf_invalid.',
                 content: new OA\JsonContent(oneOf: [
                     new OA\Schema(ref: '#/components/schemas/ApiResponse'),
                     new OA\Schema(ref: '#/components/schemas/ApiError'),
@@ -591,14 +596,14 @@ class AuthController extends Controller
     }
 
     // ════════════════════════════════════════════════════════
-    // GET /auth/google — توجيه لصفحة موافقة جوجل
+    // GET /auth/google — redirect to Google's consent screen
     // ════════════════════════════════════════════════════════
     #[OA\Get(
         path: '/auth/google',
-        summary: 'بدء تسجيل الدخول عبر Google OAuth',
+        summary: 'Begin sign-in through Google OAuth',
         tags: ['Store - Auth'],
         responses: [
-            new OA\Response(response: 302, description: 'تحويل إلى شاشة موافقة Google'),
+            new OA\Response(response: 302, description: "Redirect to Google's consent screen"),
         ]
     )]
     public function googleLogin(): void
@@ -632,19 +637,19 @@ class AuthController extends Controller
         exit;
     }
 
-    // GET /auth/google/callback — استقبال كود جوجل
+    // GET /auth/google/callback — receive Google's code
     // ════════════════════════════════════════════════════════
     #[OA\Get(
         path: '/auth/google/callback',
-        summary: 'استقبال رد Google وإنشاء الجلسة',
-        description: 'ينشئ حساباً جديداً إن لم يكن البريد مسجَّلاً، وإلا يربط الحساب القائم.',
+        summary: "Receive Google's response and establish the session",
+        description: 'Creates a new account when the email is not registered; otherwise links the existing one.',
         tags: ['Store - Auth'],
         parameters: [
             new OA\Parameter(name: 'code', in: 'query', schema: new OA\Schema(type: 'string')),
             new OA\Parameter(name: 'state', in: 'query', schema: new OA\Schema(type: 'string')),
         ],
         responses: [
-            new OA\Response(response: 302, description: 'تحويل للرئيسية بعد نجاح الدخول أو فشله'),
+            new OA\Response(response: 302, description: 'Redirect home after the sign-in succeeds or fails'),
         ]
     )]
     public function googleCallback(): void
@@ -668,7 +673,7 @@ class AuthController extends Controller
         unset($_SESSION['google_oauth_state']);
 
         try {
-            // 1) تبديل الـ code بـ access_token
+            // 1) Exchange the code for an access_token
             $tokenResponse = $this->httpPost('https://oauth2.googleapis.com/token', [
                 'code'          => $code,
                 'client_id'     => $_ENV['GOOGLE_CLIENT_ID'] ?? '',
@@ -682,7 +687,7 @@ class AuthController extends Controller
                 throw new \Exception('No access token returned');
             }
 
-            // 2) جلب بيانات المستخدم
+            // 2) Fetch the user's profile
             $userInfoJson = $this->httpGet('https://www.googleapis.com/oauth2/v3/userinfo', $tokenData['access_token']);
             $userInfo = json_decode($userInfoJson, true);
 
@@ -713,9 +718,9 @@ class AuthController extends Controller
 
             session_regenerate_id(true);
 
-            // كمسار الدخول بكلمة السر — التوكن يتبع المعرّف. ولا يُعاد
-            // في جسم استجابة هنا: هذا المسار ينتهي بـredirect، والصفحة
-            // التالية تُطبع بالتوكن الجديد أصلاً.
+            // As on the password login path — the token follows the id. It is not
+            // returned in a response body here: this path ends in a redirect, and the
+            // next page is rendered with the new token anyway.
             rotateCsrfToken();
 
             $_SESSION['user_id']     = $userId;
@@ -735,7 +740,7 @@ class AuthController extends Controller
         }
     }
 
-    /** POST بسيط باستخدام cURL (بدون أي مكتبة خارجية) */
+    /** A minimal POST over cURL, with no external library. */
     /**
      * @param array<string, string> $fields
      */
@@ -754,7 +759,7 @@ class AuthController extends Controller
         return $response;
     }
 
-    /** GET بسيط باستخدام cURL مع Authorization Bearer */
+    /** A minimal GET over cURL with an Authorization Bearer header. */
     private function httpGet(string $url, string $bearerToken): string
     {
         $ch = curl_init($url);

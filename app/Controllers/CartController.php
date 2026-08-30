@@ -9,28 +9,30 @@ use App\Models\ProductModel;
 use OpenApi\Attributes as OA;
 
 /**
- * CartController — السلّة وفحص المخزون.
+ * CartController — the cart, and stock checks.
  *
- * ⚠️ كانت السلّة تُدار في المتصفّح بالكامل (localStorage)، فلا تتبع
- * المستخدم بين أجهزته، وتضيع بمسح بيانات المتصفّح — وضياع سلّة مليئة
- * خسارة بيع لا إزعاج واجهة. صارت على الخادم في CartModel.
+ * ⚠️ The cart used to live entirely in the browser (localStorage), so it did not
+ * follow the user between devices and vanished when browser data was cleared —
+ * and losing a full cart is a lost sale, not a UI annoyance. It now lives on the
+ * server, in CartModel.
  *
- * ولا سلّة زائر: زرّ السلّة وزرّ «أضف للسلّة» محروسان بتسجيل الدخول في
- * القوالب الثلاثة، وغير المسجَّل يُدفع إلى نافذة الدخول. ولذلك كل نقطة
- * هنا تحمل حارس `auth` في جدول المسارات.
+ * There is no guest cart: the cart button and the "add to cart" button are both
+ * login-guarded in all three templates, and a signed-out visitor is pushed to the
+ * login modal. That is why every endpoint here carries the `auth` guard in the
+ * route table.
  */
 class CartController extends Controller
 {
     // ════════════════════════════════════════════════════════
     // POST /cart/check-stock
-    // يستقبل: variant_ids[] (مصفوفة معرّفات الـ Variants)
-    // يُرجع: بيانات المخزون والسعر الحالي لكل Variant
+    // Takes:    variant_ids[] (an array of variant ids)
+    // Returns:  current stock and price for each variant
     // ════════════════════════════════════════════════════════
     #[OA\Post(
         path: '/cart/check-stock',
-        summary: 'التحقق من توفّر وأسعار الـvariants الموجودة في السلة',
-        description: 'تُستدعى من صفحات المنتجات وقائمة الأمنيات لتحديث بطاقاتها بالمخزون '
-                   . 'والسعر الحيَّين. المنتجات المخفية لا تُرجَع.',
+        summary: 'Check availability and pricing for the variants in the cart',
+        description: 'Called from the product pages and the wishlist to refresh their cards with '
+                   . 'live stock and pricing. Hidden products are not returned.',
         tags: ['Store - Cart'],
         requestBody: new OA\RequestBody(
             required: true,
@@ -43,7 +45,7 @@ class CartController extends Controller
                             property: 'variant_ids',
                             type: 'array',
                             items: new OA\Items(type: 'integer'),
-                            description: 'معرّفات الـvariants المطلوب فحصها'
+                            description: 'The variant ids to check'
                         ),
                     ]
                 )
@@ -53,10 +55,11 @@ class CartController extends Controller
             new OA\Response(
                 response: 200,
                 description: <<<'TXT'
-                المخزون الحيّ للنسخ المطلوبة.
+                Live stock for the requested variants.
 
-                بطاقةٌ معروضة على صفحة بقيت مفتوحة قد تحمل سعراً ومخزوناً
-                قديمين. هذه النقطة تُرجع الحقيقة من القاعدة.
+                A card rendered on a page that has been left open may be showing a
+                stale price and stale stock. This endpoint returns the truth from
+                the database.
                 TXT,
                 content: new OA\JsonContent(
                     allOf: [
@@ -66,7 +69,7 @@ class CartController extends Controller
                                 new OA\Property(
                                     property: 'items',
                                     type: 'array',
-                                    description: 'نسخة لكل variant_id مطلوب. النسخ المحذوفة تسقط من الناتج.',
+                                    description: 'One entry per requested variant_id. Deleted variants drop out of the result.',
                                     items: new OA\Items(ref: '#/components/schemas/ProductVariant')
                                 ),
                             ],
@@ -92,21 +95,23 @@ class CartController extends Controller
             $this->respond(false, 'No variant IDs provided.');
         }
 
-        // الموديل يبتلع أي فشل ويسجّله ويُرجع مصفوفة فارغة، فلا حاجة
-        // لـtry/catch هنا — الاستجابة تبقى JSON صالحاً في كل الحالات.
+        // The model swallows any failure, logs it, and returns an empty array, so
+        // there is no need for a try/catch here — the response stays valid JSON in
+        // every case.
         $results = ProductModel::findVariantsStock($variantIds);
 
         $this->respond(true, 'Stock data retrieved.', ['items' => $results]);
     }
 
     // ════════════════════════════════════════════════════════
-    // GET /cart — سلّة المستخدم
+    // GET /cart — the user's cart
     // ════════════════════════════════════════════════════════
     #[OA\Get(
         path: '/cart',
-        summary: 'سلّة المستخدم الحالي',
-        description: 'الأسعار والمخزون تُقرأ من القاعدة عند كل طلب لا من وقت الإضافة، '
-                   . 'فتظهر أي تغيّرات في السلّة قبل صفحة الدفع لا عندها.',
+        summary: "The current user's cart",
+        description: 'Prices and stock are read from the database on every request rather than '
+                   . 'captured at add time, so any change shows up in the cart before checkout '
+                   . 'rather than at it.',
         tags: ['Store - Cart'],
         security: [['userSessionAuth' => []]],
         responses: [
@@ -132,9 +137,10 @@ class CartController extends Controller
     // ════════════════════════════════════════════════════════
     #[OA\Post(
         path: '/cart/add',
-        summary: 'إضافة كمية إلى السلّة (تُجمَع مع الموجود)',
-        description: 'إضافة نفس الـvariant مرّتين تُحدّث كمية سطر واحد لا تُنشئ ثانياً. '
-                   . 'ولا يُتحقَّق من المخزون هنا: السلّة نيّة لا حجز، والحجز يقع في /checkout.',
+        summary: 'Add a quantity to the cart (summed with what is already there)',
+        description: 'Adding the same variant twice updates one line rather than creating a second. '
+                   . 'Stock is not checked here: a cart is an intention, not a reservation, and the '
+                   . 'reservation happens at /checkout.',
         tags: ['Store - Cart'],
         security: [['userSessionAuth' => []]],
         requestBody: new OA\RequestBody(
@@ -167,9 +173,9 @@ class CartController extends Controller
         }
 
         if (!CartModel::add($userId, $productId, $variantId, $qty)) {
-            // أشيع سبب: variant لم يعد موجوداً بين عرض الصفحة والنقر،
-            // أو كمية خارج الحدّ. الرسالة واحدة للاثنين — التفصيل في
-            // السجلّ لا في الاستجابة.
+            // The usual causes: a variant that stopped existing between page render and
+            // click, or a quantity outside the allowed range. The message is the same
+            // for both — the detail belongs in the log, not in the response.
             $this->respond(false, 'Could not add this item to your cart.');
         }
 
@@ -177,11 +183,11 @@ class CartController extends Controller
     }
 
     // ════════════════════════════════════════════════════════
-    // POST /cart/update — ضبط كمية سطر ضبطاً مطلقاً
+    // POST /cart/update — set a line's quantity absolutely
     // ════════════════════════════════════════════════════════
     #[OA\Post(
         path: '/cart/update',
-        summary: 'ضبط كمية سطر في السلّة (الصفر يحذفه)',
+        summary: 'Set a cart line\'s quantity (zero removes it)',
         tags: ['Store - Cart'],
         security: [['userSessionAuth' => []]],
         requestBody: new OA\RequestBody(
@@ -222,7 +228,7 @@ class CartController extends Controller
     // ════════════════════════════════════════════════════════
     #[OA\Post(
         path: '/cart/remove',
-        summary: 'حذف سطر من السلّة',
+        summary: 'Remove a line from the cart',
         tags: ['Store - Cart'],
         security: [['userSessionAuth' => []]],
         requestBody: new OA\RequestBody(
@@ -255,17 +261,17 @@ class CartController extends Controller
     }
 
     /**
-     * يردّ بالسلّة كاملةً بعد أي تعديل.
+     * Responds with the whole cart after any change.
      *
-     * ── لماذا السلّة كلّها لا تأكيدٌ فقط ──────────────────────────
+     * ── Why the whole cart and not just an acknowledgement ───────
      *
-     * لأن العميل بلا حالة الآن: الخادم هو المرجع الوحيد. وردّ «تمّ»
-     * وحده يجبر العميل على طلب ثانٍ ليعرف ما صارت إليه السلّة — طلبان
-     * لكل نقرة زيادة أو نقصان.
+     * Because the client is stateless now: the server is the only source of
+     * truth. An "ok" on its own forces the client into a second request to learn
+     * what the cart became — two round trips for every increment or decrement.
      *
-     * والأهمّ أنه يحلّ تعارض التبويبين بلا منطق إضافي: كل استجابة تحمل
-     * الحالة الكاملة، فالتبويب الذي يعدّل يرى نتيجة تعديله ونتيجة
-     * تعديل غيره معاً.
+     * More importantly it resolves the two-tab conflict with no extra logic:
+     * every response carries the complete state, so the tab making a change sees
+     * both its own result and the other tab's.
      */
     private function respondWithCart(int $userId, string $message): never
     {

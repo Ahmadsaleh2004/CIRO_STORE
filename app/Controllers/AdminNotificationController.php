@@ -7,16 +7,16 @@ use App\Models\AdminNotificationModel;
 use OpenApi\Attributes as OA;
 
 /**
- * AdminNotificationController — إشعارات الأدمن (جرس الـ navbar المشترك).
- * يرث من AdminController الذي يحمي كل صفحات الأدمن تلقائيًا
- * (startAdminSession + isAdmin في الـ constructor).
- * كل الـ endpoints ترجع JSON.
+ * AdminNotificationController — admin notifications (the shared navbar bell).
+ * Extends AdminController, which protects every admin page automatically
+ * (startAdminSession + isAdmin in the constructor).
+ * Every endpoint returns JSON.
  */
 class AdminNotificationController extends AdminController
 {
     #[OA\Get(
         path: '/admin/notifications/list',
-        summary: 'قائمة إشعارات الأدمن الحالي + عدد غير المقروء (AJAX — JSON)',
+        summary: "The current admin's notifications plus the unread count (AJAX — JSON)",
         tags: ['Admin - Notifications'],
         security: [['adminSessionAuth' => []]],
         responses: [
@@ -61,7 +61,7 @@ class AdminNotificationController extends AdminController
 
     #[OA\Post(
         path: '/admin/notifications/mark-read',
-        summary: 'تحديد إشعار واحد كمقروء (AJAX — JSON)',
+        summary: 'Mark a single notification as read (AJAX — JSON)',
         tags: ['Admin - Notifications'],
         security: [['adminSessionAuth' => []]],
         requestBody: new OA\RequestBody(
@@ -110,7 +110,7 @@ class AdminNotificationController extends AdminController
 
     #[OA\Post(
         path: '/admin/notifications/mark-all-read',
-        summary: 'تحديد كل إشعارات الأدمن كمقروءة (AJAX — JSON)',
+        summary: "Mark all of the admin's notifications as read (AJAX — JSON)",
         tags: ['Admin - Notifications'],
         security: [['adminSessionAuth' => []]],
         requestBody: new OA\RequestBody(
@@ -149,7 +149,7 @@ class AdminNotificationController extends AdminController
 
     #[OA\Post(
         path: '/admin/notifications/delete-all',
-        summary: 'حذف كل إشعارات الأدمن (AJAX — JSON)',
+        summary: "Delete all of the admin's notifications (AJAX — JSON)",
         tags: ['Admin - Notifications'],
         security: [['adminSessionAuth' => []]],
         requestBody: new OA\RequestBody(
@@ -188,7 +188,7 @@ class AdminNotificationController extends AdminController
 
     #[OA\Post(
         path: '/admin/notifications/dismiss',
-        summary: 'حذف إشعار واحد للأدمن الحالي (AJAX — JSON)',
+        summary: 'Delete a single notification for the current admin (AJAX — JSON)',
         tags: ['Admin - Notifications'],
         security: [['adminSessionAuth' => []]],
         requestBody: new OA\RequestBody(

@@ -10,16 +10,17 @@ use App\Models\AdminModel;
 use OpenApi\Attributes as OA;
 
 /**
- * AdminSupportController — صفحة رسائل الدعم الفني للأدمن.
- * يرث من AdminController الذي يتحقق من تسجيل دخول الأدمن تلقائياً.
+ * AdminSupportController — the admin's support inbox page.
+ * Extends AdminController, which verifies the admin login automatically.
  */
-// ملاحظة: لا #[OA\PathItem] هنا. كانت ثلاثة منها تعلن المسارات مجرّدة
-// بلا عملية، فكان swagger-php يدمج أول #[OA\Post] في كل واحدة — فيخرج
-// المسارات الثلاثة بنفس الوصف ونفس operationId. سمات Get/Post أدناه
-// وعلى الميثودات تعلن المسارات بنفسها فلا حاجة لها.
+// Note: no #[OA\PathItem] here. There used to be three of them declaring bare
+// paths with no operation, so swagger-php merged the first #[OA\Post] into each
+// one — emitting all three paths with the same description and the same
+// operationId. The Get/Post attributes below, on the methods themselves, declare
+// their paths already, so the PathItems were never needed.
 #[OA\Post(
     path: '/admin/support/reply',
-    summary: 'إرسال رد على رسالة دعم كإشعار للمستخدم صاحب الرسالة',
+    summary: 'Reply to a support message, delivered as a notification to its author',
     tags: ['Admin - Support'],
     security: [['adminSessionAuth' => []]],
     requestBody: new OA\RequestBody(
@@ -39,7 +40,7 @@ use OpenApi\Attributes as OA;
     responses: [
         new OA\Response(
             response: 200,
-            description: 'نجاح أو فشل الإرسال',
+            description: 'Whether sending succeeded',
             content: new OA\JsonContent(
                 properties: [
                     new OA\Property(property: 'success', type: 'boolean'),
@@ -51,7 +52,7 @@ use OpenApi\Attributes as OA;
 )]
 #[OA\Post(
     path: '/admin/support/delete',
-    summary: 'حذف رسالة دعم فني نهائياً',
+    summary: 'Permanently delete a support message',
     tags: ['Admin - Support'],
     security: [['adminSessionAuth' => []]],
     requestBody: new OA\RequestBody(
@@ -70,7 +71,7 @@ use OpenApi\Attributes as OA;
     responses: [
         new OA\Response(
             response: 200,
-            description: 'نجاح أو فشل الحذف',
+            description: 'Whether the deletion succeeded',
             content: new OA\JsonContent(
                 properties: [
                     new OA\Property(property: 'success', type: 'boolean'),
@@ -84,36 +85,36 @@ class AdminSupportController extends AdminController
 {
     #[OA\Get(
         path: '/admin/support',
-        summary: 'قائمة رسائل الدعم الفني (بحث + Pagination)، تُحدّد كل الرسائل كمقروءة تلقائياً عند الفتح',
+        summary: 'Support message list (search + pagination); opening it marks every message read automatically',
         tags: ['Admin - Support'],
         security: [['adminSessionAuth' => []]],
         parameters: [
             new OA\Parameter(
                 name: 'q',
-                description: 'بحث بالاسم / الإيميل / نص الرسالة',
+                description: 'Search by name, email or message body',
                 in: 'query',
                 required: false,
                 schema: new OA\Schema(type: 'string')
             ),
             new OA\Parameter(
                 name: 'page',
-                description: 'رقم الصفحة (Pagination)',
+                description: 'Page number',
                 in: 'query',
                 required: false,
                 schema: new OA\Schema(type: 'integer', default: 1)
             ),
         ],
         responses: [
-            new OA\Response(response: 200, description: 'صفحة HTML — يتطلب صلاحية can_manage_support'),
-            new OA\Response(response: 302, description: 'إعادة توجيه لـ /admin/login'),
-            new OA\Response(response: 403, description: 'ممنوع — لا يملك can_manage_support'),
+            new OA\Response(response: 200, description: 'HTML page — requires the can_manage_support permission'),
+            new OA\Response(response: 302, description: 'Redirect to /admin/login'),
+            new OA\Response(response: 403, description: 'Forbidden — the admin lacks can_manage_support'),
         ]
     )]
     public function index(): void
     {
         Middleware::requirePermission('can_manage_support');
 
-        // تحديد كل الرسائل كمقروءة عند فتح الصفحة — نفس سلوك القديم بالحرف
+        // Mark every message read when the page opens — the old behaviour, to the letter
         SupportModel::markAllNotified();
 
         $search      = trim($_GET['q'] ?? '');
@@ -153,12 +154,12 @@ class AdminSupportController extends AdminController
 
         $adminId = (int) $_SESSION['admin_id'];
 
-        // TODO: Rate limiting على عملية الرد — تذكرة منفصلة (غير موجود بالمشروع الجديد حالياً)
+        // TODO: rate limiting on replies — tracked separately (not present in the rewrite yet)
 
         NotificationModel::insert($targetUserId, 'Support Response', $replyText, $adminId);
         AdminModel::logAction($adminId, 'reply_support_message', 'support', $targetUserId, "Replied: {$replyText}");
 
-        // ── إشعار جماعي لكل أدمن رتبته أعلى ويملك can_manage_support (باستثناء الجذر) ──────────
+        // ── Broadcast to every higher-ranked admin holding can_manage_support (root excluded) ──
         $rankOrder = ['D' => 1, 'C' => 2, 'B' => 3, 'A' => 4];
         $myRank    = getAdminRole();
         $myRankVal = $rankOrder[$myRank] ?? 0;
@@ -201,7 +202,7 @@ class AdminSupportController extends AdminController
             $this->respond(false, 'Invalid ID.');
         }
 
-        // ── جلب محتوى الرسالة قبل الحذف للتفاصيل ──────────────────────
+        // ── Read the message body before deleting it, for the audit details ───
         $msgText = SupportModel::getMessageText($msgId) ?? 'N/A';
 
         if (!SupportModel::delete($msgId)) {
@@ -211,7 +212,7 @@ class AdminSupportController extends AdminController
         $adminId = (int) $_SESSION['admin_id'];
         AdminModel::logAction($adminId, 'delete_support_message', 'support', $msgId, "Deleted message: {$msgText}");
 
-        // ── إشعار جماعي لكل أدمن رتبته أعلى ويملك can_manage_support (باستثناء الجذر) ──────────
+        // ── Broadcast to every higher-ranked admin holding can_manage_support (root excluded) ──
         $rankOrder = ['D' => 1, 'C' => 2, 'B' => 3, 'A' => 4];
         $myRank    = getAdminRole();
         $myRankVal = $rankOrder[$myRank] ?? 0;

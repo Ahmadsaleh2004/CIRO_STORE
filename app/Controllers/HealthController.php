@@ -8,54 +8,60 @@ use OpenApi\Attributes as OA;
 use Throwable;
 
 /**
- * HealthController — هل التطبيق صالح لاستقبال الطلبات؟
+ * HealthController — is this instance actually fit to serve requests?
  *
- * ── لماذا استعلام حقيقي لا «200 وحسب» ──────────────────────
+ * ── Why a real query and not just "200" ────────────────────
  *
- * فحص يردّ 200 لمجرّد أن Apache يستجيب يقول شيئاً واحداً: أن Apache
- * يستجيب. والحاوية التي فقدت اتصالها بالقاعدة تجتاز فحصاً كهذا وتبقى
- * في دوران الحمل، فتستقبل الطلبات وتفشل فيها كلها.
+ * A check that returns 200 because Apache answered tells you exactly one
+ * thing: Apache answered. A container that has lost its database connection
+ * passes that check, stays in the load balancer, accepts traffic, and fails
+ * every request it takes.
  *
- * ولهذا يُنفَّذ استعلام فعلي. `SELECT 1` لا استعلام على جدول: يثبت أن
- * الاتصال حيّ والمصادقة سليمة، بلا أن يعتمد على وجود بيانات ولا على
- * مخطّط بعينه — فيبقى الفحص صحيحاً أثناء الهجرات.
+ * So a real query runs. `SELECT 1` rather than a query against a table: it
+ * proves the connection is live and authentication works without depending on
+ * any data existing or on a particular schema — so the check stays correct
+ * mid-migration.
  *
- * ── ما لا تُرجعه ───────────────────────────────────────────
+ * ── What it deliberately does not return ───────────────────
  *
- * **لا نسخ ولا أسماء ولا مسارات.** النقطة عامة بلا مصادقة (وهي كذلك
- * بالضرورة: فاحص الصحّة لا يملك جلسة)، فكل ما تكشفه مكشوف للجميع.
- * رسالة الاستثناء تذهب إلى السجلّ وحده.
+ * **No versions, no names, no paths.** The endpoint is public and
+ * unauthenticated of necessity (a health prober has no session), so anything
+ * it reveals is revealed to everyone. The exception message goes to the log
+ * and nowhere else.
  */
 class HealthController extends Controller
 {
-    // ⚠️ الكتم هنا لا عند header(): القاعدة المحلية تطابق **الفعل كاملاً**
-    // ابتداءً من سمة OA، وsemgrep يربط nosemgrep ببداية المطابقة لا
-    // بالسطر الذي أثارها. وضعه عند السطر «المنطقي» لا يكتم شيئاً — وهو
-    // نفس الخطأ الذي كان في تعليقات unlink بـAdminBrandingController.
+    // ⚠️ The suppression belongs here, not at the header() call: the local rule
+    // matches **the whole method** starting at the OA attribute, and semgrep
+    // binds a nosemgrep comment to the start of the match, not to the line that
+    // triggered it. Placing it at the "logical" line suppresses nothing — the
+    // same mistake the unlink comments in AdminBrandingController used to make.
     //
-    // ولماذا الاستثناء أصلاً: القاعدة تبلّغ عن رأس JSON بلا
-    // beginJsonPost() ولا verifyCsrfToken، وهي محقّة عادةً لأن النمط
-    // يعني نقطة تُعدّل الحالة بلا حماية. لكن هذه هي الحالة التي تسمّيها
-    // القاعدة نفسها استثناءً: GET للقراءة المحضة. `SELECT 1` أدناه لا
-    // يمسّ صفّاً ولا جدولاً، والنقطة عامة بالضرورة — فاحص الصحّة لا
-    // يملك جلسة ولا توكناً.
+    // And why suppress at all: the rule reports a JSON header emitted without
+    // beginJsonPost() or verifyCsrfToken, and it is usually right, because that
+    // shape means a state-changing endpoint with no protection. But this is the
+    // exception the rule itself names: a GET that only reads. The `SELECT 1`
+    // below touches no row and no table, and the endpoint is public by
+    // necessity — a health prober holds neither session nor token.
     // nosemgrep: cairo-json-endpoint-without-csrf
     #[OA\Get(
         path: '/health',
-        summary: 'فحص صحّة التطبيق',
+        summary: 'Application health check',
         description: <<<'TXT'
-        تُرجع 200 حين يكون التطبيق قادراً على خدمة الطلبات فعلاً، و503
-        حين لا يكون. الفحص ينفّذ استعلاماً حقيقياً على قاعدة البيانات
-        لا مجرّد ردّ ثابت — فحاوية تردّ 200 وقاعدتها ساقطة ليست سليمة.
+        Returns 200 when the application can actually serve requests, and 503
+        when it cannot. The check runs a real database query rather than a
+        canned response — a container that answers 200 while its database is
+        down is not healthy.
 
-        عامة بلا مصادقة بالضرورة: فاحص الصحّة لا يملك جلسة. ولذلك لا
-        تكشف نسخاً ولا أسماء ولا مسارات — التفاصيل في السجلّ وحده.
+        Public and unauthenticated of necessity: a health prober has no
+        session. For that reason it exposes no versions, no names and no
+        paths — details go to the log alone.
         TXT,
         tags: ['Store - Pages'],
         responses: [
             new OA\Response(
                 response: 200,
-                description: 'التطبيق سليم.',
+                description: 'The application is healthy.',
                 content: new OA\JsonContent(
                     properties: [
                         new OA\Property(property: 'status', type: 'string', enum: ['ok'], example: 'ok'),
@@ -72,7 +78,7 @@ class HealthController extends Controller
             ),
             new OA\Response(
                 response: 503,
-                description: 'التطبيق غير قادر على خدمة الطلبات.',
+                description: 'The application cannot serve requests.',
                 content: new OA\JsonContent(
                     properties: [
                         new OA\Property(property: 'status', type: 'string', enum: ['fail'], example: 'fail'),
@@ -94,12 +100,13 @@ class HealthController extends Controller
         $databaseOk = true;
 
         try {
-            // SELECT 1 لا استعلام على جدول: يثبت الاتصال والمصادقة بلا
-            // أن يعتمد على مخطّط قد يكون في منتصف هجرة.
+            // SELECT 1 rather than a query against a table: it proves the
+            // connection and the credentials without depending on a schema that
+            // may be halfway through a migration.
             Database::connect()->query('SELECT 1')->fetchColumn();
         } catch (Throwable $e) {
             $databaseOk = false;
-            error_log('[Cairo Store] health: فشل فحص قاعدة البيانات — ' . $e->getMessage());
+            error_log('[Cairo Store] health: database check failed — ' . $e->getMessage());
         }
 
         $healthy = $databaseOk;
@@ -107,8 +114,8 @@ class HealthController extends Controller
         if (!headers_sent()) {
             http_response_code($healthy ? 200 : 503);
             header('Content-Type: application/json; charset=utf-8');
-            // لا تخزين مؤقّت إطلاقاً: نتيجة محفوظة تُبقي حاوية ميّتة
-            // تبدو حيّة حتى انتهاء صلاحيتها.
+            // No caching whatsoever: a stored result keeps a dead container
+            // looking alive until the entry expires.
             header('Cache-Control: no-store, max-age=0');
         }
 

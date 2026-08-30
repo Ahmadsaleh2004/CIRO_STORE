@@ -11,13 +11,13 @@ use OpenApi\Attributes as OA;
 class WishlistController extends Controller
 {
     /**
-     * عرض صفحة الويش ليست (المحتوى نفسه بيتبني بالكامل من js/wishlist.js عن طريق localStorage)
+     * Render the wishlist page (its contents are built entirely by js/wishlist.js from localStorage).
      */
     #[OA\Get(
         path: '/wishlist',
-        summary: 'صفحة قائمة الأمنيات',
-        description: 'المحتوى يُبنى كاملاً في المتصفح من localStorage (js/features/wishlist.js)؛ '
-                   . 'الخادم يُرجع الهيكل فقط.',
+        summary: 'Wishlist page',
+        description: 'The contents are built entirely in the browser from localStorage '
+                   . '(js/features/wishlist.js); the server returns only the shell.',
         tags: ['Store - Wishlist'],
         responses: [
             new OA\Response(response: 200, ref: '#/components/responses/HtmlPage'),
@@ -32,10 +32,11 @@ class WishlistController extends Controller
             'desc'          => 'Your saved products at Cairo Store.',
             'activePage'    => 'wishlist',
             'extraHead'     => '<link rel="stylesheet" href="' . URLROOT . '/css/store/pages/wishlist.css">',
-            // بلا extraScripts: فوتر المتجر يحمّل js/features/wishlist.js على كل
-            // صفحة أصلاً. تحميله هنا أيضاً كان يضع وسمين للملف نفسه، فيُنفَّذ
-            // مرتين (266 سطراً تُحلَّل مرتين، ومعالج DOMContentLoaded يعمل مرتين).
-            // لم يظهر عطل لأن العرض يستبدل innerHTML كاملاً، لكنه هدر خالص.
+            // No extraScripts: the store footer already loads js/features/wishlist.js on
+            // every page. Loading it here too emitted two tags for the same file, so it
+            // ran twice (266 lines parsed twice, and the DOMContentLoaded handler firing
+            // twice). No fault surfaced, because rendering replaces innerHTML wholesale,
+            // but it was pure waste.
             'isRegularUser' => isUser(),
             'csrf'          => generateCsrfToken(),
             'userLoggedIn'  => isUserLoggedIn(),
@@ -45,30 +46,30 @@ class WishlistController extends Controller
 
     /**
      * GET /handlers/product_stock_handler.php?ids[]=1&ids[]=2
-     * يرجّع بيانات المخزون/السعر الحيّة بصيغة JSON.
-     * سايب نفس المسار القديم بالظبط عشان js/wishlist.js يشتغل من غير أي تعديل عليه.
+     * Returns live stock and price data as JSON.
+     * The old path is kept exactly as it was so js/wishlist.js works untouched.
      */
     #[OA\Get(
         path: '/handlers/product_stock_handler.php',
-        summary: 'مخزون وأسعار مجموعة منتجات (لتحديث بطاقات قائمة الأمنيات)',
-        description: 'نقطة عامة لا تتطلّب تسجيل دخول. الزائر غير المسجّل يحصل على '
-                   . 'already_notified=false للجميع بدل تسريب حالة مستخدم آخر. '
-                   . 'الحد الأقصى 200 معرّف في الطلب الواحد.',
+        summary: 'Stock and pricing for a set of products (to refresh wishlist cards)',
+        description: 'A public endpoint requiring no login. A signed-out visitor gets '
+                   . 'already_notified=false for everything, rather than leaking another '
+                   . "user's state. At most 200 ids per request.",
         tags: ['Store - Wishlist'],
         parameters: [
             new OA\Parameter(
                 name: 'ids',
                 in: 'query',
                 required: true,
-                description: 'ids[]=1&ids[]=2 — حتى 200 معرّف',
+                description: 'ids[]=1&ids[]=2 — up to 200 ids',
                 schema: new OA\Schema(type: 'array', items: new OA\Items(type: 'integer'))
             ),
         ],
         responses: [
             new OA\Response(
                 response: 200,
-                description: 'JSON — {success, message, products{}} مفهرسة بمعرّف المنتج، '
-                           . 'وكل عنصر يحمل stock_quantity و price و is_visible و already_notified.'
+                description: 'JSON — {success, message, products{}} keyed by product id, each entry '
+                           . 'carrying stock_quantity, price, is_visible and already_notified.'
             ),
         ]
     )]
@@ -98,13 +99,14 @@ class WishlistController extends Controller
 
         $products = ProductModel::findStockByIds($ids);
 
-        // حالة "نبّهني لما يتوفر" لكل منتج — تُحسب هنا وليس في findStockByIds
-        // لأنها تعتمد على المستخدم الحالي بينما الموديل عام ومستخدَم في أماكن أخرى.
-        // نفس منطق $notifiedProductIds في ProductController::index().
-        // ملاحظة: هذا الـ endpoint عام (GET بلا تسجيل دخول) — لذلك الزائر غير
-        // المسجّل يحصل على false للجميع بدل تسريب حالة مستخدم آخر.
-        // الموديل يبتلع أي فشل ويُرجع مصفوفة فارغة، فبيانات المخزون
-        // تصل للعميل حتى لو تعذّر جلب حالة "نبّهني".
+        // The "notify me when available" flag per product — computed here rather than
+        // in findStockByIds, because it depends on the current user while the model is
+        // generic and used elsewhere. Same logic as $notifiedProductIds in
+        // ProductController::index().
+        // Note: this endpoint is public (a GET with no login), so a signed-out visitor
+        // gets false for everything rather than leaking another user's state.
+        // The model swallows any failure and returns an empty array, so the stock data
+        // still reaches the client even if the "notify me" lookup fails.
         $notifiedIds = (isUser() && ($uid = getCurrentUserId()))
             ? StockNotificationModel::productIdsForUserWithin($uid, $ids)
             : [];
@@ -113,9 +115,10 @@ class WishlistController extends Controller
             $products[$pid]['already_notified'] = in_array((int)$pid, $notifiedIds, true);
         }
 
-        // إنذار كاذب: المطبوع صفوف منتجات من القاعدة مرّت من json_encode
-        // تحت رأس application/json. المعرّفات القادمة من الطلب تُستعمل
-        // للاستعلام وحده ولا يصل أيٌّ منها خاماً إلى المخرَج.
+        // False positive: what is printed is product rows from the database, passed
+        // through json_encode under an application/json header. The ids that come from
+        // the request are used for the query alone, and none of them reaches the output
+        // raw.
         // nosemgrep: php.lang.security.injection.echoed-request.echoed-request
         echo json_encode(['success' => true, 'message' => 'ok', 'products' => $products]);
         exit;
@@ -123,14 +126,14 @@ class WishlistController extends Controller
 
     /**
      * POST /handlers/notify_handler.php
-     * "نبّهني لما يتوفر" — بيخزّن الطلب في جدول stock_notifications
-     * يرجع JSON للأجاكس
+     * "Notify me when available" — records the request in the stock_notifications
+     * table and returns JSON for the AJAX caller.
      */
     #[OA\Post(
         path: '/handlers/notify_handler.php',
-        summary: 'تسجيل طلب "نبّهني عند التوفّر" لمنتج',
-        description: 'يتطلّب تسجيل دخول مستخدم. الطلب المكرّر لا ينشئ صفاً جديداً ولا '
-                   . 'يُشعِر الأدمنية مرة ثانية.',
+        summary: 'Register a "notify me when available" request for a product',
+        description: 'Requires a logged-in user. A repeat request creates no new row and does '
+                   . 'not notify the admins a second time.',
         tags: ['Store - Wishlist'],
         security: [['userSessionAuth' => []]],
         requestBody: new OA\RequestBody(
@@ -149,7 +152,7 @@ class WishlistController extends Controller
         responses: [
             new OA\Response(
                 response: 200,
-                description: 'نتيجة العملية. الحقل success يفصل النجاح عن الفشل — كود HTTP يبقى 200 في الحالتين. وعند فشل CSRF يحمل الجسم error_code=csrf_invalid.',
+                description: 'Operation result. The success field separates success from failure — the HTTP status stays 200 either way. On CSRF failure the body carries error_code=csrf_invalid.',
                 content: new OA\JsonContent(oneOf: [
                     new OA\Schema(ref: '#/components/schemas/ApiResponse'),
                     new OA\Schema(ref: '#/components/schemas/ApiError'),
@@ -159,17 +162,18 @@ class WishlistController extends Controller
     )]
     public function notify(): void
     {
-        // كانت هذه الدالة تكتب فحوصها الثلاثة بيدها بـhttp_response_code
-        // و echo json_encode و exit. المشكلة لم تكن التكرار بل رسالة فشل
-        // CSRF: 'Invalid session, please refresh the page.'
+        // This method used to write its three checks by hand with
+        // http_response_code, echo json_encode and exit. The problem was not the
+        // duplication but the CSRF failure message:
+        // 'Invalid session, please refresh the page.'
         //
-        // js/core/csrf.js يكتشف فشل التوكن بـ
+        // js/core/csrf.js detects a token failure with
         //     message.startsWith('Invalid CSRF token')
-        // ليجلب توكناً جديداً ويُعيد المحاولة مرة واحدة. الرسالة أعلاه لا
-        // تبدأ بتلك البادئة، فكانت إعادة المحاولة **لا تُفعَّل أبداً** لزر
-        // «نبّهني عند التوفّر» رغم أن notify-stock.js يستدعي
-        // fetchWithCsrfRetry — أي أن المستخدم بتوكن منتهٍ كان يرى فشلاً
-        // نهائياً حيث ترى بقية الأزرار تعافياً صامتاً.
+        // in order to fetch a fresh token and retry exactly once. The message above
+        // does not start with that prefix, so the retry **never fired at all** for
+        // the "notify me when available" button, even though notify-stock.js calls
+        // fetchWithCsrfRetry — meaning a user with an expired token saw an outright
+        // failure where every other button recovered silently.
         $this->beginJsonPost();
 
         if (!isUser()) {
@@ -184,8 +188,8 @@ class WishlistController extends Controller
             exit;
         }
 
-        // add() تُرجع true فقط عند إضافة صفّ جديد فعلاً، فلا يُشعَر
-        // الأدمنية مرتين لو ضغط المستخدم الزر مجدداً.
+        // add() returns true only when a row is genuinely inserted, so the admins are
+        // not notified twice if the user presses the button again.
         if (StockNotificationModel::add($pid, $uid)) {
             StockNotifier::customerRequestedNotification($pid, $uid);
         }

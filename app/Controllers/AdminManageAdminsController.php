@@ -10,19 +10,20 @@ use App\Models\OrderModel;
 use OpenApi\Attributes as OA;
 
 /**
- * AdminManageAdminsController — إدارة الأدمنية (قائمة/إضافة/تعديل/حذف/تفاصيل/تصدير).
- * يرث من AdminController الذي يتحقق من تسجيل دخول الأدمن تلقائياً.
+ * AdminManageAdminsController — admin management (list / add / edit / delete /
+ * details / export).
+ * Extends AdminController, which verifies the admin login automatically.
  */
 class AdminManageAdminsController extends AdminController
 {
     #[OA\Get(
         path: '/admin/admins',
-        summary: 'قائمة كل الأدمنية مع صلاحياتهم',
+        summary: 'List every admin together with their permissions',
         tags: ['Admin - Manage Admins'],
         security: [['adminSessionAuth' => []]],
         responses: [
-            new OA\Response(response: 200, description: 'صفحة HTML بالجدول — يتطلب صلاحية can_manage_admins'),
-            new OA\Response(response: 403, description: 'ممنوع — لا يملك can_manage_admins'),
+            new OA\Response(response: 200, description: 'HTML page with the table — requires the can_manage_admins permission'),
+            new OA\Response(response: 403, description: 'Forbidden — the admin lacks can_manage_admins'),
         ]
     )]
     public function index(): void
@@ -45,7 +46,7 @@ class AdminManageAdminsController extends AdminController
 
     #[OA\Get(
         path: '/admin/admins/add',
-        summary: 'عرض فورم إضافة أدمن جديد',
+        summary: 'Show the add-admin form',
         tags: ['Admin - Manage Admins'],
         security: [['adminSessionAuth' => []]],
         responses: [
@@ -64,7 +65,7 @@ class AdminManageAdminsController extends AdminController
 
     #[OA\Post(
         path: '/admin/admins/add',
-        summary: 'إضافة أدمن جديد (يتطلب سبب + كلمة مرور الأدمن الحالي)',
+        summary: "Add a new admin (requires a reason and the acting admin's password)",
         tags: ['Admin - Manage Admins'],
         security: [['adminSessionAuth' => []]],
         requestBody: new OA\RequestBody(
@@ -75,10 +76,10 @@ class AdminManageAdminsController extends AdminController
                     required: ['new_name','new_email','new_password','new_role','add_reason','confirm_current_pass','csrf_token'],
                     properties: [
                         new OA\Property(property: 'new_name', type: 'string'),
-                        new OA\Property(property: 'new_email', type: 'string', format: 'email', description: 'يجب أن ينتهي بـ @gmail.com'),
+                        new OA\Property(property: 'new_email', type: 'string', format: 'email', description: 'Must end in @gmail.com'),
                         new OA\Property(property: 'new_phone', type: 'string'),
                         new OA\Property(property: 'new_password', type: 'string', format: 'password'),
-                        new OA\Property(property: 'new_role', type: 'string', description: 'A|B|C|D — يجب أن تكون أقل صراحة من رتبتك'),
+                        new OA\Property(property: 'new_role', type: 'string', description: 'A|B|C|D — must be strictly lower than your own rank'),
                         new OA\Property(property: 'perm_admins', type: 'boolean'),
                         new OA\Property(property: 'perm_products', type: 'boolean'),
                         new OA\Property(property: 'perm_users', type: 'boolean'),
@@ -119,10 +120,10 @@ class AdminManageAdminsController extends AdminController
 
         $newRole = in_array($_POST['new_role'] ?? '', ['A','B','C','D'], true) ? $_POST['new_role'] : 'B';
         if (!AdminModel::canManageTarget($myRole, $newRole)) {
-            // ليست SQL إطلاقاً: نصّ رسالة يُرسَل في JSON. القاعدة تطابق
-            // أي نصّ مُركَّب فيه مدخل مستخدم. ولا XSS أيضاً — الواجهة
-            // تعرضه بـshowToast الذي يمرّره إلى خيار text في SweetAlert2،
-            // وهو يضبط textContent لا innerHTML.
+            // Not SQL at all: a message string sent inside JSON. The rule matches any
+            // concatenated string containing user input. Nor is it XSS — the front end
+            // renders it through showToast, which passes it to SweetAlert2's `text`
+            // option, and that sets textContent rather than innerHTML.
             // nosemgrep: php.lang.security.injection.tainted-sql-string.tainted-sql-string
             $this->respond(false, "You cannot create an admin with rank {$newRole}.");
         }
@@ -207,7 +208,7 @@ class AdminManageAdminsController extends AdminController
 
     #[OA\Post(
         path: '/admin/admins/edit',
-        summary: 'حفظ تعديل رتبة/صلاحيات أدمن (يتطلب سبب + كلمة مرور الأدمن الحالي)',
+        summary: "Save a change to an admin's rank or permissions (requires a reason and the acting admin's password)",
         tags: ['Admin - Manage Admins'],
         security: [['adminSessionAuth' => []]],
         responses: [
@@ -294,7 +295,7 @@ class AdminManageAdminsController extends AdminController
 
     #[OA\Post(
         path: '/admin/admins/delete',
-        summary: 'حذف أدمن (AJAX — يرجع JSON، يتطلب سبب + كلمة مرور)',
+        summary: 'Delete an admin (AJAX — returns JSON; requires a reason and a password)',
         tags: ['Admin - Manage Admins'],
         security: [['adminSessionAuth' => []]],
         requestBody: new OA\RequestBody(
@@ -315,7 +316,7 @@ class AdminManageAdminsController extends AdminController
         responses: [
             new OA\Response(
                 response: 200,
-                description: 'نجاح أو فشل',
+                description: 'Success or failure',
                 content: new OA\JsonContent(
                     properties: [
                         new OA\Property(property: 'success', type: 'boolean'),
@@ -349,8 +350,8 @@ class AdminManageAdminsController extends AdminController
             $this->respond(false, 'Admin not found.');
         }
         if (!AdminModel::canManageTarget(getAdminRole(), $target['role'])) {
-            // كسابقتها: رسالة JSON لا استعلام. والقيمة هنا من قاعدة
-            // البيانات (عمود role) لا من الطلب أصلاً.
+            // As above: a JSON message, not a query. And the value here comes from
+            // the database (the role column), not from the request at all.
             // nosemgrep: php.lang.security.injection.tainted-sql-string.tainted-sql-string
             $this->respond(false, "You cannot delete an admin with rank {$target['role']}.");
         }
@@ -405,7 +406,7 @@ class AdminManageAdminsController extends AdminController
 
     #[OA\Get(
         path: '/admin/admins/details',
-        summary: 'تفاصيل أدمن معيّن: بياناته + نشاط طلباته + سجل أفعاله',
+        summary: 'Details for one admin: profile, order activity, and their action log',
         tags: ['Admin - Manage Admins'],
         security: [['adminSessionAuth' => []]],
         parameters: [
@@ -430,14 +431,14 @@ class AdminManageAdminsController extends AdminController
             exit;
         }
 
-        // طلبات تولاها هذا الأدمن (orderRows) + إجمالي أرباح الطلبات المكتملة فقط
+        // Orders this admin handled (orderRows) plus revenue totalled over completed orders only
         $orderRows   = OrderModel::getOrdersHandledByAdmin((int)$target['id']);
         $profitTotal = array_sum(array_map(
             fn($o) => (float)$o['total_amount'],
             array_filter($orderRows, fn($o) => $o['status'] === 'completed' && empty($o['was_auto_released']))
         ));
 
-        // أفعال إضافية على الطلبات لا تظهر عبر orderRows (بلاغات مشاكل، تصدير CSV)
+        // Further order actions that orderRows does not surface (problem reports, CSV exports)
         $orderAuditRows = array_filter(
             AdminModel::getAuditLogByTypes((int)$target['id'], ['orders']),
             fn($log) => in_array($log['action'], ['report_order_issue', 'export_csv'], true)
@@ -463,7 +464,7 @@ class AdminManageAdminsController extends AdminController
 
     #[OA\Get(
         path: '/admin/admins/export-csv',
-        summary: 'تصدير قائمة الأدمنية كملف CSV — رتبة A فقط',
+        summary: 'Export the admin list as a CSV file — rank A only',
         tags: ['Admin - Manage Admins'],
         security: [['adminSessionAuth' => []]],
         responses: [
@@ -476,13 +477,14 @@ class AdminManageAdminsController extends AdminController
     {
         Middleware::requirePermission('can_manage_admins');
 
-        // GET يُنزّل ملفاً — أي أن الفشل يظهر للأدمن كصفحة. كان نصّاً
-        // خاماً بلا لايوت ولا رجوع، ويكشف قاعدة الصلاحية لمن لا يملكها.
+        // A GET that downloads a file — so a failure reaches the admin as a page. It
+        // used to be raw text with no layout and no way back, and it disclosed the
+        // permission rule to someone who does not hold it.
         if (!isRoleA()) {
             ErrorPage::forbidden(
-                'admins/export-csv: محاولة من أدمن #' . (getCurrentAdminId() ?? 0),
+                'admins/export-csv: attempt by admin #' . (getCurrentAdminId() ?? 0),
                 URLROOT . '/admin/admins',
-                'العودة إلى إدارة الأدمنية'
+                'Back to admin management'
             );
         }
 
@@ -508,8 +510,9 @@ class AdminManageAdminsController extends AdminController
         $this->sendCsv('admins_' . date('Ymd_His') . '.csv', $headers, $rows);
     }
 
-    // ملاحظة: كان هنا redirectWithError() خاصة بلا مستدعٍ واحد. النسخة
-    // العاملة منها في AdminBrandingController، وهذه بقيت بعد نقل منطقٍ
-    // ما ولم يحذفها أحد. كود ميّت في كنترولر صلاحيات يُقرأ كأنه مسار
-    // قائم فيُضلّل من يراجع الأمان.
+    // Note: there used to be a private redirectWithError() here without a single
+    // caller. The working copy lives in AdminBrandingController; this one was left
+    // behind when some logic moved and nobody removed it. Dead code inside a
+    // permissions controller reads like a live path, and misleads whoever reviews
+    // the security.
 }

@@ -2,12 +2,13 @@
 -- 0007_branding_sliders
 -- ══════════════════════════════════════════════════════════════
 --
--- الترتيب في اسم الملف لا في تعليق. كان الاعتماد مكتوباً نصّاً
--- («يعتمد على admin_auth.sql») ولا شيء يفرضه — فترتيب التنفيذ
--- كان يتبع ترتيب نظام الملفات، وهو يختلف بين جهاز وآخر.
+-- Ordering lives in the file name, not in a comment. The dependency used to be
+-- written as prose ("depends on admin_auth.sql") with nothing enforcing it — so
+-- execution order followed the file system's order, which differs per machine.
 --
--- يُشغَّل بـ`php scripts/migrate.php up`. والملف يبقى SQL صالحاً
--- يمكن لصقه في أي عميل كما هو — القسمان تعليقان لا صيغة خاصة.
+-- Run with `php scripts/migrate.php up`. The file stays valid SQL that can be
+-- pasted into any client as-is — the two section markers are comments, not
+-- special syntax.
 
 -- @UP
 -- ════════════════════════════════════════════════════════════════════════════

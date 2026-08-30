@@ -9,14 +9,15 @@ use App\Models\UserModel;
 use OpenApi\Attributes as OA;
 
 /**
- * AdminMessagingController — رسائل فردية + Broadcast، مشترك بين كل موديولات
- * الأدمن (Manage Admins الآن، Manage Users لاحقًا) عبر باراميتر target_type.
+ * AdminMessagingController — direct messages and broadcasts, shared across every
+ * admin module (Manage Admins today, Manage Users later) via the target_type
+ * parameter.
  */
 class AdminMessagingController extends AdminController
 {
     #[OA\Post(
         path: '/admin/messaging/notify',
-        summary: 'إرسال رسالة فردية لأدمن أو يوزر (AJAX)',
+        summary: 'Send a direct message to an admin or a user (AJAX)',
         tags: ['Admin - Messaging'],
         security: [['adminSessionAuth' => []]],
         requestBody: new OA\RequestBody(
@@ -26,7 +27,7 @@ class AdminMessagingController extends AdminController
                 schema: new OA\Schema(
                     required: ['target_type', 'target_id', 'title', 'message', 'csrf_token'],
                     properties: [
-                        new OA\Property(property: 'target_type', type: 'string', description: "'admin' أو 'user'"),
+                        new OA\Property(property: 'target_type', type: 'string', description: "'admin' or 'user'"),
                         new OA\Property(property: 'target_id', type: 'integer'),
                         new OA\Property(property: 'title', type: 'string'),
                         new OA\Property(property: 'message', type: 'string'),
@@ -51,8 +52,8 @@ class AdminMessagingController extends AdminController
     public function notify(): void
     {
         $this->beginJsonPost();
-        // ملاحظة: صلاحية ثابتة حاليًا لأن Manage Admins فقط موجود. لما يُبنى
-        // Manage Users، بدّلها لفحص ديناميكي حسب target_type.
+        // Note: the permission is fixed for now because only Manage Admins exists.
+        // Once Manage Users is built, switch this to a dynamic check on target_type.
         Middleware::requirePermission('can_manage_admins');
 
         $targetType = $_POST['target_type'] ?? 'admin';
@@ -88,7 +89,7 @@ class AdminMessagingController extends AdminController
 
     #[OA\Post(
         path: '/admin/messaging/broadcast',
-        summary: 'إرسال إشعار جماعي (AJAX) — أدمنية حسب الصلاحية + الرتبة، أو يوزرز حسب الحالة',
+        summary: 'Send a broadcast (AJAX) — admins by permission and rank, or users by status',
         tags: ['Admin - Messaging'],
         security: [['adminSessionAuth' => []]],
         requestBody: new OA\RequestBody(
@@ -98,12 +99,12 @@ class AdminMessagingController extends AdminController
                 schema: new OA\Schema(
                     required: ['title', 'body', 'csrf_token'],
                     properties: [
-                        new OA\Property(property: 'target_type', type: 'string', enum: ['admin', 'user'], description: "'admin' (صلاحيات + رتب) أو 'user' (حالات)"),
+                        new OA\Property(property: 'target_type', type: 'string', enum: ['admin', 'user'], description: "'admin' (permissions + ranks) or 'user' (statuses)"),
                         new OA\Property(property: 'title', type: 'string'),
                         new OA\Property(property: 'body', type: 'string'),
-                        new OA\Property(property: 'perms', type: 'array', items: new OA\Items(type: 'string'), description: 'للأدمنية فقط'),
-                        new OA\Property(property: 'ranks', type: 'array', items: new OA\Items(type: 'string'), description: 'للأدمنية فقط'),
-                        new OA\Property(property: 'statuses', type: 'array', items: new OA\Items(type: 'string', enum: ['active', 'not_active', 'blocked']), description: 'لليوزرز فقط'),
+                        new OA\Property(property: 'perms', type: 'array', items: new OA\Items(type: 'string'), description: 'Admins only'),
+                        new OA\Property(property: 'ranks', type: 'array', items: new OA\Items(type: 'string'), description: 'Admins only'),
+                        new OA\Property(property: 'statuses', type: 'array', items: new OA\Items(type: 'string', enum: ['active', 'not_active', 'blocked']), description: 'Users only'),
                         new OA\Property(property: 'csrf_token', type: 'string'),
                     ]
                 )
@@ -124,16 +125,17 @@ class AdminMessagingController extends AdminController
     )]
     public function broadcast(): void
     {
-        // التحقق أولاً ثم الصلاحية — والترتيب مقصود وكان معكوساً.
-        // الصلاحية المطلوبة هنا تُحسب من $_POST['target_type']، أي من
-        // مُدخَل لم يُتحقَّق منه بعد. لم يكن ذلك مستغَلاً (الطلب يفشل عند
-        // CSRF على أي حال)، لكن اشتقاق قرار صلاحية من بيانات غير موثوقة
-        // قبل التحقق منها ترتيب لا يُبنى عليه.
+        // Validation first, permission second — the order is deliberate, and it
+        // used to be the other way round. The permission required here is derived
+        // from $_POST['target_type'], that is, from input not yet validated. It was
+        // not exploitable (the request fails at CSRF regardless), but deriving a
+        // permission decision from untrusted data before validating it is not an
+        // order worth building on.
         $this->beginJsonPost();
 
         $targetType = $_POST['target_type'] ?? 'admin';
 
-        // فحص صلاحية ديناميكي حسب target_type — كان مثبّت على can_manage_admins فقط
+        // Dynamic permission check driven by target_type — this used to be pinned to can_manage_admins alone
         Middleware::requirePermission($targetType === 'user' ? 'can_manage_users' : 'can_manage_admins');
 
         $senderId = getCurrentAdminId();
@@ -167,7 +169,7 @@ class AdminMessagingController extends AdminController
             $this->respond(true, '✅ Broadcast sent to ' . count($targets) . ' user(s).');
         }
 
-        // ── المسار الأصلي للأدمنية (لا تغيّره) ──────────────────────
+        // ── The original admin path (leave it as it is) ─────────────
         $perms = $_POST['perms'] ?? [];
         $ranks = $_POST['ranks'] ?? [];
 

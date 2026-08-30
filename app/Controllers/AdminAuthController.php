@@ -3,22 +3,22 @@
 namespace App\Controllers;
 
 // ════════════════════════════════════════════════════════════════════════════
-// TODO (مرحلة قادمة — لا تُنفَّذ الآن):
+// TODO (a later phase — do not implement now):
 //
-//  1. 2FA (TOTP): ✅ نُفِّذ — انظر login() (حالة pending_2fa_admin_id)
-//     ودالة verify2FALogin() + مسار POST /admin/login/2fa.
-//     التفعيل/التعطيل من صفحة AdminMyInfoController (my-info).
+//  1. 2FA (TOTP): ✅ done — see login() (the pending_2fa_admin_id state),
+//     verify2FALogin(), and the POST /admin/login/2fa route.
+//     Enabling and disabling live on the AdminMyInfoController page (my-info).
 //
-//  2. إشعار الإيميل عند جهاز/IP جديد:
-//     بعد نجاح تسجيل الدخول بالكامل (وبعد 2FA)، أضف:
-//     - مقارنة IP الحالي مع آخر IP مسجّل للأدمن
-//     - إذا كان مختلفاً → استدعاء دالة sendNewDeviceAlert($admin)
-//     البنية الحالية في login() مصممة لاستقبال هذا الاستدعاء
-//     بعد السطر: "// [EMAIL_ALERT_HOOK]"
+//  2. Email alert on a new device or IP:
+//     after a fully successful login (and after 2FA), add:
+//     - a comparison of the current IP with the admin's last recorded IP
+//     - if it differs → call sendNewDeviceAlert($admin)
+//     The present structure of login() is shaped to receive that call
+//     after the line: "// [EMAIL_ALERT_HOOK]"
 //
-// ملاحظة: كل Controller خاص بلوحة التحكم لاحقاً لازم يستخدم نفس
-// session_name('admin_session') قبل session_start() — حتى لا تُنسى
-// هذه النقطة عند بناء باقي صفحات الأدمن.
+// Note: every future admin-panel controller must use the same
+// session_name('admin_session') before session_start() — recorded here so the
+// point is not forgotten while the remaining admin pages are built.
 // ════════════════════════════════════════════════════════════════════════════
 
 use App\Core\Controller;
@@ -27,26 +27,27 @@ use App\Services\AdminSessionOpener;
 use OpenApi\Attributes as OA;
 
 /**
- * AdminAuthController — تسجيل دخول الأدمن / خروجه
+ * AdminAuthController — admin sign-in and sign-out.
  *
- * مستقل تماماً عن AuthController العام.
- * يستخدم جدول admins حصراً — لا يلمس جدول users إطلاقاً.
- * يستخدم session_name('admin_session') منفصلة عن جلسة المستخدم العادي.
+ * Entirely separate from the public AuthController.
+ * It uses the admins table exclusively — it never touches the users table.
+ * It uses session_name('admin_session'), distinct from the regular user session.
  */
 class AdminAuthController extends Controller
 {
-    /** عمر الحالة المعلّقة بين كلمة المرور والكود، بالثواني. */
+    /** Lifetime, in seconds, of the pending state between password and code. */
     private const PENDING_2FA_TTL = 300;
 
-    /** كم كوداً خاطئاً تحتمله الحالة المعلّقة قبل أن تُلغى. */
+    /** How many wrong codes the pending state tolerates before it is discarded. */
     private const MAX_2FA_ATTEMPTS = 5;
 
     /**
-     * يُنهي الحالة المعلّقة بين كلمة المرور والكود.
+     * Ends the pending state between password and code.
      *
-     * المفاتيح الثلاثة تُمسح معاً دائماً: بقاء أحدها بلا الآخرين كان
-     * سيترك حالة نصفية — معرّفاً بلا مهلة، أو عدّاداً بلا معرّف — وهي
-     * بالضبط الحالات التي يصعب التفكير فيها لاحقاً.
+     * All three keys are always cleared together: leaving one behind without the
+     * others would leave a half state — an id with no deadline, or a counter with
+     * no id — and those are precisely the states that become hard to reason about
+     * later.
      */
     private function clearPending2FA(): void
     {
@@ -58,27 +59,27 @@ class AdminAuthController extends Controller
     }
 
     // ════════════════════════════════════════════════════════
-    // GET /admin/login — عرض صفحة تسجيل الدخول
+    // GET /admin/login — render the sign-in page
     // ════════════════════════════════════════════════════════
     #[OA\Get(
         path: '/admin/login',
-        summary: 'عرض صفحة تسجيل دخول الأدمن',
+        summary: 'Render the admin sign-in page',
         tags: ['Admin - Auth'],
         responses: [
-            new OA\Response(response: 200, description: 'صفحة HTML لتسجيل الدخول')
+            new OA\Response(response: 200, description: 'Sign-in HTML page')
         ]
     )]
     public function showLogin(): void
     {
         startAdminSession();
 
-        // لو الأدمن مسجّل دخول أصلاً وجه لـ admin/home
+        // If the admin is already signed in, send them to admin/home
         if (!empty($_SESSION['admin_id'])) {
             header('Location: ' . URLROOT . '/admin/home');
             exit;
         }
 
-        // منع التخزين المؤقت لصفحة تسجيل الدخول
+        // Prevent caching of the sign-in page
         header('Cache-Control: no-store, no-cache, must-revalidate');
         header('Pragma: no-cache');
         header('Expires: 0');
@@ -87,11 +88,11 @@ class AdminAuthController extends Controller
     }
 
     // ════════════════════════════════════════════════════════
-    // POST /admin/login — معالجة تسجيل الدخول
+    // POST /admin/login — handle the sign-in
     // ════════════════════════════════════════════════════════
     #[OA\Post(
         path: '/admin/login',
-        summary: 'تسجيل دخول الأدمن',
+        summary: 'Sign the admin in',
         tags: ['Admin - Auth'],
         requestBody: new OA\RequestBody(
             required: true,
@@ -100,10 +101,10 @@ class AdminAuthController extends Controller
                 schema: new OA\Schema(
                     required: ['email', 'password', 'csrf_token'],
                     properties: [
-                        new OA\Property(property: 'email', type: 'string', format: 'email', description: 'البريد الإلكتروني للأدمن'),
-                        new OA\Property(property: 'password', type: 'string', format: 'password', description: 'كلمة المرور'),
-                        new OA\Property(property: 'csrf_token', type: 'string', description: 'CSRF token — مطلوب دائماً'),
-                        new OA\Property(property: 'h-captcha-response', type: 'string', description: 'hCaptcha response — مطلوب بعد أول محاولة فاشلة'),
+                        new OA\Property(property: 'email', type: 'string', format: 'email', description: "The admin's email address"),
+                        new OA\Property(property: 'password', type: 'string', format: 'password', description: 'Password'),
+                        new OA\Property(property: 'csrf_token', type: 'string', description: 'CSRF token — always required'),
+                        new OA\Property(property: 'h-captcha-response', type: 'string', description: 'hCaptcha response — required after the first failed attempt'),
                     ]
                 )
             )
@@ -111,14 +112,14 @@ class AdminAuthController extends Controller
         responses: [
             new OA\Response(
                 response: 200,
-                description: 'نجاح أو فشل تسجيل الدخول',
+                description: 'Whether the sign-in succeeded',
                 content: new OA\JsonContent(
                     properties: [
                         new OA\Property(property: 'success', type: 'boolean'),
                         new OA\Property(property: 'message', type: 'string'),
-                        new OA\Property(property: 'redirect', type: 'string', description: 'موجود عند النجاح فقط'),
-                        new OA\Property(property: 'show_captcha', type: 'boolean', description: 'موجود عند الفشل — يعني يجب إظهار hCaptcha'),
-                        new OA\Property(property: 'failed_attempts', type: 'integer', description: 'عدد المحاولات الفاشلة'),
+                        new OA\Property(property: 'redirect', type: 'string', description: 'Present on success only'),
+                        new OA\Property(property: 'show_captcha', type: 'boolean', description: 'Present on failure — means hCaptcha must be shown'),
+                        new OA\Property(property: 'failed_attempts', type: 'integer', description: 'Number of failed attempts'),
                     ]
                 )
             )
@@ -137,10 +138,10 @@ class AdminAuthController extends Controller
 
         // CSRF
         $token = $_POST['csrf_token'] ?? '';
-        // استُثني من beginJsonPost: يدوّر توكن CSRF عند كل فشل
-        // (rotateCsrfToken) قبل الردّ. البوابة الموحّدة ترد مباشرةً بلا
-        // تدوير، فالتحويل يُسقط التدوير على أحسّ مسار في المشروع —
-        // دخول الأدمن.
+        // Deliberately not using beginJsonPost: this rotates the CSRF token on every
+        // failure (rotateCsrfToken) before responding. The unified gate answers
+        // immediately with no rotation, so switching to it would drop the rotation on
+        // the most sensitive path in the project — the admin login.
         if (!verifyCsrfToken($token)) {
             rotateCsrfToken();
             $this->respondCsrfFailure();
@@ -154,13 +155,13 @@ class AdminAuthController extends Controller
             $this->respond(false, 'Please enter your email and password.');
         }
 
-        // ── Rate Limiting (3 محاولات / 30 دقيقة) ────────────────
+        // ── Rate limiting (3 attempts / 30 minutes) ─────────────
         if (AdminModel::isRateLimited($email)) {
             rotateCsrfToken();
             $this->respond(false, 'Too many failed attempts. Access is locked for 30 minutes.');
         }
 
-        // ── CAPTCHA (بعد أول محاولة فاشلة) ──────────────────────
+        // ── CAPTCHA (after the first failed attempt) ────────────
         $failedAttempts = AdminModel::getFailedAttempts($email);
         if ($failedAttempts >= 1) {
             $captchaResponse = $_POST['h-captcha-response'] ?? '';
@@ -170,35 +171,38 @@ class AdminAuthController extends Controller
             }
         }
 
-        // ── التحقق من الأدمن (جدول admins فقط) ──────────────────
+        // ── Verify the admin (the admins table only) ───────────
         $admin = AdminModel::findByEmail($email);
 
         if ($admin && password_verify($pass, $admin['password'])) {
             AdminModel::logLoginAttempt($email, true);
 
-            // ── 2FA (TOTP) — خطوة ثانية اختيارية لكل أدمن ────────────
-            // بعد نجاح كلمة المرور مباشرةً: لا نفتح الجلسة الكاملة بعد،
-            // نخزّن الـ id بجلسة مؤقتة "pending" حتى يدخل الكود الصحيح.
+            // ── 2FA (TOTP) — an optional second step, per admin ──────
+            // Immediately after the password succeeds: the full session is not opened
+            // yet; the id is held in a temporary "pending" state until the correct code
+            // arrives.
             if (!empty($admin['totp_enabled']) && !empty($admin['totp_secret'])) {
                 $_SESSION['pending_2fa_admin_id'] = (int)$admin['id'];
-                // الحالة المعلّقة تُختم بوقت بدئها وعدّاد محاولاتها.
+                // The pending state is stamped with its start time and attempt counter.
                 //
-                // بدونهما كانت تبقى مفتوحة إلى الأبد: من عبر كلمة المرور
-                // يحتفظ بالجلسة المعلّقة ويجرّب فيها بلا حدّ ولا انتهاء.
-                // الوقت يقصر النافذة، والعدّاد يقصر عدد الطلبات داخلها —
-                // وخنق الراوتر فوقهما يحدّ المصدر نفسه.
+                // Without them it stayed open forever: whoever cleared the password kept
+                // the pending session and could guess inside it without limit and without
+                // expiry. The deadline narrows the window, the counter narrows the number
+                // of requests inside it — and the router's throttle above both limits the
+                // source itself.
                 $_SESSION['pending_2fa_started_at'] = time();
                 $_SESSION['pending_2fa_attempts']   = 0;
                 rotateCsrfToken();
                 $this->respond(true, 'Enter your 2FA code.', ['requires_2fa' => true]);
             }
-            // إذا كانت 2FA غير مفعّلة نكمل بفتح الجلسة العادي أسفل هذا السطر
+            // When 2FA is not enabled, the normal session opening continues below
             //
-            // كل ما كان مكتوباً هنا — تدوير المعرّف، والهوية، والصلاحيات،
-            // وسجلّ التدقيق، ومسح الخنق، وإيميل التنبيه — صار في
-            // AdminSessionOpener، لأنه كان مكرَّراً حرفياً في
-            // verify2FALogin. وما يُنسى في إحدى نسختين لا يظهر كخطأ بل
-            // كفجوة صامتة: مسار دخول بلا تدوير معرّف، أو بلا صلاحيات.
+            // Everything that used to be written here — the id rotation, the identity,
+            // the permissions, the audit record, clearing the throttle, the alert email —
+            // now lives in AdminSessionOpener, because it was duplicated verbatim in
+            // verify2FALogin. And what gets forgotten in one of two copies does not
+            // surface as an error but as a silent gap: a login path with no id rotation,
+            // or with no permissions.
             AdminSessionOpener::open($admin);
 
             rotateCsrfToken();
@@ -207,10 +211,10 @@ class AdminAuthController extends Controller
             ]);
         }
 
-        // فاشل
+        // Failed
         AdminModel::logLoginAttempt($email, false);
 
-        // إعادة حساب المحاولات بعد التسجيل
+        // Recount the attempts after recording this one
         $attemptsNow = AdminModel::getFailedAttempts($email);
 
         if ($attemptsNow === 3) {
@@ -219,11 +223,11 @@ class AdminAuthController extends Controller
                 \App\Core\Mailer::queue(
                     $adminRow['email'],
                     $adminRow['full_name'] ?? 'Admin',
-                    'تنبيه: محاولات دخول فاشلة متكررة',
-                    \App\Core\Mailer::template('تنبيه أمني', "
-                        تم رصد 3 محاولات دخول فاشلة متتالية على حسابك.<br>
-                        تم قفل الدخول مؤقتًا لمدة 30 دقيقة كإجراء حماية.<br><br>
-                        إذا لم تكن أنت من حاول الدخول، ننصحك بتغيير كلمة المرور فورًا.
+                    'Alert: repeated failed sign-in attempts',
+                    \App\Core\Mailer::template('Security alert', "
+                        Three consecutive failed sign-in attempts were detected on your account.<br>
+                        Sign-in has been locked for 30 minutes as a protective measure.<br><br>
+                        If it was not you who tried to sign in, we recommend changing your password immediately.
                     ")
                 );
             }
@@ -237,13 +241,13 @@ class AdminAuthController extends Controller
     }
 
     // ════════════════════════════════════════════════════════
-    // POST /admin/login/2fa — التحقق من كود TOTP بعد نجاح كلمة المرور
+    // POST /admin/login/2fa — verify the TOTP code after the password succeeds
     // ════════════════════════════════════════════════════════
     #[OA\Post(
         path: '/admin/login/2fa',
-        summary: 'الخطوة الثانية من دخول الأدمن — التحقق من رمز TOTP',
-        description: 'تُستدعى بعد أن يُرجع /admin/login الحقل requires_2fa. '
-                   . 'الرمز من تطبيق مصادقة (Google Authenticator أو ما يماثله).',
+        summary: 'The second step of the admin sign-in — verifying the TOTP code',
+        description: 'Called after /admin/login returns the requires_2fa field. '
+                   . 'The code comes from an authenticator app (Google Authenticator or similar).',
         tags: ['Admin - Auth'],
         requestBody: new OA\RequestBody(
             required: true,
@@ -252,7 +256,7 @@ class AdminAuthController extends Controller
                 schema: new OA\Schema(
                     required: ['code', 'csrf_token'],
                     properties: [
-                        new OA\Property(property: 'code', type: 'string', description: 'رمز TOTP من ستة أرقام'),
+                        new OA\Property(property: 'code', type: 'string', description: 'Six-digit TOTP code'),
                         new OA\Property(property: 'csrf_token', type: 'string'),
                     ]
                 )
@@ -261,7 +265,7 @@ class AdminAuthController extends Controller
         responses: [
             new OA\Response(
                 response: 200,
-                description: 'نتيجة العملية. الحقل success يفصل النجاح عن الفشل — كود HTTP يبقى 200 في الحالتين. وعند فشل CSRF يحمل الجسم error_code=csrf_invalid.',
+                description: 'Operation result. The success field separates success from failure — the HTTP status stays 200 either way. On CSRF failure the body carries error_code=csrf_invalid.',
                 content: new OA\JsonContent(oneOf: [
                     new OA\Schema(ref: '#/components/schemas/ApiResponse'),
                     new OA\Schema(ref: '#/components/schemas/ApiError'),
@@ -282,7 +286,7 @@ class AdminAuthController extends Controller
         }
 
         $token = $_POST['csrf_token'] ?? '';
-        // استُثني من beginJsonPost: يدوّر التوكن عند الفشل مثل login().
+        // Deliberately not using beginJsonPost: it rotates the token on failure, as login() does.
         if (!verifyCsrfToken($token)) {
             rotateCsrfToken();
             $this->respondCsrfFailure();
@@ -294,17 +298,17 @@ class AdminAuthController extends Controller
             $this->respond(false, 'Session expired. Please log in again.');
         }
 
-        // ── حدود الحالة المعلّقة ────────────────────────────────
+        // ── Limits on the pending state ─────────────────────────
         //
-        // كانت هذه الخطوة بلا أي حدّ: كلمة المرور عبرت، والكود ست خانات
-        // بنافذة ±30 ثانية — ثلاثة أكواد صالحة من مليون في كل لحظة. من
-        // يملك كلمة المرور كان يتجاوز الطبقة الثانية بحلقة تخمين، فتصير
-        // موجودة شكلاً لا فعلاً.
+        // This step used to have no limit at all: the password had cleared, and the
+        // code is six digits within a ±30-second window — three valid codes out of a
+        // million at any instant. Anyone holding the password could get past the second
+        // layer with a guessing loop, leaving it present in form but not in effect.
         //
-        // ثلاثة حدود تعمل معاً الآن، كلٌّ يسدّ ما لا يسدّه الآخر:
-        //   · خنق الراوتر (throttle:admin-2fa) يحدّ المصدر عبر الجلسات
-        //   · المهلة أدناه تُغلق النافذة الزمنية
-        //   · العدّاد يُنهي الحالة المعلّقة نفسها
+        // Three limits now work together, each closing what the others do not:
+        //   · the router throttle (throttle:admin-2fa) limits the source across sessions
+        //   · the deadline below closes the time window
+        //   · the counter ends the pending state itself
         if (time() - (int)($_SESSION['pending_2fa_started_at'] ?? 0) > self::PENDING_2FA_TTL) {
             $this->clearPending2FA();
             $this->respond(false, 'Session expired. Please log in again.');
@@ -323,9 +327,10 @@ class AdminAuthController extends Controller
             isset($admin['last_totp_slice']) ? (int)$admin['last_totp_slice'] : null
         );
 
-        // الاستهلاك شرط للنجاح لا أثر جانبي له: consumeTotpSlice تكتب
-        // بشرط، فترجع false حين يسبقها طلب متزامن بالكود نفسه. رفضها
-        // هنا هو ما يجعل الكود الواحد صالحاً مرّة واحدة فعلاً.
+        // Consumption is a condition of success, not a side effect of it:
+        // consumeTotpSlice writes conditionally, so it returns false when a concurrent
+        // request with the same code got there first. Refusing on that here is what
+        // actually makes a single code single-use.
         if ($slice === null || !AdminModel::consumeTotpSlice($pendingId, $slice)) {
             $attempts = (int)($_SESSION['pending_2fa_attempts'] ?? 0) + 1;
             $_SESSION['pending_2fa_attempts'] = $attempts;
@@ -339,7 +344,7 @@ class AdminAuthController extends Controller
             $this->respond(false, 'Invalid code. Please try again.');
         }
 
-        // نجاح — نفس ما يجري بعد كلمة المرور وحدها، بالخدمة نفسها.
+        // Success — the same path as after the password alone, through the same service.
         AdminSessionOpener::open($admin);
 
         $this->clearPending2FA();
@@ -350,36 +355,37 @@ class AdminAuthController extends Controller
     }
 
     // ════════════════════════════════════════════════════════
-    // POST /admin/logout — تسجيل خروج الأدمن فقط
+    // POST /admin/logout — sign out the admin only
     // ════════════════════════════════════════════════════════
     #[OA\Post(
         path: '/admin/logout',
-        summary: 'تسجيل خروج الأدمن',
+        summary: 'Sign the admin out',
         tags: ['Admin - Auth'],
         responses: [
-            new OA\Response(response: 302, description: 'إعادة توجيه لـ /admin/login بعد تدمير الجلسة')
+            new OA\Response(response: 302, description: 'Redirect to /admin/login after the session is destroyed')
         ]
     )]
     public function logout(): void
     {
         startAdminSession();
 
-        // التحقق قبل التدمير. لا beginJsonPost هنا: هذه النقطة تحوّل
-        // بـ302 ولا تُرجع JSON إطلاقاً (js/admin/admin-layout/admin-navbar.js
-        // يستدعيها بـfetch عارٍ ثم يوجّه بنفسه).
+        // Verify before destroying. No beginJsonPost here: this endpoint redirects
+        // with a 302 and never returns JSON (js/admin/admin-layout/admin-navbar.js
+        // calls it with a bare fetch and then navigates itself).
         //
-        // بدون هذا الفحص كان أي موقع خارجي يستطيع تسجيل خروج الأدمن
-        // بـ`<img src=".../admin/logout">` — المتصفح يرسل كوكي
-        // admin_session تلقائياً. الأثر إزعاج لا اختراق، لكنه CSRF قائم.
+        // Without this check any external site could sign the admin out with
+        // `<img src=".../admin/logout">` — the browser sends the admin_session cookie
+        // automatically. The impact is annoyance rather than a breach, but it is a real
+        // CSRF hole.
         //
-        // عند الفشل نحوّل إلى لوحة التحكم بلا تدمير الجلسة: الطلب لم
-        // يأتِ من صفحاتنا، فالسلوك الآمن ألّا نطيعه.
+        // On failure we redirect to the panel without destroying the session: the
+        // request did not come from our pages, so the safe behaviour is not to obey it.
         if (!verifyCsrfToken($_POST['csrf_token'] ?? '')) {
             header('Location: ' . URLROOT . '/admin/home');
             exit;
         }
 
-        // تدمير جلسة الأدمن فقط — لا تلمس جلسة المستخدم العادي (PHPSESSID)
+        // Destroy the admin session only — do not touch the regular user session (PHPSESSID)
         $_SESSION = [];
         if (ini_get('session.use_cookies')) {
             $p = session_get_cookie_params();
@@ -400,13 +406,13 @@ class AdminAuthController extends Controller
     }
 
     // ════════════════════════════════════════════════════════
-    // POST /admin/forgot — طلب رابط إعادة تعيين كلمة مرور الأدمن
+    // POST /admin/forgot — request an admin password reset link
     // ════════════════════════════════════════════════════════
     #[OA\Post(
         path: '/admin/forgot',
-        summary: 'طلب رابط إعادة تعيين كلمة مرور الأدمن',
-        description: 'الرسالة المُرجَعة واحدة سواء وُجد البريد أم لا — كي لا تكشف النقطة '
-                   . 'أي البُرد مسجَّلة كأدمن.',
+        summary: 'Request an admin password reset link',
+        description: 'The message returned is the same whether the email exists or not, so the '
+                   . 'endpoint does not disclose which addresses are registered as admins.',
         tags: ['Admin - Auth'],
         requestBody: new OA\RequestBody(
             required: true,
@@ -424,7 +430,7 @@ class AdminAuthController extends Controller
         responses: [
             new OA\Response(
                 response: 200,
-                description: 'نتيجة العملية. الحقل success يفصل النجاح عن الفشل — كود HTTP يبقى 200 في الحالتين. وعند فشل CSRF يحمل الجسم error_code=csrf_invalid.',
+                description: 'Operation result. The success field separates success from failure — the HTTP status stays 200 either way. On CSRF failure the body carries error_code=csrf_invalid.',
                 content: new OA\JsonContent(oneOf: [
                     new OA\Schema(ref: '#/components/schemas/ApiResponse'),
                     new OA\Schema(ref: '#/components/schemas/ApiError'),
@@ -445,7 +451,7 @@ class AdminAuthController extends Controller
         }
 
         $token = $_POST['csrf_token'] ?? '';
-        // استُثني من beginJsonPost: يدوّر التوكن عند الفشل مثل login().
+        // Deliberately not using beginJsonPost: it rotates the token on failure, as login() does.
         if (!verifyCsrfToken($token)) {
             rotateCsrfToken();
             $this->respondCsrfFailure();
@@ -461,29 +467,29 @@ class AdminAuthController extends Controller
                 \App\Core\Mailer::queue(
                     $admin['email'],
                     $admin['full_name'] ?? 'Admin',
-                    'إعادة تعيين كلمة المرور',
+                    'Reset your password',
                     \App\Core\Mailer::template(
-                        'إعادة تعيين كلمة المرور',
-                        'اضغط على الرابط التالي لإعادة تعيين كلمة المرور'
-                        . ' (صالح لمدة 60 دقيقة فقط):<br><br>'
+                        'Reset your password',
+                        'Follow this link to reset your password'
+                        . ' (valid for 60 minutes only):<br><br>'
                         . '<a href="{link}">{link}</a><br><br>'
-                        . 'إذا لم تطلب هذا، تجاهل هذا الإيميل.',
+                        . 'If you did not request this, ignore this email.',
                         ['link' => $resetLink]
                     )
                 );
             }
         }
 
-        // نُظهر نجاح دائمًا لمنع تعداد إيميلات الأدمن المسجّلة
+        // Always report success, to prevent enumeration of registered admin addresses
         $this->respond(true, 'If this email is registered, you will receive a reset link shortly.');
     }
 
     // ════════════════════════════════════════════════════════
-    // POST /admin/store-mode/enter — دخول وضع تصفح المتجر كزائر
+    // POST /admin/store-mode/enter — enter store-browsing mode as a visitor
     // ════════════════════════════════════════════════════════
     #[OA\Post(
         path: '/admin/store-mode/enter',
-        summary: 'دخول الأدمن لوضع تصفح المتجر كزائر (Store Mode)',
+        summary: 'Put the admin into store-browsing mode, as a visitor (Store Mode)',
         tags: ['Admin - Auth'],
         requestBody: new OA\RequestBody(
             required: true,
@@ -492,14 +498,14 @@ class AdminAuthController extends Controller
                 schema: new OA\Schema(
                     required: ['csrf_token'],
                     properties: [
-                        new OA\Property(property: 'csrf_token', type: 'string', description: 'CSRF token — مطلوب دائماً'),
+                        new OA\Property(property: 'csrf_token', type: 'string', description: 'CSRF token — always required'),
                     ]
                 )
             )
         ),
         responses: [
-            new OA\Response(response: 302, description: 'إعادة توجيه للمتجر / بعد تعيين وضع المتجر'),
-            new OA\Response(response: 401, description: 'غير مسجّل دخول (AJAX/POST)')
+            new OA\Response(response: 302, description: 'Redirect to the store / once store mode is set'),
+            new OA\Response(response: 401, description: 'Not signed in (AJAX/POST)')
         ]
     )]
     public function enterStoreMode(): void
@@ -517,19 +523,21 @@ class AdminAuthController extends Controller
         }
 
         $token = $_POST['csrf_token'] ?? '';
-        // استُثني من beginJsonPost: يفشل بـheader(Location) لا بـJSON.
-        // البوابة تطبع رأس JSON ثم respond، فتقلب تحويلاً إلى استجابة.
+        // Deliberately not using beginJsonPost: this fails with a header(Location),
+        // not with JSON. The gate emits a JSON header and then responds, which would
+        // turn a redirect into a response body.
         if (!verifyCsrfToken($token)) {
             header('Location: ' . URLROOT . '/admin/home');
             exit;
         }
 
-        // علم Store Mode في جلسة الأدمن (لأي فحص مستقبلي داخل اللوحة)
+        // The store-mode flag in the admin session (for any future check inside the panel)
         $_SESSION['admin_in_store_mode'] = true;
 
-        // ⚠️ جلستا الأدمن (admin_session) والزائر (PHPSESSID) منفصلتان تماماً،
-        // والمتجر يقرأ علم Store Mode فقط من جلسة الزائر (PHPSESSID).
-        // لذلك تُكتب نسخة العلم في كلتيهما بتبديل مأمون لاسم الجلسة.
+        // ⚠️ The admin session (admin_session) and the visitor session (PHPSESSID) are
+        // entirely separate, and the store reads the store-mode flag only from the
+        // visitor session (PHPSESSID). So a copy of the flag is written into both,
+        // through a guarded switch of the session name.
         session_write_close();
 
         session_name('PHPSESSID');
@@ -537,7 +545,7 @@ class AdminAuthController extends Controller
         $_SESSION['admin_in_store_mode'] = true;
         session_write_close();
 
-        // استعادة سياق جلسة الأدمن للرد الحالي
+        // Restore the admin session context for the current response
         session_name('admin_session');
         session_start();
 
@@ -546,15 +554,15 @@ class AdminAuthController extends Controller
     }
 
     // ════════════════════════════════════════════════════════
-    // GET /admin/store-mode/reauth — صفحة إعادة التحقق بكلمة السر
+    // GET /admin/store-mode/reauth — the password re-authentication page
     // ════════════════════════════════════════════════════════
     #[OA\Get(
         path: '/admin/store-mode/reauth',
-        summary: 'عرض صفحة إعادة التحقق بكلمة السر قبل الرجوع للوحة',
+        summary: 'Show the password re-authentication page before returning to the panel',
         tags: ['Admin - Auth'],
         responses: [
-            new OA\Response(response: 200, description: 'صفحة HTML مستقلة لإعادة التحقق'),
-            new OA\Response(response: 302, description: 'إعادة توجيه لـ /admin/home إن لم يكن الأدمن في وضع المتجر')
+            new OA\Response(response: 200, description: 'A standalone HTML page for re-authentication'),
+            new OA\Response(response: 302, description: 'Redirect to /admin/home when the admin is not in store mode')
         ]
     )]
     public function showReauth(): void
@@ -566,7 +574,7 @@ class AdminAuthController extends Controller
             exit;
         }
 
-        // إن لم يكن الأدمن في وضع المتجر — لا حاجة لهذه الصفحة أصلاً
+        // If the admin is not in store mode, this page has no purpose
         if (empty($_SESSION['admin_in_store_mode'])) {
             header('Location: ' . URLROOT . '/admin/home');
             exit;
@@ -582,11 +590,11 @@ class AdminAuthController extends Controller
     }
 
     // ════════════════════════════════════════════════════════
-    // POST /admin/store-mode/reauth — إعادة التحقق بكلمة السر (JSON)
+    // POST /admin/store-mode/reauth — password re-authentication (JSON)
     // ════════════════════════════════════════════════════════
     #[OA\Post(
         path: '/admin/store-mode/reauth',
-        summary: 'إعادة تحقق الأدمن بكلمة السر قبل الرجوع للوحة (JSON)',
+        summary: 'Re-authenticate the admin by password before returning to the panel (JSON)',
         tags: ['Admin - Auth'],
         requestBody: new OA\RequestBody(
             required: true,
@@ -595,9 +603,9 @@ class AdminAuthController extends Controller
                 schema: new OA\Schema(
                     required: ['password', 'csrf_token'],
                     properties: [
-                        new OA\Property(property: 'password', type: 'string', format: 'password', description: 'كلمة مرور الأدمن'),
-                        new OA\Property(property: 'csrf_token', type: 'string', description: 'CSRF token — مطلوب دائماً'),
-                        new OA\Property(property: 'return', type: 'string', description: 'وجهة العودة (اختياري) — تُحمى ضد Open Redirect'),
+                        new OA\Property(property: 'password', type: 'string', format: 'password', description: "The admin's password"),
+                        new OA\Property(property: 'csrf_token', type: 'string', description: 'CSRF token — always required'),
+                        new OA\Property(property: 'return', type: 'string', description: 'Return destination (optional) — guarded against open redirects'),
                     ]
                 )
             )
@@ -605,12 +613,12 @@ class AdminAuthController extends Controller
         responses: [
             new OA\Response(
                 response: 200,
-                description: 'نجاح أو فشل التحقق',
+                description: 'Whether the check succeeded',
                 content: new OA\JsonContent(
                     properties: [
                         new OA\Property(property: 'success', type: 'boolean'),
                         new OA\Property(property: 'message', type: 'string'),
-                        new OA\Property(property: 'redirect', type: 'string', description: 'موجود عند النجاح فقط'),
+                        new OA\Property(property: 'redirect', type: 'string', description: 'Present on success only'),
                     ]
                 )
             )
@@ -632,14 +640,15 @@ class AdminAuthController extends Controller
         }
 
         $token = $_POST['csrf_token'] ?? '';
-        // استُثني من beginJsonPost: يدوّر التوكن **ويُعيده في الاستجابة**
-        // ($extra['csrf_token']) كي يواصل admin-auth.js بلا جلب إضافي.
-        // سلوك خاص لا تملكه البوابة الموحّدة.
+        // Deliberately not using beginJsonPost: this rotates the token **and returns
+        // it in the response** ($extra['csrf_token']) so admin-auth.js can carry on
+        // without a further fetch. That is special behaviour the unified gate does not
+        // have.
         if (!verifyCsrfToken($token)) {
-            // التوكن الجديد يُعاد في الاستجابة كي يواصل store-reauth.js
-            // بلا جلب إضافي — وهذه النقطة تمرّ بـfetchWithCsrfRetry فعلاً،
-            // فبلا error_code كانت ستفقد إعادة المحاولة بعد حذف مطابقة
-            // نصّ الرسالة من csrf.js.
+            // The new token is returned in the response so store-reauth.js can carry on
+            // without a further fetch — and this endpoint really does go through
+            // fetchWithCsrfRetry, so without error_code it would have lost its retry once
+            // the message-text matching was removed from csrf.js.
             $this->respondCsrfFailure(['csrf_token' => rotateCsrfToken()]);
         }
 
@@ -657,13 +666,13 @@ class AdminAuthController extends Controller
             ]);
         }
 
-        // نجاح — إزالة وضع المتجر من جلستي الأدمن والزائر معاً.
+        // Success — clear store mode from the admin session and the visitor session alike.
         //
-        // الرفع إلى دالة ليس تجميلاً: كتابة unset مرّتين على $_SESSION
-        // تُخفي أن الاثنتين تعملان على **جلستين مختلفتين** — الأولى
-        // admin_session والثانية PHPSESSID بعد تبديل الاسم. السطران
-        // متطابقان نصّاً ومختلفان أثراً، وهذا أسوأ ما يمكن أن يكون
-        // عليه سطران متجاوران.
+        // Extracting this into a function is not cosmetic: writing unset on $_SESSION
+        // twice hides that the two calls act on **two different sessions** — the first
+        // on admin_session and the second on PHPSESSID after the name is switched. The
+        // two lines are textually identical and different in effect, which is the worst
+        // thing two adjacent lines can be.
         $this->forgetStoreMode();
         session_write_close();
 
@@ -683,16 +692,16 @@ class AdminAuthController extends Controller
     }
 
     // ════════════════════════════════════════════════════════
-    // GET /admin/csrf — توليد CSRF Token جديد لفورم الأدمن
+    // GET /admin/csrf — issue a fresh CSRF token for the admin forms
     // ════════════════════════════════════════════════════════
     #[OA\Get(
         path: '/admin/csrf',
-        summary: 'توليد CSRF token جديد لفورم الأدمن',
+        summary: 'Issue a fresh CSRF token for the admin forms',
         tags: ['Admin - Auth'],
         responses: [
             new OA\Response(
                 response: 200,
-                description: 'توكن CSRF جديد',
+                description: 'A fresh CSRF token',
                 content: new OA\JsonContent(
                     properties: [
                         new OA\Property(property: 'success', type: 'boolean', example: true),
@@ -711,20 +720,21 @@ class AdminAuthController extends Controller
     }
 
     // ════════════════════════════════════════════════════════
-    // Helpers خاصة
+    // Private helpers
     // ════════════════════════════════════════════════════════
 
     /**
-     * التحقق من hCaptcha server-side
+     * Verify hCaptcha server-side.
      */
     private function verifyCaptcha(string $captchaResponse): bool
     {
         $secretKey = trim($_ENV['HCAPTCHA_SECRET_KEY'] ?? '');
 
-        // قيمة placeholder (مثل YOUR_HCAPTCHA_SECRET_KEY_HERE) تُعامل كأنها غير
-        // مضبوطة. بدون هذا الفحص كانت empty() تمرّ لأن النص غير فارغ، فيُرسَل
-        // الـ placeholder إلى hCaptcha ويُرفض دائمًا — أي فشل دائم بلا سبب ظاهر
-        // بدل تفعيل تجاوز التطوير المقصود أدناه.
+        // A placeholder value (such as YOUR_HCAPTCHA_SECRET_KEY_HERE) is treated as
+        // unset. Without this check, empty() passed because the string is not empty, so
+        // the placeholder was sent to hCaptcha and always rejected — a permanent failure
+        // with no visible cause, instead of activating the intended development bypass
+        // below.
         if ($secretKey === '' || str_starts_with($secretKey, 'YOUR_')) {
             error_log("AdminAuthController: HCAPTCHA_SECRET_KEY not configured in .env — bypassing captcha check (dev mode)");
             return true;
@@ -750,15 +760,16 @@ class AdminAuthController extends Controller
 
         $result = @file_get_contents('https://hcaptcha.com/siteverify', false, $context);
         if ($result === false) {
-            // يحدث عند انقطاع الإنترنت، أو حجب HTTPS الصادر، أو allow_url_fopen=Off
+            // Happens when the network is down, outbound HTTPS is blocked, or allow_url_fopen=Off
             error_log("AdminAuthController: hCaptcha siteverify request failed (network/allow_url_fopen?)");
             return false;
         }
 
         $data = json_decode($result, true);
 
-        // hCaptcha يرجّع error-codes تشرح سبب الرفض (مثل invalid-or-already-seen-response
-        // أو sitekey-secret-mismatch). بدون تسجيلها يصبح أي فشل صامتًا تمامًا.
+        // hCaptcha returns error-codes explaining the refusal (such as
+        // invalid-or-already-seen-response or sitekey-secret-mismatch). Without logging
+        // them, any failure becomes entirely silent.
         if (empty($data['success'])) {
             $codes = isset($data['error-codes']) && is_array($data['error-codes'])
                 ? implode(', ', $data['error-codes'])
@@ -771,9 +782,9 @@ class AdminAuthController extends Controller
     }
 
     /**
-     * يحمي معامل العودة من Open Redirect في صفحات Store Mode:
-     * يقبل فقط وجهة داخلية تبدأ بـ URLROOT.'/admin/' أو نسبية /admin/.
-     * أي قيمة خارج هذا النطاق تُستبدل بوجهة افتراضية آمنة.
+     * Guards the return parameter against open redirects on the Store Mode pages:
+     * it accepts only an internal destination starting with URLROOT.'/admin/' or the
+     * relative /admin/. Anything outside that range is replaced with a safe default.
      */
     private function safeAdminReturn(?string $return): string
     {
@@ -786,7 +797,7 @@ class AdminAuthController extends Controller
             return $return;
         }
 
-        // صيغة نسبية مقبولة — تُحوّل لرابط كامل داخل اللوحة فقط
+        // An acceptable relative form — expanded to a full URL inside the panel only
         if (str_starts_with($return, '/admin/')) {
             return URLROOT . $return;
         }
@@ -794,19 +805,20 @@ class AdminAuthController extends Controller
         return URLROOT . '/admin/home';
     }
 
-    // حُذفت renderStandaloneView() هنا: كانت تعرض view بلا layout لأن
-    // view() المورثة كانت تفرض head+navbar+footer. صار ذلك خياراً في
-    // الكلاس الأب — $this->view($path, $data, 'bare') — فلم يعد لنسخة
-    // محلية معنى. الفروق التي كسبناها بالحذف: فحص الوجود يسبق أي إخراج،
-    // وصفحة 404 حقيقية بدل "View not found: {$viewPath}" النصية.
+    // renderStandaloneView() was removed from here: it rendered a view without a
+    // layout because the inherited view() forced head+navbar+footer. That is now an
+    // option on the parent class — $this->view($path, $data, 'bare') — so a local
+    // copy no longer means anything. What the removal gained: the existence check
+    // now precedes any output, and a real 404 page replaces the plain-text
+    // "View not found: {$viewPath}".
 
     /**
-     * يمحو علامة وضع المتجر من **الجلسة المفتوحة حالياً**.
+     * Clears the store-mode flag from **whichever session is currently open**.
      *
-     * الاسم مهمّ: الدالة لا تعرف أي جلسة هي، وهذا مقصود — يستدعيها
-     * reauth مرّتين، مرّة لجلسة الأدمن ومرّة لجلسة الزائر بعد
-     * session_name('PHPSESSID'). الدالة تصف الفعل، والمستدعي يملك
-     * السياق.
+     * The name matters: the function does not know which session it is acting on,
+     * and that is deliberate — reauth calls it twice, once for the admin session and
+     * once for the visitor session after session_name('PHPSESSID'). The function
+     * describes the act; the caller owns the context.
      */
     private function forgetStoreMode(): void
     {

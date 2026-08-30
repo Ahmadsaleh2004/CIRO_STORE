@@ -15,7 +15,7 @@ class Router
     private array $groupStack = [];
 
     /**
-     * @param callable|array{class-string, string} $handler كنترولر وفعله، أو دالة
+     * @param callable|array{class-string, string} $handler A controller and its action, or a closure
      */
     public function get(string $path, callable|array $handler): Route
     {
@@ -23,7 +23,7 @@ class Router
     }
 
     /**
-     * @param callable|array{class-string, string} $handler كنترولر وفعله، أو دالة
+     * @param callable|array{class-string, string} $handler A controller and its action, or a closure
      */
     public function post(string $path, callable|array $handler): Route
     {
@@ -37,7 +37,7 @@ class Router
      *
      * المشروع اليوم كله GET/POST، فالإضافة لا تغيّر سلوكاً قائماً.
      *
-     * @param callable|array{class-string, string} $handler كنترولر وفعله، أو دالة
+     * @param callable|array{class-string, string} $handler A controller and its action, or a closure
      */
     public function put(string $path, callable|array $handler): Route
     {
@@ -45,7 +45,7 @@ class Router
     }
 
     /**
-     * @param callable|array{class-string, string} $handler كنترولر وفعله، أو دالة
+     * @param callable|array{class-string, string} $handler A controller and its action, or a closure
      */
     public function patch(string $path, callable|array $handler): Route
     {
@@ -53,7 +53,7 @@ class Router
     }
 
     /**
-     * @param callable|array{class-string, string} $handler كنترولر وفعله، أو دالة
+     * @param callable|array{class-string, string} $handler A controller and its action, or a closure
      */
     public function delete(string $path, callable|array $handler): Route
     {
@@ -128,7 +128,7 @@ class Router
     }
 
     /**
-     * @param callable|array{class-string, string} $handler كنترولر وفعله، أو دالة
+     * @param callable|array{class-string, string} $handler A controller and its action, or a closure
      */
     private function addRoute(string $method, string $path, callable|array $handler): Route
     {

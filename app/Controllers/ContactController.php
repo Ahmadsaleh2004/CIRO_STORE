@@ -8,14 +8,14 @@ use App\Models\UserModel;
 use OpenApi\Attributes as OA;
 
 /**
- * ContactController — يعالج صفحة /contact (GET + POST)
- * منقول من PageController::contact()
+ * ContactController — serves the /contact page (GET + POST).
+ * Moved out of PageController::contact().
  */
 class ContactController extends Controller
 {
     #[OA\Get(
         path: '/contact',
-        summary: 'صفحة "اتصل بنا"',
+        summary: 'Contact page',
         tags: ['Store - Pages'],
         responses: [
             new OA\Response(response: 200, ref: '#/components/responses/HtmlPage'),
@@ -25,22 +25,23 @@ class ContactController extends Controller
     )]
     #[OA\Post(
         path: '/contact',
-        summary: 'إرسال نموذج "اتصل بنا" من الصفحة نفسها',
+        summary: 'Submit the contact form from the page itself',
         description: <<<'TXT'
-        النقطة الوحيدة التي كانت مسجَّلة في الراوتر وغائبة عن المواصفة
-        (103 من 104). وُثّقت هنا كما تعمل فعلاً.
+        The one endpoint that was registered in the router and missing from the
+        spec (103 of 104). Documented here as it actually behaves.
 
-        تختلف عن POST /contact/send اختلافاً جوهرياً: هذه **لا تُرجع
-        JSON**. الدالة تخدم GET وPOST معاً، وتعيد عرض الصفحة كاملةً مع
-        رسالة نجاح أو خطأ في متن HTML. ولهذا استُثنيت من beginJsonPost
-        صراحةً — الفشل هنا لا يوقف التنفيذ بل يملأ $errorMsg ويُكمل.
+        It differs from POST /contact/send in a fundamental way: this one **does
+        not return JSON**. The method serves both GET and POST, and re-renders the
+        whole page with a success or error message inside the HTML body. That is
+        why it is deliberately excluded from beginJsonPost — a failure here does
+        not halt execution, it fills $errorMsg and carries on.
 
-        وفشل CSRF لا يُرجع error_code لأن لا عميل JS يقرأ هذه الاستجابة:
-        الصفحة تُعرض والرسالة داخلها.
+        A CSRF failure returns no error_code either, because no JavaScript client
+        reads this response: the page is rendered with the message inside it.
 
-        شرطان للإرسال: مستخدم مسجّل الدخول (الزائر يُرفض)، ورسالة لا تقلّ
-        عن عشرة محارف. والاسم والبريد يُقرآن من قاعدة البيانات لا من
-        الطلب — تمريرهما في الجسم لا أثر له.
+        Two conditions to send: a logged-in user (a visitor is refused), and a
+        message of at least ten characters. The name and email are read from the
+        database, not from the request — passing them in the body has no effect.
         TXT,
         tags: ['Store - Pages'],
         requestBody: new OA\RequestBody(
@@ -53,14 +54,14 @@ class ContactController extends Controller
                         new OA\Property(
                             property: 'send_message',
                             type: 'string',
-                            description: 'علامة وجود النموذج. بلا هذا المفتاح تُعرض الصفحة بلا معالجة.',
+                            description: 'Marks the form as present. Without this key the page renders with no processing.',
                             example: '1'
                         ),
                         new OA\Property(
                             property: 'message',
                             type: 'string',
                             minLength: 10,
-                            example: 'أرغب بالاستفسار عن توفّر المنتج باللون الأسود.'
+                            example: 'I would like to ask whether this product is available in black.'
                         ),
                         new OA\Property(property: 'csrf_token', ref: '#/components/schemas/CsrfToken'),
                     ],
@@ -75,7 +76,7 @@ class ContactController extends Controller
     )]
     public function contact(): void
     {
-        // بيانات التواصل الثابتة
+        // Static contact details
         $phone        = '+20 123 456 789';
         $workingHours = 'Sun - Thu: 9 AM - 6 PM';
         $email        = 'info@cairostore.com';
@@ -83,23 +84,24 @@ class ContactController extends Controller
         $successMsg = '';
         $errorMsg   = '';
 
-        // معالجة إرسال الفورم (POST)
+        // Form submission handling (POST)
         if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['send_message'])) {
             $token = $_POST['csrf_token'] ?? '';
 
-            // استُثني من beginJsonPost: لا يفشل أصلاً — يضع النص في
-            // $errorMsg ويُكمل عرض الصفحة. الدالة تخدم GET وPOST معاً.
+            // Deliberately not using beginJsonPost: this never aborts — it puts the
+            // text in $errorMsg and carries on rendering the page. The same method
+            // serves GET and POST.
             if (!verifyCsrfToken($token)) {
                 $errorMsg = 'Invalid request, please refresh the page and try again.';
             } else {
                 $msgText  = trim($_POST['message']   ?? '');
                 $userId   = getCurrentUserId();
 
-                // الزوار غير المسجلين لا يمكنهم الإرسال إطلاقًا
+                // Signed-out visitors cannot send at all
                 if (!$userId) {
                     $errorMsg = 'You must be logged in to send a message.';
                 } else {
-                    // للمستخدمين المسجلين: تجاهل full_name/email من الـ POST، واستخدم بيانات الجلسة/قاعدة البيانات
+                    // For logged-in users: ignore full_name/email from the POST and use the session and database instead
                     $user = UserModel::findById($userId);
                     $fullName = $user['full_name'] ?? '';
                     $msgEmail = $user['email'] ?? '';
@@ -140,7 +142,7 @@ class ContactController extends Controller
 
     #[OA\Post(
         path: '/contact/send',
-        summary: 'إرسال رسالة من نموذج "اتصل بنا"',
+        summary: 'Send a message from the contact form',
         tags: ['Store - Pages'],
         requestBody: new OA\RequestBody(
             required: true,
@@ -160,7 +162,7 @@ class ContactController extends Controller
         responses: [
             new OA\Response(
                 response: 200,
-                description: 'نتيجة العملية. الحقل success يفصل النجاح عن الفشل — كود HTTP يبقى 200 في الحالتين. وعند فشل CSRF يحمل الجسم error_code=csrf_invalid.',
+                description: 'Operation result. The success field separates success from failure — the HTTP status stays 200 either way. On CSRF failure the body carries error_code=csrf_invalid.',
                 content: new OA\JsonContent(oneOf: [
                     new OA\Schema(ref: '#/components/schemas/ApiResponse'),
                     new OA\Schema(ref: '#/components/schemas/ApiError'),
@@ -170,11 +172,11 @@ class ContactController extends Controller
     )]
     public function send(): void
     {
-        // كانت ترد عند فشل التوكن بـ'Invalid request, please refresh the
-        // page and try again.' — ولا تبدأ بالبادئة التي يفحصها
-        // js/core/csrf.js (startsWith('Invalid CSRF token'))، فكانت إعادة
-        // المحاولة معطّلة لنموذج «اتصل بنا» رغم أن contact.js يستدعي
-        // fetchWithCsrfRetry. نفس عطل WishlistController::notify.
+        // On a token failure this used to answer 'Invalid request, please refresh
+        // the page and try again.' — which does not start with the prefix
+        // js/core/csrf.js checks for (startsWith('Invalid CSRF token')), so the retry
+        // was dead for the contact form even though contact.js calls
+        // fetchWithCsrfRetry. The same fault as WishlistController::notify.
         $this->beginJsonPost();
 
         $userId = getCurrentUserId();
@@ -195,8 +197,8 @@ class ContactController extends Controller
 
         $saved = ContactModel::save($userId, $fullName, $msgEmail, $msgText);
 
-        // إنذار كاذب: المطبوع منطقيّ ونصّان ثابتان مكتوبان هنا — لا شيء
-        // من الطلب يصل إلى المخرَج إطلاقاً.
+        // False positive: what is printed is a boolean and two literal strings written
+        // right here — nothing from the request reaches the output at all.
         // nosemgrep: php.lang.security.injection.echoed-request.echoed-request
         echo json_encode([
             'success' => (bool)$saved,

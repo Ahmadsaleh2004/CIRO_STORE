@@ -12,23 +12,23 @@ paths:
     get:
       tags:
         - 'Admin - Site Settings'
-      summary: 'عرض صفحة إعدادات الموقع الحالية'
+      summary: 'Show the current site settings page'
       operationId: 634d1801e5ae45f856fbfc627b8bcd25
       responses:
         '200':
-          description: 'صفحة HTML — يتطلب صلاحية can_edit_site_content'
+          description: 'HTML page — requires the can_edit_site_content permission'
         '302':
-          description: 'إعادة توجيه لـ /admin/login'
+          description: 'Redirect to /admin/login'
         '403':
-          description: 'ممنوع — لا يملك can_edit_site_content'
+          description: 'Forbidden — the admin lacks can_edit_site_content'
       security:
         -
           adminSessionAuth: []
     post:
       tags:
         - 'Admin - Site Settings'
-      summary: 'حفظ إعدادات الموقع (AJAX) — الحقول المالية/العملة تُقبل فقط لصاحب can_manage_checkout_settings'
-      description: "AdminSiteSettingsController — صفحة إعدادات الموقع للأدمن.\r\nيرث من AdminController الذي يتحقق من تسجيل دخول الأدمن تلقائياً."
+      summary: 'Save site settings (AJAX) — the financial and currency fields are accepted only from a holder of can_manage_checkout_settings'
+      description: "AdminSiteSettingsController — the admin's site settings page.\nExtends AdminController, which verifies the admin login automatically."
       operationId: 3e053842fbd06f520e821e6726b6fe5f
       requestBody:
         required: true
@@ -73,15 +73,15 @@ paths:
                 terms_and_conditions:
                   type: string
                 default_currency:
-                  description: 'فقط لصاحب can_manage_checkout_settings'
+                  description: 'Only for a holder of can_manage_checkout_settings'
                   type: string
                 default_language:
-                  description: 'فقط لصاحب can_manage_checkout_settings'
+                  description: 'Only for a holder of can_manage_checkout_settings'
                   type: string
               type: object
       responses:
         '200':
-          description: 'نجاح أو فشل الحفظ'
+          description: 'Whether the save succeeded'
           content:
             application/json:
               schema:
@@ -96,7 +96,7 @@ paths:
     get:
       tags:
         - 'Store - Pages'
-      summary: 'صفحة "من نحن" — بيانات المتجر الثابتة مع عدد المنتجات المرئية'
+      summary: "About page — the store's static details plus the visible product count"
       operationId: 6da6392c8a0f7198065416a7e1062f26
       responses:
         '200':
@@ -109,15 +109,15 @@ paths:
     get:
       tags:
         - 'Admin - Auth'
-      summary: 'عرض صفحة تسجيل دخول الأدمن'
+      summary: 'Render the admin sign-in page'
       operationId: d3b445322ac83354e1501b04eeea68b7
       responses:
         '200':
-          description: 'صفحة HTML لتسجيل الدخول'
+          description: 'Sign-in HTML page'
     post:
       tags:
         - 'Admin - Auth'
-      summary: 'تسجيل دخول الأدمن'
+      summary: 'Sign the admin in'
       operationId: f605c43a8e23a8d3a236178d7f5cf925
       requestBody:
         required: true
@@ -130,39 +130,39 @@ paths:
                 - csrf_token
               properties:
                 email:
-                  description: 'البريد الإلكتروني للأدمن'
+                  description: "The admin's email address"
                   type: string
                   format: email
                 password:
-                  description: 'كلمة المرور'
+                  description: Password
                   type: string
                   format: password
                 csrf_token:
-                  description: 'CSRF token — مطلوب دائماً'
+                  description: 'CSRF token — always required'
                   type: string
                 h-captcha-response:
-                  description: 'hCaptcha response — مطلوب بعد أول محاولة فاشلة'
+                  description: 'hCaptcha response — required after the first failed attempt'
                   type: string
               type: object
       responses:
         '200':
-          description: 'نجاح أو فشل تسجيل الدخول'
+          description: 'Whether the sign-in succeeded'
           content:
             application/json:
               schema:
                 properties:
                   success: { type: boolean }
                   message: { type: string }
-                  redirect: { description: 'موجود عند النجاح فقط', type: string }
-                  show_captcha: { description: 'موجود عند الفشل — يعني يجب إظهار hCaptcha', type: boolean }
-                  failed_attempts: { description: 'عدد المحاولات الفاشلة', type: integer }
+                  redirect: { description: 'Present on success only', type: string }
+                  show_captcha: { description: 'Present on failure — means hCaptcha must be shown', type: boolean }
+                  failed_attempts: { description: 'Number of failed attempts', type: integer }
                 type: object
   /admin/login/2fa:
     post:
       tags:
         - 'Admin - Auth'
-      summary: 'الخطوة الثانية من دخول الأدمن — التحقق من رمز TOTP'
-      description: 'تُستدعى بعد أن يُرجع /admin/login الحقل requires_2fa. الرمز من تطبيق مصادقة (Google Authenticator أو ما يماثله).'
+      summary: 'The second step of the admin sign-in — verifying the TOTP code'
+      description: 'Called after /admin/login returns the requires_2fa field. The code comes from an authenticator app (Google Authenticator or similar).'
       operationId: e7030ff592552764ee24f00281a3823c
       requestBody:
         required: true
@@ -174,14 +174,14 @@ paths:
                 - csrf_token
               properties:
                 code:
-                  description: 'رمز TOTP من ستة أرقام'
+                  description: 'Six-digit TOTP code'
                   type: string
                 csrf_token:
                   type: string
               type: object
       responses:
         '200':
-          description: 'نتيجة العملية. الحقل success يفصل النجاح عن الفشل — كود HTTP يبقى 200 في الحالتين. وعند فشل CSRF يحمل الجسم error_code=csrf_invalid.'
+          description: 'Operation result. The success field separates success from failure — the HTTP status stays 200 either way. On CSRF failure the body carries error_code=csrf_invalid.'
           content:
             application/json:
               schema:
@@ -196,17 +196,17 @@ paths:
     post:
       tags:
         - 'Admin - Auth'
-      summary: 'تسجيل خروج الأدمن'
+      summary: 'Sign the admin out'
       operationId: 5bc6c0aaaefe4ef3e155d33f1085c096
       responses:
         '302':
-          description: 'إعادة توجيه لـ /admin/login بعد تدمير الجلسة'
+          description: 'Redirect to /admin/login after the session is destroyed'
   /admin/forgot:
     post:
       tags:
         - 'Admin - Auth'
-      summary: 'طلب رابط إعادة تعيين كلمة مرور الأدمن'
-      description: 'الرسالة المُرجَعة واحدة سواء وُجد البريد أم لا — كي لا تكشف النقطة أي البُرد مسجَّلة كأدمن.'
+      summary: 'Request an admin password reset link'
+      description: 'The message returned is the same whether the email exists or not, so the endpoint does not disclose which addresses are registered as admins.'
       operationId: 130cea99c5909844a7e4be7451bce9a8
       requestBody:
         required: true
@@ -225,7 +225,7 @@ paths:
               type: object
       responses:
         '200':
-          description: 'نتيجة العملية. الحقل success يفصل النجاح عن الفشل — كود HTTP يبقى 200 في الحالتين. وعند فشل CSRF يحمل الجسم error_code=csrf_invalid.'
+          description: 'Operation result. The success field separates success from failure — the HTTP status stays 200 either way. On CSRF failure the body carries error_code=csrf_invalid.'
           content:
             application/json:
               schema:
@@ -240,7 +240,7 @@ paths:
     post:
       tags:
         - 'Admin - Auth'
-      summary: 'دخول الأدمن لوضع تصفح المتجر كزائر (Store Mode)'
+      summary: 'Put the admin into store-browsing mode, as a visitor (Store Mode)'
       operationId: 6f56f79b4b92334c5dbcae224315b3f5
       requestBody:
         required: true
@@ -251,29 +251,29 @@ paths:
                 - csrf_token
               properties:
                 csrf_token:
-                  description: 'CSRF token — مطلوب دائماً'
+                  description: 'CSRF token — always required'
                   type: string
               type: object
       responses:
         '302':
-          description: 'إعادة توجيه للمتجر / بعد تعيين وضع المتجر'
+          description: 'Redirect to the store / once store mode is set'
         '401':
-          description: 'غير مسجّل دخول (AJAX/POST)'
+          description: 'Not signed in (AJAX/POST)'
   /admin/store-mode/reauth:
     get:
       tags:
         - 'Admin - Auth'
-      summary: 'عرض صفحة إعادة التحقق بكلمة السر قبل الرجوع للوحة'
+      summary: 'Show the password re-authentication page before returning to the panel'
       operationId: 1e62213c6d5d92b4fdce0e924902f5aa
       responses:
         '200':
-          description: 'صفحة HTML مستقلة لإعادة التحقق'
+          description: 'A standalone HTML page for re-authentication'
         '302':
-          description: 'إعادة توجيه لـ /admin/home إن لم يكن الأدمن في وضع المتجر'
+          description: 'Redirect to /admin/home when the admin is not in store mode'
     post:
       tags:
         - 'Admin - Auth'
-      summary: 'إعادة تحقق الأدمن بكلمة السر قبل الرجوع للوحة (JSON)'
+      summary: 'Re-authenticate the admin by password before returning to the panel (JSON)'
       operationId: 64d4315e901132618b9471c6aeb5ec11
       requestBody:
         required: true
@@ -285,36 +285,36 @@ paths:
                 - csrf_token
               properties:
                 password:
-                  description: 'كلمة مرور الأدمن'
+                  description: "The admin's password"
                   type: string
                   format: password
                 csrf_token:
-                  description: 'CSRF token — مطلوب دائماً'
+                  description: 'CSRF token — always required'
                   type: string
                 return:
-                  description: 'وجهة العودة (اختياري) — تُحمى ضد Open Redirect'
+                  description: 'Return destination (optional) — guarded against open redirects'
                   type: string
               type: object
       responses:
         '200':
-          description: 'نجاح أو فشل التحقق'
+          description: 'Whether the check succeeded'
           content:
             application/json:
               schema:
                 properties:
                   success: { type: boolean }
                   message: { type: string }
-                  redirect: { description: 'موجود عند النجاح فقط', type: string }
+                  redirect: { description: 'Present on success only', type: string }
                 type: object
   /admin/csrf:
     get:
       tags:
         - 'Admin - Auth'
-      summary: 'توليد CSRF token جديد لفورم الأدمن'
+      summary: 'Issue a fresh CSRF token for the admin forms'
       operationId: 023c6f87e86c774e5c00533c18b0b90a
       responses:
         '200':
-          description: 'توكن CSRF جديد'
+          description: 'A fresh CSRF token'
           content:
             application/json:
               schema:
@@ -326,7 +326,7 @@ paths:
     get:
       tags:
         - 'Admin - Branding'
-      summary: 'عرض صفحة إدارة السلايدر'
+      summary: 'Show the slider management page'
       operationId: 04da49ab824daf342dfe454feda55cdb
       responses:
         '200':
@@ -344,7 +344,7 @@ paths:
     get:
       tags:
         - 'Admin - Branding'
-      summary: 'بحث حي عن منتج لاختياره بالسلايدر (AJAX)'
+      summary: 'Live product search for slider selection (AJAX)'
       operationId: 185ea70d9c6ff55d56d576baa2b5d789
       parameters:
         -
@@ -354,7 +354,7 @@ paths:
             type: string
       responses:
         '200':
-          description: 'نتيجة العملية. الحقل success يفصل النجاح عن الفشل — كود HTTP يبقى 200 في الحالتين. وعند فشل CSRF يحمل الجسم error_code=csrf_invalid.'
+          description: 'Operation result. The success field separates success from failure — the HTTP status stays 200 either way. On CSRF failure the body carries error_code=csrf_invalid.'
           content:
             application/json:
               schema:
@@ -372,7 +372,7 @@ paths:
     post:
       tags:
         - 'Admin - Branding'
-      summary: 'حفظ كامل السلايدر (Full Replace) — شرائح + عناصر + رفع صور'
+      summary: 'Save the whole slider (full replace) — slides, items and image uploads'
       operationId: 373a97f2a24a1dc606e7649ae9fca3a2
       requestBody:
         required: true
@@ -390,23 +390,23 @@ paths:
     get:
       tags:
         - 'Admin - Dashboard'
-      summary: 'صفحة إحصائيات لوحة تحكم الأدمن (مبيعات، طلبات، مستخدمون، أفضل المنتجات مبيعًا)'
+      summary: 'Admin dashboard statistics (sales, orders, users, best-selling products)'
       operationId: 5a10c70d52102afac94342c298f09cad
       parameters:
         -
           name: q
           in: query
-          description: 'بحث اختياري بالاسم ضمن قائمة أفضل المنتجات مبيعًا'
+          description: 'Optional name search within the best-sellers list'
           required: false
           schema:
             type: string
       responses:
         '200':
-          description: 'صفحة HTML للداشبورد — يتطلب جلسة admin_session صالحة وصلاحية can_view_dashboard'
+          description: 'Dashboard HTML page — requires a valid admin_session and the can_view_dashboard permission'
         '302':
-          description: 'إعادة توجيه لـ /admin/login إذا لم تكن الجلسة صالحة'
+          description: 'Redirect to /admin/login when the session is not valid'
         '403':
-          description: 'ممنوع — الأدمن ليس لديه صلاحية can_view_dashboard'
+          description: 'Forbidden — the admin lacks the can_view_dashboard permission'
       security:
         -
           adminSessionAuth: []
@@ -414,13 +414,13 @@ paths:
     get:
       tags:
         - 'Admin - Home'
-      summary: 'صفحة لوحة التحكم الرئيسية'
+      summary: 'Admin panel home page'
       operationId: 5f2b0324a493fd085fc513c017fc963f
       responses:
         '200':
-          description: 'صفحة HTML للوحة التحكم — يتطلب جلسة admin_session صالحة'
+          description: 'Admin panel HTML page — requires a valid admin_session'
         '302':
-          description: 'إعادة توجيه لـ /admin/login إذا لم تكن الجلسة صالحة'
+          description: 'Redirect to /admin/login when the session is not valid'
       security:
         -
           adminSessionAuth: []
@@ -428,13 +428,13 @@ paths:
     get:
       tags:
         - 'Admin - Manage Admins'
-      summary: 'قائمة كل الأدمنية مع صلاحياتهم'
+      summary: 'List every admin together with their permissions'
       operationId: 9159b1b855dae051e4af33f4dc0eff6d
       responses:
         '200':
-          description: 'صفحة HTML بالجدول — يتطلب صلاحية can_manage_admins'
+          description: 'HTML page with the table — requires the can_manage_admins permission'
         '403':
-          description: 'ممنوع — لا يملك can_manage_admins'
+          description: 'Forbidden — the admin lacks can_manage_admins'
       security:
         -
           adminSessionAuth: []
@@ -442,7 +442,7 @@ paths:
     get:
       tags:
         - 'Admin - Manage Admins'
-      summary: 'عرض فورم إضافة أدمن جديد'
+      summary: 'Show the add-admin form'
       operationId: 9eb0ffcb6b3931118276117fa7237887
       responses:
         '200':
@@ -459,7 +459,7 @@ paths:
     post:
       tags:
         - 'Admin - Manage Admins'
-      summary: 'إضافة أدمن جديد (يتطلب سبب + كلمة مرور الأدمن الحالي)'
+      summary: "Add a new admin (requires a reason and the acting admin's password)"
       operationId: b2d4e525109310fa73bd53ed9159b66d
       requestBody:
         required: true
@@ -478,7 +478,7 @@ paths:
                 new_name:
                   type: string
                 new_email:
-                  description: 'يجب أن ينتهي بـ @gmail.com'
+                  description: 'Must end in @gmail.com'
                   type: string
                   format: email
                 new_phone:
@@ -487,7 +487,7 @@ paths:
                   type: string
                   format: password
                 new_role:
-                  description: 'A|B|C|D — يجب أن تكون أقل صراحة من رتبتك'
+                  description: 'A|B|C|D — must be strictly lower than your own rank'
                   type: string
                 perm_admins:
                   type: boolean
@@ -527,7 +527,7 @@ paths:
     post:
       tags:
         - 'Admin - Manage Admins'
-      summary: 'حفظ تعديل رتبة/صلاحيات أدمن (يتطلب سبب + كلمة مرور الأدمن الحالي)'
+      summary: "Save a change to an admin's rank or permissions (requires a reason and the acting admin's password)"
       operationId: 23326486824d40055b9d9ed454b088d1
       responses:
         '302':
@@ -541,7 +541,7 @@ paths:
     post:
       tags:
         - 'Admin - Manage Admins'
-      summary: 'حذف أدمن (AJAX — يرجع JSON، يتطلب سبب + كلمة مرور)'
+      summary: 'Delete an admin (AJAX — returns JSON; requires a reason and a password)'
       operationId: d63d8a22bfb1db8f2c0bfc8f806f9c80
       requestBody:
         required: true
@@ -566,7 +566,7 @@ paths:
               type: object
       responses:
         '200':
-          description: 'نجاح أو فشل'
+          description: 'Success or failure'
           content:
             application/json:
               schema:
@@ -581,7 +581,7 @@ paths:
     get:
       tags:
         - 'Admin - Manage Admins'
-      summary: 'تفاصيل أدمن معيّن: بياناته + نشاط طلباته + سجل أفعاله'
+      summary: 'Details for one admin: profile, order activity, and their action log'
       operationId: 8b119ec8062bda0941bc4b18ad7dc779
       parameters:
         -
@@ -606,7 +606,7 @@ paths:
     get:
       tags:
         - 'Admin - Manage Admins'
-      summary: 'تصدير قائمة الأدمنية كملف CSV — رتبة A فقط'
+      summary: 'Export the admin list as a CSV file — rank A only'
       operationId: 407baf53eac765c467db8fcdff2e886a
       responses:
         '200':
@@ -622,7 +622,7 @@ paths:
     post:
       tags:
         - 'Admin - Messaging'
-      summary: 'إرسال رسالة فردية لأدمن أو يوزر (AJAX)'
+      summary: 'Send a direct message to an admin or a user (AJAX)'
       operationId: 73cc265efb790ccc50f0f6a1a6d839fb
       requestBody:
         required: true
@@ -637,7 +637,7 @@ paths:
                 - csrf_token
               properties:
                 target_type:
-                  description: "'admin' أو 'user'"
+                  description: "'admin' or 'user'"
                   type: string
                 target_id:
                   type: integer
@@ -665,7 +665,7 @@ paths:
     post:
       tags:
         - 'Admin - Messaging'
-      summary: 'إرسال إشعار جماعي (AJAX) — أدمنية حسب الصلاحية + الرتبة، أو يوزرز حسب الحالة'
+      summary: 'Send a broadcast (AJAX) — admins by permission and rank, or users by status'
       operationId: 724f415bb841000f324c16023b863562
       requestBody:
         required: true
@@ -678,7 +678,7 @@ paths:
                 - csrf_token
               properties:
                 target_type:
-                  description: "'admin' (صلاحيات + رتب) أو 'user' (حالات)"
+                  description: "'admin' (permissions + ranks) or 'user' (statuses)"
                   type: string
                   enum: [admin, user]
                 title:
@@ -686,15 +686,15 @@ paths:
                 body:
                   type: string
                 perms:
-                  description: 'للأدمنية فقط'
+                  description: 'Admins only'
                   type: array
                   items: { type: string }
                 ranks:
-                  description: 'للأدمنية فقط'
+                  description: 'Admins only'
                   type: array
                   items: { type: string }
                 statuses:
-                  description: 'لليوزرز فقط'
+                  description: 'Users only'
                   type: array
                   items: { type: string, enum: [active, not_active, blocked] }
                 csrf_token:
@@ -717,20 +717,20 @@ paths:
     get:
       tags:
         - 'Admin - My Info'
-      summary: 'عرض صفحة معلوماتي الخاصة بالأدمن'
+      summary: "Show the admin's own account page"
       operationId: 15738aa88d77264ebe6bd5f675809a65
       responses:
         '200':
-          description: 'صفحة HTML لمعلومات الأدمن — يتطلب جلسة admin_session صالحة'
+          description: 'Admin account HTML page — requires a valid admin_session'
         '302':
-          description: 'إعادة توجيه لـ /admin/login إذا لم تكن الجلسة صالحة'
+          description: 'Redirect to /admin/login when the session is not valid'
       security:
         -
           adminSessionAuth: []
     post:
       tags:
         - 'Admin - My Info'
-      summary: 'تحديث بيانات حساب الأدمن (الاسم / الهاتف / كلمة المرور)'
+      summary: "Update the admin's account details (name / phone / password)"
       operationId: 2700a423dbe09207ba93b4bc4af11330
       requestBody:
         required: true
@@ -749,17 +749,17 @@ paths:
                 phone_number:
                   type: string
                 new_password:
-                  description: 'اختياري — اتركه فارغًا للإبقاء على كلمة المرور الحالية'
+                  description: 'Optional — leave it empty to keep the current password'
                   type: string
                   format: password
                 current_password:
-                  description: 'إلزامي دائمًا للتأكيد قبل الحفظ'
+                  description: 'Always required, as confirmation before saving'
                   type: string
                   format: password
               type: object
       responses:
         '200':
-          description: 'نجاح أو فشل التحديث'
+          description: 'Whether the update succeeded'
           content:
             application/json:
               schema:
@@ -774,8 +774,8 @@ paths:
     post:
       tags:
         - 'Admin - My Info'
-      summary: 'توليد سرّ TOTP جديد ورمز QR لتفعيل التحقق بخطوتين'
-      description: 'لا يُفعّل التحقق بعد — التفعيل يتم في /admin/my-info/2fa/confirm بعد إثبات أن التطبيق يولّد الرمز الصحيح.'
+      summary: 'Generate a new TOTP secret and QR code for enabling two-factor authentication'
+      description: 'This does not enable 2FA yet — enabling happens at /admin/my-info/2fa/confirm once the authenticator app has proved it produces the right code.'
       operationId: 79533270d49ee00862b4addb0218fbb2
       requestBody:
         required: true
@@ -798,8 +798,8 @@ paths:
     post:
       tags:
         - 'Admin - My Info'
-      summary: 'تأكيد وتفعيل التحقق بخطوتين برمز من التطبيق'
-      description: 'تأكيد تفعيل 2FA — يتحقق من أول كود TRUE قبل الحفظ (طريقة آمنة).'
+      summary: 'Confirm and enable two-factor authentication with a code from the app'
+      description: 'Confirm enabling 2FA — verifies a first valid code before saving, which is the safe order.'
       operationId: d0cb964874c9888281346775acddcea0
       requestBody:
         required: true
@@ -811,14 +811,14 @@ paths:
                 - csrf_token
               properties:
                 code:
-                  description: 'رمز TOTP من ستة أرقام'
+                  description: 'Six-digit TOTP code'
                   type: string
                 csrf_token:
                   type: string
               type: object
       responses:
         '200':
-          description: 'نتيجة العملية. الحقل success يفصل النجاح عن الفشل — كود HTTP يبقى 200 في الحالتين. وعند فشل CSRF يحمل الجسم error_code=csrf_invalid.'
+          description: 'Operation result. The success field separates success from failure — the HTTP status stays 200 either way. On CSRF failure the body carries error_code=csrf_invalid.'
           content:
             application/json:
               schema:
@@ -836,8 +836,8 @@ paths:
     post:
       tags:
         - 'Admin - My Info'
-      summary: 'تعطيل التحقق بخطوتين'
-      description: 'يتطلّب كلمة المرور الحالية — لا يكفي كون الجلسة مفتوحة.'
+      summary: 'Disable two-factor authentication'
+      description: 'Requires the current password — an open session is not enough.'
       operationId: fea030f1df1b77403b3e10f844048121
       requestBody:
         required: true
@@ -856,7 +856,7 @@ paths:
               type: object
       responses:
         '200':
-          description: 'نتيجة العملية. الحقل success يفصل النجاح عن الفشل — كود HTTP يبقى 200 في الحالتين. وعند فشل CSRF يحمل الجسم error_code=csrf_invalid.'
+          description: 'Operation result. The success field separates success from failure — the HTTP status stays 200 either way. On CSRF failure the body carries error_code=csrf_invalid.'
           content:
             application/json:
               schema:
@@ -874,7 +874,7 @@ paths:
     get:
       tags:
         - 'Admin - Notifications'
-      summary: 'قائمة إشعارات الأدمن الحالي + عدد غير المقروء (AJAX — JSON)'
+      summary: "The current admin's notifications plus the unread count (AJAX — JSON)"
       operationId: d66040aef82763dd64c8c2a4d38e92df
       responses:
         '200':
@@ -895,7 +895,7 @@ paths:
     post:
       tags:
         - 'Admin - Notifications'
-      summary: 'تحديد إشعار واحد كمقروء (AJAX — JSON)'
+      summary: 'Mark a single notification as read (AJAX — JSON)'
       operationId: 05c21f2628a3191d9815c2dd0b23b69a
       requestBody:
         required: true
@@ -929,7 +929,7 @@ paths:
     post:
       tags:
         - 'Admin - Notifications'
-      summary: 'تحديد كل إشعارات الأدمن كمقروءة (AJAX — JSON)'
+      summary: "Mark all of the admin's notifications as read (AJAX — JSON)"
       operationId: cdb5fee5e5f1af94ea966dd380e2a16f
       requestBody:
         required: true
@@ -959,7 +959,7 @@ paths:
     post:
       tags:
         - 'Admin - Notifications'
-      summary: 'حذف كل إشعارات الأدمن (AJAX — JSON)'
+      summary: "Delete all of the admin's notifications (AJAX — JSON)"
       operationId: dbd791a5230b53e7c9c8596df8bcb340
       requestBody:
         required: true
@@ -989,7 +989,7 @@ paths:
     post:
       tags:
         - 'Admin - Notifications'
-      summary: 'حذف إشعار واحد للأدمن الحالي (AJAX — JSON)'
+      summary: 'Delete a single notification for the current admin (AJAX — JSON)'
       operationId: d1a95195e4ca9a66b0e87b55d12cb856
       requestBody:
         required: true
@@ -1023,7 +1023,7 @@ paths:
     get:
       tags:
         - 'Admin - Manage Orders'
-      summary: 'قائمة الطلبات مع فلترة بالحالة وبحث وترقيم صفحات'
+      summary: 'Order list with status filtering, search and pagination'
       operationId: 90364368f050228cfd842a0034df5909
       parameters:
         -
@@ -1051,9 +1051,9 @@ paths:
             type: integer
       responses:
         '200':
-          description: 'صفحة HTML بالجدول — يتطلب صلاحية can_manage_orders'
+          description: 'HTML page with the table — requires the can_manage_orders permission'
         '403':
-          description: 'ممنوع — لا يملك can_manage_orders'
+          description: 'Forbidden — the admin lacks can_manage_orders'
       security:
         -
           adminSessionAuth: []
@@ -1061,7 +1061,7 @@ paths:
     get:
       tags:
         - 'Admin - Manage Orders'
-      summary: 'تفاصيل طلب معيّن: بيانات العميل + العناصر + عداد المهلة المتبقية'
+      summary: 'Details for one order: customer, items, and the remaining-time counter'
       operationId: edebcf7658158b7615642c22a344a6e3
       parameters:
         -
@@ -1072,9 +1072,9 @@ paths:
             type: integer
       responses:
         '200':
-          description: 'صفحة HTML بتفاصيل الطلب — يتطلب صلاحية can_manage_orders'
+          description: 'Order details HTML page — requires the can_manage_orders permission'
         '403':
-          description: 'ممنوع — لا يملك can_manage_orders'
+          description: 'Forbidden — the admin lacks can_manage_orders'
       security:
         -
           adminSessionAuth: []
@@ -1082,7 +1082,7 @@ paths:
     post:
       tags:
         - 'Admin - Manage Orders'
-      summary: 'أخذ طلب من قائمة not_taken (AJAX — يرجع JSON)'
+      summary: 'Take an order off the not_taken list (AJAX — returns JSON)'
       operationId: 8cce2e57de9a204478dec2af61f6fcb5
       requestBody:
         required: true
@@ -1100,7 +1100,7 @@ paths:
               type: object
       responses:
         '200':
-          description: 'نجاح أو فشل'
+          description: 'Success or failure'
           content:
             application/json:
               schema:
@@ -1115,7 +1115,7 @@ paths:
     post:
       tags:
         - 'Admin - Manage Orders'
-      summary: 'إنهاء تسليم طلب — completed (AJAX — يرجع JSON)'
+      summary: 'Complete an order delivery (AJAX — returns JSON)'
       operationId: a3fa71b36ce82a84b707904ff83ad9c1
       requestBody:
         required: true
@@ -1135,7 +1135,7 @@ paths:
               type: object
       responses:
         '200':
-          description: 'نجاح أو فشل'
+          description: 'Success or failure'
           content:
             application/json:
               schema:
@@ -1150,7 +1150,7 @@ paths:
     post:
       tags:
         - 'Admin - Manage Orders'
-      summary: 'إلغاء تسليم طلب — cancelled مع إرجاع المخزون (AJAX — يرجع JSON)'
+      summary: 'Cancel a delivery — sets cancelled and restores stock (AJAX — returns JSON)'
       operationId: 817644f088f9b06b6f684c1466cdc35f
       requestBody:
         required: true
@@ -1173,7 +1173,7 @@ paths:
               type: object
       responses:
         '200':
-          description: 'نجاح أو فشل'
+          description: 'Success or failure'
           content:
             application/json:
               schema:
@@ -1224,7 +1224,7 @@ paths:
     post:
       tags:
         - 'Admin - Manage Orders'
-      summary: 'إبلاغ مشكلة على طلب + إشعار اليوزر (لا يغيّر حالة الطلب — AJAX يرجع JSON)'
+      summary: "Report a problem on an order and notify the user (does not change the order's status — AJAX, returns JSON)"
       operationId: 5035bb015ad28a0af879f44321af5963
       requestBody:
         required: true
@@ -1245,7 +1245,7 @@ paths:
               type: object
       responses:
         '200':
-          description: 'نجاح أو فشل'
+          description: 'Success or failure'
           content:
             application/json:
               schema:
@@ -1296,7 +1296,7 @@ paths:
     get:
       tags:
         - 'Admin - Manage Orders'
-      summary: 'تصدير قائمة الطلبات (بنفس الفلاتر) كملف CSV'
+      summary: 'Export the order list, under the same filters, as a CSV file'
       operationId: 59251c697f49fb55cac650129d45a7fa
       parameters:
         -
@@ -1330,7 +1330,7 @@ paths:
     get:
       tags:
         - 'Admin - Manage Products'
-      summary: 'قائمة المنتجات مع بحث/فلترة بكاتوجري/ترتيب (6 خيارات ثابتة) + Pagination'
+      summary: 'Product list with search, category filtering, sorting (six fixed options) and pagination'
       operationId: 3da16339bf1b85ec7ea2343494eed92f
       parameters:
         -
@@ -1362,9 +1362,9 @@ paths:
             type: integer
       responses:
         '200':
-          description: 'صفحة HTML — يتطلب صلاحية can_manage_products'
+          description: 'HTML page — requires the can_manage_products permission'
         '403':
-          description: 'ممنوع — لا يملك can_manage_products'
+          description: 'Forbidden — the admin lacks can_manage_products'
       security:
         -
           adminSessionAuth: []
@@ -1372,7 +1372,7 @@ paths:
     get:
       tags:
         - 'Admin - Manage Products'
-      summary: 'عرض فورم إضافة منتج جديد'
+      summary: 'Show the new-product form'
       operationId: 92eace0359de6f629ea1e199625bbe25
       responses:
         '200':
@@ -1389,7 +1389,7 @@ paths:
     post:
       tags:
         - 'Admin - Manage Products'
-      summary: 'حفظ منتج جديد (يتطلب كاتوجري واحدة على الأقل + صورة إجبارية)'
+      summary: 'Save a new product (requires at least one category and a mandatory image)'
       operationId: cfcef97fac9a6d26545c4f069a5d25e1
       requestBody:
         required: true
@@ -1409,13 +1409,13 @@ paths:
                 manufacturer:
                   type: string
                 category_ids:
-                  description: 'عنصر واحد على الأقل'
+                  description: 'At least one item'
                   type: array
                   items: { type: integer }
                 variants:
-                  description: 'ألوان/كميات/أسعار المنتج — بنفس بنية المشروع القديم'
+                  description: "The product's colours, quantities and prices — in the same shape the old project used"
                   type: array
-                  items: { description: 'صف variant واحد: color_name و price و discount و stock و gender و image', type: object }
+                  items: { description: 'One variant row: color_name, price, discount, stock, gender and image', type: object }
                 csrf_token:
                   type: string
               type: object
@@ -1438,7 +1438,7 @@ paths:
     get:
       tags:
         - 'Admin - Manage Products'
-      summary: 'عرض فورم تعديل منتج موجود'
+      summary: 'Show the edit form for an existing product'
       operationId: f02b6f12db3c35e3524307d488c463f4
       parameters:
         -
@@ -1449,16 +1449,16 @@ paths:
             type: integer
       responses:
         '200':
-          description: 'صفحة HTML للفورم'
+          description: 'HTML page with the form'
         '302':
-          description: 'إعادة توجيه لـ /admin/products إذا المنتج غير موجود'
+          description: 'Redirect to /admin/products when the product does not exist'
       security:
         -
           adminSessionAuth: []
     post:
       tags:
         - 'Admin - Manage Products'
-      summary: 'حفظ تعديل منتج موجود'
+      summary: 'Save changes to an existing product'
       operationId: 26c405fe96d7d65f5dc1c0435b3a357c
       requestBody:
         required: true
@@ -1484,7 +1484,7 @@ paths:
                   items: { type: integer }
                 variants:
                   type: array
-                  items: { description: 'صف variant واحد: color_name و price و discount و stock و gender و image', type: object }
+                  items: { description: 'One variant row: color_name, price, discount, stock, gender and image', type: object }
                 csrf_token:
                   type: string
               type: object
@@ -1505,7 +1505,7 @@ paths:
     post:
       tags:
         - 'Admin - Manage Products'
-      summary: 'حذف منتج (AJAX — JSON)'
+      summary: 'Delete a product (AJAX — JSON)'
       operationId: 170eba095bdc9855df47c0618a68c122
       requestBody:
         required: true
@@ -1538,7 +1538,7 @@ paths:
     post:
       tags:
         - 'Admin - Manage Products'
-      summary: 'إخفاء/إظهار منتج في المتجر (AJAX — JSON)'
+      summary: 'Hide or show a product in the store (AJAX — JSON)'
       operationId: 4e854461050b42589c328367951f6495
       responses:
         '200':
@@ -1549,7 +1549,7 @@ paths:
                 properties:
                   success: { type: boolean }
                   message: { type: string }
-                  is_visible: { description: '0 أو 1', type: integer }
+                  is_visible: { description: '0 or 1', type: integer }
                 type: object
       security:
         -
@@ -1558,7 +1558,7 @@ paths:
     post:
       tags:
         - 'Admin - Manage Products'
-      summary: 'اقتراح أقرب الكاتوجريز بالمعنى أثناء كتابة الأدمن (منع التكرار)'
+      summary: 'Suggest the closest categories by meaning as the admin types, to prevent duplicates'
       operationId: 205ae814273f6848e0fd7553c61f2d0d
       requestBody:
         required: true
@@ -1579,7 +1579,7 @@ paths:
     post:
       tags:
         - 'Admin - Manage Products'
-      summary: 'إضافة كاتوجري جديدة (يتطلب اسم غير مكرر)'
+      summary: 'Add a new category (the name must not already exist)'
       operationId: 1a0834eeec9bdc1c951521e834eee9ed
       requestBody:
         required: true
@@ -1605,7 +1605,7 @@ paths:
     post:
       tags:
         - 'Admin - Manage Products'
-      summary: 'حذف كاتوجري (غير أساسية) مع نقل منتجاتها لكاتوجري وجهة يختارها الأدمن يدوياً'
+      summary: 'Delete a non-core category, moving its products to a destination category the admin picks by hand'
       operationId: 25acbec758d8b2ded54e1de6f75a1480
       requestBody:
         required: true
@@ -1620,7 +1620,7 @@ paths:
                 category_id:
                   type: integer
                 destination_id:
-                  description: 'الكاتوجري التي تُنقل إليها المنتجات — إلزامي'
+                  description: 'The category the products are moved into — required'
                   type: integer
                 csrf_token:
                   type: string
@@ -1635,7 +1635,7 @@ paths:
     get:
       tags:
         - 'Admin - Manage Products'
-      summary: 'تصدير قائمة المنتجات كملف CSV (مع تطبيق فلاتر البحث/الكاتوجري الحالية)'
+      summary: 'Export the product list as a CSV file, under the current search and category filters'
       operationId: 3939be5fd54ce25d14376e3ea2cd7655
       parameters:
         -
@@ -1662,8 +1662,8 @@ paths:
     post:
       tags:
         - 'Admin - Support'
-      summary: 'إرسال رد على رسالة دعم كإشعار للمستخدم صاحب الرسالة'
-      description: "AdminSupportController — صفحة رسائل الدعم الفني للأدمن.\r\nيرث من AdminController الذي يتحقق من تسجيل دخول الأدمن تلقائياً."
+      summary: 'Reply to a support message, delivered as a notification to its author'
+      description: "AdminSupportController — the admin's support inbox page.\nExtends AdminController, which verifies the admin login automatically."
       operationId: 1352770916a2a4c08bb0492de4740ed7
       requestBody:
         required: true
@@ -1684,7 +1684,7 @@ paths:
               type: object
       responses:
         '200':
-          description: 'نجاح أو فشل الإرسال'
+          description: 'Whether sending succeeded'
           content:
             application/json:
               schema:
@@ -1699,7 +1699,7 @@ paths:
     post:
       tags:
         - 'Admin - Support'
-      summary: 'حذف رسالة دعم فني نهائياً'
+      summary: 'Permanently delete a support message'
       operationId: ff32f904c4a196d8bea9075d40a781bf
       requestBody:
         required: true
@@ -1717,7 +1717,7 @@ paths:
               type: object
       responses:
         '200':
-          description: 'نجاح أو فشل الحذف'
+          description: 'Whether the deletion succeeded'
           content:
             application/json:
               schema:
@@ -1732,31 +1732,31 @@ paths:
     get:
       tags:
         - 'Admin - Support'
-      summary: 'قائمة رسائل الدعم الفني (بحث + Pagination)، تُحدّد كل الرسائل كمقروءة تلقائياً عند الفتح'
+      summary: 'Support message list (search + pagination); opening it marks every message read automatically'
       operationId: 505ebd03f2ff82b6f81567650b77e89c
       parameters:
         -
           name: q
           in: query
-          description: 'بحث بالاسم / الإيميل / نص الرسالة'
+          description: 'Search by name, email or message body'
           required: false
           schema:
             type: string
         -
           name: page
           in: query
-          description: 'رقم الصفحة (Pagination)'
+          description: 'Page number'
           required: false
           schema:
             type: integer
             default: 1
       responses:
         '200':
-          description: 'صفحة HTML — يتطلب صلاحية can_manage_support'
+          description: 'HTML page — requires the can_manage_support permission'
         '302':
-          description: 'إعادة توجيه لـ /admin/login'
+          description: 'Redirect to /admin/login'
         '403':
-          description: 'ممنوع — لا يملك can_manage_support'
+          description: 'Forbidden — the admin lacks can_manage_support'
       security:
         -
           adminSessionAuth: []
@@ -1764,20 +1764,20 @@ paths:
     get:
       tags:
         - 'Admin - Manage Users'
-      summary: 'قائمة اليوزرز مع بحث/فلترة/صفحات'
+      summary: 'User list with search, filtering and pagination'
       operationId: 4f04f3df234645178522c804b5cb710f
       parameters:
         -
           name: q
           in: query
-          description: 'بحث بالاسم أو الإيميل'
+          description: 'Search by name or email'
           required: false
           schema:
             type: string
         -
           name: status
           in: query
-          description: 'فلترة الحالة'
+          description: 'Filter by status'
           required: false
           schema:
             type: string
@@ -1789,15 +1789,15 @@ paths:
         -
           name: page
           in: query
-          description: 'رقم الصفحة'
+          description: 'Page number'
           required: false
           schema:
             type: integer
       responses:
         '200':
-          description: 'صفحة HTML بالجدول — يتطلب صلاحية can_manage_users'
+          description: 'HTML page with the table — requires the can_manage_users permission'
         '403':
-          description: 'ممنوع — لا يملك can_manage_users'
+          description: 'Forbidden — the admin lacks can_manage_users'
       security:
         -
           adminSessionAuth: []
@@ -1805,7 +1805,7 @@ paths:
     get:
       tags:
         - 'Admin - Manage Users'
-      summary: 'تفاصيل يوزر معيّن: بياناته + إنذاراته + طلباته + سجل أفعال الأدمنية عليه'
+      summary: 'Details for one user: profile, strikes, orders, and the log of admin actions taken on them'
       operationId: 36a29cc9c7cab7fc1e5d3d380728501d
       parameters:
         -
@@ -1830,7 +1830,7 @@ paths:
     post:
       tags:
         - 'Admin - Manage Users'
-      summary: 'حذف يوزر (AJAX — يرجع JSON، يتطلب سبب)'
+      summary: 'Delete a user (AJAX — returns JSON, a reason is required)'
       operationId: cc96f2e3ca2c7d6197ffbf44b9d76c69
       requestBody:
         required: true
@@ -1851,7 +1851,7 @@ paths:
               type: object
       responses:
         '200':
-          description: 'نجاح أو فشل'
+          description: 'Success or failure'
           content:
             application/json:
               schema:
@@ -1866,7 +1866,7 @@ paths:
     post:
       tags:
         - 'Admin - Manage Users'
-      summary: 'إضافة إنذار (Strike) ليوزر (AJAX — يرجع JSON)'
+      summary: 'Add a strike to a user (AJAX — returns JSON)'
       operationId: 9aac759633ad67b1442c14fe915f9559
       requestBody:
         required: true
@@ -1887,7 +1887,7 @@ paths:
               type: object
       responses:
         '200':
-          description: 'نجاح أو فشل'
+          description: 'Success or failure'
           content:
             application/json:
               schema:
@@ -1903,7 +1903,7 @@ paths:
     post:
       tags:
         - 'Admin - Manage Users'
-      summary: 'إزالة إنذار (Strike) من يوزر (AJAX — يرجع JSON)'
+      summary: 'Remove a strike from a user (AJAX — returns JSON)'
       operationId: 75e0fc9062a1ac4f2b93d3d082422d43
       requestBody:
         required: true
@@ -1924,7 +1924,7 @@ paths:
               type: object
       responses:
         '200':
-          description: 'نجاح أو فشل'
+          description: 'Success or failure'
           content:
             application/json:
               schema:
@@ -1939,7 +1939,7 @@ paths:
     get:
       tags:
         - 'Admin - Manage Users'
-      summary: 'تصدير قائمة اليوزرز كملف CSV'
+      summary: 'Export the user list as a CSV file'
       operationId: 9bfb41fd828517aa7dc9aeb9a39ef7fb
       responses:
         '200':
@@ -1955,8 +1955,8 @@ paths:
     post:
       tags:
         - 'Store - Auth'
-      summary: 'تسجيل دخول مستخدم'
-      description: 'محمي بحدّ محاولات (Rate limiting): بعد 5 محاولات فاشلة يُقفل الدخول 15 دقيقة ويُرسَل تنبيه أمني بالبريد. يشترط تفعيل البريد، ويرفض الحساب الموقوف بثلاث مخالفات.'
+      summary: 'Log a user in'
+      description: 'Rate limited: after five failed attempts, login is locked for 15 minutes and a security alert is emailed. A verified email address is required, and an account suspended on three strikes is refused.'
       operationId: 363e422b5a8c763fa1ea6fd03a77481d
       requestBody:
         required: true
@@ -1984,8 +1984,8 @@ paths:
     post:
       tags:
         - 'Store - Auth'
-      summary: 'إنشاء حساب مستخدم جديد'
-      description: 'قيود التحقق: البريد يجب أن ينتهي بـ@gmail.com، وكلمة المرور 8 محارف على الأقل بحرف كبير وصغير ورقم ورمز، والعمر 13 سنة فأكثر، والبريد والهاتف غير مسجَّلين مسبقاً، والموافقة على سياسة الخصوصية إلزامية.'
+      summary: 'Create a new user account'
+      description: 'Validation rules: the email must end in @gmail.com; the password must be at least 8 characters with an upper-case letter, a lower-case letter, a digit and a symbol; the user must be 13 or older; the email and phone must not already be registered; and agreeing to the privacy policy is mandatory.'
       operationId: 10c02a951e844462c465d0e576b8c942
       requestBody:
         required: true
@@ -2035,7 +2035,7 @@ paths:
               type: object
       responses:
         '200':
-          description: 'نتيجة العملية. الحقل success يفصل النجاح عن الفشل — كود HTTP يبقى 200 في الحالتين. وعند فشل CSRF يحمل الجسم error_code=csrf_invalid.'
+          description: 'Operation result. The success field separates success from failure — the HTTP status stays 200 either way. On CSRF failure the body carries error_code=csrf_invalid.'
           content:
             application/json:
               schema:
@@ -2046,11 +2046,11 @@ paths:
     post:
       tags:
         - 'Store - Auth'
-      summary: 'تسجيل خروج المستخدم وإنهاء الجلسة'
+      summary: 'Log the user out and end the session'
       operationId: e39ef4c513f6d25e947a67cab73e4b5b
       responses:
         '200':
-          description: 'نتيجة العملية. الحقل success يفصل النجاح عن الفشل — كود HTTP يبقى 200 في الحالتين. وعند فشل CSRF يحمل الجسم error_code=csrf_invalid.'
+          description: 'Operation result. The success field separates success from failure — the HTTP status stays 200 either way. On CSRF failure the body carries error_code=csrf_invalid.'
           content:
             application/json:
               schema:
@@ -2064,8 +2064,8 @@ paths:
     post:
       tags:
         - 'Store - Auth'
-      summary: 'طلب رابط إعادة تعيين كلمة المرور'
-      description: 'الرسالة المُرجَعة واحدة سواء وُجد البريد أم لا — كي لا تكشف النقطة أي البُرد مسجَّلة.'
+      summary: 'Request a password reset link'
+      description: 'The message returned is the same whether the email exists or not, so the endpoint does not disclose which addresses are registered.'
       operationId: 3696ca182b435d66d9798771fdfa6145
       requestBody:
         required: true
@@ -2084,7 +2084,7 @@ paths:
               type: object
       responses:
         '200':
-          description: 'نتيجة العملية. الحقل success يفصل النجاح عن الفشل — كود HTTP يبقى 200 في الحالتين. وعند فشل CSRF يحمل الجسم error_code=csrf_invalid.'
+          description: 'Operation result. The success field separates success from failure — the HTTP status stays 200 either way. On CSRF failure the body carries error_code=csrf_invalid.'
           content:
             application/json:
               schema:
@@ -2095,8 +2095,8 @@ paths:
     get:
       tags:
         - 'Store - Auth'
-      summary: 'صفحة إعادة تعيين كلمة المرور'
-      description: 'صفحة مستقلة لا تحمّل layout المتجر. تخدم المستخدم والأدمن معاً حسب نوع التوكن.'
+      summary: 'Password reset page'
+      description: 'A standalone page that does not load the store layout. It serves both users and admins, according to the token type.'
       operationId: b0475d0b82a92bb91acb4f5d64ff8bce
       parameters:
         -
@@ -2115,7 +2115,7 @@ paths:
     post:
       tags:
         - 'Store - Auth'
-      summary: 'حفظ كلمة المرور الجديدة بعد التحقق من التوكن'
+      summary: 'Save the new password once the token checks out'
       operationId: a77c8abd652cccfebb114b7b317c0c78
       requestBody:
         required: true
@@ -2141,7 +2141,7 @@ paths:
               type: object
       responses:
         '200':
-          description: 'نتيجة العملية. الحقل success يفصل النجاح عن الفشل — كود HTTP يبقى 200 في الحالتين. وعند فشل CSRF يحمل الجسم error_code=csrf_invalid.'
+          description: 'Operation result. The success field separates success from failure — the HTTP status stays 200 either way. On CSRF failure the body carries error_code=csrf_invalid.'
           content:
             application/json:
               schema:
@@ -2152,7 +2152,7 @@ paths:
     get:
       tags:
         - 'Store - Auth'
-      summary: 'تفعيل البريد عبر الرابط المُرسَل بعد التسجيل'
+      summary: 'Verify the email address using the link sent after registration'
       operationId: e2f8a0a752017e09bdc6e9b9a04f5891
       parameters:
         -
@@ -2163,17 +2163,17 @@ paths:
             type: string
       responses:
         '302':
-          description: 'تحويل للرئيسية مع رسالة نجاح أو خطأ'
+          description: 'Redirect home with a success or error message'
   /auth/csrf:
     get:
       tags:
         - 'Store - Auth'
-      summary: 'جلب توكن CSRF جديد لنماذج المتجر'
-      description: 'النقطة الوحيدة التي لا تتطلّب توكناً — منها يُجلب.'
+      summary: 'Fetch a fresh CSRF token for the store forms'
+      description: 'The one endpoint that requires no token — it is where the token comes from.'
       operationId: dfb82574a38b02fc29d2a04de30bc763
       responses:
         '200':
-          description: 'نتيجة العملية. الحقل success يفصل النجاح عن الفشل — كود HTTP يبقى 200 في الحالتين. وعند فشل CSRF يحمل الجسم error_code=csrf_invalid.'
+          description: 'Operation result. The success field separates success from failure — the HTTP status stays 200 either way. On CSRF failure the body carries error_code=csrf_invalid.'
           content:
             application/json:
               schema:
@@ -2184,17 +2184,17 @@ paths:
     get:
       tags:
         - 'Store - Auth'
-      summary: 'بدء تسجيل الدخول عبر Google OAuth'
+      summary: 'Begin sign-in through Google OAuth'
       operationId: 9b78b91f9bc61b0dc692bcae4cb7cee1
       responses:
         '302':
-          description: 'تحويل إلى شاشة موافقة Google'
+          description: "Redirect to Google's consent screen"
   /auth/google/callback:
     get:
       tags:
         - 'Store - Auth'
-      summary: 'استقبال رد Google وإنشاء الجلسة'
-      description: 'ينشئ حساباً جديداً إن لم يكن البريد مسجَّلاً، وإلا يربط الحساب القائم.'
+      summary: "Receive Google's response and establish the session"
+      description: 'Creates a new account when the email is not registered; otherwise links the existing one.'
       operationId: 91798fd9a12796cdf6a69fe162223581
       parameters:
         -
@@ -2209,12 +2209,12 @@ paths:
             type: string
       responses:
         '302':
-          description: 'تحويل للرئيسية بعد نجاح الدخول أو فشله'
+          description: 'Redirect home after the sign-in succeeds or fails'
   /admin/backup:
     get:
       tags:
         - 'Admin - Backup'
-      summary: 'صفحة إدارة النسخ الاحتياطي (Root admin ID=1 فقط)'
+      summary: 'Backup management page (root admin only)'
       operationId: 0b8a457d21fd62e658d0a5b9b8f8a396
       responses:
         '200':
@@ -2232,7 +2232,7 @@ paths:
     post:
       tags:
         - 'Admin - Backup'
-      summary: 'إنشاء نسخة احتياطية جديدة (AJAX — JSON، Root admin ID=1 فقط)'
+      summary: 'Create a new backup (AJAX — JSON, root admin only)'
       operationId: c704af6e8e32a1573116afb9888ffa09
       requestBody:
         required: true
@@ -2263,13 +2263,13 @@ paths:
     get:
       tags:
         - 'Admin - Backup'
-      summary: 'تحميل نسخة احتياطية (Root admin ID=1 فقط — منع Path Traversal)'
+      summary: 'Download a backup (root admin only — path traversal blocked)'
       operationId: 9234c937552ec75d4908e14cc621cb2d
       parameters:
         -
           name: file
           in: query
-          description: 'اسم الملف فقط — يُرفض أي مسار خارج مجلد النسخ'
+          description: 'File name only — any path outside the backup directory is rejected'
           required: true
           schema:
             type: string
@@ -2287,7 +2287,7 @@ paths:
     post:
       tags:
         - 'Admin - Backup'
-      summary: 'حذف نسخة احتياطية (AJAX — JSON، Root admin ID=1 فقط)'
+      summary: 'Delete a backup (AJAX — JSON, root admin only)'
       operationId: 20c40db3396b35777d92d320a7dfdac0
       requestBody:
         required: true
@@ -2320,8 +2320,8 @@ paths:
     post:
       tags:
         - 'Store - Cart'
-      summary: 'التحقق من توفّر وأسعار الـvariants الموجودة في السلة'
-      description: 'تُستدعى من صفحات المنتجات وقائمة الأمنيات لتحديث بطاقاتها بالمخزون والسعر الحيَّين. المنتجات المخفية لا تُرجَع.'
+      summary: 'Check availability and pricing for the variants in the cart'
+      description: 'Called from the product pages and the wishlist to refresh their cards with live stock and pricing. Hidden products are not returned.'
       operationId: 11742ec09980c02399157d72f056b111
       requestBody:
         required: true
@@ -2332,25 +2332,25 @@ paths:
                 - variant_ids
               properties:
                 variant_ids:
-                  description: 'معرّفات الـvariants المطلوب فحصها'
+                  description: 'The variant ids to check'
                   type: array
                   items: { type: integer }
               type: object
       responses:
         '200':
-          description: "المخزون الحيّ للنسخ المطلوبة.\r\n\r\nبطاقةٌ معروضة على صفحة بقيت مفتوحة قد تحمل سعراً ومخزوناً\r\nقديمين. هذه النقطة تُرجع الحقيقة من القاعدة."
+          description: "Live stock for the requested variants.\n\nA card rendered on a page that has been left open may be showing a\nstale price and stale stock. This endpoint returns the truth from\nthe database."
           content:
             application/json:
               schema:
                 allOf:
                   - { $ref: '#/components/schemas/ApiResponse' }
-                  - { properties: { items: { description: 'نسخة لكل variant_id مطلوب. النسخ المحذوفة تسقط من الناتج.', type: array, items: { $ref: '#/components/schemas/ProductVariant' } } }, type: object }
+                  - { properties: { items: { description: 'One entry per requested variant_id. Deleted variants drop out of the result.', type: array, items: { $ref: '#/components/schemas/ProductVariant' } } }, type: object }
   /cart:
     get:
       tags:
         - 'Store - Cart'
-      summary: 'سلّة المستخدم الحالي'
-      description: 'الأسعار والمخزون تُقرأ من القاعدة عند كل طلب لا من وقت الإضافة، فتظهر أي تغيّرات في السلّة قبل صفحة الدفع لا عندها.'
+      summary: "The current user's cart"
+      description: 'Prices and stock are read from the database on every request rather than captured at add time, so any change shows up in the cart before checkout rather than at it.'
       operationId: dd1ea1e457a423ff9cd872a74b1ffa7f
       responses:
         '200':
@@ -2364,8 +2364,8 @@ paths:
     post:
       tags:
         - 'Store - Cart'
-      summary: 'إضافة كمية إلى السلّة (تُجمَع مع الموجود)'
-      description: 'إضافة نفس الـvariant مرّتين تُحدّث كمية سطر واحد لا تُنشئ ثانياً. ولا يُتحقَّق من المخزون هنا: السلّة نيّة لا حجز، والحجز يقع في /checkout.'
+      summary: 'Add a quantity to the cart (summed with what is already there)'
+      description: 'Adding the same variant twice updates one line rather than creating a second. Stock is not checked here: a cart is an intention, not a reservation, and the reservation happens at /checkout.'
       operationId: 749f5b130bcf852c4a121d2b4618ec31
       requestBody:
         required: true
@@ -2399,7 +2399,7 @@ paths:
     post:
       tags:
         - 'Store - Cart'
-      summary: 'ضبط كمية سطر في السلّة (الصفر يحذفه)'
+      summary: "Set a cart line's quantity (zero removes it)"
       operationId: f151d100ec15be29671e4cafd1eafc6d
       requestBody:
         required: true
@@ -2430,7 +2430,7 @@ paths:
     post:
       tags:
         - 'Store - Cart'
-      summary: 'حذف سطر من السلّة'
+      summary: 'Remove a line from the cart'
       operationId: eb8d04ff154041f144314563d95d8b00
       requestBody:
         required: true
@@ -2456,21 +2456,21 @@ paths:
     get:
       tags:
         - 'Store - Checkout'
-      summary: 'صفحة إتمام الطلب (ثلاث خطوات)'
+      summary: 'Checkout page (three steps)'
       operationId: 3c9e7f1f4ad315498f6c07de22b0082f
       responses:
         '200':
-          description: 'صفحة HTML'
+          description: 'HTML page'
         '302':
-          description: 'تحويل للرئيسية مع فتح نافذة الدخول إن لم يكن مسجّلاً'
+          description: 'Redirect home with the login modal opened when not signed in'
       security:
         -
           userSessionAuth: []
     post:
       tags:
         - 'Store - Checkout'
-      summary: 'إنشاء الطلب من محتويات السلة'
-      description: 'العميل يرسل **ماذا وكم** فقط. كل قيمة مالية تُقرأ من قاعدة البيانات داخل المعاملة نفسها التي تحجز المخزون. وحقل shown_price يُقارَن ولا يُخزَّن: إن اختلف عن سعر القاعدة يُرفض الطلب كاملاً ويردّ الخادم error_code=price_changed مع الأسعار الصحيحة.'
+      summary: 'Create the order from the cart contents'
+      description: 'The client sends **what and how many** and nothing else. Every monetary value is read from the database inside the same transaction that reserves stock. The shown_price field is compared and never stored: if it differs from the database price the whole order is refused and the server answers error_code=price_changed together with the correct prices.'
       operationId: b9a528bfe771ba04bed8dc5cf05bef51
       requestBody:
         required: true
@@ -2485,7 +2485,7 @@ paths:
               properties:
                 items:
                   type: array
-                  items: { required: [product_id, qty], properties: { product_id: { type: integer }, variant_id: { type: integer, nullable: true }, qty: { type: integer, maximum: 100, minimum: 1 }, shown_price: { description: 'السعر الذي عُرض على الزبون — للمقارنة وحدها، لا يُخزَّن ولا يُحسب منه شيء', type: number, format: float } }, type: object }
+                  items: { required: [product_id, qty], properties: { product_id: { type: integer }, variant_id: { type: integer, nullable: true }, qty: { type: integer, maximum: 100, minimum: 1 }, shown_price: { description: 'The price the customer was shown — for comparison only; never stored and never computed from', type: number, format: float } }, type: object }
                 address_id:
                   type: integer
                 payment_method:
@@ -2498,7 +2498,7 @@ paths:
               type: object
       responses:
         '200':
-          description: 'نتيجة العملية. النجاح يحمل order_id وredirect. والفشل يحمل error_code من: price_changed · unavailable · out_of_stock · error · csrf_invalid. وprice_changed وحده يحمل معه items بالأسعار الصحيحة.'
+          description: 'Operation result. Success carries order_id and redirect. Failure carries an error_code out of: price_changed · unavailable · out_of_stock · error · csrf_invalid. Only price_changed additionally carries items with the correct prices.'
           content:
             application/json:
               schema:
@@ -2512,8 +2512,8 @@ paths:
     post:
       tags:
         - 'Store - Checkout'
-      summary: 'إلغاء طلب من طرف المستخدم'
-      description: 'يُسمح بالإلغاء فقط قبل أن يتولّى الطلب أدمن. نفس الزر المشترك في views/shared/order-cancel-button.php يخدم واجهة الأدمن بنقطة أخرى.'
+      summary: 'Cancel an order, by the user'
+      description: 'Cancelling is allowed only before an admin takes the order. The same shared button in views/shared/order-cancel-button.php serves the admin interface through a different endpoint.'
       operationId: 97b7adab83828a0e8f3ee5568419e90a
       requestBody:
         required: true
@@ -2531,7 +2531,7 @@ paths:
               type: object
       responses:
         '200':
-          description: 'نتيجة العملية. الحقل success يفصل النجاح عن الفشل — كود HTTP يبقى 200 في الحالتين. وعند فشل CSRF يحمل الجسم error_code=csrf_invalid.'
+          description: 'Operation result. The success field separates success from failure — the HTTP status stays 200 either way. On CSRF failure the body carries error_code=csrf_invalid.'
           content:
             application/json:
               schema:
@@ -2545,7 +2545,7 @@ paths:
     get:
       tags:
         - 'Store - Checkout'
-      summary: 'صفحة تأكيد الطلب بعد إتمامه'
+      summary: 'Order confirmation page, after checkout'
       operationId: 700822d16d5b6157d2dde3a3b9f3b073
       parameters:
         -
@@ -2567,7 +2567,7 @@ paths:
     get:
       tags:
         - 'Store - Pages'
-      summary: 'صفحة "اتصل بنا"'
+      summary: 'Contact page'
       operationId: 2d03ed858c3066693769a44051ce6a34
       responses:
         '200':
@@ -2579,8 +2579,8 @@ paths:
     post:
       tags:
         - 'Store - Pages'
-      summary: 'إرسال نموذج "اتصل بنا" من الصفحة نفسها'
-      description: "النقطة الوحيدة التي كانت مسجَّلة في الراوتر وغائبة عن المواصفة\r\n(103 من 104). وُثّقت هنا كما تعمل فعلاً.\r\n\r\nتختلف عن POST /contact/send اختلافاً جوهرياً: هذه **لا تُرجع\r\nJSON**. الدالة تخدم GET وPOST معاً، وتعيد عرض الصفحة كاملةً مع\r\nرسالة نجاح أو خطأ في متن HTML. ولهذا استُثنيت من beginJsonPost\r\nصراحةً — الفشل هنا لا يوقف التنفيذ بل يملأ $errorMsg ويُكمل.\r\n\r\nوفشل CSRF لا يُرجع error_code لأن لا عميل JS يقرأ هذه الاستجابة:\r\nالصفحة تُعرض والرسالة داخلها.\r\n\r\nشرطان للإرسال: مستخدم مسجّل الدخول (الزائر يُرفض)، ورسالة لا تقلّ\r\nعن عشرة محارف. والاسم والبريد يُقرآن من قاعدة البيانات لا من\r\nالطلب — تمريرهما في الجسم لا أثر له."
+      summary: 'Submit the contact form from the page itself'
+      description: "The one endpoint that was registered in the router and missing from the\nspec (103 of 104). Documented here as it actually behaves.\n\nIt differs from POST /contact/send in a fundamental way: this one **does\nnot return JSON**. The method serves both GET and POST, and re-renders the\nwhole page with a success or error message inside the HTML body. That is\nwhy it is deliberately excluded from beginJsonPost — a failure here does\nnot halt execution, it fills $errorMsg and carries on.\n\nA CSRF failure returns no error_code either, because no JavaScript client\nreads this response: the page is rendered with the message inside it.\n\nTwo conditions to send: a logged-in user (a visitor is refused), and a\nmessage of at least ten characters. The name and email are read from the\ndatabase, not from the request — passing them in the body has no effect."
       operationId: f519ff2180ddfa32f78b30a2e4b9648c
       requestBody:
         required: true
@@ -2593,12 +2593,12 @@ paths:
                 - csrf_token
               properties:
                 send_message:
-                  description: 'علامة وجود النموذج. بلا هذا المفتاح تُعرض الصفحة بلا معالجة.'
+                  description: 'Marks the form as present. Without this key the page renders with no processing.'
                   type: string
                   example: '1'
                 message:
                   type: string
-                  example: 'أرغب بالاستفسار عن توفّر المنتج باللون الأسود.'
+                  example: 'I would like to ask whether this product is available in black.'
                   minLength: 10
                 csrf_token:
                   $ref: '#/components/schemas/CsrfToken'
@@ -2612,7 +2612,7 @@ paths:
     post:
       tags:
         - 'Store - Pages'
-      summary: 'إرسال رسالة من نموذج "اتصل بنا"'
+      summary: 'Send a message from the contact form'
       operationId: da9e99ecb7f2081457a4e5acaaf9d2f2
       requestBody:
         required: true
@@ -2637,7 +2637,7 @@ paths:
               type: object
       responses:
         '200':
-          description: 'نتيجة العملية. الحقل success يفصل النجاح عن الفشل — كود HTTP يبقى 200 في الحالتين. وعند فشل CSRF يحمل الجسم error_code=csrf_invalid.'
+          description: 'Operation result. The success field separates success from failure — the HTTP status stays 200 either way. On CSRF failure the body carries error_code=csrf_invalid.'
           content:
             application/json:
               schema:
@@ -2648,12 +2648,12 @@ paths:
     get:
       tags:
         - 'Store - Pages'
-      summary: 'فحص صحّة التطبيق'
-      description: "تُرجع 200 حين يكون التطبيق قادراً على خدمة الطلبات فعلاً، و503\r\nحين لا يكون. الفحص ينفّذ استعلاماً حقيقياً على قاعدة البيانات\r\nلا مجرّد ردّ ثابت — فحاوية تردّ 200 وقاعدتها ساقطة ليست سليمة.\r\n\r\nعامة بلا مصادقة بالضرورة: فاحص الصحّة لا يملك جلسة. ولذلك لا\r\nتكشف نسخاً ولا أسماء ولا مسارات — التفاصيل في السجلّ وحده."
+      summary: 'Application health check'
+      description: "Returns 200 when the application can actually serve requests, and 503\nwhen it cannot. The check runs a real database query rather than a\ncanned response — a container that answers 200 while its database is\ndown is not healthy.\n\nPublic and unauthenticated of necessity: a health prober has no\nsession. For that reason it exposes no versions, no names and no\npaths — details go to the log alone."
       operationId: 0f6f4acf921ee6317a01dfda0e60a1ec
       responses:
         '200':
-          description: 'التطبيق سليم.'
+          description: 'The application is healthy.'
           content:
             application/json:
               schema:
@@ -2662,7 +2662,7 @@ paths:
                   checks: { properties: { database: { type: string, example: ok } }, type: object }
                 type: object
         '503':
-          description: 'التطبيق غير قادر على خدمة الطلبات.'
+          description: 'The application cannot serve requests.'
           content:
             application/json:
               schema:
@@ -2674,8 +2674,8 @@ paths:
     get:
       tags:
         - 'Store - Pages'
-      summary: 'الصفحة الرئيسية — السلايدر والأقسام والمنتجات المرئية'
-      description: 'الراوت /home يشير إلى نفس الدالة.'
+      summary: 'Home page — slider, categories and visible products'
+      description: 'The /home route points at this same method.'
       operationId: 5aeb21eb14626d47415174baf0626d95
       responses:
         '200':
@@ -2688,7 +2688,7 @@ paths:
     get:
       tags:
         - 'Store - Pages'
-      summary: 'مسار بديل للصفحة الرئيسية — نفس الدالة تماماً'
+      summary: 'Alias route for the home page — the exact same method'
       operationId: d5422bafc41cad3a4f7437fdc549bbd3
       responses:
         '200':
@@ -2701,21 +2701,21 @@ paths:
     get:
       tags:
         - 'Store - Account'
-      summary: 'صفحة حساب المستخدم — البيانات والطلبات والعناوين'
+      summary: 'User account page — profile, orders and addresses'
       operationId: d93ba194372c293cc0f8f85203c98baf
       responses:
         '200':
-          description: 'صفحة HTML'
+          description: 'HTML page'
         '302':
-          description: 'تحويل للرئيسية مع فتح نافذة الدخول'
+          description: 'Redirect home with the login modal opened'
       security:
         -
           userSessionAuth: []
     post:
       tags:
         - 'Store - Account'
-      summary: 'تحديث بيانات الحساب'
-      description: 'كلمة المرور الحالية إلزامية لأي تعديل، حتى لو لم تكن كلمة المرور نفسها هي المُعدَّلة.'
+      summary: 'Update account details'
+      description: 'The current password is required for any change, even when the password itself is not the thing being changed.'
       operationId: 592a6fc7ff9e9773a5172f11b68e437c
       requestBody:
         required: true
@@ -2745,7 +2745,7 @@ paths:
               type: object
       responses:
         '200':
-          description: 'نتيجة العملية. الحقل success يفصل النجاح عن الفشل — كود HTTP يبقى 200 في الحالتين. وعند فشل CSRF يحمل الجسم error_code=csrf_invalid.'
+          description: 'Operation result. The success field separates success from failure — the HTTP status stays 200 either way. On CSRF failure the body carries error_code=csrf_invalid.'
           content:
             application/json:
               schema:
@@ -2759,7 +2759,7 @@ paths:
     post:
       tags:
         - 'Store - Account'
-      summary: 'إضافة عنوان شحن للحساب'
+      summary: 'Add a shipping address to the account'
       operationId: f11e44b48711fb563ca9e120a0c9254d
       requestBody:
         required: true
@@ -2771,7 +2771,7 @@ paths:
                 - csrf_token
               properties:
                 label:
-                  description: 'اسم العنوان مثل "المنزل"'
+                  description: 'A name for the address, such as "Home"'
                   type: string
                 full_address:
                   type: string
@@ -2788,7 +2788,7 @@ paths:
               type: object
       responses:
         '200':
-          description: 'نتيجة العملية. الحقل success يفصل النجاح عن الفشل — كود HTTP يبقى 200 في الحالتين. وعند فشل CSRF يحمل الجسم error_code=csrf_invalid.'
+          description: 'Operation result. The success field separates success from failure — the HTTP status stays 200 either way. On CSRF failure the body carries error_code=csrf_invalid.'
           content:
             application/json:
               schema:
@@ -2802,7 +2802,7 @@ paths:
     post:
       tags:
         - 'Store - Account'
-      summary: 'حذف عنوان شحن'
+      summary: 'Delete a shipping address'
       operationId: bb4efa69e36bcf9a32dfcc5608a6997f
       requestBody:
         required: true
@@ -2820,7 +2820,7 @@ paths:
               type: object
       responses:
         '200':
-          description: 'نتيجة العملية. الحقل success يفصل النجاح عن الفشل — كود HTTP يبقى 200 في الحالتين. وعند فشل CSRF يحمل الجسم error_code=csrf_invalid.'
+          description: 'Operation result. The success field separates success from failure — the HTTP status stays 200 either way. On CSRF failure the body carries error_code=csrf_invalid.'
           content:
             application/json:
               schema:
@@ -2834,17 +2834,17 @@ paths:
     get:
       tags:
         - 'Store - Notifications'
-      summary: 'إشعارات المستخدم الحالي'
+      summary: "The current user's notifications"
       operationId: d321c32ce96e2ef4958565db94181aa5
       responses:
         '200':
-          description: 'قائمة إشعارات المستخدم وعدد غير المقروء منها.'
+          description: "The user's notification list and their unread count."
           content:
             application/json:
               schema:
                 allOf:
                   - { $ref: '#/components/schemas/ApiResponse' }
-                  - { properties: { notifications: { type: array, items: { $ref: '#/components/schemas/Notification' } }, unread: { description: 'عدد غير المقروء — يُستعمل لشارة الجرس.', type: integer, example: 3 } }, type: object }
+                  - { properties: { notifications: { type: array, items: { $ref: '#/components/schemas/Notification' } }, unread: { description: 'Unread count — used for the bell badge.', type: integer, example: 3 } }, type: object }
       security:
         -
           userSessionAuth: []
@@ -2852,7 +2852,7 @@ paths:
     post:
       tags:
         - 'Store - Notifications'
-      summary: 'تعليم إشعار واحد كمقروء'
+      summary: 'Mark a single notification as read'
       operationId: efa71487ff28bb11a97db5798008e833
       requestBody:
         required: true
@@ -2870,7 +2870,7 @@ paths:
               type: object
       responses:
         '200':
-          description: 'نتيجة العملية. الحقل success يفصل النجاح عن الفشل — كود HTTP يبقى 200 في الحالتين. وعند فشل CSRF يحمل الجسم error_code=csrf_invalid.'
+          description: 'Operation result. The success field separates success from failure — the HTTP status stays 200 either way. On CSRF failure the body carries error_code=csrf_invalid.'
           content:
             application/json:
               schema:
@@ -2884,11 +2884,11 @@ paths:
     post:
       tags:
         - 'Store - Notifications'
-      summary: 'تعليم كل إشعارات المستخدم كمقروءة'
+      summary: "Mark all of the user's notifications as read"
       operationId: 9bb6f79b33bd8a231f6ad74c5642cb76
       responses:
         '200':
-          description: 'نتيجة العملية. الحقل success يفصل النجاح عن الفشل — كود HTTP يبقى 200 في الحالتين. وعند فشل CSRF يحمل الجسم error_code=csrf_invalid.'
+          description: 'Operation result. The success field separates success from failure — the HTTP status stays 200 either way. On CSRF failure the body carries error_code=csrf_invalid.'
           content:
             application/json:
               schema:
@@ -2902,7 +2902,7 @@ paths:
     post:
       tags:
         - 'Store - Notifications'
-      summary: 'حذف إشعار واحد'
+      summary: 'Delete a single notification'
       operationId: 229870d29318194334a9ca8cff8c1d09
       requestBody:
         required: true
@@ -2920,7 +2920,7 @@ paths:
               type: object
       responses:
         '200':
-          description: 'نتيجة العملية. الحقل success يفصل النجاح عن الفشل — كود HTTP يبقى 200 في الحالتين. وعند فشل CSRF يحمل الجسم error_code=csrf_invalid.'
+          description: 'Operation result. The success field separates success from failure — the HTTP status stays 200 either way. On CSRF failure the body carries error_code=csrf_invalid.'
           content:
             application/json:
               schema:
@@ -2934,11 +2934,11 @@ paths:
     post:
       tags:
         - 'Store - Notifications'
-      summary: 'حذف كل إشعارات المستخدم'
+      summary: "Delete all of the user's notifications"
       operationId: 568ead104f2687ae3aacf0cd675f60f2
       responses:
         '200':
-          description: 'نتيجة العملية. الحقل success يفصل النجاح عن الفشل — كود HTTP يبقى 200 في الحالتين. وعند فشل CSRF يحمل الجسم error_code=csrf_invalid.'
+          description: 'Operation result. The success field separates success from failure — the HTTP status stays 200 either way. On CSRF failure the body carries error_code=csrf_invalid.'
           content:
             application/json:
               schema:
@@ -2952,8 +2952,8 @@ paths:
     get:
       tags:
         - 'Store - Products'
-      summary: 'قائمة المنتجات المرئية مع Pagination'
-      description: 'البحث والفرز والفلترة بالسعر تتم كلها في المتصفح (js/features/products-catalog.js)، فلا بارامترات فلترة هنا.'
+      summary: 'Visible product list with pagination'
+      description: 'Search, sorting and price filtering all happen in the browser (js/features/products-catalog.js), so there are no filter parameters here.'
       operationId: 3766bdcbe4e6257669b4818e48e63431
       parameters:
         -
@@ -2973,8 +2973,8 @@ paths:
     get:
       tags:
         - 'Store - Products'
-      summary: 'صفحة تفاصيل منتج'
-      description: 'تُعيد التوجيه للرئيسية إن كان المعرّف مفقوداً أو المنتج غير موجود. الـvariant المعروض يُختار حسب جنس الزائر (pickDisplayVariant).'
+      summary: 'Product details page'
+      description: "Redirects home when the id is missing or the product does not exist. The displayed variant is chosen from the visitor's gender (pickDisplayVariant)."
       operationId: 71949b3453b48a350070f790deaba7d1
       parameters:
         -
@@ -2985,14 +2985,14 @@ paths:
             type: integer
       responses:
         '200':
-          description: 'صفحة HTML'
+          description: 'HTML page'
         '302':
-          description: 'تحويل للرئيسية — معرّف مفقود أو منتج غير موجود'
+          description: 'Redirect home — missing id or unknown product'
     post:
       tags:
         - 'Store - Products'
-      summary: 'حفظ تقييم المستخدم للمنتج ثم عرض الصفحة'
-      description: 'نفس الدالة تخدم GET وPOST. يتطلّب تسجيل دخول مستخدم وتوكن CSRF. الأدمن في وضع تصفّح المتجر لا يستطيع التقييم.'
+      summary: "Save the user's product review, then render the page"
+      description: 'The same method serves GET and POST. Requires a logged-in user and a CSRF token. An admin in store-browsing mode cannot leave a review.'
       operationId: 26deaeebf822fcad11cd8cdfce47d5e8
       requestBody:
         content:
@@ -3028,8 +3028,8 @@ paths:
     get:
       tags:
         - 'Store - Wishlist'
-      summary: 'صفحة قائمة الأمنيات'
-      description: 'المحتوى يُبنى كاملاً في المتصفح من localStorage (js/features/wishlist.js)؛ الخادم يُرجع الهيكل فقط.'
+      summary: 'Wishlist page'
+      description: 'The contents are built entirely in the browser from localStorage (js/features/wishlist.js); the server returns only the shell.'
       operationId: b8e542e88f9a484f66f3c6e4a2f21a1d
       responses:
         '200':
@@ -3042,14 +3042,14 @@ paths:
     get:
       tags:
         - 'Store - Wishlist'
-      summary: 'مخزون وأسعار مجموعة منتجات (لتحديث بطاقات قائمة الأمنيات)'
-      description: 'نقطة عامة لا تتطلّب تسجيل دخول. الزائر غير المسجّل يحصل على already_notified=false للجميع بدل تسريب حالة مستخدم آخر. الحد الأقصى 200 معرّف في الطلب الواحد.'
+      summary: 'Stock and pricing for a set of products (to refresh wishlist cards)'
+      description: "A public endpoint requiring no login. A signed-out visitor gets already_notified=false for everything, rather than leaking another user's state. At most 200 ids per request."
       operationId: 9253a97c5fb60428efd374b57886f3b0
       parameters:
         -
           name: ids
           in: query
-          description: 'ids[]=1&ids[]=2 — حتى 200 معرّف'
+          description: 'ids[]=1&ids[]=2 — up to 200 ids'
           required: true
           schema:
             type: array
@@ -3057,13 +3057,13 @@ paths:
               type: integer
       responses:
         '200':
-          description: 'JSON — {success, message, products{}} مفهرسة بمعرّف المنتج، وكل عنصر يحمل stock_quantity و price و is_visible و already_notified.'
+          description: 'JSON — {success, message, products{}} keyed by product id, each entry carrying stock_quantity, price, is_visible and already_notified.'
   /handlers/notify_handler.php:
     post:
       tags:
         - 'Store - Wishlist'
-      summary: 'تسجيل طلب "نبّهني عند التوفّر" لمنتج'
-      description: 'يتطلّب تسجيل دخول مستخدم. الطلب المكرّر لا ينشئ صفاً جديداً ولا يُشعِر الأدمنية مرة ثانية.'
+      summary: 'Register a "notify me when available" request for a product'
+      description: 'Requires a logged-in user. A repeat request creates no new row and does not notify the admins a second time.'
       operationId: 36f17baedbf0949141c244f281dc2717
       requestBody:
         required: true
@@ -3081,7 +3081,7 @@ paths:
               type: object
       responses:
         '200':
-          description: 'نتيجة العملية. الحقل success يفصل النجاح عن الفشل — كود HTTP يبقى 200 في الحالتين. وعند فشل CSRF يحمل الجسم error_code=csrf_invalid.'
+          description: 'Operation result. The success field separates success from failure — the HTTP status stays 200 either way. On CSRF failure the body carries error_code=csrf_invalid.'
           content:
             application/json:
               schema:

@@ -8,34 +8,34 @@ use App\Models\AdminDashboardModel;
 use OpenApi\Attributes as OA;
 
 /**
- * AdminDashboardController — صفحة الإحصائيات الحقيقية للأدمن.
- * يرث من AdminController الذي يتحقق من تسجيل دخول الأدمن تلقائياً.
+ * AdminDashboardController — the admin's real statistics page.
+ * Extends AdminController, which verifies the admin login automatically.
  */
 class AdminDashboardController extends AdminController
 {
     #[OA\Get(
         path: '/admin/dashboard',
-        summary: 'صفحة إحصائيات لوحة تحكم الأدمن (مبيعات، طلبات، مستخدمون، أفضل المنتجات مبيعًا)',
+        summary: 'Admin dashboard statistics (sales, orders, users, best-selling products)',
         tags: ['Admin - Dashboard'],
         security: [['adminSessionAuth' => []]],
         parameters: [
             new OA\Parameter(
                 name: 'q',
-                description: 'بحث اختياري بالاسم ضمن قائمة أفضل المنتجات مبيعًا',
+                description: 'Optional name search within the best-sellers list',
                 in: 'query',
                 required: false,
                 schema: new OA\Schema(type: 'string')
             )
         ],
         responses: [
-            new OA\Response(response: 200, description: 'صفحة HTML للداشبورد — يتطلب جلسة admin_session صالحة وصلاحية can_view_dashboard'),
-            new OA\Response(response: 302, description: 'إعادة توجيه لـ /admin/login إذا لم تكن الجلسة صالحة'),
-            new OA\Response(response: 403, description: 'ممنوع — الأدمن ليس لديه صلاحية can_view_dashboard'),
+            new OA\Response(response: 200, description: 'Dashboard HTML page — requires a valid admin_session and the can_view_dashboard permission'),
+            new OA\Response(response: 302, description: 'Redirect to /admin/login when the session is not valid'),
+            new OA\Response(response: 403, description: 'Forbidden — the admin lacks the can_view_dashboard permission'),
         ]
     )]
     public function index(): void
     {
-        // صلاحية دقيقة إضافية فوق حماية AdminController الأساسية (رتبة A تتجاوزها دائمًا)
+        // A fine-grained permission on top of AdminController's base protection (rank A always overrides it)
         Middleware::requirePermission('can_view_dashboard');
 
         header('Cache-Control: no-store, no-cache, must-revalidate');
@@ -44,39 +44,40 @@ class AdminDashboardController extends AdminController
         $adminId = (int) ($_SESSION['admin_id'] ?? 0);
         $search  = trim($_GET['q'] ?? '');
 
-        // ── بطاقات إحصائية ──────────────────────────────────
+        // ── Stat cards ──────────────────────────────────────
         $todaySales    = AdminDashboardModel::getTodaySales();
         $pendingOrders = AdminDashboardModel::getPendingOrdersCount();
         $newMessages   = AdminDashboardModel::getUnreadNotificationsCount($adminId);
         $newUsersWeek  = AdminDashboardModel::getNewUsersThisWeek();
         $totalStrikes  = AdminDashboardModel::getStrikesThisWeek();
 
-        // ── رسم بياني: مبيعات آخر 30 يوم ─────────────────────
+        // ── Chart: sales over the last 30 days ───────────────
         $salesRows        = AdminDashboardModel::getSalesLast30Days();
         $chartLabels      = array_values(array_column($salesRows, 'day'));
         $chartValues      = array_values(array_map('floatval', array_column($salesRows, 'total')));
         $monthToDateSales = AdminDashboardModel::getMonthToDateSales();
 
-        // ── توزيع المستخدمين ─────────────────────────────────
+        // ── User distribution ────────────────────────────────
         $usersBreakdown = AdminDashboardModel::getUsersActivityBreakdown();
 
-        // ── أفضل المنتجات مبيعًا ──────────────────────────────
+        // ── Best-selling products ────────────────────────────
         $bestProducts = AdminDashboardModel::getBestSellingProducts($search);
 
-        // ── أصول الـ Chart.js ─────────────────────────────────
+        // ── Chart.js assets ──────────────────────────────────
         //
-        // ⚠️ كان هنا وسمان مبنيّان بالنصّ: <script src> إلى الـCDN بلا
-        // `integrity` ولا `crossorigin`، وكتلة <script> مضمّنة تُبنى
-        // بضمّ JSON داخل كود JS.
+        // ⚠️ There used to be two string-built tags here: a <script src> to the CDN
+        // with neither `integrity` nor `crossorigin`, and an inline <script> block
+        // assembled by splicing JSON into JavaScript source.
         //
-        // والكتلة المضمّنة كانت **محجوبة أصلاً**: سياسة CSP في
-        // public/.htaccess تمنع script-src 'unsafe-inline'، وبصمتها
-        // مستحيلة لأن محتواها يتغيّر كل يوم بتغيّر أرقام المبيعات.
-        // فالرسم البياني لم يكن يُرسم إطلاقاً — canvas فارغ وسطر رفض
-        // في الـconsole لا غير.
+        // And that inline block was **blocked outright**: the CSP in
+        // public/.htaccess forbids script-src 'unsafe-inline', and hashing it is
+        // impossible because its contents change daily with the sales figures. So
+        // the chart was never drawn at all — an empty canvas and a refusal line in
+        // the console, nothing more.
         //
-        // الآن: المكتبة من VENDOR_ASSETS ببصمتها، والمنطق في ملف
-        // خارجي، والأرقام تعبر كبيانات في جزيرة JSON يطبعها الـview.
+        // Now: the library comes from VENDOR_ASSETS with its hash, the logic lives
+        // in an external file, and the figures travel as data in a JSON island
+        // printed by the view.
         $extraScripts = vendorJs('chartjs', false)
             . jsTag('js/admin/dashboard-chart.js', false);
 

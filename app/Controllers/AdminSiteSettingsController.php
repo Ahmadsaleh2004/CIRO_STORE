@@ -9,13 +9,13 @@ use App\Models\AdminModel;
 use OpenApi\Attributes as OA;
 
 /**
- * AdminSiteSettingsController — صفحة إعدادات الموقع للأدمن.
- * يرث من AdminController الذي يتحقق من تسجيل دخول الأدمن تلقائياً.
+ * AdminSiteSettingsController — the admin's site settings page.
+ * Extends AdminController, which verifies the admin login automatically.
  */
 #[OA\PathItem(path: '/admin/settings')]
 #[OA\Post(
     path: '/admin/settings',
-    summary: 'حفظ إعدادات الموقع (AJAX) — الحقول المالية/العملة تُقبل فقط لصاحب can_manage_checkout_settings',
+    summary: 'Save site settings (AJAX) — the financial and currency fields are accepted only from a holder of can_manage_checkout_settings',
     tags: ['Admin - Site Settings'],
     security: [['adminSessionAuth' => []]],
     requestBody: new OA\RequestBody(
@@ -42,8 +42,8 @@ use OpenApi\Attributes as OA;
                     new OA\Property(property: 'return_policy', type: 'string'),
                     new OA\Property(property: 'privacy_policy', type: 'string'),
                     new OA\Property(property: 'terms_and_conditions', type: 'string'),
-                    new OA\Property(property: 'default_currency', type: 'string', description: 'فقط لصاحب can_manage_checkout_settings'),
-                    new OA\Property(property: 'default_language', type: 'string', description: 'فقط لصاحب can_manage_checkout_settings'),
+                    new OA\Property(property: 'default_currency', type: 'string', description: 'Only for a holder of can_manage_checkout_settings'),
+                    new OA\Property(property: 'default_language', type: 'string', description: 'Only for a holder of can_manage_checkout_settings'),
                 ]
             )
         )
@@ -51,7 +51,7 @@ use OpenApi\Attributes as OA;
     responses: [
         new OA\Response(
             response: 200,
-            description: 'نجاح أو فشل الحفظ',
+            description: 'Whether the save succeeded',
             content: new OA\JsonContent(
                 properties: [
                     new OA\Property(property: 'success', type: 'boolean'),
@@ -65,13 +65,13 @@ class AdminSiteSettingsController extends AdminController
 {
     #[OA\Get(
         path: '/admin/settings',
-        summary: 'عرض صفحة إعدادات الموقع الحالية',
+        summary: 'Show the current site settings page',
         tags: ['Admin - Site Settings'],
         security: [['adminSessionAuth' => []]],
         responses: [
-            new OA\Response(response: 200, description: 'صفحة HTML — يتطلب صلاحية can_edit_site_content'),
-            new OA\Response(response: 302, description: 'إعادة توجيه لـ /admin/login'),
-            new OA\Response(response: 403, description: 'ممنوع — لا يملك can_edit_site_content'),
+            new OA\Response(response: 200, description: 'HTML page — requires the can_edit_site_content permission'),
+            new OA\Response(response: 302, description: 'Redirect to /admin/login'),
+            new OA\Response(response: 403, description: 'Forbidden — the admin lacks can_edit_site_content'),
         ]
     )]
     public function index(): void
@@ -92,13 +92,13 @@ class AdminSiteSettingsController extends AdminController
         $this->beginJsonPost();
         Middleware::requirePermission('can_edit_site_content');
 
-        // ── جلب القيم الحالية قبل التحديث (للمقارنة) ─────────────────────
+        // ── Read the current values before updating, so they can be compared ──
         $before = SettingsModel::get();
 
-        // ── بناء قائمة الحقول المسموحة حسب صلاحيات الأدمن ────────────────
-        // التحقق الأمني يصير هنا في الكونترولر، وليس فقط بالـ View.
-        // حتى لو زوّر المستخدم الفورم وأرسل default_currency مباشرة،
-        // الكونترولر لن يقرأها إذا لم تكن ضمن $fields المسموحة.
+        // ── Build the allow-list of fields from the admin's permissions ───────
+        // The security check happens here in the controller, not only in the view.
+        // Even if someone forges the form and posts default_currency directly, the
+        // controller will not read it unless it is in the permitted $fields.
         $fields = SettingsModel::GENERAL_FIELDS;
         if (hasPermission('can_manage_checkout_settings')) {
             $fields = array_merge($fields, SettingsModel::CHECKOUT_FIELDS);
@@ -115,7 +115,7 @@ class AdminSiteSettingsController extends AdminController
 
         $adminId = (int) $_SESSION['admin_id'];
 
-        // ── حصر الحقول اللي تغيّرت فعليًا ──────────────────────────────
+        // ── Narrow down to the fields that actually changed ───────────────────
         $changedFields = [];
         foreach ($data as $key => $newVal) {
             $oldVal = $before[$key] ?? null;
@@ -129,7 +129,7 @@ class AdminSiteSettingsController extends AdminController
 
         AdminModel::logAction($adminId, 'update_site_settings', 'website_settings', 1, $detailsText);
 
-        // ── إشعار جماعي لكل أدمن رتبته أعلى ويملك can_edit_site_content (باستثناء الجذر) ──────────
+        // ── Broadcast to every higher-ranked admin holding can_edit_site_content (root excluded) ──
         $rankOrder = ['D' => 1, 'C' => 2, 'B' => 3, 'A' => 4];
         $myRank    = getAdminRole();
         $myRankVal = $rankOrder[$myRank] ?? 0;

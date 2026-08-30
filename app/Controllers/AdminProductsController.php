@@ -12,20 +12,21 @@ use App\Services\StockNotifier;
 use OpenApi\Attributes as OA;
 
 /**
- * AdminProductsController — قائمة/إضافة/تعديل/حذف المنتجات + إدارة الكاتوجريز الديناميكية.
- * يرث من AdminController الذي يتحقق من تسجيل دخول الأدمن تلقائياً.
+ * AdminProductsController — list, add, edit and delete products, plus dynamic
+ * category management.
+ * Extends AdminController, which verifies the admin login automatically.
  */
 class AdminProductsController extends AdminController
 {
     private const PER_PAGE = 12;
 
     // ═══════════════════════════════════════════════════════════
-    // 1) قائمة المنتجات (Manage Products)
+    // 1) Product list (Manage Products)
     // ═══════════════════════════════════════════════════════════
 
     #[OA\Get(
         path: '/admin/products',
-        summary: 'قائمة المنتجات مع بحث/فلترة بكاتوجري/ترتيب (6 خيارات ثابتة) + Pagination',
+        summary: 'Product list with search, category filtering, sorting (six fixed options) and pagination',
         tags: ['Admin - Manage Products'],
         security: [['adminSessionAuth' => []]],
         parameters: [
@@ -38,8 +39,8 @@ class AdminProductsController extends AdminController
             new OA\Parameter(name: 'page', in: 'query', schema: new OA\Schema(type: 'integer')),
         ],
         responses: [
-            new OA\Response(response: 200, description: 'صفحة HTML — يتطلب صلاحية can_manage_products'),
-            new OA\Response(response: 403, description: 'ممنوع — لا يملك can_manage_products'),
+            new OA\Response(response: 200, description: 'HTML page — requires the can_manage_products permission'),
+            new OA\Response(response: 403, description: 'Forbidden — the admin lacks can_manage_products'),
         ]
     )]
     public function index(): void
@@ -98,12 +99,12 @@ class AdminProductsController extends AdminController
     }
 
     // ═══════════════════════════════════════════════════════════
-    // 2) إضافة منتج
+    // 2) Add a product
     // ═══════════════════════════════════════════════════════════
 
     #[OA\Get(
         path: '/admin/products/add',
-        summary: 'عرض فورم إضافة منتج جديد',
+        summary: 'Show the new-product form',
         tags: ['Admin - Manage Products'],
         security: [['adminSessionAuth' => []]],
         responses: [
@@ -129,7 +130,7 @@ class AdminProductsController extends AdminController
 
     #[OA\Post(
         path: '/admin/products/add',
-        summary: 'حفظ منتج جديد (يتطلب كاتوجري واحدة على الأقل + صورة إجبارية)',
+        summary: 'Save a new product (requires at least one category and a mandatory image)',
         tags: ['Admin - Manage Products'],
         security: [['adminSessionAuth' => []]],
         requestBody: new OA\RequestBody(
@@ -146,13 +147,13 @@ class AdminProductsController extends AdminController
                             property: 'category_ids',
                             type: 'array',
                             items: new OA\Items(type: 'integer'),
-                            description: 'عنصر واحد على الأقل'
+                            description: 'At least one item'
                         ),
                         new OA\Property(
                             property: 'variants',
                             type: 'array',
-                            items: new OA\Items(type: 'object', description: 'صف variant واحد: color_name و price و discount و stock و gender و image'),
-                            description: 'ألوان/كميات/أسعار المنتج — بنفس بنية المشروع القديم'
+                            items: new OA\Items(type: 'object', description: 'One variant row: color_name, price, discount, stock, gender and image'),
+                            description: "The product's colours, quantities and prices — in the same shape the old project used"
                         ),
                         new OA\Property(property: 'csrf_token', type: 'string'),
                     ]
@@ -179,13 +180,13 @@ class AdminProductsController extends AdminController
         $this->beginJsonPost();
         Middleware::requirePermission('can_manage_products');
 
-        // ── تحقق من الكاتوجري (قبل أي شيء)
+        // ── Validate the category (before anything else)
         $categoryIds = array_filter(array_map('intval', $_POST['category_ids'] ?? []));
         if (empty($categoryIds)) {
             $this->jsonError('Please select at least one category.');
         }
 
-        // ── تحقق من الصورة الإجبارية (قبل beginTransaction)
+        // ── Validate the mandatory image (before beginTransaction)
         $variants     = $_POST['variants'] ?? [];
         $variantFiles = $_FILES['variants'] ?? [];
 
@@ -193,7 +194,7 @@ class AdminProductsController extends AdminController
             $this->jsonError('Product image is required.');
         }
 
-        // ── رفع صور الـ variants وبناء مصفوفة البيانات
+        // ── Upload the variant images and build the data array
         $uploadDir      = ROOTPATH . '/public/images/';
         $parsedVariants = ProductVariantUploader::parse(
             $variants,
@@ -225,7 +226,7 @@ class AdminProductsController extends AdminController
         $productId = AdminProductModel::create($postData, $parsedVariants, array_values($categoryIds), $adminId);
 
         if (!$productId) {
-            // احذف أي صور رُفعت إذا فشل الإنشاء
+            // Remove any uploaded images if creation failed
             ProductVariantUploader::cleanup($parsedVariants, $uploadDir);
             $this->jsonError('Failed to create product. Please check the data and try again.');
         }
@@ -248,20 +249,20 @@ class AdminProductsController extends AdminController
     }
 
     // ═══════════════════════════════════════════════════════════
-    // 3) تعديل منتج
+    // 3) Edit a product
     // ═══════════════════════════════════════════════════════════
 
     #[OA\Get(
         path: '/admin/products/edit',
-        summary: 'عرض فورم تعديل منتج موجود',
+        summary: 'Show the edit form for an existing product',
         tags: ['Admin - Manage Products'],
         security: [['adminSessionAuth' => []]],
         parameters: [
             new OA\Parameter(name: 'id', in: 'query', required: true, schema: new OA\Schema(type: 'integer'))
         ],
         responses: [
-            new OA\Response(response: 200, description: 'صفحة HTML للفورم'),
-            new OA\Response(response: 302, description: 'إعادة توجيه لـ /admin/products إذا المنتج غير موجود'),
+            new OA\Response(response: 200, description: 'HTML page with the form'),
+            new OA\Response(response: 302, description: 'Redirect to /admin/products when the product does not exist'),
         ]
     )]
     public function showEdit(): void
@@ -290,7 +291,7 @@ class AdminProductsController extends AdminController
 
     #[OA\Post(
         path: '/admin/products/edit',
-        summary: 'حفظ تعديل منتج موجود',
+        summary: 'Save changes to an existing product',
         tags: ['Admin - Manage Products'],
         security: [['adminSessionAuth' => []]],
         requestBody: new OA\RequestBody(
@@ -308,7 +309,7 @@ class AdminProductsController extends AdminController
                         new OA\Property(
                             property: 'variants',
                             type: 'array',
-                            items: new OA\Items(type: 'object', description: 'صف variant واحد: color_name و price و discount و stock و gender و image'),
+                            items: new OA\Items(type: 'object', description: 'One variant row: color_name, price, discount, stock, gender and image'),
                         ),
                         new OA\Property(property: 'csrf_token', type: 'string'),
                     ]
@@ -347,10 +348,10 @@ class AdminProductsController extends AdminController
         $variantFiles = $_FILES['variants'] ?? [];
         $uploadDir    = ROOTPATH . '/public/images/';
 
-        // جلب الصور القديمة للـ variants للمقارنة بعد التحديث
+        // Read the old variant images so they can be compared after the update
         $oldImagePaths = AdminProductModel::getVariantImagePaths($productId);
 
-        // هل كان المنتج بالكامل نافذ الكمية قبل هذا التعديل؟
+        // Was the product entirely out of stock before this edit?
         $wasOutOfStock = (AdminProductModel::getTotalStock($productId) === 0);
 
         $parsedVariants = ProductVariantUploader::parse(
@@ -374,7 +375,7 @@ class AdminProductsController extends AdminController
             'gender'       => $parsedVariants[0]['gender'] ?? 'both',
         ];
 
-        // صورة المنتج الرئيسية — تُحدَّث فقط إذا رُفعت صورة جديدة للـ variant الأول
+        // The product's main image — updated only when a new image is uploaded for the first variant
         if (!empty($parsedVariants[0]['image_path'])) {
             $postData['image_path'] = $parsedVariants[0]['image_path'];
         }
@@ -384,9 +385,9 @@ class AdminProductsController extends AdminController
         }
 
         $adminId = getCurrentAdminId();
-        // ثلاث حالات متمايزة كما في delete(): null فشل تقني · false لم
-        // يوجد · true حُدِّث. والصور المرفوعة تُنظَّف في الحالتين
-        // الفاشلتين كي لا تتراكم ملفات لا يشير إليها صفّ.
+        // Three distinct outcomes, as in delete(): null is a technical failure ·
+        // false is not found · true is updated. Uploaded images are cleaned up in both
+        // failing cases, so files no row points at do not accumulate.
         $ok = AdminProductModel::update($productId, $postData, $parsedVariants, array_values($categoryIds), $adminId);
 
         if ($ok === null) {
@@ -398,21 +399,21 @@ class AdminProductsController extends AdminController
             $this->jsonError('Product not found.');
         }
 
-        // إذا كان نافذًا وعاد للتوفر، أخبر المستخدمين
+        // If it was out of stock and is back in stock, tell the users
         if ($wasOutOfStock && AdminProductModel::getTotalStock($productId) > 0) {
             StockNotifier::productBackInStock($productId, $postData['name'], getCurrentAdminId());
         }
 
-        // احذف الصور القديمة التي لم تعد مستخدمة
+        // Delete old images that are no longer referenced
         $newImagePaths = array_column($parsedVariants, 'image_path');
         foreach ($oldImagePaths as $oldPath) {
             if ($oldPath && !in_array($oldPath, $newImagePaths, true)) {
-                // publicFileToDelete يحتوي المسار داخل public/ بـrealpath.
-                // كان هنا ltrim وحدها، وهي لا تمنع `..`.
+                // publicFileToDelete confines the path inside public/ with realpath.
+                // There used to be only an ltrim here, and ltrim does not stop `..`.
                 $disk = publicFileToDelete($oldPath);
                 if ($disk !== null) {
-                    // $disk ناتج publicFileToDelete: realpath محتوى داخل
-                    // public/ وis_file — لا يصل هنا مسار خارجه.
+                    // $disk is the output of publicFileToDelete: a realpath contained
+                    // inside public/ plus is_file — no path outside it reaches here.
                     // nosemgrep: php.lang.security.unlink-use.unlink-use,php.lang.security.injection.tainted-filename.tainted-filename
                     @unlink($disk);
                 }
@@ -434,12 +435,12 @@ class AdminProductsController extends AdminController
     }
 
     // ═══════════════════════════════════════════════════════════
-    // 4) حذف منتج (AJAX)
+    // 4) Delete a product (AJAX)
     // ═══════════════════════════════════════════════════════════
 
     #[OA\Post(
         path: '/admin/products/delete',
-        summary: 'حذف منتج (AJAX — JSON)',
+        summary: 'Delete a product (AJAX — JSON)',
         tags: ['Admin - Manage Products'],
         security: [['adminSessionAuth' => []]],
         requestBody: new OA\RequestBody(
@@ -478,24 +479,25 @@ class AdminProductsController extends AdminController
             $this->respond(false, 'Invalid product ID.');
         }
 
-        // اسم المنتج يُقرأ قبل الحذف — بعد الحذف يستحيل معرفته للسجل/الإشعار
+        // The product name is read before deletion — afterwards it is unknowable, and the audit record and notification both need it
         $productName = AdminProductModel::getNameById($productId) ?? "#{$productId}";
 
-        // احذف الصور من القرص قبل حذف السجلات
+        // Delete the images from disk before deleting the rows
         $imagePaths = AdminProductModel::getVariantImagePaths($productId);
         foreach ($imagePaths as $imgPath) {
-            // كسابقه: الاحتواء داخل الهيلبر لا في المستدعي.
+            // As above: the containment lives in the helper, not in the caller.
             $disk = $imgPath ? publicFileToDelete($imgPath) : null;
             if ($disk !== null) {
-                // كسابقه: الاحتواء تمّ في publicFileToDelete.
+                // As above: containment already happened in publicFileToDelete.
                 // nosemgrep: php.lang.security.unlink-use.unlink-use,php.lang.security.injection.tainted-filename.tainted-filename
                 @unlink($disk);
             }
         }
 
-        // ثلاث حالات متمايزة: null فشل تقني · false لم يوجد · true حُذف.
-        // الفصل بينها مقصود: قبله كانت النقطة تُجيب «نجح» لمنتج غير موجود
-        // ثم تكتب صفّ تدقيق وإشعاراً يزعمان حذفاً لم يحدث.
+        // Three distinct outcomes: null is a technical failure · false is not found ·
+        // true is deleted. Separating them is deliberate: before that, the endpoint
+        // answered "success" for a product that did not exist, then wrote an audit row
+        // and a notification both claiming a deletion that never happened.
         $deleted = AdminProductModel::delete($productId);
         if ($deleted === null) {
             $this->respond(false, 'Failed to delete product.');
@@ -524,7 +526,7 @@ class AdminProductsController extends AdminController
 
     #[OA\Post(
         path: '/admin/products/toggle-visibility',
-        summary: 'إخفاء/إظهار منتج في المتجر (AJAX — JSON)',
+        summary: 'Hide or show a product in the store (AJAX — JSON)',
         tags: ['Admin - Manage Products'],
         security: [['adminSessionAuth' => []]],
         responses: [
@@ -535,7 +537,7 @@ class AdminProductsController extends AdminController
                     properties: [
                         new OA\Property(property: 'success', type: 'boolean'),
                         new OA\Property(property: 'message', type: 'string'),
-                        new OA\Property(property: 'is_visible', type: 'integer', description: '0 أو 1'),
+                        new OA\Property(property: 'is_visible', type: 'integer', description: '0 or 1'),
                     ]
                 )
             )
@@ -566,15 +568,16 @@ class AdminProductsController extends AdminController
             "is_visible set to {$newVal}"
         );
 
-        // ⚠️ الإشعار كان غائباً عن هذا المسار وحده.
+        // ⚠️ The notification was missing from this path, and this path alone.
         //
-        // إضافة منتج وتعديله وحذفه تستدعي notifyProductChange جميعاً،
-        // أما الإخفاء والإظهار فكانا يكتفيان بسطر في سجلّ التدقيق.
-        // والفرق ليس شكلياً: إخفاء منتج يُسقطه من المتجر كلّه — أثرٌ
-        // على الزبائن أقرب إلى الحذف منه إلى التعديل — وكان يمرّ بلا
-        // أن يعلم به أدمن أعلى رتبة، ولا يظهر في جرس المنفّذ نفسه.
+        // Adding, editing and deleting a product all call notifyProductChange, while
+        // hiding and showing settled for a line in the audit log. The difference is not
+        // cosmetic: hiding a product removes it from the entire store — an effect on
+        // customers closer to deletion than to an edit — and it passed without any
+        // higher-ranked admin learning of it, and without appearing in the actor's own
+        // notification bell.
         //
-        // الدالة موجودة وتعمل منذ البداية؛ لم يكن ينقصها إلا استدعاء.
+        // The function existed and worked from the start; all it lacked was a call.
         $productName = AdminProductModel::getNameById($productId) ?? "#{$productId}";
         $this->notifyProductChange(
             $adminId,
@@ -589,12 +592,12 @@ class AdminProductsController extends AdminController
     }
 
     // ═══════════════════════════════════════════════════════════
-    // 6) إدارة الكاتوجريز (AJAX)
+    // 6) Category management (AJAX)
     // ═══════════════════════════════════════════════════════════
 
     #[OA\Post(
         path: '/admin/products/categories/suggest',
-        summary: 'اقتراح أقرب الكاتوجريز بالمعنى أثناء كتابة الأدمن (منع التكرار)',
+        summary: 'Suggest the closest categories by meaning as the admin types, to prevent duplicates',
         tags: ['Admin - Manage Products'],
         security: [['adminSessionAuth' => []]],
         requestBody: new OA\RequestBody(
@@ -615,11 +618,12 @@ class AdminProductsController extends AdminController
     )]
     public function suggestCategory(): void
     {
-        // كانت تفحص الصلاحية وحدها بلا توكن CSRF. النقطة قراءة محضة
-        // (اقتراح تصنيفات مشابهة) فأثر استغلالها محدود، لكن
-        // js/admin/category-picker.js يمرّ عليها بشبكة الأمان، وترك نقطة
-        // POST واحدة بلا فحص يعني أن حذف مطابقة نصّ الرسالة من csrf.js
-        // كان سيتركها بلا مسار تعافٍ. التوحيد يغلق الاثنين معاً.
+        // This used to check the permission alone, with no CSRF token. The endpoint is
+        // a pure read (suggesting similar categories), so the impact of abusing it is
+        // limited — but js/admin/category-picker.js reaches it through the safety net,
+        // and leaving a single POST endpoint unchecked meant that removing the
+        // message-text matching from csrf.js would have left it with no recovery path.
+        // Unifying them closes both at once.
         $this->beginJsonPost();
         Middleware::requirePermission('can_manage_products');
 
@@ -629,7 +633,7 @@ class AdminProductsController extends AdminController
 
     #[OA\Post(
         path: '/admin/products/categories/add',
-        summary: 'إضافة كاتوجري جديدة (يتطلب اسم غير مكرر)',
+        summary: 'Add a new category (the name must not already exist)',
         tags: ['Admin - Manage Products'],
         security: [['adminSessionAuth' => []]],
         requestBody: new OA\RequestBody(
@@ -683,7 +687,7 @@ class AdminProductsController extends AdminController
 
     #[OA\Post(
         path: '/admin/products/categories/delete',
-        summary: 'حذف كاتوجري (غير أساسية) مع نقل منتجاتها لكاتوجري وجهة يختارها الأدمن يدوياً',
+        summary: 'Delete a non-core category, moving its products to a destination category the admin picks by hand',
         tags: ['Admin - Manage Products'],
         security: [['adminSessionAuth' => []]],
         requestBody: new OA\RequestBody(
@@ -697,7 +701,7 @@ class AdminProductsController extends AdminController
                         new OA\Property(
                             property: 'destination_id',
                             type: 'integer',
-                            description: 'الكاتوجري التي تُنقل إليها المنتجات — إلزامي'
+                            description: 'The category the products are moved into — required'
                         ),
                         new OA\Property(property: 'csrf_token', type: 'string'),
                     ]
@@ -744,12 +748,12 @@ class AdminProductsController extends AdminController
     }
 
     // ═══════════════════════════════════════════════════════════
-    // 7) تصدير CSV — يستخدم sendCsv() الموروثة من AdminController
+    // 7) CSV export — uses sendCsv(), inherited from AdminController
     // ═══════════════════════════════════════════════════════════
 
     #[OA\Get(
         path: '/admin/products/export-csv',
-        summary: 'تصدير قائمة المنتجات كملف CSV (مع تطبيق فلاتر البحث/الكاتوجري الحالية)',
+        summary: 'Export the product list as a CSV file, under the current search and category filters',
         tags: ['Admin - Manage Products'],
         security: [['adminSessionAuth' => []]],
         parameters: [
@@ -809,14 +813,15 @@ class AdminProductsController extends AdminController
     }
 
     // ═══════════════════════════════════════════════════════════
-    // Helpers خاصة داخلية
+    // Internal private helpers
     // ═══════════════════════════════════════════════════════════
 
     /**
-     * إشعار تغيير منتج (إضافة/تعديل/حذف) — يرسل:
-     *  (1) تأكيد للأدمن المنفّذ نفسه.
-     *  (2) تنبيه لكل أدمن يملك can_manage_products ورتبته أعلى STRICTLY من رتبة
-     *      المنفّذ، باستثناء رتبة A دائماً (عبر AdminModel::findHigherRankWithPermission).
+     * Notify on a product change (add / edit / delete). Sends:
+     *  (1) a confirmation to the acting admin themselves;
+     *  (2) an alert to every admin holding can_manage_products whose rank is STRICTLY
+     *      above the actor's, always excluding rank A (via
+     *      AdminModel::findHigherRankWithPermission).
      *
      * @param string $action 'added' | 'edited' | 'deleted'
      */
@@ -825,12 +830,12 @@ class AdminProductsController extends AdminController
         $actorName = $_SESSION['admin_name'] ?? 'An admin';
         $actorRole = getAdminRole();
 
-        // العنوان والفعل معاً، لا الفعل وحده.
+        // The title and the verb together, not the verb alone.
         //
-        // كان العنوان يُبنى بـ`'Product ' . ucfirst($verb)`، وهو يصحّ
-        // على added/edited/deleted وحدها. وحالتا الإخفاء والإظهار
-        // تكسرانه: «Product Hid» ليست عبارة. فصار لكل حالة عنوانها
-        // وفعلها، والافتراضي يبقى للحالات القادمة.
+        // The title used to be built as `'Product ' . ucfirst($verb)`, which only
+        // works for added/edited/deleted. Hiding and showing break it: "Product Hid"
+        // is not a phrase. So each case now carries its own title and verb, and the
+        // default remains for cases still to come.
         [$title, $verb] = match ($action) {
             'added'   => ['Product Added',   'added'],
             'edited'  => ['Product Edited',  'edited'],
@@ -840,7 +845,7 @@ class AdminProductsController extends AdminController
             default   => ['Product ' . ucfirst($action), $action],
         };
 
-        // (1) تأكيد للمنفّذ نفسه
+        // (1) A confirmation for the actor themselves
         AdminModel::sendNotification(
             $actorAdminId,
             $title,
@@ -851,7 +856,7 @@ class AdminProductsController extends AdminController
             $actorAdminId
         );
 
-        // (2) الأدمنية الأعلى رتبة (باستثناء A) ممن يملكون can_manage_products
+        // (2) Higher-ranked admins (rank A excluded) who hold can_manage_products
         $targets = AdminModel::findHigherRankWithPermission('can_manage_products', $actorRole);
         foreach ($targets as $targetId) {
             $targetId = (int)$targetId;

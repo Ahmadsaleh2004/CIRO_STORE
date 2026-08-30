@@ -7,9 +7,9 @@ use App\Models\NotificationModel;
 use OpenApi\Attributes as OA;
 
 /**
- * NotificationController — إدارة إشعارات المستخدمين
- * منقول من handlers/notifications_handler.php القديم
- * كل الـ endpoints ترجع JSON
+ * NotificationController — user notification management.
+ * Moved out of the old handlers/notifications_handler.php.
+ * Every endpoint returns JSON.
  */
 class NotificationController extends Controller
 {
@@ -18,13 +18,13 @@ class NotificationController extends Controller
     // ════════════════════════════════════════════════════════
     #[OA\Get(
         path: '/notifications/list',
-        summary: 'إشعارات المستخدم الحالي',
+        summary: "The current user's notifications",
         tags: ['Store - Notifications'],
         security: [['userSessionAuth' => []]],
         responses: [
             new OA\Response(
                 response: 200,
-                description: 'قائمة إشعارات المستخدم وعدد غير المقروء منها.',
+                description: "The user's notification list and their unread count.",
                 content: new OA\JsonContent(
                     allOf: [
                         new OA\Schema(ref: '#/components/schemas/ApiResponse'),
@@ -38,7 +38,7 @@ class NotificationController extends Controller
                                 new OA\Property(
                                     property: 'unread',
                                     type: 'integer',
-                                    description: 'عدد غير المقروء — يُستعمل لشارة الجرس.',
+                                    description: 'Unread count — used for the bell badge.',
                                     example: 3
                                 ),
                             ],
@@ -51,16 +51,17 @@ class NotificationController extends Controller
     )]
     public function list(): void
     {
-        // لا beginJsonPost هنا: هذه قراءة على GET ولا تعدّل حالة، فلا
-        // معنى لفحص POST ولا لتوكن CSRF.
+        // No beginJsonPost here: this is a GET read that changes no state, so there
+        // is nothing for a POST check or a CSRF token to protect.
         //
-        // ⚠️ ملاحظة تاريخية تخصّ بقية هذا الملف: النقاط الأربع المعدِّلة
-        // للحالة (markRead · markAllRead · dismiss · deleteAll) كانت
-        // تستدعي requireAuth + requirePost **بلا أي فحص CSRF إطلاقاً**،
-        // رغم أن js/features/notifications.js يرسل التوكن في كل منها.
-        // أي أن `/notifications/delete-all` — حذف كل إشعارات المستخدم —
-        // كان قابلاً للتنفيذ من أي موقع خارجي. أُثبت ذلك بطلب بلا توكن
-        // رجع {"success":true} قبل الإصلاح. الأربع تمرّ الآن بالبوابة.
+        // ⚠️ Historical note covering the rest of this file: the four state-changing
+        // endpoints (markRead · markAllRead · dismiss · deleteAll) called requireAuth
+        // + requirePost **with no CSRF check whatsoever**, even though
+        // js/features/notifications.js sends the token to every one of them. Which
+        // meant `/notifications/delete-all` — deleting all of a user's notifications
+        // — was executable from any external site. That was demonstrated with a
+        // token-less request that returned {"success":true} before the fix. All four
+        // now go through the gate.
         header('Content-Type: application/json; charset=utf-8');
         $this->requireAuth();
 
@@ -79,7 +80,7 @@ class NotificationController extends Controller
     // ════════════════════════════════════════════════════════
     #[OA\Post(
         path: '/notifications/mark-read',
-        summary: 'تعليم إشعار واحد كمقروء',
+        summary: 'Mark a single notification as read',
         tags: ['Store - Notifications'],
         security: [['userSessionAuth' => []]],
         requestBody: new OA\RequestBody(
@@ -98,7 +99,7 @@ class NotificationController extends Controller
         responses: [
             new OA\Response(
                 response: 200,
-                description: 'نتيجة العملية. الحقل success يفصل النجاح عن الفشل — كود HTTP يبقى 200 في الحالتين. وعند فشل CSRF يحمل الجسم error_code=csrf_invalid.',
+                description: 'Operation result. The success field separates success from failure — the HTTP status stays 200 either way. On CSRF failure the body carries error_code=csrf_invalid.',
                 content: new OA\JsonContent(oneOf: [
                     new OA\Schema(ref: '#/components/schemas/ApiResponse'),
                     new OA\Schema(ref: '#/components/schemas/ApiError'),
@@ -129,13 +130,13 @@ class NotificationController extends Controller
     // ════════════════════════════════════════════════════════
     #[OA\Post(
         path: '/notifications/mark-all-read',
-        summary: 'تعليم كل إشعارات المستخدم كمقروءة',
+        summary: "Mark all of the user's notifications as read",
         tags: ['Store - Notifications'],
         security: [['userSessionAuth' => []]],
         responses: [
             new OA\Response(
                 response: 200,
-                description: 'نتيجة العملية. الحقل success يفصل النجاح عن الفشل — كود HTTP يبقى 200 في الحالتين. وعند فشل CSRF يحمل الجسم error_code=csrf_invalid.',
+                description: 'Operation result. The success field separates success from failure — the HTTP status stays 200 either way. On CSRF failure the body carries error_code=csrf_invalid.',
                 content: new OA\JsonContent(oneOf: [
                     new OA\Schema(ref: '#/components/schemas/ApiResponse'),
                     new OA\Schema(ref: '#/components/schemas/ApiError'),
@@ -158,7 +159,7 @@ class NotificationController extends Controller
     // ════════════════════════════════════════════════════════
     #[OA\Post(
         path: '/notifications/dismiss',
-        summary: 'حذف إشعار واحد',
+        summary: 'Delete a single notification',
         tags: ['Store - Notifications'],
         security: [['userSessionAuth' => []]],
         requestBody: new OA\RequestBody(
@@ -177,7 +178,7 @@ class NotificationController extends Controller
         responses: [
             new OA\Response(
                 response: 200,
-                description: 'نتيجة العملية. الحقل success يفصل النجاح عن الفشل — كود HTTP يبقى 200 في الحالتين. وعند فشل CSRF يحمل الجسم error_code=csrf_invalid.',
+                description: 'Operation result. The success field separates success from failure — the HTTP status stays 200 either way. On CSRF failure the body carries error_code=csrf_invalid.',
                 content: new OA\JsonContent(oneOf: [
                     new OA\Schema(ref: '#/components/schemas/ApiResponse'),
                     new OA\Schema(ref: '#/components/schemas/ApiError'),
@@ -208,13 +209,13 @@ class NotificationController extends Controller
     // ════════════════════════════════════════════════════════
     #[OA\Post(
         path: '/notifications/delete-all',
-        summary: 'حذف كل إشعارات المستخدم',
+        summary: "Delete all of the user's notifications",
         tags: ['Store - Notifications'],
         security: [['userSessionAuth' => []]],
         responses: [
             new OA\Response(
                 response: 200,
-                description: 'نتيجة العملية. الحقل success يفصل النجاح عن الفشل — كود HTTP يبقى 200 في الحالتين. وعند فشل CSRF يحمل الجسم error_code=csrf_invalid.',
+                description: 'Operation result. The success field separates success from failure — the HTTP status stays 200 either way. On CSRF failure the body carries error_code=csrf_invalid.',
                 content: new OA\JsonContent(oneOf: [
                     new OA\Schema(ref: '#/components/schemas/ApiResponse'),
                     new OA\Schema(ref: '#/components/schemas/ApiError'),
@@ -236,21 +237,21 @@ class NotificationController extends Controller
     // Helpers
     // ════════════════════════════════════════════════════════
 
-    /** التحقق من تسجيل الدخول */
+    /** Verify the user is logged in. */
     private function requireAuth(): void
     {
         if (isUserLoggedIn()) {
             return;
         }
 
-        // 401 لا 200. كانت ترد 200 بجسم `success:false` — أي أن الطبقة
-        // التي فوق HTTP تقول «مرفوض» بينما HTTP نفسه يقول «تمّ». الأثر
-        // ليس نظرياً: مواصفة OpenAPI الخاصة بالمشروع تعلن 401 على هذه
-        // النقاط، وأي مراقبة تعدّ الأخطاء برمز الحالة ترى صفراً بينما
-        // ترتدّ الطلبات فعلاً.
+        // 401, not 200. This used to answer 200 with a `success:false` body — the
+        // layer above HTTP saying "denied" while HTTP itself said "done". The effect
+        // is not theoretical: the project's own OpenAPI spec declares 401 on these
+        // endpoints, and any monitoring that counts errors by status code sees zero
+        // while requests are in fact being turned away.
         //
-        // Middleware::requireLogin ترد 401 على النقاط المحروسة بـauth
-        // منذ المرحلة السابقة؛ هذه النقاط الخمس كانت الاستثناء الباقي.
+        // Middleware::requireLogin has answered 401 on auth-guarded endpoints since
+        // the previous phase; these five were the remaining exception.
         if (!headers_sent()) {
             http_response_code(401);
         }
@@ -258,8 +259,8 @@ class NotificationController extends Controller
         $this->respond(false, 'Unauthorized.');
     }
 
-    // حُذفت requirePost(): كانت تفحص الطريقة وحدها، وهذا ما تفعله
-    // beginJsonPost() ضمن ثلاثة فحوص. وجودها بجانبها كان يوحي بأن
-    // النقاط محميّة بينما كان **فحص CSRF غائباً تماماً** عن هذا الملف —
-    // انظر تعليق list() أدناه.
+    // requirePost() was removed: it checked the method and nothing else, which is
+    // one of the three checks beginJsonPost() already performs. Having it sitting
+    // alongside suggested these endpoints were protected while **the CSRF check was
+    // entirely absent** from this file — see the comment on list() above.
 }

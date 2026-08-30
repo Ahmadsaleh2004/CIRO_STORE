@@ -9,23 +9,24 @@ use App\Models\OrderModel;
 use OpenApi\Attributes as OA;
 
 /**
- * MyInfoController — بيانات المستخدم + طلباته + عناوينه
- * منقول ومُحوَّل من pages/my-info.php القديمة
- * مستقلة تمامًا عن AdminMyInfoController الخاص بالأدمن — لا تشارك Session ولا منطق ولا جدول بيانات.
+ * MyInfoController — the user's profile, orders and addresses.
+ * Moved and converted from the old pages/my-info.php.
+ * Entirely separate from the admin-facing AdminMyInfoController — they share no
+ * session, no logic and no table.
  */
 class MyInfoController extends Controller
 {
     // ════════════════════════════════════════════════════════
-    // GET /user/info — عرض الصفحة
+    // GET /user/info — render the page
     // ════════════════════════════════════════════════════════
     #[OA\Get(
         path: '/user/info',
-        summary: 'صفحة حساب المستخدم — البيانات والطلبات والعناوين',
+        summary: 'User account page — profile, orders and addresses',
         tags: ['Store - Account'],
         security: [['userSessionAuth' => []]],
         responses: [
-            new OA\Response(response: 200, description: 'صفحة HTML'),
-            new OA\Response(response: 302, description: 'تحويل للرئيسية مع فتح نافذة الدخول'),
+            new OA\Response(response: 200, description: 'HTML page'),
+            new OA\Response(response: 302, description: 'Redirect home with the login modal opened'),
         ]
     )]
     public function index(): void
@@ -36,7 +37,7 @@ class MyInfoController extends Controller
         $user   = UserModel::findById($userId);
 
         if (!$user) {
-            // جلسة فاسدة — سجّل خروج وأعِد التوجيه
+            // Corrupt session — log out and redirect
             session_destroy();
             header('Location: ' . URLROOT . '/?openLogin=1');
             exit;
@@ -62,13 +63,13 @@ class MyInfoController extends Controller
     }
 
     // ════════════════════════════════════════════════════════
-    // POST /user/info — تحديث بيانات الملف الشخصي
+    // POST /user/info — update the profile
     // ════════════════════════════════════════════════════════
     #[OA\Post(
         path: '/user/info',
-        summary: 'تحديث بيانات الحساب',
-        description: 'كلمة المرور الحالية إلزامية لأي تعديل، حتى لو لم تكن كلمة المرور '
-                   . 'نفسها هي المُعدَّلة.',
+        summary: 'Update account details',
+        description: 'The current password is required for any change, even when the password '
+                   . 'itself is not the thing being changed.',
         tags: ['Store - Account'],
         security: [['userSessionAuth' => []]],
         requestBody: new OA\RequestBody(
@@ -92,7 +93,7 @@ class MyInfoController extends Controller
         responses: [
             new OA\Response(
                 response: 200,
-                description: 'نتيجة العملية. الحقل success يفصل النجاح عن الفشل — كود HTTP يبقى 200 في الحالتين. وعند فشل CSRF يحمل الجسم error_code=csrf_invalid.',
+                description: 'Operation result. The success field separates success from failure — the HTTP status stays 200 either way. On CSRF failure the body carries error_code=csrf_invalid.',
                 content: new OA\JsonContent(oneOf: [
                     new OA\Schema(ref: '#/components/schemas/ApiResponse'),
                     new OA\Schema(ref: '#/components/schemas/ApiError'),
@@ -167,11 +168,11 @@ class MyInfoController extends Controller
     }
 
     // ════════════════════════════════════════════════════════
-    // POST /user/addresses — إضافة عنوان
+    // POST /user/addresses — add an address
     // ════════════════════════════════════════════════════════
     #[OA\Post(
         path: '/user/addresses',
-        summary: 'إضافة عنوان شحن للحساب',
+        summary: 'Add a shipping address to the account',
         tags: ['Store - Account'],
         security: [['userSessionAuth' => []]],
         requestBody: new OA\RequestBody(
@@ -181,7 +182,7 @@ class MyInfoController extends Controller
                 schema: new OA\Schema(
                     required: ['full_address', 'csrf_token'],
                     properties: [
-                        new OA\Property(property: 'label', type: 'string', description: 'اسم العنوان مثل "المنزل"'),
+                        new OA\Property(property: 'label', type: 'string', description: 'A name for the address, such as "Home"'),
                         new OA\Property(property: 'full_address', type: 'string'),
                         new OA\Property(property: 'city', type: 'string'),
                         new OA\Property(property: 'country', type: 'string'),
@@ -195,7 +196,7 @@ class MyInfoController extends Controller
         responses: [
             new OA\Response(
                 response: 200,
-                description: 'نتيجة العملية. الحقل success يفصل النجاح عن الفشل — كود HTTP يبقى 200 في الحالتين. وعند فشل CSRF يحمل الجسم error_code=csrf_invalid.',
+                description: 'Operation result. The success field separates success from failure — the HTTP status stays 200 either way. On CSRF failure the body carries error_code=csrf_invalid.',
                 content: new OA\JsonContent(oneOf: [
                     new OA\Schema(ref: '#/components/schemas/ApiResponse'),
                     new OA\Schema(ref: '#/components/schemas/ApiError'),
@@ -208,10 +209,11 @@ class MyInfoController extends Controller
         $this->beginJsonPost();
         Middleware::requireLogin();
 
-        // كان الاستخراج يدوياً هنا: trim على حقل واحد، و`?? null` على
-        // أربعة، و`!empty(...) ? 1 : 0` على الخامس. والقاعدة الوحيدة
-        // المفروضة كانت «العنوان غير فارغ» — بلا حدّ أدنى ولا أقصى،
-        // فكان يُقبل عنوان من محرف واحد ويُقبل نصّ بطول القاعدة.
+        // Extraction used to be done by hand here: trim on one field, `?? null` on
+        // four more, and `!empty(...) ? 1 : 0` on the fifth. The only rule actually
+        // enforced was "the address is not empty" — no minimum and no maximum — so a
+        // one-character address was accepted, and so was a string as long as the
+        // column allowed.
         $input = $this->validate([
             'full_address' => 'required|string|min:5|max:255',
             'label'        => 'string|max:50|default:Home',
@@ -240,11 +242,11 @@ class MyInfoController extends Controller
     }
 
     // ════════════════════════════════════════════════════════
-    // POST /user/addresses/delete — حذف عنوان
+    // POST /user/addresses/delete — delete an address
     // ════════════════════════════════════════════════════════
     #[OA\Post(
         path: '/user/addresses/delete',
-        summary: 'حذف عنوان شحن',
+        summary: 'Delete a shipping address',
         tags: ['Store - Account'],
         security: [['userSessionAuth' => []]],
         requestBody: new OA\RequestBody(
@@ -263,7 +265,7 @@ class MyInfoController extends Controller
         responses: [
             new OA\Response(
                 response: 200,
-                description: 'نتيجة العملية. الحقل success يفصل النجاح عن الفشل — كود HTTP يبقى 200 في الحالتين. وعند فشل CSRF يحمل الجسم error_code=csrf_invalid.',
+                description: 'Operation result. The success field separates success from failure — the HTTP status stays 200 either way. On CSRF failure the body carries error_code=csrf_invalid.',
                 content: new OA\JsonContent(oneOf: [
                     new OA\Schema(ref: '#/components/schemas/ApiResponse'),
                     new OA\Schema(ref: '#/components/schemas/ApiError'),

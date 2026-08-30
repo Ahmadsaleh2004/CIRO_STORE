@@ -10,16 +10,19 @@ use App\Models\AdminModel;
 use OpenApi\Attributes as OA;
 
 /**
- * AdminOrdersController — إدارة الطلبات (قائمة/تفاصيل/أخذ/تسليم/إلغاء/إرجاع/بلاغ/تصدير/حذف).
- * الحذف مسموح للطلبات بحالة completed أو cancelled (زر Delete Order في قائمة Manage Orders) —
- * يضمن أن الطلبات النشطة/قيد التجهيز (not_taken/taken) لا تُحذف أبدًا (سجل التدقيق محفوظ لكل الباقي).
- * يرث من AdminController الذي يتحقق من تسجيل دخول الأدمن تلقائياً.
+ * AdminOrdersController — order management (list / details / take / deliver /
+ * cancel / release / report / export / delete).
+ * Deletion is allowed only for orders in the completed or cancelled state (the
+ * Delete Order button in Manage Orders) — which guarantees active and in-flight
+ * orders (not_taken / taken) can never be deleted, and the audit trail survives
+ * for everything else.
+ * Extends AdminController, which verifies the admin login automatically.
  */
 class AdminOrdersController extends AdminController
 {
     #[OA\Get(
         path: '/admin/orders',
-        summary: 'قائمة الطلبات مع فلترة بالحالة وبحث وترقيم صفحات',
+        summary: 'Order list with status filtering, search and pagination',
         tags: ['Admin - Manage Orders'],
         security: [['adminSessionAuth' => []]],
         parameters: [
@@ -28,15 +31,15 @@ class AdminOrdersController extends AdminController
             new OA\Parameter(name: 'page', in: 'query', required: false, schema: new OA\Schema(type: 'integer')),
         ],
         responses: [
-            new OA\Response(response: 200, description: 'صفحة HTML بالجدول — يتطلب صلاحية can_manage_orders'),
-            new OA\Response(response: 403, description: 'ممنوع — لا يملك can_manage_orders'),
+            new OA\Response(response: 200, description: 'HTML page with the table — requires the can_manage_orders permission'),
+            new OA\Response(response: 403, description: 'Forbidden — the admin lacks can_manage_orders'),
         ]
     )]
     public function index(): void
     {
         Middleware::requirePermission('can_manage_orders');
 
-        // Lazy Check — إرجاع تلقائي قبل أي استعلام (مهلة الـ 4 ساعات)
+        // Lazy check — automatic release before any query runs (the 4-hour deadline)
         $this->notifyAutoReleasedOrders(OrderModel::releaseExpiredTakenOrders());
 
         $status = in_array($_GET['status'] ?? '', ['not_taken', 'taken', 'completed', 'cancelled'], true)
@@ -46,7 +49,7 @@ class AdminOrdersController extends AdminController
 
         $result = OrderModel::getAdminOrdersList(['status' => $status, 'search' => $search], $page);
 
-        // كل الطلبات المعروضة صارت مقروءة للأدمن
+        // Every order shown is now marked read for this admin
         OrderModel::markAllOrdersNotified();
 
         $flashMsg = $_SESSION['flash_msg'] ?? '';
@@ -68,22 +71,22 @@ class AdminOrdersController extends AdminController
 
     #[OA\Get(
         path: '/admin/orders/details',
-        summary: 'تفاصيل طلب معيّن: بيانات العميل + العناصر + عداد المهلة المتبقية',
+        summary: 'Details for one order: customer, items, and the remaining-time counter',
         tags: ['Admin - Manage Orders'],
         security: [['adminSessionAuth' => []]],
         parameters: [
             new OA\Parameter(name: 'id', in: 'query', required: true, schema: new OA\Schema(type: 'integer')),
         ],
         responses: [
-            new OA\Response(response: 200, description: 'صفحة HTML بتفاصيل الطلب — يتطلب صلاحية can_manage_orders'),
-            new OA\Response(response: 403, description: 'ممنوع — لا يملك can_manage_orders'),
+            new OA\Response(response: 200, description: 'Order details HTML page — requires the can_manage_orders permission'),
+            new OA\Response(response: 403, description: 'Forbidden — the admin lacks can_manage_orders'),
         ]
     )]
     public function details(): void
     {
         Middleware::requirePermission('can_manage_orders');
 
-        // نفس الـ Lazy Check — الطلب المطلوب قد يكون انتهت مهلته للتو
+        // The same lazy check — this very order may have just passed its deadline
         $this->notifyAutoReleasedOrders(OrderModel::releaseExpiredTakenOrders());
 
         $orderId = (int)($_GET['id'] ?? 0);
@@ -114,7 +117,7 @@ class AdminOrdersController extends AdminController
 
     #[OA\Post(
         path: '/admin/orders/take',
-        summary: 'أخذ طلب من قائمة not_taken (AJAX — يرجع JSON)',
+        summary: 'Take an order off the not_taken list (AJAX — returns JSON)',
         tags: ['Admin - Manage Orders'],
         security: [['adminSessionAuth' => []]],
         requestBody: new OA\RequestBody(
@@ -133,7 +136,7 @@ class AdminOrdersController extends AdminController
         responses: [
             new OA\Response(
                 response: 200,
-                description: 'نجاح أو فشل',
+                description: 'Success or failure',
                 content: new OA\JsonContent(
                     properties: [
                         new OA\Property(property: 'success', type: 'boolean'),
@@ -183,7 +186,7 @@ class AdminOrdersController extends AdminController
 
     #[OA\Post(
         path: '/admin/orders/mark-delivered',
-        summary: 'إنهاء تسليم طلب — completed (AJAX — يرجع JSON)',
+        summary: 'Complete an order delivery (AJAX — returns JSON)',
         tags: ['Admin - Manage Orders'],
         security: [['adminSessionAuth' => []]],
         requestBody: new OA\RequestBody(
@@ -203,7 +206,7 @@ class AdminOrdersController extends AdminController
         responses: [
             new OA\Response(
                 response: 200,
-                description: 'نجاح أو فشل',
+                description: 'Success or failure',
                 content: new OA\JsonContent(
                     properties: [
                         new OA\Property(property: 'success', type: 'boolean'),
@@ -248,7 +251,7 @@ class AdminOrdersController extends AdminController
 
     #[OA\Post(
         path: '/admin/orders/cancel-delivery',
-        summary: 'إلغاء تسليم طلب — cancelled مع إرجاع المخزون (AJAX — يرجع JSON)',
+        summary: 'Cancel a delivery — sets cancelled and restores stock (AJAX — returns JSON)',
         tags: ['Admin - Manage Orders'],
         security: [['adminSessionAuth' => []]],
         requestBody: new OA\RequestBody(
@@ -269,7 +272,7 @@ class AdminOrdersController extends AdminController
         responses: [
             new OA\Response(
                 response: 200,
-                description: 'نجاح أو فشل',
+                description: 'Success or failure',
                 content: new OA\JsonContent(
                     properties: [
                         new OA\Property(property: 'success', type: 'boolean'),
@@ -396,7 +399,7 @@ class AdminOrdersController extends AdminController
 
     #[OA\Post(
         path: '/admin/orders/report-issue',
-        summary: 'إبلاغ مشكلة على طلب + إشعار اليوزر (لا يغيّر حالة الطلب — AJAX يرجع JSON)',
+        summary: "Report a problem on an order and notify the user (does not change the order's status — AJAX, returns JSON)",
         tags: ['Admin - Manage Orders'],
         security: [['adminSessionAuth' => []]],
         requestBody: new OA\RequestBody(
@@ -416,7 +419,7 @@ class AdminOrdersController extends AdminController
         responses: [
             new OA\Response(
                 response: 200,
-                description: 'نجاح أو فشل',
+                description: 'Success or failure',
                 content: new OA\JsonContent(
                     properties: [
                         new OA\Property(property: 'success', type: 'boolean'),
@@ -528,7 +531,7 @@ class AdminOrdersController extends AdminController
 
     #[OA\Get(
         path: '/admin/orders/export-csv',
-        summary: 'تصدير قائمة الطلبات (بنفس الفلاتر) كملف CSV',
+        summary: 'Export the order list, under the same filters, as a CSV file',
         tags: ['Admin - Manage Orders'],
         security: [['adminSessionAuth' => []]],
         parameters: [
@@ -567,13 +570,14 @@ class AdminOrdersController extends AdminController
         $this->sendCsv('orders_' . date('Ymd_His') . '.csv', $headers, $rows);
     }
 
-    // ── Helpers خاصة داخلية ───────────────────────────────────────
+    // ── Internal private helpers ──────────────────────────────────
 
-    // ملاحظة: كان هنا notifyHigherRanks() خاصة بلا مستدعٍ. الكنترولر
-    // ينادي AdminModel::notifyHigherRanksOnAction مباشرةً في ستّة
-    // مواضع، فالغلاف بقي بعد الترحيل ميّتاً. حذفه ليس تنظيفاً تجميلياً:
-    // نسخة حيّة منه ما زالت في AdminUsersController، ووجود اثنتين
-    // إحداهما ميّتة يجعل تعديل قاعدة الإشعار يبدو منجزاً وهو نصف منجز.
+    // Note: there used to be a private notifyHigherRanks() here with no caller.
+    // The controller calls AdminModel::notifyHigherRanksOnAction directly in six
+    // places, so the wrapper was left dead after the migration. Removing it is not
+    // cosmetic tidying: a live copy of it still exists in AdminUsersController,
+    // and having two — one of them dead — makes a change to the notification rule
+    // look finished when it is only half finished.
 
     /**
      * For every order that releaseExpiredTakenOrders() just reverted: log the action

@@ -10,18 +10,19 @@ use App\Services\SliderFormParser;
 use OpenApi\Attributes as OA;
 
 /**
- * AdminBrandingController — سلايدر الصفحة الرئيسية.
+ * AdminBrandingController — the home page slider.
  *
- * ⚠️ حدود الشرائح والصور (MAX_SLIDES / MAX_ITEMS_PER_SLIDE) انتقلت إلى
- * SliderFormParser مع التحقق الذي يستعملها. بقاؤها هنا كان سيعني رقمين
- * في موضعين — وأسوأ ما فيه أن أحدهما يتغيّر وحده فيصير الحدّ المُعلَن
- * غير الحدّ المُطبَّق.
+ * ⚠️ The slide and image limits (MAX_SLIDES / MAX_ITEMS_PER_SLIDE) moved to
+ * SliderFormParser, alongside the validation that uses them. Keeping them here
+ * as well would have meant the same two numbers in two places — and the worst
+ * of that is one of them changing alone, so the advertised limit stops being
+ * the enforced limit.
  */
 class AdminBrandingController extends AdminController
 {
     #[OA\Get(
         path: '/admin/branding',
-        summary: 'عرض صفحة إدارة السلايدر',
+        summary: 'Show the slider management page',
         tags: ['Admin - Branding'],
         security: [['adminSessionAuth' => []]],
         responses: [
@@ -50,14 +51,14 @@ class AdminBrandingController extends AdminController
 
     #[OA\Get(
         path: '/admin/branding/products/search',
-        summary: 'بحث حي عن منتج لاختياره بالسلايدر (AJAX)',
+        summary: 'Live product search for slider selection (AJAX)',
         tags: ['Admin - Branding'],
         security: [['adminSessionAuth' => []]],
         parameters: [new OA\Parameter(name: 'q', in: 'query', schema: new OA\Schema(type: 'string'))],
         responses: [
             new OA\Response(
                 response: 200,
-                description: 'نتيجة العملية. الحقل success يفصل النجاح عن الفشل — كود HTTP يبقى 200 في الحالتين. وعند فشل CSRF يحمل الجسم error_code=csrf_invalid.',
+                description: 'Operation result. The success field separates success from failure — the HTTP status stays 200 either way. On CSRF failure the body carries error_code=csrf_invalid.',
                 content: new OA\JsonContent(oneOf: [
                     new OA\Schema(ref: '#/components/schemas/ApiResponse'),
                     new OA\Schema(ref: '#/components/schemas/ApiError'),
@@ -75,9 +76,10 @@ class AdminBrandingController extends AdminController
         $q = trim($_GET['q'] ?? '');
         $products = BrandingModel::searchProducts($q);
 
-        // إنذار كاذب: القاعدة تلاحق «صدى مدخل الطلب»، والمطبوع هنا ناتج
-        // json_encode لصفوف من القاعدة تحت رأس application/json المضبوط
-        // أعلاه. لا $_GET يصل إلى المخرَج، وjson_encode تهرّب ما تُخرجه.
+        // False positive: the rule chases "request input echoed back", and what is
+        // printed here is json_encode over rows from the database, under the
+        // application/json header set above. No $_GET reaches the output, and
+        // json_encode escapes what it emits.
         // nosemgrep: php.lang.security.injection.echoed-request.echoed-request
         echo json_encode(['success' => true, 'products' => $products], JSON_UNESCAPED_UNICODE);
         exit;
@@ -85,7 +87,7 @@ class AdminBrandingController extends AdminController
 
     #[OA\Post(
         path: '/admin/branding/save',
-        summary: 'حفظ كامل السلايدر (Full Replace) — شرائح + عناصر + رفع صور',
+        summary: 'Save the whole slider (full replace) — slides, items and image uploads',
         tags: ['Admin - Branding'],
         security: [['adminSessionAuth' => []]],
         requestBody: new OA\RequestBody(
@@ -101,8 +103,9 @@ class AdminBrandingController extends AdminController
     {
         Middleware::requirePermission('can_manage_branding');
 
-        // استُثني من beginJsonPost: يفشل بـredirectWithError لا بـJSON.
-        // هذه صفحة فورم لا نقطة API — التحويل يقلبها إلى استجابة JSON.
+        // Deliberately not using beginJsonPost: this fails via redirectWithError,
+        // not JSON. It is a form page, not an API endpoint — routing it through
+        // beginJsonPost would turn the response into JSON.
         if (!verifyCsrfToken($_POST['csrf_token'] ?? '')) {
             $this->redirectWithError('Invalid CSRF token, please refresh and try again.');
             return;
@@ -110,13 +113,15 @@ class AdminBrandingController extends AdminController
         $oldImagePaths = BrandingModel::collectAllImagePaths();
         $uploadDir     = ROOTPATH . '/public/images/';
 
-        // التحضير كلّه في الخدمة: قراءة $_FILES المتداخلة، والتحقق،
-        // والرفع. كان هنا 130 سطراً تخلط ذلك بتنسيق الاستجابة، فكان كل
-        // مسار خطأ ينتهي بـheader() وexit — أي غير قابل للاختبار إطلاقاً.
+        // All the preparation lives in the service: reading the nested $_FILES,
+        // validating, uploading. This used to be 130 lines here mixing that with
+        // response formatting, so every error path ended in header() and exit —
+        // which is to say, untestable.
         $parsed = SliderFormParser::parse($_POST['slides'] ?? [], $_FILES['slides'] ?? [], $uploadDir);
 
-        // التنظيف مرّة واحدة عند أي فشل. كان cleanupNewUploads مكرَّراً
-        // في خمسة مواضع، ونسيانه في السادس يعني صوراً يتيمة على القرص.
+        // Cleanup in one place for every failure. cleanupNewUploads used to be
+        // repeated across five spots, and forgetting it in a sixth meant orphaned
+        // images left behind on disk.
         if ($parsed['error'] !== null) {
             $this->cleanupNewUploads($parsed['uploaded'], $uploadDir);
             $this->redirectWithError($parsed['error']);
@@ -142,7 +147,7 @@ class AdminBrandingController extends AdminController
     }
 
     /**
-     * يحذف الصور التي كانت مستعملة ولم تعد ضمن الحفظة الجديدة.
+     * Deletes images that were in use and are no longer part of the new save.
      *
      * @param list<string> $oldPaths
      * @param list<string> $keptPaths
@@ -150,17 +155,18 @@ class AdminBrandingController extends AdminController
     private function deleteOrphanedImages(array $oldPaths, array $keptPaths, string $uploadDir): void
     {
         foreach (array_diff($oldPaths, $keptPaths) as $orphanPath) {
-            // basename() تجرّد أي مسار من المدخل فلا يبقى منه إلا اسم
-            // الملف — لا `..` ولا شرطات ولا مسار مطلق. المسار الناتج
-            // محصور في $uploadDir بالبناء. semgrep يرى تدفّق بيانات من
-            // قاعدة البيانات إلى unlink ولا يرى أثر basename.
+            // basename() strips any path from the input, leaving nothing but the
+            // file name — no `..`, no slashes, no absolute path. The resulting path
+            // is confined to $uploadDir by construction. semgrep sees a data flow
+            // from the database into unlink and does not see basename's effect.
             $disk = rtrim($uploadDir, '/\\') . DIRECTORY_SEPARATOR . basename($orphanPath);
             if (file_exists($disk)) {
-                // ⚠️ الكتم على سطر @unlink نفسه. كان موضوعاً فوق `if`،
-                // وsemgrep يربط التعليق بالسطر التالي له مباشرةً — فكان
-                // يكتم شرط `file_exists` ولا يكتم شيئاً، والنتيجة تُبلَّغ
-                // كما لو لم يكن هناك تعليق أصلاً. (مقيس: النتيجة كانت
-                // تظهر قبل إعادة الهيكلة وبعدها بالتساوي.)
+                // ⚠️ The suppression sits on the @unlink line itself. It used to sit
+                // above the `if`, and semgrep binds the comment to the line directly
+                // after it — so it suppressed the `file_exists` condition and
+                // suppressed nothing at all, and the finding was reported exactly as
+                // if no comment were there. (Measured: the finding appeared before
+                // and after the refactor alike.)
                 // nosemgrep: php.lang.security.unlink-use.unlink-use
                 @unlink($disk);
             }
@@ -168,7 +174,7 @@ class AdminBrandingController extends AdminController
     }
 
     // ══════════════════════════════════════════════════════════
-    // Helpers خاصة
+    // Private helpers
     // ══════════════════════════════════════════════════════════
 
     /**
@@ -177,11 +183,11 @@ class AdminBrandingController extends AdminController
     private function cleanupNewUploads(array $paths, string $uploadDir): void
     {
         foreach ($paths as $p) {
-            // كسابقتها: basename تحصر الاسم داخل $uploadDir بالبناء.
+            // As above: basename confines the name inside $uploadDir by construction.
             $disk = rtrim($uploadDir, '/\\') . DIRECTORY_SEPARATOR . basename($p);
             if (file_exists($disk)) {
-                // الكتم على سطر @unlink نفسه — راجع الشرح في
-                // deleteOrphanedImages أعلاه.
+                // Suppression on the @unlink line itself — see the explanation in
+                // deleteOrphanedImages above.
                 // nosemgrep: php.lang.security.unlink-use.unlink-use
                 @unlink($disk);
             }
@@ -195,10 +201,10 @@ class AdminBrandingController extends AdminController
     }
 
     /**
-     * إشعارات عند تعديل السلايدر:
-     * — إشعار تأكيد للمُعدِّل نفسه (سجل)
-     * — إشعار لكل أدمن يملك صلاحية can_manage_branding برتبة أعلى من رتبة المُعدِّل،
-     *   باستثناء الأدمن الأساسي (getRootAdminId) والمُعدِّل.
+     * Notifications when the slider is edited:
+     * — a confirmation notice for the editor themselves (an audit record)
+     * — a notice for every admin holding can_manage_branding at a rank above the
+     *   editor's, excluding the root admin (getRootAdminId) and the editor.
      */
     private function notifyAboutBrandingChange(int $adminId): void
     {

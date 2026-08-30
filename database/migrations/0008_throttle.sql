@@ -2,8 +2,9 @@
 -- 0008_throttle
 -- ══════════════════════════════════════════════════════════════
 --
--- يُشغَّل بـ`php scripts/migrate.php up`. القسمان تعليقان لا صيغة
--- خاصة، فالملف يبقى SQL صالحاً يمكن لصقه في أي عميل كما هو.
+-- Run with `php scripts/migrate.php up`. The two section markers are comments,
+-- not special syntax, so the file stays valid SQL that can be pasted into any
+-- client as-is.
 
 -- @UP
 -- ════════════════════════════════════════════════════════════════════════════

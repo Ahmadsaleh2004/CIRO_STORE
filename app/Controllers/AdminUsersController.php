@@ -11,24 +11,24 @@ use App\Models\SupportModel;
 use OpenApi\Attributes as OA;
 
 /**
- * AdminUsersController — إدارة اليوزرز (قائمة/تفاصيل/حذف/إنذارات/تصدير).
- * يرث من AdminController الذي يتحقق من تسجيل دخول الأدمن تلقائياً.
+ * AdminUsersController — user management (list / details / delete / strikes / export).
+ * Extends AdminController, which verifies the admin login automatically.
  */
 class AdminUsersController extends AdminController
 {
     #[OA\Get(
         path: '/admin/users',
-        summary: 'قائمة اليوزرز مع بحث/فلترة/صفحات',
+        summary: 'User list with search, filtering and pagination',
         tags: ['Admin - Manage Users'],
         security: [['adminSessionAuth' => []]],
         parameters: [
-            new OA\Parameter(name: 'q', in: 'query', required: false, schema: new OA\Schema(type: 'string'), description: 'بحث بالاسم أو الإيميل'),
-            new OA\Parameter(name: 'status', in: 'query', required: false, schema: new OA\Schema(type: 'string', enum: ['all','active','not_active','blocked']), description: 'فلترة الحالة'),
-            new OA\Parameter(name: 'page', in: 'query', required: false, schema: new OA\Schema(type: 'integer'), description: 'رقم الصفحة'),
+            new OA\Parameter(name: 'q', in: 'query', required: false, schema: new OA\Schema(type: 'string'), description: 'Search by name or email'),
+            new OA\Parameter(name: 'status', in: 'query', required: false, schema: new OA\Schema(type: 'string', enum: ['all','active','not_active','blocked']), description: 'Filter by status'),
+            new OA\Parameter(name: 'page', in: 'query', required: false, schema: new OA\Schema(type: 'integer'), description: 'Page number'),
         ],
         responses: [
-            new OA\Response(response: 200, description: 'صفحة HTML بالجدول — يتطلب صلاحية can_manage_users'),
-            new OA\Response(response: 403, description: 'ممنوع — لا يملك can_manage_users'),
+            new OA\Response(response: 200, description: 'HTML page with the table — requires the can_manage_users permission'),
+            new OA\Response(response: 403, description: 'Forbidden — the admin lacks can_manage_users'),
         ]
     )]
     public function index(): void
@@ -61,7 +61,7 @@ class AdminUsersController extends AdminController
 
     #[OA\Get(
         path: '/admin/users/details',
-        summary: 'تفاصيل يوزر معيّن: بياناته + إنذاراته + طلباته + سجل أفعال الأدمنية عليه',
+        summary: 'Details for one user: profile, strikes, orders, and the log of admin actions taken on them',
         tags: ['Admin - Manage Users'],
         security: [['adminSessionAuth' => []]],
         parameters: [
@@ -100,7 +100,7 @@ class AdminUsersController extends AdminController
 
     #[OA\Post(
         path: '/admin/users/delete',
-        summary: 'حذف يوزر (AJAX — يرجع JSON، يتطلب سبب)',
+        summary: 'Delete a user (AJAX — returns JSON, a reason is required)',
         tags: ['Admin - Manage Users'],
         security: [['adminSessionAuth' => []]],
         requestBody: new OA\RequestBody(
@@ -120,7 +120,7 @@ class AdminUsersController extends AdminController
         responses: [
             new OA\Response(
                 response: 200,
-                description: 'نجاح أو فشل',
+                description: 'Success or failure',
                 content: new OA\JsonContent(
                     properties: [
                         new OA\Property(property: 'success', type: 'boolean'),
@@ -151,7 +151,7 @@ class AdminUsersController extends AdminController
             $this->respond(false, 'User not found.');
         }
 
-        // حالة المستخدم لحظة الحذف — blocked محسوبة (strikes >= 3)، مو عمود مباشر بالجدول
+        // The user's status at the moment of deletion — "blocked" is derived (strikes >= 3), not a column on the table
         $strikesCount = UserModel::getStrikesCount($targetId);
         $statusLabel  = $strikesCount >= 3 ? 'Blocked' : 'Active';
 
@@ -181,7 +181,7 @@ class AdminUsersController extends AdminController
 
     #[OA\Post(
         path: '/admin/users/strikes/add',
-        summary: 'إضافة إنذار (Strike) ليوزر (AJAX — يرجع JSON)',
+        summary: 'Add a strike to a user (AJAX — returns JSON)',
         tags: ['Admin - Manage Users'],
         security: [['adminSessionAuth' => []]],
         requestBody: new OA\RequestBody(
@@ -201,7 +201,7 @@ class AdminUsersController extends AdminController
         responses: [
             new OA\Response(
                 response: 200,
-                description: 'نجاح أو فشل',
+                description: 'Success or failure',
                 content: new OA\JsonContent(
                     properties: [
                         new OA\Property(property: 'success', type: 'boolean'),
@@ -257,7 +257,7 @@ class AdminUsersController extends AdminController
 
     #[OA\Post(
         path: '/admin/users/strikes/remove',
-        summary: 'إزالة إنذار (Strike) من يوزر (AJAX — يرجع JSON)',
+        summary: 'Remove a strike from a user (AJAX — returns JSON)',
         tags: ['Admin - Manage Users'],
         security: [['adminSessionAuth' => []]],
         requestBody: new OA\RequestBody(
@@ -277,7 +277,7 @@ class AdminUsersController extends AdminController
         responses: [
             new OA\Response(
                 response: 200,
-                description: 'نجاح أو فشل',
+                description: 'Success or failure',
                 content: new OA\JsonContent(
                     properties: [
                         new OA\Property(property: 'success', type: 'boolean'),
@@ -318,7 +318,7 @@ class AdminUsersController extends AdminController
 
     #[OA\Get(
         path: '/admin/users/export-csv',
-        summary: 'تصدير قائمة اليوزرز كملف CSV',
+        summary: 'Export the user list as a CSV file',
         tags: ['Admin - Manage Users'],
         security: [['adminSessionAuth' => []]],
         responses: [
@@ -359,7 +359,7 @@ class AdminUsersController extends AdminController
         $this->sendCsv('users_' . date('Ymd_His') . '.csv', $headers, $rows);
     }
 
-    // ── Helpers خاصة داخلية ───────────────────────────────────────
+    // ── Internal private helpers ──────────────────────────────────
 
     /**
      * Notify admins with a strictly higher rank than the actor who hold

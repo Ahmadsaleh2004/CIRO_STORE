@@ -1,7 +1,7 @@
 <?php
 /**
  * app/views/admin/settings.php — fragment فقط (بدون DOCTYPE/html/head/body)
- * يُحمَّل من AdminController::adminView() بعد inc/head.php و inc/navbar.php
+ * Loaded by AdminController::adminView() after inc/head.php and inc/navbar.php
  * المتغيرات الجاهزة من AdminSiteSettingsController::index():
  *   $settings, $canEditCheckout, $csrf
  */

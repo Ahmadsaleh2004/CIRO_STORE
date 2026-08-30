@@ -8,14 +8,14 @@ use App\Models\ProductModel;
 use OpenApi\Attributes as OA;
 
 /**
- * AboutController — يعالج صفحة /about
- * منقول من PageController::about() وموسَّع بـ AboutModel
+ * AboutController — serves the /about page.
+ * Moved out of PageController::about() and extended with AboutModel.
  */
 class AboutController extends Controller
 {
     #[OA\Get(
         path: "/about",
-        summary: "صفحة \"من نحن\" — بيانات المتجر الثابتة مع عدد المنتجات المرئية",
+        summary: "About page — the store's static details plus the visible product count",
         tags: ["Store - Pages"],
         responses: [
             new OA\Response(response: 200, ref: '#/components/responses/HtmlPage'),
@@ -26,10 +26,10 @@ class AboutController extends Controller
     {
         $model = new AboutModel();
 
-        // بيانات المتجر الثابتة مُخزَّنة في AboutModel
+        // The store's static details live in AboutModel
         $storeInfo = $model->getStoreInfo();
 
-        // عدد المنتجات المرئية من قاعدة البيانات
+        // Visible product count, read from the database
         $productsCount = ProductModel::countVisible();
 
         $this->view('page/about', [

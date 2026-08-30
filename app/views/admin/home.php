@@ -1,7 +1,7 @@
 <?php
 /**
  * app/views/admin/home.php — fragment فقط (بدون DOCTYPE/html/head/body)
- * يُحمَّل من AdminController::adminView() بعد inc/head.php و inc/navbar.php
+ * Loaded by AdminController::adminView() after inc/head.php and inc/navbar.php
  * المتغيرات المتاحة: $adminName, $adminRole, $adminId, $csrf (من adminView)
  * لا يحتوي على أي منطق خاص باليوزر العادي.
  */

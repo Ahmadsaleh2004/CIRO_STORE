@@ -10,31 +10,32 @@ use App\Models\NotificationModel;
 use OpenApi\Attributes as OA;
 
 /**
- * CheckoutController — عرض صفحة الدفع + إنشاء الطلب + إلغاؤه
- * منقول من pages/checkout.php + handlers/order_handler.php القديمين
+ * CheckoutController — renders the checkout page, creates the order, cancels it.
+ * Moved out of the old pages/checkout.php and handlers/order_handler.php.
  */
 class CheckoutController extends Controller
 {
     /**
-     * أقصى كمية مقبولة لعنصر واحد في طلب واحد.
+     * The largest quantity accepted for one item in one order.
      *
-     * الرقم اختير ليكون أوسع من أي طلب تجزئة معقول وأضيق بكثير من مدى
-     * `int`، فلا يصل ضربٌ عشري ولا عمود `unsigned` إلى حافّته. متجرٌ
-     * يبيع بالجملة يرفع الرقم هنا في موضع واحد.
+     * The number was chosen to be wider than any sensible retail order and far
+     * narrower than the range of `int`, so neither a decimal multiplication nor an
+     * `unsigned` column ever reaches its edge. A store selling wholesale raises the
+     * number here, in one place.
      */
     private const MAX_ITEM_QTY = 100;
 
     // ════════════════════════════════════════════════════════
-    // GET /checkout — عرض صفحة الدفع
+    // GET /checkout — render the checkout page
     // ════════════════════════════════════════════════════════
     #[OA\Get(
         path: '/checkout',
-        summary: 'صفحة إتمام الطلب (ثلاث خطوات)',
+        summary: 'Checkout page (three steps)',
         tags: ['Store - Checkout'],
         security: [['userSessionAuth' => []]],
         responses: [
-            new OA\Response(response: 200, description: 'صفحة HTML'),
-            new OA\Response(response: 302, description: 'تحويل للرئيسية مع فتح نافذة الدخول إن لم يكن مسجّلاً'),
+            new OA\Response(response: 200, description: 'HTML page'),
+            new OA\Response(response: 302, description: 'Redirect home with the login modal opened when not signed in'),
         ]
     )]
     public function index(): void
@@ -52,9 +53,10 @@ class CheckoutController extends Controller
             'activePage'  => '',
             'robots'      => 'noindex, nofollow',
             'extraHead'   => '<link rel="stylesheet" href="' . URLROOT . '/css/store/pages/checkout.css">',
-            // منطق الصفحة صار في ملف خارجي. كان هنا سطر <script> يحقن
-            // window.CHECKOUT_IDEMPOTENCY_KEY — لم يعد له داع: المفتاح
-            // يصل الـview كمتغيّر ويُطبع في data-checkout-idempotency.
+            // The page logic now lives in an external file. There used to be a
+            // <script> line here injecting window.CHECKOUT_IDEMPOTENCY_KEY — no longer
+            // needed: the key reaches the view as a variable and is printed into
+            // data-checkout-idempotency.
             'extraScripts' => '<script src="' . URLROOT . '/js/features/checkout.js" defer></script>',
             'addresses'   => $addresses,
             'csrf'        => $csrf,
@@ -66,15 +68,16 @@ class CheckoutController extends Controller
     }
 
     // ════════════════════════════════════════════════════════
-    // POST /checkout — إنشاء الطلب
+    // POST /checkout — create the order
     // ════════════════════════════════════════════════════════
     #[OA\Post(
         path: '/checkout',
-        summary: 'إنشاء الطلب من محتويات السلة',
-        description: 'العميل يرسل **ماذا وكم** فقط. كل قيمة مالية تُقرأ من قاعدة البيانات '
-                   . 'داخل المعاملة نفسها التي تحجز المخزون. وحقل shown_price يُقارَن ولا '
-                   . 'يُخزَّن: إن اختلف عن سعر القاعدة يُرفض الطلب كاملاً ويردّ الخادم '
-                   . 'error_code=price_changed مع الأسعار الصحيحة.',
+        summary: 'Create the order from the cart contents',
+        description: 'The client sends **what and how many** and nothing else. Every monetary '
+                   . 'value is read from the database inside the same transaction that reserves '
+                   . 'stock. The shown_price field is compared and never stored: if it differs '
+                   . 'from the database price the whole order is refused and the server answers '
+                   . 'error_code=price_changed together with the correct prices.',
         tags: ['Store - Checkout'],
         security: [['userSessionAuth' => []]],
         requestBody: new OA\RequestBody(
@@ -95,7 +98,7 @@ class CheckoutController extends Controller
                                     property: 'shown_price',
                                     type: 'number',
                                     format: 'float',
-                                    description: 'السعر الذي عُرض على الزبون — للمقارنة وحدها، لا يُخزَّن ولا يُحسب منه شيء'
+                                    description: 'The price the customer was shown — for comparison only; never stored and never computed from'
                                 ),
                             ],
                             type: 'object'
@@ -111,10 +114,10 @@ class CheckoutController extends Controller
         responses: [
             new OA\Response(
                 response: 200,
-                description: 'نتيجة العملية. النجاح يحمل order_id وredirect. والفشل يحمل '
-                           . 'error_code من: price_changed · unavailable · out_of_stock · '
-                           . 'error · csrf_invalid. وprice_changed وحده يحمل معه items '
-                           . 'بالأسعار الصحيحة.',
+                description: 'Operation result. Success carries order_id and redirect. Failure carries '
+                           . 'an error_code out of: price_changed · unavailable · out_of_stock · '
+                           . 'error · csrf_invalid. Only price_changed additionally carries items '
+                           . 'with the correct prices.',
                 content: new OA\JsonContent(oneOf: [
                     new OA\Schema(ref: '#/components/schemas/ApiResponse'),
                     new OA\Schema(ref: '#/components/schemas/ApiError'),
@@ -127,7 +130,7 @@ class CheckoutController extends Controller
         $this->beginJsonPost();
         Middleware::requireLogin();
 
-        // قراءة body JSON من cart.js (fetchWithCsrfRetry)
+        // Read the JSON body sent by cart.js (fetchWithCsrfRetry)
         $post = $this->requestData();
 
         $userId         = (int)$_SESSION['user_id'];
@@ -146,49 +149,51 @@ class CheckoutController extends Controller
             $this->respond(false, 'Missing idempotency key.');
         }
 
-        // التحقق من ملكية العنوان
+        // Verify the address belongs to this user
         $userAddresses = OrderModel::getUserAddresses($userId);
         $validAddress  = array_filter($userAddresses, fn($a) => (int)$a['id'] === $addressId);
         if (empty($validAddress)) {
             $this->respond(false, 'Invalid address selected.');
         }
 
-        // ── تنظيف عناصر الطلب ────────────────────────────────
+        // ── Sanitise the order items ─────────────────────────
         //
-        // ⚠️ أسماء الحقول هنا كانت **لا تطابق ما يرسله المتصفح**، وكان
-        // ذلك عطلاً كاملاً لا ثغرة: السلّة تُبنى في localStorage بالشكل
-        // {id, variant_id, quantity, price} — من ثلاثة مواضع متفقة
+        // ⚠️ The field names here **did not match what the browser sends**, and that
+        // was a total outage rather than a vulnerability: the cart is built in
+        // localStorage as {id, variant_id, quantity, price} — from three places that
+        // agree
         // (products-catalog.js · product-details.js · wishlist.js) —
-        // بينما كان هذا السطر يقرأ `product_id` و`qty`. فكان
-        // $productId = 0 لكل عنصر، فيسقط عند `continue`، فتخرج
-        // $cleanItems فارغة، فيتلقّى **كل** زبون «Invalid items in cart»
-        // بعد أن يملأ ثلاث خطوات. ولم يكن أحد يقدر على إتمام طلب.
+        // while this line read `product_id` and `qty`. So $productId was 0 for every
+        // item, each one fell through at `continue`, $cleanItems came out empty, and
+        // **every** customer received "Invalid items in cart" after filling in three
+        // steps. Nobody could complete an order at all.
         //
-        // والعطل أقدم من كل عمليات التنظيف — موجود في كومِت الأساس
-        // 841d64d نفسه، ونجا لأن لا اختبار يغطّي هذا المسار (وهو ما
-        // يعالجه البند 1.7).
+        // The fault is older than every cleanup pass — present in the baseline commit
+        // 841d64d itself — and it survived because no test covered this path (which is
+        // what item 1.7 addresses).
         //
-        // العلاج في العميل لا هنا: checkout.js صار يترجم شكل السلّة إلى
-        // شكل الـAPI الموثَّق في OpenAPI قبل الإرسال. توسيع الخادم
-        // ليقبل الاسمين كان سيثبّت التسميتين معاً إلى الأبد.
+        // The fix belongs in the client, not here: checkout.js now translates the
+        // cart's shape into the API shape documented in OpenAPI before sending.
+        // Widening the server to accept both names would have cemented both spellings
+        // forever.
         $cleanItems = [];
         foreach ($items as $item) {
             $productId = (int)($item['product_id'] ?? 0);
             $variantId = (int)($item['variant_id'] ?? 0);
             $qty       = (int)($item['qty']         ?? 0);
 
-            // ما عرضه المتصفح على الزبون. يُمرَّر للمقارنة وحدها —
-            // OrderModel لا يحسب منه شيئاً ولا يخزّنه. راجع التعليق
-            // المفصّل فوق placeOrder.
+            // What the browser displayed to the customer. Passed for comparison alone —
+            // OrderModel computes nothing from it and stores none of it. See the detailed
+            // comment above placeOrder.
             $shownPrice = (float)($item['shown_price'] ?? -1);
 
-            // الحدّ الأعلى ليس تجميلاً: qty يدخل في ضرب عشري وفي
-            // stock_quantity غير المُوقَّع. كمية سخيفة يجب أن تُرفض هنا
-            // بوضوح لا أن تُترك لفحص المخزون ليردّ «نفد المخزون».
+            // The upper bound is not decoration: qty feeds a decimal multiplication and
+            // an unsigned stock_quantity. An absurd quantity should be refused here,
+            // plainly, rather than left to the stock check to answer "out of stock".
             //
-            // و`variant_id` مطلوب: المتجر يفرض أن لكل منتج variant
-            // واحداً على الأقل (storeAdd و storeEdit ترفضان دونه)، وكل
-            // مسارات الإضافة للسلّة تمرّره. راجع التعليق في placeOrder.
+            // And `variant_id` is required: the store enforces at least one variant per
+            // product (storeAdd and storeEdit refuse without one), and every add-to-cart
+            // path passes it. See the comment in placeOrder.
             if ($productId <= 0 || $variantId <= 0 || $qty <= 0 || $qty > self::MAX_ITEM_QTY) {
                 continue;
             }
@@ -213,29 +218,31 @@ class CheckoutController extends Controller
             $idempotencyKey
         );
 
-        // ── الرفض يقول سببه ──────────────────────────────────
+        // ── A refusal states its reason ──────────────────────
         //
-        // كان الردّ واحداً لكل فشل: «Could not place order. Some items
-        // may be out of stock.» — وهي تُقال أيضاً عن عطل قاعدة بيانات
-        // وعن منتج أُخفي. رسالة تخمّن السبب تُرسل الزبون ليصلح ما ليس
-        // مكسوراً.
+        // There used to be one answer for every failure: "Could not place order. Some
+        // items may be out of stock." — said equally of a database outage and of a
+        // product that was hidden. A message that guesses at the cause sends the
+        // customer off to fix something that is not broken.
         if ($result['status'] !== OrderModel::PLACE_OK) {
             $this->respondPlaceFailure($result);
         }
 
         $orderId = $result['order_id'];
 
-        // ── تفريغ السلّة ─────────────────────────────────────
+        // ── Empty the cart ───────────────────────────────────
         //
-        // بعد نجاح الطلب لا قبله: التفريغ المبكّر يعني أن أي فشل بعده
-        // (سعر تغيّر، مخزون نفد) يترك الزبون بلا سلّة وبلا طلب معاً.
+        // After the order succeeds, not before: emptying early means any later failure
+        // (a changed price, exhausted stock) leaves the customer with neither a cart
+        // nor an order.
         //
-        // ⚠️ ولا يُفرَّغ في مسار idempotency المكرَّر أيضاً — وهو مقصود:
-        // النقرة المكرّرة تُرجع الطلب نفسه، وسلّته أُفرغت في المرّة
-        // الأولى. فالتفريغ هنا بلا أثر ثانٍ، وهذا هو الصواب.
+        // ⚠️ Nor is it emptied on the repeated idempotency path — and that is
+        // deliberate: a duplicate click returns the same order, whose cart was already
+        // emptied the first time. Emptying here has no second effect, which is exactly
+        // right.
         CartModel::clear($userId);
 
-        // إرسال إشعار للمستخدم
+        // Notify the user
         NotificationModel::insert(
             $userId,
             '✅ Order Placed Successfully',
@@ -256,9 +263,10 @@ class CheckoutController extends Controller
     // ════════════════════════════════════════════════════════
     #[OA\Post(
         path: '/checkout/cancel-order',
-        summary: 'إلغاء طلب من طرف المستخدم',
-        description: 'يُسمح بالإلغاء فقط قبل أن يتولّى الطلب أدمن. نفس الزر المشترك في '
-                   . 'views/shared/order-cancel-button.php يخدم واجهة الأدمن بنقطة أخرى.',
+        summary: 'Cancel an order, by the user',
+        description: 'Cancelling is allowed only before an admin takes the order. The same shared '
+                   . 'button in views/shared/order-cancel-button.php serves the admin interface '
+                   . 'through a different endpoint.',
         tags: ['Store - Checkout'],
         security: [['userSessionAuth' => []]],
         requestBody: new OA\RequestBody(
@@ -277,7 +285,7 @@ class CheckoutController extends Controller
         responses: [
             new OA\Response(
                 response: 200,
-                description: 'نتيجة العملية. الحقل success يفصل النجاح عن الفشل — كود HTTP يبقى 200 في الحالتين. وعند فشل CSRF يحمل الجسم error_code=csrf_invalid.',
+                description: 'Operation result. The success field separates success from failure — the HTTP status stays 200 either way. On CSRF failure the body carries error_code=csrf_invalid.',
                 content: new OA\JsonContent(oneOf: [
                     new OA\Schema(ref: '#/components/schemas/ApiResponse'),
                     new OA\Schema(ref: '#/components/schemas/ApiError'),
@@ -322,7 +330,7 @@ class CheckoutController extends Controller
     // ════════════════════════════════════════════════════════
     #[OA\Get(
         path: '/checkout/confirmation',
-        summary: 'صفحة تأكيد الطلب بعد إتمامه',
+        summary: 'Order confirmation page, after checkout',
         tags: ['Store - Checkout'],
         security: [['userSessionAuth' => []]],
         parameters: [
@@ -357,22 +365,24 @@ class CheckoutController extends Controller
     }
 
     /**
-     * يترجم رمز فشل placeOrder إلى ردّ JSON، ويوقف التنفيذ.
+     * Translates a placeOrder failure code into a JSON response, then halts.
      *
-     * الرمز يسافر إلى العميل في `error_code` — بنفس العقد الذي أرساه
-     * `csrf_invalid`: **ما تقرأه الآلة رمزٌ ثابت، وما يقرأه الإنسان نصٌّ
-     * حرّ يتغيّر بلا كسر أحد.** وبلا هذا الفصل كان `checkout.js` سيضطر
-     * لمطابقة نصّ الرسالة ليعرف متى يحدّث أسعار السلّة — وهو بالضبط
-     * الفخّ الذي أوقع غلاف CSRF ثلاث مرّات.
+     * The code travels to the client in `error_code` — under the same contract
+     * `csrf_invalid` established: **what the machine reads is a stable code, and
+     * what a human reads is free text that can change without breaking anyone.**
+     * Without that separation `checkout.js` would have had to match on the message
+     * text to know when to refresh the cart's prices — which is precisely the trap
+     * the CSRF wrapper fell into three times.
      *
      * @param array{status:string, items?:list<array<string,mixed>>} $result
      */
     private function respondPlaceFailure(array $result): never
     {
         if ($result['status'] === OrderModel::PLACE_PRICE_CHANGED) {
-            // الأسعار الصحيحة تُرسَل مع الرفض لا في طلب تالٍ: الزبون
-            // واقف أمام الشاشة الآن، وجعله يعيد التحميل ليكتشف الجديد
-            // خطوةٌ ضائعة — وفرصة ليغادر.
+            // The correct prices travel with the refusal rather than in a follow-up
+            // request: the customer is standing at the screen right now, and making them
+            // reload to discover the new figures is a wasted step — and an opportunity
+            // to leave.
             $this->respond(
                 false,
                 'Some prices changed while your cart was open. Please review your cart before ordering.',

@@ -12,8 +12,8 @@ class HomeController extends Controller
 {
     #[OA\Get(
         path: "/",
-        summary: "الصفحة الرئيسية — السلايدر والأقسام والمنتجات المرئية",
-        description: "الراوت /home يشير إلى نفس الدالة.",
+        summary: "Home page — slider, categories and visible products",
+        description: "The /home route points at this same method.",
         tags: ["Store - Pages"],
         responses: [
             new OA\Response(response: 200, ref: '#/components/responses/HtmlPage'),
@@ -22,7 +22,7 @@ class HomeController extends Controller
         ]
     )]    #[OA\Get(
         path: '/home',
-        summary: 'مسار بديل للصفحة الرئيسية — نفس الدالة تماماً',
+        summary: 'Alias route for the home page — the exact same method',
         tags: ['Store - Pages'],
         responses: [
             new OA\Response(response: 200, ref: '#/components/responses/HtmlPage'),
@@ -32,21 +32,21 @@ class HomeController extends Controller
     )]
     public function index(): void
     {
-        // 1. جلب كل المنتجات المرئية من الموديل
+        // 1. Fetch every visible product from the model
         $products = ProductModel::findVisible();
 
-        // في حال كانت قاعدة البيانات فارغة أو غير متصلة بعد، نضمن عدم توقف الكود
+        // Guard against an empty or not-yet-connected database so the page still renders
         if (empty($products)) {
             $productsJS = [];
         } else {
-            // 2. تحديد أعلى 7 بالمبيعات → best-seller
+            // 2. Top 7 by sales → best-seller
             $bestSellerIds = array_slice(
                 array_column($products, 'id'),
                 0,
                 7
             );
 
-            // 3. تحديد أحدث 7 بتاريخ الإضافة → new (مستثنيًا Best Sellers)
+            // 3. Newest 7 by date added → new (excluding the best sellers)
             $productsSortedByDate = $products;
             usort($productsSortedByDate, function ($a, $b) {
                 return strtotime($b['date_added'] ?? '2000-01-01') - strtotime($a['date_added'] ?? '2000-01-01');
@@ -61,7 +61,7 @@ class HomeController extends Controller
                 7
             );
 
-            // 4. دالة تحديد التاغ
+            // 4. Tag resolver
             $getProductTag = function (array $p) use ($bestSellerIds, $newArrivalIds): string {
                 if (in_array((int)($p['id'] ?? 0), $bestSellerIds)) {
                     return 'best-seller';
@@ -75,7 +75,7 @@ class HomeController extends Controller
                 return 'regular';
             };
 
-            // 5. تجهيز مصفوفة الـ JS
+            // 5. Build the array handed to JavaScript
             $productsJS = array_values(array_map(function ($p) use ($getProductTag) {
                 $price = (float)($p['price'] ?? 0);
                 $discount = (float)($p['discount_percentage'] ?? 0);
@@ -100,7 +100,7 @@ class HomeController extends Controller
             }, $products));
         }
 
-        // 6. تمرير البيانات إلى الـ View
+        // 6. Pass the data to the view
         $homeSliders = BrandingModel::getActiveSlidersForHome();
 
         $this->view('home', [

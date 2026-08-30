@@ -8,20 +8,20 @@ use App\Models\AdminModel;
 use OpenApi\Attributes as OA;
 
 /**
- * AdminMyInfoController — صفحة "معلوماتي" الخاصة بالأدمن نفسه فقط.
- * مستقلة تمامًا عن MyInfoController الخاص باليوزر (Session مختلفة، جدول مختلف،
- * لا يوجد أي استدعاء أو import مشترك بين الاثنين).
+ * AdminMyInfoController — the "my info" page, for the admin themselves only.
+ * Entirely separate from the user-facing MyInfoController: a different session, a
+ * different table, and not one shared call or import between the two.
  */
 class AdminMyInfoController extends AdminController
 {
     #[OA\Get(
         path: '/admin/my-info',
-        summary: 'عرض صفحة معلوماتي الخاصة بالأدمن',
+        summary: "Show the admin's own account page",
         tags: ['Admin - My Info'],
         security: [['adminSessionAuth' => []]],
         responses: [
-            new OA\Response(response: 200, description: 'صفحة HTML لمعلومات الأدمن — يتطلب جلسة admin_session صالحة'),
-            new OA\Response(response: 302, description: 'إعادة توجيه لـ /admin/login إذا لم تكن الجلسة صالحة'),
+            new OA\Response(response: 200, description: 'Admin account HTML page — requires a valid admin_session'),
+            new OA\Response(response: 302, description: 'Redirect to /admin/login when the session is not valid'),
         ]
     )]
     public function index(): void
@@ -38,8 +38,9 @@ class AdminMyInfoController extends AdminController
         $this->adminView('my-info', [
             'pageTitle'    => 'My Info',
             'extraHead'    => '<link rel="stylesheet" href="' . URLROOT . '/css/store/pages/my-info.css">',
-            // ملف الصفحة وحدها — فوتر الأدمن يحمّل ثلاثة عشر ملفاً على كل
-            // صفحة، ولا داعي لإضافة رابع عشر يخصّ هذه وحدها.
+            // This page's own file — the admin footer already loads thirteen scripts on
+            // every page, and there is no reason to add a fourteenth that only this one
+            // needs.
             'extraScripts' => '<script src="' . URLROOT . '/js/admin/my-info.js"></script>',
             'profile'      => $admin,
         ]);
@@ -47,7 +48,7 @@ class AdminMyInfoController extends AdminController
 
     #[OA\Post(
         path: '/admin/my-info',
-        summary: 'تحديث بيانات حساب الأدمن (الاسم / الهاتف / كلمة المرور)',
+        summary: "Update the admin's account details (name / phone / password)",
         tags: ['Admin - My Info'],
         security: [['adminSessionAuth' => []]],
         requestBody: new OA\RequestBody(
@@ -60,8 +61,8 @@ class AdminMyInfoController extends AdminController
                         new OA\Property(property: 'csrf_token', type: 'string'),
                         new OA\Property(property: 'full_name', type: 'string'),
                         new OA\Property(property: 'phone_number', type: 'string'),
-                        new OA\Property(property: 'new_password', type: 'string', format: 'password', description: 'اختياري — اتركه فارغًا للإبقاء على كلمة المرور الحالية'),
-                        new OA\Property(property: 'current_password', type: 'string', format: 'password', description: 'إلزامي دائمًا للتأكيد قبل الحفظ'),
+                        new OA\Property(property: 'new_password', type: 'string', format: 'password', description: 'Optional — leave it empty to keep the current password'),
+                        new OA\Property(property: 'current_password', type: 'string', format: 'password', description: 'Always required, as confirmation before saving'),
                     ]
                 )
             )
@@ -69,7 +70,7 @@ class AdminMyInfoController extends AdminController
         responses: [
             new OA\Response(
                 response: 200,
-                description: 'نجاح أو فشل التحديث',
+                description: 'Whether the update succeeded',
                 content: new OA\JsonContent(
                     properties: [
                         new OA\Property(property: 'success', type: 'boolean'),
@@ -102,7 +103,7 @@ class AdminMyInfoController extends AdminController
         }
 
         $phone = trim($post['phone_number'] ?? '');
-        // دعم الحقل المركّب (phone_country_code + phone_local) — الفورم الجديد
+        // Support the composite field (phone_country_code + phone_local) — the new form
         if ($phone === '' && isset($post['phone_local'])) {
             $code  = trim($post['phone_country_code'] ?? '');
             $local = trim($post['phone_local'] ?? '');
@@ -134,17 +135,17 @@ class AdminMyInfoController extends AdminController
     }
 
     // ════════════════════════════════════════════════════════
-    // التحقق الثنائي (2FA / TOTP) — اختياري لكل أدمن
+    // Two-factor authentication (2FA / TOTP) — optional per admin
     // ════════════════════════════════════════════════════════
 
     /**
-     * توليد secret جديد وتخزينه مؤقتًا بالجلسة (لم يُفعَّل بعد) + إرجاع رابط QR.
+     * Generate a new secret, hold it in the session (not yet enabled), and return a QR URL.
      */
     #[OA\Post(
         path: '/admin/my-info/2fa/generate',
-        summary: 'توليد سرّ TOTP جديد ورمز QR لتفعيل التحقق بخطوتين',
-        description: 'لا يُفعّل التحقق بعد — التفعيل يتم في /admin/my-info/2fa/confirm '
-                   . 'بعد إثبات أن التطبيق يولّد الرمز الصحيح.',
+        summary: 'Generate a new TOTP secret and QR code for enabling two-factor authentication',
+        description: 'This does not enable 2FA yet — enabling happens at /admin/my-info/2fa/confirm '
+                   . 'once the authenticator app has proved it produces the right code.',
         tags: ['Admin - My Info'],
         security: [['adminSessionAuth' => []]],
         requestBody: new OA\RequestBody(
@@ -163,12 +164,13 @@ class AdminMyInfoController extends AdminController
     )]
     public function generate2FASecret(): void
     {
-        // ملاحظة تاريخية: كان دمج جسم JSON مفقوداً هنا وحده من بين الدوال
-        // الأربع في هذا الملف، فكان $post غير معرَّف و$token فارغاً دائماً
-        // — أي أن زر «تفعيل 2FA» كان يُرفض بـ«Invalid CSRF token» في كل
-        // مرة. الطلب يصل بجسم JSON من js/admin/my-info.js فلا يملأ $_POST.
-        // اليوم لا مجال لتكرار ذلك: beginJsonPost تقرأ التوكن عبر
-        // requestData() التي تدمج $_POST بجسم JSON دائماً.
+        // Historical note: merging the JSON body was missing here, and here alone,
+        // out of the four methods in this file — so $post was undefined and $token
+        // always empty, which meant the "Enable 2FA" button was rejected with
+        // "Invalid CSRF token" every single time. The request arrives as a JSON body
+        // from js/admin/my-info.js, so it never populates $_POST. That cannot recur
+        // now: beginJsonPost reads the token through requestData(), which always
+        // merges $_POST with the JSON body.
         $this->beginJsonPost();
 
         $adminId = (int)$_SESSION['admin_id'];
@@ -187,11 +189,11 @@ class AdminMyInfoController extends AdminController
     }
 
     /**
-     * تأكيد تفعيل 2FA — يتحقق من أول كود TRUE قبل الحفظ (طريقة آمنة).
+     * Confirm enabling 2FA — verifies a first valid code before saving, which is the safe order.
      */
     #[OA\Post(
         path: '/admin/my-info/2fa/confirm',
-        summary: 'تأكيد وتفعيل التحقق بخطوتين برمز من التطبيق',
+        summary: 'Confirm and enable two-factor authentication with a code from the app',
         tags: ['Admin - My Info'],
         security: [['adminSessionAuth' => []]],
         requestBody: new OA\RequestBody(
@@ -201,7 +203,7 @@ class AdminMyInfoController extends AdminController
                 schema: new OA\Schema(
                     required: ['code', 'csrf_token'],
                     properties: [
-                        new OA\Property(property: 'code', type: 'string', description: 'رمز TOTP من ستة أرقام'),
+                        new OA\Property(property: 'code', type: 'string', description: 'Six-digit TOTP code'),
                         new OA\Property(property: 'csrf_token', type: 'string'),
                     ]
                 )
@@ -210,7 +212,7 @@ class AdminMyInfoController extends AdminController
         responses: [
             new OA\Response(
                 response: 200,
-                description: 'نتيجة العملية. الحقل success يفصل النجاح عن الفشل — كود HTTP يبقى 200 في الحالتين. وعند فشل CSRF يحمل الجسم error_code=csrf_invalid.',
+                description: 'Operation result. The success field separates success from failure — the HTTP status stays 200 either way. On CSRF failure the body carries error_code=csrf_invalid.',
                 content: new OA\JsonContent(oneOf: [
                     new OA\Schema(ref: '#/components/schemas/ApiResponse'),
                     new OA\Schema(ref: '#/components/schemas/ApiError'),
@@ -253,12 +255,12 @@ class AdminMyInfoController extends AdminController
     }
 
     /**
-     * تعطيل 2FA — يطلب كلمة المرور الحالية كتأكيد قبل التنفيذ.
+     * Disable 2FA — asks for the current password as confirmation before acting.
      */
     #[OA\Post(
         path: '/admin/my-info/2fa/disable',
-        summary: 'تعطيل التحقق بخطوتين',
-        description: 'يتطلّب كلمة المرور الحالية — لا يكفي كون الجلسة مفتوحة.',
+        summary: 'Disable two-factor authentication',
+        description: 'Requires the current password — an open session is not enough.',
         tags: ['Admin - My Info'],
         security: [['adminSessionAuth' => []]],
         requestBody: new OA\RequestBody(
@@ -277,7 +279,7 @@ class AdminMyInfoController extends AdminController
         responses: [
             new OA\Response(
                 response: 200,
-                description: 'نتيجة العملية. الحقل success يفصل النجاح عن الفشل — كود HTTP يبقى 200 في الحالتين. وعند فشل CSRF يحمل الجسم error_code=csrf_invalid.',
+                description: 'Operation result. The success field separates success from failure — the HTTP status stays 200 either way. On CSRF failure the body carries error_code=csrf_invalid.',
                 content: new OA\JsonContent(oneOf: [
                     new OA\Schema(ref: '#/components/schemas/ApiResponse'),
                     new OA\Schema(ref: '#/components/schemas/ApiError'),

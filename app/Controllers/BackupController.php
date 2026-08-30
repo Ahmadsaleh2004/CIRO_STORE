@@ -10,21 +10,23 @@ use App\Models\AdminModel;
 use OpenApi\Attributes as OA;
 
 /**
- * BackupController — نسخ احتياطي لقاعدة البيانات (الروت وحده — لا صلاحية can_*).
+ * BackupController — database backups (root only — no can_* permission).
  *
- * ⚠️ كان الشرط `getCurrentAdminId() !== 1` مكتوباً بيده أربع مرّات —
- * أي أن حقّ تنزيل قاعدة البيانات كاملةً كان معلَّقاً بـ**موضع** في طابور
- * المعرّفات لا بشخص. وdeleteAdmin كانت تزحف بالمعرّفات عند كل حذف، فحذف
- * صفٍّ واحد كان كفيلاً بنقل الحقّ إلى شخص آخر بصمت.
+ * ⚠️ The condition `getCurrentAdminId() !== 1` used to be hand-written in four
+ * places — meaning the right to download the entire database hung on a
+ * **position** in the id sequence rather than on a person. And deleteAdmin
+ * renumbered ids on every delete, so removing a single row was enough to hand
+ * that right to somebody else, silently.
  *
- * الزحف حُذف، والشرط صار Middleware::requireRoot() المعتمدة على رتبة A —
- * تعريف واحد للروت في المشروع كله بدل ثلاثة متنافسة.
+ * The renumbering is gone, and the condition is now Middleware::requireRoot(),
+ * which keys off rank A — one definition of "root" across the whole project
+ * instead of three competing ones.
  */
 class BackupController extends AdminController
 {
     #[OA\Get(
         path: '/admin/backup',
-        summary: 'صفحة إدارة النسخ الاحتياطي (Root admin ID=1 فقط)',
+        summary: 'Backup management page (root admin only)',
         tags: ['Admin - Backup'],
         security: [['adminSessionAuth' => []]],
         responses: [
@@ -46,7 +48,7 @@ class BackupController extends AdminController
 
     #[OA\Post(
         path: '/admin/backup/create',
-        summary: 'إنشاء نسخة احتياطية جديدة (AJAX — JSON، Root admin ID=1 فقط)',
+        summary: 'Create a new backup (AJAX — JSON, root admin only)',
         tags: ['Admin - Backup'],
         security: [['adminSessionAuth' => []]],
         requestBody: new OA\RequestBody(
@@ -77,10 +79,10 @@ class BackupController extends AdminController
     )]
     public function create(): void
     {
-        // beginJsonPost أولاً عن قصد: هي التي تضبط ترويسة JSON، وبدونها
-        // كان رفض الصلاحية يخرج نصّاً خاماً إلى backup.js فيراه «Network
-        // error» بدل السبب الحقيقي. وفحص الـCSVF قبل الصلاحية لا يضعف
-        // شيئاً — كلاهما شرط لازم.
+        // beginJsonPost comes first deliberately: it is what sets the JSON header,
+        // and without it a permission refusal left as raw text, which backup.js
+        // reported as "Network error" instead of the real reason. Checking CSRF
+        // before permission weakens nothing — both are required either way.
         $this->beginJsonPost();
 
         Middleware::requireRoot();
@@ -111,11 +113,11 @@ class BackupController extends AdminController
 
     #[OA\Get(
         path: '/admin/backup/download',
-        summary: 'تحميل نسخة احتياطية (Root admin ID=1 فقط — منع Path Traversal)',
+        summary: 'Download a backup (root admin only — path traversal blocked)',
         tags: ['Admin - Backup'],
         security: [['adminSessionAuth' => []]],
         parameters: [
-            new OA\Parameter(name: 'file', in: 'query', required: true, schema: new OA\Schema(type: 'string'), description: 'اسم الملف فقط — يُرفض أي مسار خارج مجلد النسخ'),
+            new OA\Parameter(name: 'file', in: 'query', required: true, schema: new OA\Schema(type: 'string'), description: 'File name only — any path outside the backup directory is rejected'),
         ],
         responses: [
             new OA\Response(response: 200, ref: '#/components/responses/CsvDownload'),
@@ -130,16 +132,18 @@ class BackupController extends AdminController
         $filename = $_GET['file'] ?? '';
         $path     = BackupModel::getBackupPath($filename);
 
-        // getBackupPath تُرجع null لثلاث حالات: اسم فيه مسار · اسم لا
-        // يطابق النمط · ملف غير موجود. من زاوية الأدمن كلها «الملف
-        // المطلوب غير موجود»، و404 يكشف عن قاعدة التحقق أقل من 403.
+        // getBackupPath returns null in three cases: a name containing a path · a
+        // name that does not match the pattern · a file that does not exist. From
+        // the admin's side all three read as "the requested file is not there", and
+        // a 404 reveals less about the validation rule than a 403 would.
         if ($path === null) {
-            ErrorPage::notFound('backup/download: ملف غير صالح أو غير موجود');
+            ErrorPage::notFound('backup/download: invalid or missing file');
         }
 
-        // $path ناتج getBackupPath المُتحقَّق منه (basename + نمط صارم +
-        // is_file)، ورُفض قبل هذا السطر إن كان null. لا يصل هنا اسم من
-        // المستخدم بل مسار مفهرس داخل مجلد النسخ.
+        // $path is the validated output of getBackupPath (basename + strict
+        // pattern + is_file), and a null was already rejected above this line. What
+        // reaches here is never a user-supplied name but a path resolved inside the
+        // backup directory.
         // nosemgrep: php.lang.security.injection.tainted-filename.tainted-filename
         header('Content-Type: application/octet-stream');
         header('Content-Disposition: attachment; filename="' . basename($path) . '"');
@@ -152,7 +156,7 @@ class BackupController extends AdminController
 
     #[OA\Post(
         path: '/admin/backup/delete',
-        summary: 'حذف نسخة احتياطية (AJAX — JSON، Root admin ID=1 فقط)',
+        summary: 'Delete a backup (AJAX — JSON, root admin only)',
         tags: ['Admin - Backup'],
         security: [['adminSessionAuth' => []]],
         requestBody: new OA\RequestBody(
@@ -183,7 +187,7 @@ class BackupController extends AdminController
     )]
     public function delete(): void
     {
-        // كسابقتها: ترويسة JSON قبل أي ردّ، فلا يصل backup.js نصّ خام.
+        // As above: the JSON header before any response, so backup.js never gets raw text.
         $this->beginJsonPost();
 
         Middleware::requireRoot();

@@ -12,9 +12,9 @@ class ProductController extends Controller
 {
     #[OA\Get(
         path: '/products',
-        summary: 'قائمة المنتجات المرئية مع Pagination',
-        description: 'البحث والفرز والفلترة بالسعر تتم كلها في المتصفح '
-                   . '(js/features/products-catalog.js)، فلا بارامترات فلترة هنا.',
+        summary: 'Visible product list with pagination',
+        description: 'Search, sorting and price filtering all happen in the browser '
+                   . '(js/features/products-catalog.js), so there are no filter parameters here.',
         tags: ['Store - Products'],
         parameters: [
             new OA\Parameter(name: 'page', in: 'query', schema: new OA\Schema(type: 'integer', default: 1)),
@@ -48,7 +48,7 @@ class ProductController extends Controller
                 ? pickDisplayVariant($variants, $visitorGender)
                 : null;
 
-            // في حال عدم وجود Variants نبني _display من بيانات المنتج الأساسية
+            // With no variants, _display is built from the base product row
             $p['_display'] = $display ?? [
                 'id'                    => null,
                 'price'                 => $p['price'] ?? 0,
@@ -85,23 +85,23 @@ class ProductController extends Controller
 
     #[OA\Get(
         path: '/product',
-        summary: 'صفحة تفاصيل منتج',
-        description: 'تُعيد التوجيه للرئيسية إن كان المعرّف مفقوداً أو المنتج غير موجود. '
-                   . 'الـvariant المعروض يُختار حسب جنس الزائر (pickDisplayVariant).',
+        summary: 'Product details page',
+        description: 'Redirects home when the id is missing or the product does not exist. '
+                   . "The displayed variant is chosen from the visitor's gender (pickDisplayVariant).",
         tags: ['Store - Products'],
         parameters: [
             new OA\Parameter(name: 'id', in: 'query', required: true, schema: new OA\Schema(type: 'integer')),
         ],
         responses: [
-            new OA\Response(response: 200, description: 'صفحة HTML'),
-            new OA\Response(response: 302, description: 'تحويل للرئيسية — معرّف مفقود أو منتج غير موجود'),
+            new OA\Response(response: 200, description: 'HTML page'),
+            new OA\Response(response: 302, description: 'Redirect home — missing id or unknown product'),
         ]
     )]
     #[OA\Post(
         path: '/product',
-        summary: 'حفظ تقييم المستخدم للمنتج ثم عرض الصفحة',
-        description: 'نفس الدالة تخدم GET وPOST. يتطلّب تسجيل دخول مستخدم وتوكن CSRF. '
-                   . 'الأدمن في وضع تصفّح المتجر لا يستطيع التقييم.',
+        summary: "Save the user's product review, then render the page",
+        description: 'The same method serves GET and POST. Requires a logged-in user and a CSRF token. '
+                   . 'An admin in store-browsing mode cannot leave a review.',
         tags: ['Store - Products'],
         security: [['userSessionAuth' => []]],
         requestBody: new OA\RequestBody(
@@ -134,13 +134,13 @@ class ProductController extends Controller
 
         $p = ProductModel::findById($pid);
 
-        // توجيه للرئيسية في حال عدم وجود المنتج لتجنب خطأ تحميل ملف 404 المفقود
+        // Redirect home when the product is missing, to avoid loading a 404 page that does not exist
         if (!$p) {
             header('Location: ' . URLROOT);
             exit;
         }
 
-        // معالجة التقييمات (POST)
+        // Review handling (POST)
         $reviewMsg = $reviewErr = '';
         if (
             ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST'
@@ -148,8 +148,9 @@ class ProductController extends Controller
             && isUser()
             && empty($_SESSION['admin_in_store_mode'] ?? false)
         ) {
-            // استُثني من beginJsonPost: لا يفشل أصلاً — يضع النص في
-            // $reviewErr ويُكمل عرض صفحة المنتج. تخدم GET وPOST معاً.
+            // Deliberately not using beginJsonPost: this never aborts — it puts the
+            // text in $reviewErr and carries on rendering the product page. The same
+            // method serves GET and POST.
             if (!verifyCsrfToken($_POST['csrf_token'] ?? '')) {
                 $reviewErr = 'Invalid session, please refresh the page and try again.';
             } else {
@@ -164,18 +165,18 @@ class ProductController extends Controller
             }
         }
 
-        // جلب الـ Variants إن وجدت
+        // Fetch the variants, if any
         $variants = ProductModel::getVariants($pid);
 
-        // تجهيز الـ Variant المعروض (إن وجد، وإلا نستخدم بيانات المنتج الأساسية)
+        // Resolve the variant to display (falling back to the base product row)
         $visitorGender   = getVisitorGender();
-        // الفرع الثاني كان `$variants[0] ?? []` — وهو مستحيل: نصل إليه
-        // فقط حين تكون $variants فارغة، فلا عنصر صفر فيها أبداً.
+        // The second branch used to be `$variants[0] ?? []` — which is unreachable:
+        // we only get here when $variants is empty, so there is never an index 0.
         $selectedVariant = !empty($variants)
             ? pickDisplayVariant($variants, $visitorGender)
             : [];
 
-        // معالجة التقييمات
+        // Review handling
         $reviews   = ProductModel::getReviews($pid);
         $avgRating = count($reviews) ? round(array_sum(array_column($reviews, 'rating')) / count($reviews), 1) : 0;
 
@@ -184,10 +185,10 @@ class ProductController extends Controller
             $myReview = ProductModel::getUserReview($pid, getCurrentUserId());
         }
 
-        // المنتجات المشابهة
+        // Related products
         $related = ProductModel::getRelated($pid, $p['manufacturer'] ?? null);
 
-        // الأسعار والمخزون مع المرونة (في حال عدم وجود الـ Variant يتم القراءة من المنتج الرئيسي مباشرة)
+        // Pricing and stock, with a fallback: with no variant these read straight off the base product
         $price      = (float)($selectedVariant['price'] ?? $p['price'] ?? 0);
         $discount   = (float)($selectedVariant['discount_percentage'] ?? $p['discount_percentage'] ?? 0);
         $afterDisc  = (float)($selectedVariant['price_after_discount'] ?? $p['price_after_discount'] ?? $price);
@@ -204,7 +205,7 @@ class ProductController extends Controller
         $pageDescription = substr($p['description'] ?? '', 0, 155);
         $pageImage       = $imgSrc;
 
-// تمرير البيانات للـ View عبر دالة $this->view في MVC
+// Hand the data to the view through $this->view
         $this->view('product/product_dit', [
             'title'           => $p['name'] ?? 'Product Details',
             'desc'            => substr($p['description'] ?? '', 0, 155),
