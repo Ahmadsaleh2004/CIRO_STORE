@@ -19,8 +19,7 @@
 <?php // Tab Header — تبويب واحد فقط، نشط دائمًا ?>
 <ul class="nav nav-tabs mb-4">
     <li class="nav-item">
-        <button class="nav-link info-tab-btn active" type="button" disabled
-                class="u-cursor-default">
+        <button class="nav-link info-tab-btn active u-cursor-default" type="button" disabled>
             📋 Personal Info
         </button>
     </li>
@@ -147,7 +146,7 @@
             </div>
             <div class="text-center small mb-3">
                 <span class="text-muted">Manual entry key:</span>
-                <code id="twofaSecret" class="d-block mt-1" class="u-secret-text"></code>
+                <code id="twofaSecret" class="d-block mt-1 u-secret-text"></code>
             </div>
             <div class="float-group mb-3">
                 <input type="text"

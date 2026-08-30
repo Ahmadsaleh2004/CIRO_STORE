@@ -42,11 +42,10 @@
     <?php foreach ($messages as $m): ?>
     <div class="col-12 col-md-6 col-lg-4" id="msg-card-<?= (int) $m['id'] ?>">
         <div
-            class="support-msg-card card p-3 h-100"
+            class="support-msg-card card p-3 h-100 u-clickable"
             data-msg-id="<?= (int) $m['id'] ?>"
             data-user-id="<?= (int) ($m['user_id'] ?? 0) ?>"
             data-user-name="<?= htmlspecialchars($m['user_name'] ?? $m['full_name']) ?>"
-            class="u-clickable"
         >
             <div class="d-flex justify-content-between align-items-start mb-2">
                 <div>
@@ -66,7 +65,7 @@
                 ✉️ <?= htmlspecialchars($m['email']) ?>
             </p>
 
-            <p class="mb-3" class="u-message-body">
+            <p class="mb-3 u-message-body">
                 <?= nl2br(htmlspecialchars($m['message'])) ?>
             </p>
 

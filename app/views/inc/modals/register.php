@@ -47,9 +47,9 @@
                                 <div class="input-group">
                                     <input type="password" id="regPass" name="password"
                                            placeholder=" " required autocomplete="new-password">
-                                    <span class="input-group-text"
+                                    <span class="input-group-text u-clickable"
                                           data-action="toggle-both-passwords" data-eye="eyeReg"
-                                          id="eyeReg" class="u-clickable">👁️</span>
+                                          id="eyeReg">👁️</span>
                                 </div>
                                 <label>Password</label>
                             </div>

@@ -73,9 +73,8 @@
     </button>
     <div id="selectedCategoriesChips" class="d-flex flex-wrap gap-2 mb-2"></div>
     <div id="categoryHiddenInputs"></div>
-    <div class="form-text text-danger mb-3"
-         id="categoryRequiredError"
-         class="d-none">
+    <div class="form-text text-danger mb-3 d-none"
+         id="categoryRequiredError">
         Please select at least one category.
     </div>
 
@@ -135,8 +134,7 @@
                 <div class="col-4 col-sm-2">
                     <label class="small d-block mb-1 u-fs-75">Swatch</label>
                     <input type="color"
-                           class="field-color-hex form-control form-control-sm"
-                           class="u-color-input"
+                           class="field-color-hex form-control form-control-sm u-color-input"
                            value="#000000">
                 </div>
                 <?php // Price ?>

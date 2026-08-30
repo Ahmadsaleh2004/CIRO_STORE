@@ -221,13 +221,6 @@ function renderAuditRowsTable(array $rows): void
 </div>
 <?php endif; ?>
 
-<?php if (!empty($target['can_manage_products'])): ?>
-<div class="card p-4 mb-4">
-    <h5 class="mb-3">🛍️ Product-Related Actions</h5>
-    <?php renderAuditRowsTable($productActionRows); ?>
-</div>
-<?php endif; ?>
-
 <?php if (!empty($target['can_manage_branding'])): ?>
 <div class="card p-4 mb-4">
     <h5 class="mb-3">🎬 Branding Actions</h5>

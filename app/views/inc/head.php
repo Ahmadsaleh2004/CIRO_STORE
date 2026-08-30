@@ -38,6 +38,12 @@
     <?php // روابط ملفات الـ CSS الخارجية والداخلية ?>
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <?= vendorCss('bootstrap-css') ?>
+    <?php /*
+أنماط SweetAlert2 — ورقة خارجية لا حقنٌ من الجافاسكربت.
+         تُدرَج مع vendorJs('sweetalert2') في الفوتر ولا تنفصل عنه.
+         راجع assets_helper.php للسبب.
+*/ ?>
+<?= vendorCss('sweetalert2-css') ?>
 
     <?php /*
 حزمة المتجر — ملف @import واحد يجمع base/vendor/layout/

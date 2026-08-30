@@ -8,9 +8,37 @@
  */
 ?>
 
-<?php // ── Page Header ────────────────────────────────────────── ?>
+<?php
+// ── Page Header ───────────────────────────────────────────
+//
+// الشارة تعرض عدد **النتائج** حين يكون هناك بحث أو فلترة، والعدد
+// الكلّي فيما عدا ذلك.
+//
+// وسبب هذا التفريع أن سطر «X products found» حُذف من فوق الجدول،
+// وكانت الشارة تعرض countAll() دائماً — أي أن العدد المُرشَّح اختفى
+// من الصفحة كلّها. فأصبحت الشارة تحمل الرقمين بحسب السياق بدل سطر
+// ثالث مستقلّ.
+//
+// و`X of Y` لا الرقم وحده عند الفلترة: «12» بلا مرجع لا تقول شيئاً،
+// و«12 of 340» تقول كم رشّح البحث من كم.
+//
+// ⚠️ البحث والكاتوجريز وحدهما — لا الفرز.
+//
+// سببان: `AdminProductModel::countFiltered($search, $categoryIds)`
+// لا تأخذ الفرز أصلاً، فالفرز لا يغيّر `$total` بشيء — وعرض
+// «340 of 340» لمجرّد أن الأدمن رتّب بالسعر ضجيجٌ لا خبر.
+//
+// والثاني أن `$priceSort` وأختيها تكون **null** لا `''` حين لا
+// تُطلَب (راجع AdminProductsController::index)، فمقارنتها بـ`''`
+// كانت ستصدق دائماً وتُبقي الشارة في وضع الفلترة أبداً.
+$isFiltered = $search !== '' || $categoryIds !== [];
+
+$countLabel = $isFiltered
+    ? (int) ($total ?? 0) . ' of ' . (int) $totalProducts
+    : (string) (int) $totalProducts;
+?>
 <div class="admin-page-header">
-    <h1>📦 Manage Products <span class="badge bg-secondary fw-normal u-fs-90 align-middle"><?= (int)$totalProducts ?></span></h1>
+    <h1>📦 Manage Products <span class="badge bg-secondary fw-normal u-fs-90 align-middle"><?= htmlspecialchars($countLabel) ?></span></h1>
     <div class="d-flex gap-2 flex-wrap align-items-center">
         <?php
             $exportParams = http_build_query(array_filter([
@@ -31,11 +59,28 @@
 <?php // ── Flash Messages ─────────────────────────────────────── ?>
 <?php require APPROOT . '/views/shared/flash-messages.php'; ?>
 
-<?php // ── Sort & Filter Dropdown ──────────────────────────────── ?>
 <?php
 $activeCount = (int)(bool)$priceSort + (int)(bool)$stockSort + (int)(bool)$dateSort + count($categoryIds);
 ?>
-<div class="dropdown mb-3">
+
+<?php /*
+── صفّ الأدوات: Sort & Filter + البحث ──────────────────
+
+     كانت هاتان كتلتين فوق بعضهما: `div.dropdown mb-3` مستقلّة، ثم صفّ
+     البحث تحتها. فيقع زرّ الفرز في سطر وحده فوق حقل البحث، وهما أداتا
+     تصفية واحدة تُستعملان معاً.
+
+     وحُذف معهما سطر «X products found» — بطلبٍ صريح.
+
+     ⚠️ وله ثمن يستحقّ التسجيل: الشارة بجانب العنوان تعرض
+     `$totalProducts` وهو `countAll()` — العدد الكلّي لا عدد نتائج
+     البحث. فالعدد المُرشَّح (`$total`) لم يعد ظاهراً في أي مكان حين
+     يكون هناك بحث أو فلترة نشطة. المتغيّر ما زال يصل الـview
+     ويستعمله ترقيم الصفحات، فإعادة عرضه سطرٌ واحد متى طُلب.
+*/ ?>
+<div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+
+<div class="dropdown">
     <button class="btn btn-outline-primary btn-sm dropdown-toggle"
             type="button"
             id="sortFilterBtn"
@@ -49,8 +94,7 @@ $activeCount = (int)(bool)$priceSort + (int)(bool)$stockSort + (int)(bool)$dateS
     </button>
 
     <form method="GET"
-          class="dropdown-menu p-3"
-          class="u-category-panel"
+          class="dropdown-menu p-3 u-category-panel"
           id="sortFilterForm">
 
         <input type="hidden" name="q" value="<?= htmlspecialchars($search) ?>">
@@ -142,8 +186,6 @@ $activeCount = (int)(bool)$priceSort + (int)(bool)$stockSort + (int)(bool)$dateS
     </form>
 </div>
 
-<?php // ── Search + Count ─────────────────────────────────────── ?>
-<div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
     <form method="GET" class="d-flex gap-2">
         <?php if ($priceSort):  ?><input type="hidden" name="price_sort" value="<?= htmlspecialchars($priceSort) ?>"><?php endif; ?>
         <?php if ($stockSort):  ?><input type="hidden" name="stock_sort" value="<?= htmlspecialchars($stockSort) ?>"><?php endif; ?>
@@ -153,8 +195,7 @@ $activeCount = (int)(bool)$priceSort + (int)(bool)$stockSort + (int)(bool)$dateS
         <?php endforeach; ?>
         <input type="text"
                name="q"
-               class="form-control form-control-sm"
-               class="u-category-trigger"
+               class="form-control form-control-sm u-category-trigger"
                placeholder="Search by name..."
                value="<?= htmlspecialchars($search) ?>">
         <button class="btn btn-sm btn-success">🔍 Search</button>
@@ -167,9 +208,6 @@ $activeCount = (int)(bool)$priceSort + (int)(bool)$stockSort + (int)(bool)$dateS
         <a href="?<?= $clearQuery ?>" class="btn btn-sm btn-outline-secondary">✕ Clear Search</a>
         <?php endif; ?>
     </form>
-    <small class="u-muted">
-        <?= (int)($total ?? 0) ?> product<?= ($total ?? 0) !== 1 ? 's' : '' ?> found
-    </small>
 </div>
 
 <?php // ── Products Table ─────────────────────────────────────── ?>

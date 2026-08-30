@@ -66,8 +66,7 @@
                                 id="addCategoryBtn">+ Add</button>
                     </div>
                     <div id="categorySuggestions"
-                         class="small mt-1"
-                         class="u-picker-hint"></div>
+                         class="small mt-1 u-picker-hint"></div>
                 </div>
 
             </div>

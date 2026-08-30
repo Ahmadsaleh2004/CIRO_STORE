@@ -25,20 +25,18 @@
 
                     <div class="float-group">
                         <input type="email" id="loginEmail" name="email"
-                               class="form-control"
-                               placeholder=" " required autocomplete="email"
-                               class="u-surface-input">
+                               class="form-control u-surface-input"
+                               placeholder=" " required autocomplete="email">
                         <label>Email Address</label>
                     </div>
                     <div class="float-group mb-1">
                         <div class="input-group">
                             <input type="password" id="loginPass" name="password"
-                                   class="form-control"
-                                   placeholder=" " required autocomplete="current-password"
-                                   class="u-surface-input">
-                            <span class="input-group-text"
+                                   class="form-control u-surface-input"
+                                   placeholder=" " required autocomplete="current-password">
+                            <span class="input-group-text u-clickable"
                                   data-action="toggle-password" data-input="loginPass" data-eye="eyeLogin"
-                                  id="eyeLogin" class="u-clickable">👁️</span>
+                                  id="eyeLogin">👁️</span>
                         </div>
                         <label>Password</label>
                     </div>

@@ -85,8 +85,8 @@
                     <?php // دخول وضع تصفح المتجر كزائر — POST مع CSRF ?>
                     <form method="POST" action="<?= URLROOT ?>/admin/store-mode/enter" class="d-inline m-0 p-0">
                         <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf) ?>">
-                        <button type="submit" class="nav-link btn btn-link p-0"
-                                title="Browse the store as a visitor" class="u-bare-button">🌐 Store</button>
+                        <button type="submit" class="nav-link btn btn-link p-0 u-bare-button"
+                                title="Browse the store as a visitor">🌐 Store</button>
                     </form>
                 </li>
 
@@ -108,11 +108,9 @@
                     </button>
                     <ul class="dropdown-menu dropdown-menu-end u-surface-card">
         <?php // My Info للأدمن — متاح الآن عبر AdminMyInfoController ?>
-                        <li><a class="dropdown-item" href="<?= URLROOT ?>/admin/my-info"
-                               class="u-text">👤 My Info</a></li>
+                        <li><a class="dropdown-item u-text" href="<?= URLROOT ?>/admin/my-info">👤 My Info</a></li>
                         <?php if ($adminId === 1): ?>
-                        <li><a class="dropdown-item" href="<?= URLROOT ?>/admin/backup"
-                               class="u-text">💾 Backup DB</a></li>
+                        <li><a class="dropdown-item u-text" href="<?= URLROOT ?>/admin/backup">💾 Backup DB</a></li>
                         <?php endif; ?>
                         <li><hr class="dropdown-divider u-border-section"></li>
                         <li><a class="dropdown-item text-danger" href="#" data-action="logout-admin">🚪 Log Out</a></li>

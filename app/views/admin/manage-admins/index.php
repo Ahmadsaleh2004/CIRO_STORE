@@ -108,7 +108,18 @@ use App\Models\AdminModel;
                             <span class="u-muted">—</span>
                         <?php endif; ?>
                     </td>
-                    <?php // data-action="stop-propagation" إلزامي — يمنع تفعيل clickable-row ?>
+                    <?php /*
+⚠️ `data-action="stop-propagation"` هنا **لا يمنع** تفعيل
+                     clickable-row، خلافاً لما كان مكتوباً في هذا الموضع.
+
+                     معالجه مسجَّل على document في js/core/inline-actions.js،
+                     بينما مستمع الصفّ مسجَّل على الـ<tr> نفسه — فيسبقه
+                     ويُنقل المتصفّح قبل أن تصل النقرة إلى document أصلاً.
+
+                     ما يمنع التفعيل فعلاً هو الحارس في manage-admins.js:
+                     `if (e.target.closest('button, a, form, input, [data-action]')) return;`
+                     والسمة باقية هنا لأن ذلك الحارس يقرؤها ضمن ما يقرأ.
+*/ ?>
                     <td data-action="stop-propagation">
                         <?php if (AdminModel::canManageTarget($adminRole, $adm['role'])): ?>
                         <button class="btn btn-sm btn-outline-primary me-1"

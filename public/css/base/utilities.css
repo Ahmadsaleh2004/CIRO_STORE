@@ -184,7 +184,33 @@
 .u-thumb-42 { width: 42px; height: 42px; object-fit: cover; border-radius: 6px; }
 .u-thumb-48 { width: 48px; height: 48px; object-fit: contain; border-radius: 6px; }
 .u-thumb-80 { width: 80px; height: 80px; object-fit: contain; border-radius: 8px; border: 1px solid var(--section-border); }
-.u-thumb-preview { max-width: 100%; max-height: 100px; object-fit: cover; border-radius: 6px; }
+/* ⚠️ `height` لا `max-height` — وهو ما كان معطوباً هنا.
+   ─────────────────────────────────────────────────────────────
+   كانت القاعدة `max-width:100%; max-height:100px; object-fit:cover`،
+   وهي تحمل تناقضاً صامتاً: `object-fit` لا يفعل شيئاً ما لم يكن
+   للعنصر **مقاسٌ مضبوط** يملأه. ومع `max-*` وحدها تبقى الأبعاد تابعة
+   لنسبة الصورة الأصلية — فصورة عريضة تخرج بارتفاع 40px وأخرى طويلة
+   بارتفاع 100px.
+
+   والأثر في صفحة Manage Slider: البطاقات في `.items-container`
+   بـ`d-flex` أي `align-items: stretch` افتراضاً، فترتفع بطاقات الصف
+   كلّها إلى أطولها. صورةٌ واحدة طويلة كانت تمطّ الصف بأكمله —
+   وهو بلاغ «أحجام الصور تؤثر على الحاوية».
+
+   وبقيّة أخوات هذه الأداة (u-thumb-36/42/48/80) تضبط width وheight
+   معاً منذ البداية؛ كانت هذه وحدها شاذّة.
+
+   ⚠️ ولاحظ أن هذا لم يكن ظاهراً أصلاً: سمة class مكرّرة في
+   _templates.php كانت تُسقط الأداة كلّها، فلم يكن للصور أي تحديد
+   حجم إطلاقاً. */
+.u-thumb-preview {
+    width: 100%;
+    height: 100px;
+    object-fit: cover;
+    border-radius: 6px;
+    background: var(--bg-color);
+    display: block;
+}
 
 /* ── Table label cell (definition-list style rows) ── */
 .u-label-cell { width: 40%; color: var(--muted-text); }

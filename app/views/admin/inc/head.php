@@ -7,6 +7,7 @@
     <meta name="robots" content="noindex,nofollow">
 <?= themeBootScript() ?>
 <?= vendorCss('bootstrap-css') ?>
+<?= vendorCss('sweetalert2-css') ?>
     <?php /*
 store.css أولاً (لوحة التحكم تعيد استخدام كل طبقة المتجر)
          ثم admin.css فوقها. راجع public/css/admin.css للترتيب.

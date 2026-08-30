@@ -95,7 +95,7 @@ usort($sortedByStock, fn($a, $b) => (int)$a['stock_quantity'] <=> (int)$b['stock
                         aria-expanded="false" aria-controls="allColorsPanel">
                     <span id="toggleArrowIcon">▾</span> Show all colors &amp; stock details
                 </button>
-                <div id="allColorsPanel" class="d-none" class="mt-2 p-3 rounded border">
+                <div id="allColorsPanel" class="d-none mt-2 p-3 rounded border">
                     <?php foreach ($sortedByStock as $i => $v):
                         $vPrice = (float)($v['discount_percentage'] > 0 ? $v['price_after_discount'] : $v['price']);
                         $isLowStockFlag = (int)$v['stock_quantity'] > 0 && $i === 0;
@@ -160,12 +160,25 @@ Stock badge — نفس getStockBadge() التي تستعملها قائمة ال
 
             <?php // ── Qty + Cart block ── ?>
             <div id="qtyCartBlock" class="<?= $stock > 0 ? '' : 'd-none' ?>">
+                <?php /*
+`max` هنا قيمة ابتدائية فقط — المخزون المطلق قبل أن يعرف
+                 المتصفّح ما في السلّة. يعيد js/features/product-details.js
+                 ضبطها فوراً إلى (المخزون − ما في السلّة من هذه النسخة)،
+                 ثم بعد كل تغيّر في السلّة عبر حدث `cart:updated`.
+
+                 ولا يمكن حسابها هنا نهائياً: السلّة تتغيّر بعد رسم
+                 الصفحة — يُحذف سطر من السلّة الجانبية فيعود المتاح —
+                 فقيمةٌ يحسبها PHP مرّة واحدة تشيخ فوراً.
+*/ ?>
                 <div class="quantity-box mb-4">
                     <button class="btn btn-outline-secondary" id="minusBtn" aria-label="Decrease quantity">−</button>
                     <input type="number" value="1" min="1" max="<?= $stock ?>"
                            id="productQty" class="form-control quantity-input qty-input-md">
                     <button class="btn btn-outline-secondary" id="plusBtn" aria-label="Increase quantity">+</button>
                 </div>
+
+                <?php // يملؤه product-details.js: «لديك ٢ في السلّة — يتبقّى ٣». ?>
+                <p id="qtyRemainingHint" class="small u-muted mb-3 d-none" aria-live="polite"></p>
                 <div class="d-flex gap-2">
                     <?php if ($userLoggedIn && empty($_SESSION['admin_in_store_mode'] ?? false)): ?>
                     <button id="addCartBtn" class="btn btn-success btn-lg px-5" <?= $stock <= 0 ? 'disabled' : '' ?>>🛒 Add To Cart</button>

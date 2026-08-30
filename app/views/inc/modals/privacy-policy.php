@@ -8,7 +8,7 @@
 <?php // ══ Privacy Policy Modal ════════════════════════════════ ?>
 <div class="modal fade" id="privacyModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content" class="u-policy-panel">
+        <div class="modal-content u-policy-panel">
             <div class="modal-header u-border-bottom">
                 <h5 class="modal-title">🔒 Privacy Policy</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>

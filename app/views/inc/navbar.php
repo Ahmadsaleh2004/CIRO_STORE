@@ -104,10 +104,8 @@ $adminInStoreMode = !empty($_SESSION['admin_in_store_mode']);
                         👤 <?= htmlspecialchars($data['userName']) ?>
                     </button>
                     <ul class="dropdown-menu dropdown-menu-end u-surface-card">
-                        <li><a class="dropdown-item" href="<?= URLROOT ?>/user/info"
-                               class="u-text">👤 My Info</a></li>
-                        <li><a class="dropdown-item" href="<?= URLROOT ?>/contact"
-                               class="u-text">💬 Contact Us</a></li>
+                        <li><a class="dropdown-item u-text" href="<?= URLROOT ?>/user/info">👤 My Info</a></li>
+                        <li><a class="dropdown-item u-text" href="<?= URLROOT ?>/contact">💬 Contact Us</a></li>
                         <li><hr class="dropdown-divider u-border-section"></li>
                         <?php // دالة الـ logoutUser() هي دالة JS معرفة في ملفات الـ JS الثابتة ?>
                         <li><a class="dropdown-item text-danger" href="#"

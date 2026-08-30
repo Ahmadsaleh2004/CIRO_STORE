@@ -12,6 +12,10 @@
 $bareTitle = 'Admin Login — ' . SITENAME;
 $bareCss   = ['css/admin/pages/login.css'];
 
+// هذه الصفحة تستدعي vendorJs('sweetalert2') في آخرها، وأنماطه ورقة
+// خارجية منفصلة — فالعَلَم إقرار بالاعتماد لا زينة.
+$bareSwal  = true;
+
 // js/admin/admin-auth.js يقرأ جذر التطبيق من هذا الوسم تحديداً
 $bareHead  = '<meta name="urlroot" content="' . URLROOT . '">';
 
@@ -69,7 +73,7 @@ require APPROOT . '/views/inc/head-bare.php';
             </div>
 
             <?php // حقل كود 2FA (TOTP) — يظهر فقط عندما يطلب السيرفر requires_2fa ?>
-            <div class="form-group" id="twofaGroup" class="d-none">
+            <div class="form-group d-none" id="twofaGroup">
                 <label class="form-label" for="adminTOTP">Authenticator Code</label>
                 <input
                     type="text"
