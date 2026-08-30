@@ -345,6 +345,7 @@ class ProductModel extends Model
             return $stmt->fetchAll();
         } catch (Exception $e) {
             error_log("ProductModel::findVariantsStock Error: " . $e->getMessage());
+            reportException($e);
             return [];
         }
     }

@@ -408,6 +408,7 @@ class OrderModel extends Model
                 $db->rollBack();
             }
             error_log("OrderModel::placeOrder Error: " . $e->getMessage());
+            reportException($e);
             return ['status' => self::PLACE_ERROR];
         }
     }
@@ -469,6 +470,7 @@ class OrderModel extends Model
                 $db->rollBack();
             }
             error_log("OrderModel::cancelOrder Error: " . $e->getMessage());
+            reportException($e);
             return false;
         }
     }
@@ -553,10 +555,15 @@ class OrderModel extends Model
         try {
             $db->beginTransaction();
 
+            // القفل يحمي المخزون لا الحالة وحدها: لو جرى إلغاء آخر
+            // للطلب نفسه في اللحظة نفسها (إلغاء يدوي من الزبون مع
+            // الحظر التلقائي)، لقرأ الاثنان `stock_restored = 0` فأرجعا
+            // المخزون **مرّتين** — وهذا مخزون يُباع ولا وجود له.
             $stmt = $db->prepare(
                 "SELECT order_id, status, stock_restored
                  FROM orders
-                 WHERE user_id = ? AND status IN ('not_taken', 'taken')"
+                 WHERE user_id = ? AND status IN ('not_taken', 'taken')
+                 FOR UPDATE"
             );
             $stmt->execute([$userId]);
             $orders = $stmt->fetchAll();
@@ -588,6 +595,7 @@ class OrderModel extends Model
                 $db->rollBack();
             }
             error_log("OrderModel::cancelAllPendingForUser Error: " . $e->getMessage());
+            reportException($e);
         }
     }
 
@@ -623,9 +631,21 @@ class OrderModel extends Model
 
             // الحد يُحسب داخل MySQL (NOW()) — لا مقارنة بتوقيت PHP
             // (مناطق PHP/MySQL مختلفة أحيانًا، فتجنُّب الحساب بأنفسنا يضمن الدقة)
+            // ⚠️ `FOR UPDATE` ليست احتياطاً هنا.
+            //
+            // هذه الدالة تعمل بلا Cron: تُستدعى في مطلع **كل**
+            // طلب لصفحة الطلبات. فأدمنان يفتحان الصفحة معاً
+            // يقرآن نفس الطلبات المنتهية، فيُدرج كلّ منهما سطراً في
+            // order_expiry_log ويُرسل إشعاراً — فيصير للحدث الواحد
+            // سجلّان وإشعاران. والتحديث نفسه متماثل فلا يُظهر العطل،
+            // والسجلّ وحده يشهد عليه.
+            //
+            // القفل يسلسل الاثنين: يقف الثاني حتى يُتمّ الأوّل،
+            // ثم يقرأ قراءةً طازجة فلا يجد ما ينتهي.
             $stmt = $db->prepare(
                 "SELECT order_id, taken_by_admin_id, taken_at FROM orders
-                 WHERE status='taken' AND taken_at < DATE_SUB(NOW(), INTERVAL 4 HOUR)"
+                 WHERE status='taken' AND taken_at < DATE_SUB(NOW(), INTERVAL 4 HOUR)
+                 FOR UPDATE"
             );
             $stmt->execute();
             $expired = $stmt->fetchAll();
@@ -637,11 +657,20 @@ class OrderModel extends Model
                 );
                 $updStmt = $db->prepare(
                     "UPDATE orders SET status='not_taken', taken_at=NULL, taken_by_admin_id=NULL
-                     WHERE order_id=?"
+                     WHERE order_id=? AND status='taken'"
                 );
                 foreach ($expired as $row) {
-                    $logStmt->execute([$row['order_id'], $row['taken_by_admin_id'], $row['taken_at']]);
+                    // التحديث أوّلاً ثم السجلّ — والشرط `status='taken'`
+                    // في العبارة نفسها. فإن سبقنا أحد رغم القفل (طلب أخذه
+                    // أدمن آخر أو أُنجز لتوّه)، لم نُدرج سطراً عن انتهاء لم
+                    // يقع. السجلّ يتبع الواقع لا النيّة.
                     $updStmt->execute([$row['order_id']]);
+
+                    if ($updStmt->rowCount() === 0) {
+                        continue;
+                    }
+
+                    $logStmt->execute([$row['order_id'], $row['taken_by_admin_id'], $row['taken_at']]);
                     $reverted[] = [
                         'order_id'          => (int)$row['order_id'],
                         'previous_admin_id' => $row['taken_by_admin_id'] !== null ? (int)$row['taken_by_admin_id'] : null,
@@ -655,6 +684,7 @@ class OrderModel extends Model
                 $db->rollBack();
             }
             error_log("OrderModel::releaseExpiredTakenOrders Error: " . $e->getMessage());
+            reportException($e);
             return [];
         }
         return $reverted;
@@ -805,21 +835,51 @@ class OrderModel extends Model
     {
         $db = self::db();
         try {
-            $stmt = $db->prepare("SELECT status, user_id FROM orders WHERE order_id=? LIMIT 1");
+            // ⚠️ معاملة و`FOR UPDATE` — كانت هذه الدالة وحدها بلا قفل.
+            //
+            // كان الفحص والكتابة عبارتين منفصلتين بلا معاملة: يقرأ
+            // أدمنان الحالة `not_taken` في اللحظة نفسها، فيمرّ الشرط
+            // عند كليهما، ثم تكتب الكتابتان — والأخيرة تفوز. فيظنّ
+            // الأوّل أنه يحمل الطلب بينما `taken_by_admin_id` يحمل اسم
+            // الثاني، ويعمل الاثنان على طلب واحد.
+            //
+            // ونظيرتها `adminReleaseOrder` كانت مقفلة صحيحةً منذ
+            // البداية — فالنمط الصائب موجود في الملف نفسه على بعد
+            // مئة سطر.
+            //
+            // `FOR UPDATE` تقفل الصفّ حتى نهاية المعاملة، فيقف الثاني
+            // منتظراً ثم يقرأ الحالة الجديدة `taken` فيُرفض بأدب.
+            $db->beginTransaction();
+
+            $stmt = $db->prepare("SELECT status, user_id FROM orders WHERE order_id=? LIMIT 1 FOR UPDATE");
             $stmt->execute([$orderId]);
             $order = $stmt->fetch();
 
             if (!$order) {
+                $db->rollBack();
                 return ['success' => false, 'message' => 'Order not found.', 'targetUserId' => null];
             }
 
             if ($order['status'] !== 'not_taken') {
+                $db->rollBack();
                 return ['success' => false, 'message' => 'Cannot take this order — invalid status.', 'targetUserId' => null];
             }
 
-            $db->prepare(
-                "UPDATE orders SET status='taken', taken_at=NOW(), taken_by_admin_id=? WHERE order_id=?"
-            )->execute([$adminId, $orderId]);
+            // شرط الحالة مكرَّر في الكتابة عمداً: القفل يكفي، لكن
+            // تكراره يجعل العبارة صحيحة بذاتها لا بسياقها — فلو نُقلت
+            // يوماً خارج المعاملة لم تصر بابياً مفتوحاً بصمت.
+            $upd = $db->prepare(
+                "UPDATE orders SET status='taken', taken_at=NOW(), taken_by_admin_id=?
+                 WHERE order_id=? AND status='not_taken'"
+            );
+            $upd->execute([$adminId, $orderId]);
+
+            if ($upd->rowCount() === 0) {
+                $db->rollBack();
+                return ['success' => false, 'message' => 'Cannot take this order — invalid status.', 'targetUserId' => null];
+            }
+
+            $db->commit();
 
             return ['success' => true, 'message' => 'Order taken successfully.', 'targetUserId' => (int)$order['user_id']];
         } catch (Exception $e) {
@@ -827,6 +887,7 @@ class OrderModel extends Model
                 $db->rollBack();
             }
             error_log("OrderModel::adminTakeOrder Error: " . $e->getMessage());
+            reportException($e);
             return ['success' => false, 'message' => 'Something went wrong.', 'targetUserId' => null];
         }
     }
@@ -840,18 +901,41 @@ class OrderModel extends Model
     {
         $db = self::db();
         try {
-            $stmt = $db->prepare("SELECT user_id FROM orders WHERE order_id=? LIMIT 1");
+            // ⚠️ فحص الحالة كان غائباً تماماً، لا ناقصاً.
+            //
+            // كانت الدالة تقرأ `user_id` وحده ثم تكتب `completed` على
+            // أي طلب — مهما كانت حالته. فطلبٌ **ملغى** (وقد أُعيد
+            // مخزونه إلى المستودع) كان يُقلَب إلى «مكتمل» بطلبٍ واحد
+            // إلى /admin/orders/mark-delivered، فيظهر في تقارير
+            // المبيعات بلا بضاعة خرجت.
+            //
+            // والواجهة لا تعرض الزرّ إلا على طلب `taken` — لكن الحراسة
+            // في الواجهة ليست حراسة: النقطة تقبل طلباً مباشراً.
+            //
+            // و`FOR UPDATE` تمنع أن يمرّ فحصٌ قديم على حالة تغيّرت بين
+            // القراءة والكتابة.
+            $db->beginTransaction();
+
+            $stmt = $db->prepare("SELECT status, user_id FROM orders WHERE order_id=? LIMIT 1 FOR UPDATE");
             $stmt->execute([$orderId]);
             $order = $stmt->fetch();
 
             if (!$order) {
+                $db->rollBack();
                 return ['success' => false, 'message' => 'Order not found.', 'targetUserId' => null];
+            }
+
+            if ($order['status'] !== 'taken') {
+                $db->rollBack();
+                return ['success' => false, 'message' => 'Only a taken order can be marked as delivered.', 'targetUserId' => null];
             }
 
             $db->prepare(
                 "UPDATE orders SET status='completed', taken_by_admin_id=COALESCE(taken_by_admin_id, ?)
-                 WHERE order_id=?"
+                 WHERE order_id=? AND status='taken'"
             )->execute([$adminId, $orderId]);
+
+            $db->commit();
 
             return ['success' => true, 'message' => 'Order marked as delivered.', 'targetUserId' => (int)$order['user_id']];
         } catch (Exception $e) {
@@ -859,6 +943,7 @@ class OrderModel extends Model
                 $db->rollBack();
             }
             error_log("OrderModel::adminMarkDelivered Error: " . $e->getMessage());
+            reportException($e);
             return ['success' => false, 'message' => 'Something went wrong.', 'targetUserId' => null];
         }
     }
@@ -908,6 +993,7 @@ class OrderModel extends Model
                 $db->rollBack();
             }
             error_log("OrderModel::adminCancelDelivery Error: " . $e->getMessage());
+            reportException($e);
             return ['success' => false, 'message' => 'Something went wrong while cancelling.', 'targetUserId' => null];
         }
     }
@@ -951,6 +1037,7 @@ class OrderModel extends Model
                 $db->rollBack();
             }
             error_log("OrderModel::adminDeleteOrder Error: " . $e->getMessage());
+            reportException($e);
             return ['success' => false, 'message' => 'Something went wrong.'];
         }
     }
@@ -999,6 +1086,7 @@ class OrderModel extends Model
                 $db->rollBack();
             }
             error_log("OrderModel::adminReleaseOrder Error: " . $e->getMessage());
+            reportException($e);
             return ['success' => false, 'message' => 'Something went wrong.', 'targetUserId' => null];
         }
     }

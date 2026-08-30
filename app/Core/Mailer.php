@@ -39,6 +39,7 @@ class Mailer
             return $stmt->execute([$toEmail, $toName, $subject, $htmlBody]);
         } catch (\Throwable $e) {
             error_log('Mailer::queue Error (يُرسَل مباشرةً بدلاً منه): ' . $e->getMessage());
+            reportException($e);
             return self::send($toEmail, $toName, $subject, $htmlBody);
         }
     }
@@ -87,6 +88,7 @@ class Mailer
         } catch (\Exception $e) {
             self::$lastError = $e->getMessage();
             error_log("Mailer::send Exception: " . $e->getMessage());
+            reportException($e);
             return false;
         }
     }

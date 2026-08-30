@@ -193,4 +193,111 @@ final class OrderCancellationTest extends DatabaseTestCase
         OrderModel::cancelAllPendingForUser($userId);
         $this->assertSame(20, $this->variantStock($variantId));
     }
+
+    // ════════════════════════════════════════════════════════
+    // انتقالات حالة الطلب من لوحة التحكّم
+    // ════════════════════════════════════════════════════════
+
+    private function makeAdmin(): int
+    {
+        $stmt = $this->pdo->prepare(
+            'INSERT INTO admins (full_name, email, password, role) VALUES (?, ?, ?, ?)'
+        );
+        $stmt->execute([
+            'Test Admin',
+            'admin' . uniqid() . '@example.com',
+            password_hash('secret123', PASSWORD_BCRYPT),
+            'A',
+        ]);
+
+        return (int) $this->pdo->lastInsertId();
+    }
+
+    private function orderStatus(int $orderId): string
+    {
+        $stmt = $this->pdo->prepare('SELECT status FROM orders WHERE order_id = ?');
+        $stmt->execute([$orderId]);
+
+        return (string) $stmt->fetchColumn();
+    }
+
+    public function testOnlyOneAdminCanTakeAnOrder(): void
+    {
+        $userId    = $this->makeUser();
+        $addressId = $this->makeAddress($userId);
+        [$productId, $variantId] = $this->makeProductWithVariant(100.00, 10);
+
+        $orderId = $this->placeOrder($userId, $addressId, $productId, $variantId, 1);
+
+        $first  = $this->makeAdmin();
+        $second = $this->makeAdmin();
+
+        $this->assertTrue(OrderModel::adminTakeOrder($orderId, $first)['success']);
+
+        // الثاني يُرفض: الحالة لم تعد not_taken. وقبل إضافة المعاملة
+        // و`FOR UPDATE` كان الفحص والكتابة عبارتين منفصلتين، فيمرّ
+        // الاثنان معاً وتفوز الكتابة الأخيرة — فيظنّ الأوّل أنه يحمل
+        // الطلب بينما يحمله الثاني.
+        $result = OrderModel::adminTakeOrder($orderId, $second);
+        $this->assertFalse($result['success']);
+
+        $stmt = $this->pdo->prepare('SELECT taken_by_admin_id FROM orders WHERE order_id = ?');
+        $stmt->execute([$orderId]);
+        $this->assertSame($first, (int) $stmt->fetchColumn());
+    }
+
+    public function testACancelledOrderCannotBeMarkedDelivered(): void
+    {
+        $userId    = $this->makeUser();
+        $addressId = $this->makeAddress($userId);
+        [$productId, $variantId] = $this->makeProductWithVariant(100.00, 10);
+
+        $orderId = $this->placeOrder($userId, $addressId, $productId, $variantId, 2);
+        $adminId = $this->makeAdmin();
+
+        $this->setStatus($orderId, 'cancelled');
+
+        // ⚠️ لم تكن adminMarkDelivered تفحص الحالة إطلاقاً: تقرأ
+        // user_id وحده ثم تكتب 'completed' على أي طلب. فطلبٌ ملغى —
+        // وقد أُعيد مخزونه إلى المستودع — كان يُقلَب إلى «مكتمل» بطلب
+        // واحد إلى /admin/orders/mark-delivered، فيدخل تقارير المبيعات
+        // بلا بضاعة خرجت.
+        //
+        // والواجهة لا تعرض الزرّ إلا على طلب taken، لكن الحراسة في
+        // الواجهة ليست حراسة — النقطة تقبل طلباً مباشراً.
+        $result = OrderModel::adminMarkDelivered($orderId, $adminId);
+
+        $this->assertFalse($result['success']);
+        $this->assertSame('cancelled', $this->orderStatus($orderId));
+    }
+
+    public function testAnUntakenOrderCannotBeMarkedDelivered(): void
+    {
+        $userId    = $this->makeUser();
+        $addressId = $this->makeAddress($userId);
+        [$productId, $variantId] = $this->makeProductWithVariant(100.00, 10);
+
+        $orderId = $this->placeOrder($userId, $addressId, $productId, $variantId, 1);
+        $adminId = $this->makeAdmin();
+
+        // التسليم يفترض أن أحداً أخذ الطلب وجهّزه. القفز فوق ذلك يُنتج
+        // طلباً «مكتملاً» لا يحمل اسم من نفّذه.
+        $this->assertFalse(OrderModel::adminMarkDelivered($orderId, $adminId)['success']);
+        $this->assertSame('not_taken', $this->orderStatus($orderId));
+    }
+
+    public function testATakenOrderIsMarkedDeliveredNormally(): void
+    {
+        $userId    = $this->makeUser();
+        $addressId = $this->makeAddress($userId);
+        [$productId, $variantId] = $this->makeProductWithVariant(100.00, 10);
+
+        $orderId = $this->placeOrder($userId, $addressId, $productId, $variantId, 1);
+        $adminId = $this->makeAdmin();
+
+        // المسار السليم يبقى سليماً: الحارس يمنع ما يجب منعه وحده.
+        $this->assertTrue(OrderModel::adminTakeOrder($orderId, $adminId)['success']);
+        $this->assertTrue(OrderModel::adminMarkDelivered($orderId, $adminId)['success']);
+        $this->assertSame('completed', $this->orderStatus($orderId));
+    }
 }

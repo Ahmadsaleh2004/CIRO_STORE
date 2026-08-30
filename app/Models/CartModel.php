@@ -87,6 +87,7 @@ class CartModel extends Model
             }, $stmt->fetchAll());
         } catch (Exception $e) {
             error_log('CartModel::getForUser Error: ' . $e->getMessage());
+            reportException($e);
             return [];
         }
     }
@@ -175,6 +176,7 @@ class CartModel extends Model
             // أشيع سبب: variant محذوف بين عرض الصفحة والنقر — المفتاح
             // الأجنبي يرفض، وهو الرفض الصحيح.
             error_log('CartModel::add Error: ' . $e->getMessage());
+            reportException($e);
             return false;
         }
     }
@@ -196,10 +198,39 @@ class CartModel extends Model
         }
 
         try {
+            // ⚠️ السقف بالمخزون داخل العبارة نفسها.
+            //
+            // كانت هذه الدالة تكتب الكمية المطلوبة كما هي: `setQuantity`
+            // بـ100 على متغيّر مخزونه 2 كان ينجح، فتحمل السلّة مئة قطعة
+            // من سلعة فيها اثنتان.
+            //
+            // والأغرب أن الحارس كان موجوداً في المسار المجاور: `add`
+            // تسقّف بـ`LEAST(?, stock, MAX_QTY)` منذ بلاغ «الرقم يضلّ
+            // يزيد». فكان الباب مغلقاً من جهة الإضافة مفتوحاً من جهة
+            // التعديل — و`POST /cart/update` يقبل أي رقم مباشرةً.
+            //
+            // ولماذا JOIN لا قراءةٌ ثم كتابة: قراءة المخزون في عبارة ثم
+            // الكتابة في أخرى تفتح نافذة سباق بينهما — وهي بالضبط
+            // الثغرة التي أُغلقت في `add` بوضع السقف داخل SQL. المخزون
+            // يُقرأ ويُطبَّق في عبارة واحدة، فلا نافذة أصلاً.
             $stmt = self::db()->prepare(
-                'UPDATE cart_items SET quantity = ? WHERE user_id = ? AND variant_id = ?'
+                'UPDATE cart_items c
+                    JOIN product_variants v ON v.id = c.variant_id
+                    SET c.quantity = LEAST(?, v.stock_quantity, ' . self::MAX_QTY . ')
+                  WHERE c.user_id = ? AND c.variant_id = ? AND v.stock_quantity > 0'
             );
             $stmt->execute([$qty, $userId, $variantId]);
+
+            // مخزون صفر: الشرط أعلاه يمنع التحديث، فيبقى السطر بكميته
+            // القديمة — وهي كمية لسلعة نفدت. الحذف أصدق من إبقائه:
+            // `add` ترفض دخول نسخة نافدة أصلاً، فلا يصحّ أن يحرسها
+            // مسار ويتركها الآخر.
+            if ($stmt->rowCount() === 0 && self::hasVariant($userId, $variantId)) {
+                $stock = self::stockForVariant($variantId);
+                if ($stock !== null && $stock <= 0) {
+                    return self::remove($userId, $variantId);
+                }
+            }
 
             // rowCount = 0 يعني «لا سطر بهذا المعرّف لهذا المستخدم» —
             // إمّا لأنه غير موجود، أو لأنه يخصّ غيره. الحالتان رفضٌ
@@ -211,6 +242,7 @@ class CartModel extends Model
             return $stmt->rowCount() > 0 || self::hasVariant($userId, $variantId);
         } catch (Exception $e) {
             error_log('CartModel::setQuantity Error: ' . $e->getMessage());
+            reportException($e);
             return false;
         }
     }
@@ -279,6 +311,27 @@ class CartModel extends Model
 
         // false تعني «لا صفّ» — إمّا الـvariant غير موجود، أو لا يخصّ
         // هذا المنتج. الحالتان رفضٌ واحد من زاوية المستدعي.
+        return $stock === false ? null : (int) $stock;
+    }
+
+    /**
+     * مخزون نسخة بمعرّفها وحده.
+     *
+     * تختلف عن stockForVariantOfProduct: تلك تتحقّق كذلك من أن النسخة
+     * تخصّ المنتج المطلوب، وهو فحصٌ يلزم عند **الإضافة** حيث يأتي
+     * المعرّفان معاً من العميل. أما setQuantity فلا تتلقّى product_id
+     * أصلاً — السطر موجود سلفاً وملكيّته محروسة بشرط user_id.
+     *
+     * @return int|null null إن لم توجد النسخة.
+     */
+    private static function stockForVariant(int $variantId): ?int
+    {
+        $stmt = self::db()->prepare(
+            'SELECT stock_quantity FROM product_variants WHERE id = ? LIMIT 1'
+        );
+        $stmt->execute([$variantId]);
+        $stock = $stmt->fetchColumn();
+
         return $stock === false ? null : (int) $stock;
     }
 

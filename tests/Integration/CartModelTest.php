@@ -326,4 +326,56 @@ final class CartModelTest extends DatabaseTestCase
         $this->assertFalse(CartModel::add($userId, $productId, $variantId, 1));
         $this->assertSame(0, $this->countRows('cart_items'));
     }
+
+    // ════════════════════════════════════════════════════════
+    // سقف المخزون في التعديل — لا في الإضافة وحدها
+    // ════════════════════════════════════════════════════════
+
+    public function testSetQuantityIsCappedByStock(): void
+    {
+        $userId = $this->makeUser();
+        [$productId, $variantId] = $this->makeProduct(100.00, 0.00, 2);
+
+        CartModel::add($userId, $productId, $variantId, 1);
+
+        // كان هذا يمرّ كما هو: `setQuantity` تفحص MAX_QTY وحدها، فتكتب
+        // 100 على متغيّر مخزونه 2. والباب مفتوح من الشبكة مباشرةً عبر
+        // POST /cart/update — لا يلزم حتى تجاوز الواجهة.
+        //
+        // والسقف في `add` كان قائماً منذ بلاغ «الرقم يضلّ يزيد»؛ الثغرة
+        // أن مسار التعديل لم يأخذه.
+        $this->assertTrue(CartModel::setQuantity($userId, $variantId, 100));
+        $this->assertSame(2, CartModel::getForUser($userId)[0]['quantity']);
+    }
+
+    public function testSetQuantityBelowStockIsWrittenAsAsked(): void
+    {
+        $userId = $this->makeUser();
+        [$productId, $variantId] = $this->makeProduct(100.00, 0.00, 9);
+
+        CartModel::add($userId, $productId, $variantId, 1);
+
+        // السقف سقفٌ لا تثبيت: ما دون المخزون يمرّ بلا تعديل.
+        $this->assertTrue(CartModel::setQuantity($userId, $variantId, 4));
+        $this->assertSame(4, CartModel::getForUser($userId)[0]['quantity']);
+    }
+
+    public function testSetQuantityDropsTheLineWhenStockRanOut(): void
+    {
+        $userId = $this->makeUser();
+        [$productId, $variantId] = $this->makeProduct(100.00, 0.00, 5);
+
+        CartModel::add($userId, $productId, $variantId, 3);
+
+        // نفاد المخزون بعد دخول السطر السلّة — الحالة الواقعية: زبون
+        // آخر أتمّ الشراء بينما السلّة مفتوحة.
+        $this->pdo->prepare('UPDATE product_variants SET stock_quantity = 0 WHERE id = ?')
+            ->execute([$variantId]);
+
+        // إبقاء السطر بكميته القديمة يعني سلّة تَعِد بما لا وجود له،
+        // و`add` ترفض النسخة النافدة أصلاً — فلا يصحّ أن يحرسها مسار
+        // ويتركها الآخر.
+        $this->assertTrue(CartModel::setQuantity($userId, $variantId, 1));
+        $this->assertSame(0, $this->countRows('cart_items'));
+    }
 }
