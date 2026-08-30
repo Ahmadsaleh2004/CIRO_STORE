@@ -1,56 +1,58 @@
 <?php
 
 /**
- * إصلاح مسار الصور لتناسب مجلد images أو المسارات المطلوبة
+ * Normalise an image path so it fits the images directory, or the required form.
  */
 function fixImagePath(?string $path): string
 {
-    // 1. إذا كان المسار فارغاً
+    // 1. An empty path
     if (empty(trim((string)$path))) {
         return URLROOT . '/img/no-image.png';
     }
 
     $path = trim($path);
 
-    // 2. إذا كانت الصورة رابطاً خارجيين
+    // 2. The image is an external URL
     if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
         return $path;
     }
 
-    // 3. تنظيف المسار من السلاش الشارد في البداية
+    // 3. Strip a stray leading slash
     $cleanPath = ltrim($path, '/');
 
-    // 4. إذا كانت القيمة اسم الملف فقط (مثل ps5.jpg) نقوم بإضافة مجلد images/ تلقائياً
+    // 4. When the value is only a file name (ps5.jpg, say), prefix images/ automatically
     if (!str_contains($cleanPath, '/')) {
         $cleanPath = 'images/' . $cleanPath;
     }
 
-    // ⚠️ ترميز المسار **لازم**، وليس تجميلاً.
+    // ⚠️ Encoding the path is **required**, not cosmetic.
     //
-    // أسماء ملفات الصور في هذا المشروع تحوي مسافات: «apple watch.webp»
-    // و«ps4 controller.jpg» و«nintendo switch lite.jpg». والمسافة في
-    // رابط داخل srcset **فاصل بين مرشّحين** لا محرفاً عادياً:
+    // The image file names in this project contain spaces: "apple watch.webp",
+    // "ps4 controller.jpg" and "nintendo switch lite.jpg". And a space in a URL inside
+    // a srcset is **a separator between candidates**, not an ordinary character:
     //
     //     <source srcset="…/images/apple watch.webp">
     //
-    // يقرأها المتصفح مرشّحَين: «…/images/apple» و«watch.webp»، فيرفض
-    // الاثنين ويُسقط الصورة. أكّده المتصفح حرفياً:
+    // the browser reads it as two candidates, "…/images/apple" and "watch.webp",
+    // rejects both, and drops the image. The browser said so verbatim:
     //     Dropped srcset candidate "…/images/apple"
-    // اثنتا عشرة مرّة في تحميل واحد للصفحة الرئيسية.
+    // twelve times in a single load of the home page.
     //
-    // أي أن نسخ WebP — وهي كل فائدة <picture> — لم تكن تعمل لأي صورة
-    // اسمها يحوي مسافة. والصفحة تبدو سليمة لأن <img> الاحتياطية تعمل،
-    // فيمرّ العطل صامتاً ويُخدَّم jpg أثقل بدل webp.
+    // Which means the WebP versions — the entire point of <picture> — worked for no
+    // image whose name contained a space. And the page looks fine because the fallback
+    // <img> works, so the fault passes silently and a heavier jpg is served in place of
+    // the webp.
     //
-    // rawurlencode لكل مقطع على حدة: تشفير المسار كاملاً كان سيحوّل
-    // الشرطات المائلة نفسها إلى %2F فيتحطّم المسار.
+    // rawurlencode per segment: encoding the whole path would have turned the slashes
+    // themselves into %2F and broken it.
     $encoded = implode('/', array_map('rawurlencode', explode('/', $cleanPath)));
 
     return URLROOT . '/' . $encoded;
 }
 
 /**
- * ترجع مسار نسخة WebP المقابلة لصورة معينة إذا كانت موجودة فعليًا على القرص، وإلا null.
+ * Returns the path of an image's WebP counterpart if it actually exists on disk, and
+ * null otherwise.
  */
 function getWebpPath(?string $path): ?string
 {
@@ -60,15 +62,15 @@ function getWebpPath(?string $path): ?string
     $original = fixImagePath($path);
     $webpPath = preg_replace('/\.(jpe?g|png)$/i', '.webp', $original);
     if ($webpPath === $original) {
-        return null; // الامتداد مش jpg/png أصلاً
+        return null; // The extension is not jpg or png in the first place
     }
 
-    // تحويل الرابط الكامل لمسار فعلي على القرص للتأكد من وجود الملف.
+    // Turn the full URL into a real path on disk, to confirm the file exists.
     //
-    // ⚠️ rawurldecode لازم: fixImagePath صارت تُرمّز المسار (المسافات
-    // في أسماء الصور تكسر srcset)، و«apple%20watch.webp» لا وجود له
-    // على القرص. بلا الفكّ يفشل file_exists لكل صورة اسمها يحوي مسافة،
-    // فتُرجَع null وتختفي نسخة WebP — أي العطل نفسه من الباب الآخر.
+    // ⚠️ rawurldecode is required: fixImagePath now encodes the path (spaces in image
+    // names break srcset), and "apple%20watch.webp" does not exist on disk. Without the
+    // decode, file_exists fails for every image whose name contains a space, null is
+    // returned and the WebP version disappears — the same fault, through the other door.
     $relative = rawurldecode(str_replace(URLROOT, '', $webpPath));
     $diskPath = rtrim(ROOTPATH . '/public', '/') . $relative;
 
@@ -76,7 +78,7 @@ function getWebpPath(?string $path): ?string
 }
 
 /**
- * التحقق من تسجيل دخول المستخدم
+ * Check whether the user is signed in.
  */
 function isUserLoggedIn(): bool
 {
@@ -87,9 +89,9 @@ function isUserLoggedIn(): bool
 }
 
 /**
- * التحقق من قوة كلمة المرور:
- * 8 أحرف على الأقل، حرف كبير، حرف صغير، رقم، ورمز خاص.
- * نفس منطق النسخة القديمة.
+ * Check password strength:
+ * at least 8 characters, with an upper-case letter, a lower-case letter, a digit and a
+ * symbol. The same logic as the old version.
  */
 function isStrongPassword(string $password): bool
 {
@@ -101,11 +103,13 @@ function isStrongPassword(string $password): bool
 }
 
 /**
- * يرجّع عدد الطلبات الجديدة (is_notified=0) وعدد رسائل الدعم الجديدة (is_notified=0)
- * مع احترام صلاحيات الأدمن الحالي (can_manage_orders / can_manage_support).
- * منقول بنفس المنطق من admin_notif_helper.php بالمشروع القديم.
+ * Returns the count of new orders (is_notified=0) and new support messages
+ * (is_notified=0), respecting the current admin's permissions (can_manage_orders /
+ * can_manage_support).
+ * Moved across with the same logic from admin_notif_helper.php in the old project.
  *
- * تَعمل فقط في سياق جلسة الأدمن (admin_session) — hasPermission() تفترض ذلك.
+ * It only works inside the admin session context (admin_session) — hasPermission()
+ * assumes that.
  *
  * @return array{orders:int, messages:int}
  */
@@ -126,13 +130,13 @@ function getAdminUnreadCounters(): array
     return ['orders' => $newOrders, 'messages' => $newMessages];
 }
 /**
- * رمز تعبيري لكل تصنيف منتجات، وشعار احتياطي لأي تصنيف جديد.
+ * An emoji per product category, with a fallback for any new category.
  *
- * كانت الخريطة مكتوبة حرفياً في views/home.php و views/product/product.php.
- * الخريطة وحدها هي المكرَّر — الماركب حولها مختلف تماماً بين الصفحتين
- * (روابط <a class="btn"> في الرئيسية مقابل <option> داخل <select> في
- * صفحة المنتجات)، ولهذا هي دالة لا partial: partial مشترك كان سيجبر
- * ماركبين لا يشبه أحدهما الآخر على قالب واحد.
+ * The map used to be written out in views/home.php and views/product/product.php. The
+ * map alone is what was duplicated — the markup around it differs entirely between the
+ * two pages (<a class="btn"> links on the home page against <option> inside a <select>
+ * on the products page), which is why this is a function rather than a partial: a shared
+ * partial would have forced two markups with nothing in common into one template.
  */
 function categoryEmoji(string $category): string
 {

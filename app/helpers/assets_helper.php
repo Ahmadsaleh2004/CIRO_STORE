@@ -2,25 +2,25 @@
 
 /**
  * app/helpers/assets_helper.php
- * وسوم الأصول (CSS) + سكربت تهيئة الثيم.
+ * The asset tags (CSS) plus the theme bootstrap script.
  *
- * يُحمَّل تلقائياً من public/index.php عبر glob على مجلد helpers،
- * فلا يحتاج require يدوي.
+ * Loaded automatically from public/index.php by a glob over the helpers directory, so
+ * it needs no manual require.
  *
- * لماذا هذا الملف؟
- * بعد تقسيم style.css إلى ملفات صغيرة، صار لكل صفحة "حزمة" واحدة
- * (store أو admin) بدل قائمة وسوم <link> طويلة داخل الـ View.
- * الحزمة نفسها ملف @import فقط — راجع public/css/store.css.
+ * Why this file?
+ * After style.css was split into small files, each page has a single "bundle" (store or
+ * admin) rather than a long list of <link> tags inside the view.
+ * The bundle itself is nothing but a file of @imports — see public/css/store.css.
  */
 
 /**
- * قائمة ملفات الدخول لكل حزمة، بالترتيب.
- * admin يُحمِّل store أولاً لأن لوحة التحكم تعيد استخدام كل طبقة المتجر.
+ * The entry files per bundle, in order.
+ * admin loads store first, because the admin panel reuses the store's entire layer.
  *
- * حُذفت حزمة 'admin-auth' هنا: لم تكن مستدعاة من أي مكان، وكانت تناقض
- * ما تعلنه public/css/admin/pages/login.css صراحةً في رأسها — أنه ملف
- * مستقل لا يعتمد على tokens.css. صفحتا الأدمن المستقلتان تعلنان ملف
- * الـCSS في $bareCss مباشرة.
+ * The 'admin-auth' bundle was removed from here: nothing called it, and it contradicted
+ * what public/css/admin/pages/login.css declares outright in its header — that it is a
+ * standalone file not depending on tokens.css. The two standalone admin pages declare
+ * their CSS file directly in $bareCss.
  *
  * @return list<string>
  */
@@ -33,10 +33,10 @@ function cssBundleFiles(string $bundle): array
 }
 
 /**
- * البيان الذي ينتجه `npm run build` — اسم الملف المبصوم لكل حزمة.
+ * The manifest `npm run build` produces — each bundle's fingerprinted file name.
  *
- * يُقرأ مرّة واحدة لكل طلب. غيابه ليس خطأً بل يعني «لم يُبنَ بعد»،
- * فتعود cssBundle إلى سلسلة @import.
+ * Read once per request. Its absence is not an error but means "not built yet", so
+ * cssBundle falls back to the chain of @imports.
  *
  * @return array<string, string>
  */
@@ -58,29 +58,30 @@ function cssManifest(): array
 }
 
 /**
- * يطبع وسوم <link> الخاصة بحزمة.
+ * Prints a bundle's <link> tags.
  *
- * ── مساران، والاختيار بينهما آليّ ────────────────────────────
+ * ── Two paths, chosen between automatically ─────────────────
  *
- * **مبنيّ** (البيان موجود): وسم واحد لكل حزمة يشير إلى ملف مدموج
- * مضغوط مبصوم. store.css كانت 36 استيراداً و admin.css 19، والمتصفح
- * لا يعرف بوجود أيٍّ منها حتى ينزّل الملف الأب ويحلّله — فالتنزيل
- * متسلسل بطبعه لا متوازٍ.
- * القياس: 55 طلباً و112 كيلوبايت → طلبان و59 كيلوبايت.
+ * **Built** (the manifest exists): one tag per bundle, pointing at a concatenated,
+ * minified, fingerprinted file. store.css was 36 imports and admin.css 19, and the
+ * browser does not know any of them exist until it has downloaded and parsed the parent
+ * file — so the downloading is inherently serial rather than parallel.
+ * Measured: 55 requests and 112 KB → two requests and 59 KB.
  *
- * **غير مبنيّ** (لا بيان): سلسلة @import كما كانت. وهذا هو وضع
- * التطوير المفضَّل — كل ملف يظهر منفصلاً في DevTools، وتعديل واحد
- * منها يظهر فوراً بلا إعادة بناء.
+ * **Not built** (no manifest): the chain of @imports, as it was. And this is the
+ * preferred development mode — every file appears separately in DevTools, and editing
+ * one of them shows immediately with no rebuild.
  *
- * ولهذا لا يوجد مفتاح إعداد يختار بينهما: **وجود البيان هو الاختيار**.
- * مفتاح منفصل كان سيسمح بحالتين لا معنى لهما — مبنيّ ومعطَّل، وغير
- * مبنيّ ومفعَّل (وهذه الأخيرة صفحة بلا أي تنسيق).
+ * Which is why there is no configuration flag choosing between them: **the manifest's
+ * existence is the choice**. A separate flag would have allowed two meaningless states —
+ * built and disabled, and not built but enabled (the latter being a page with no styling
+ * at all).
  *
- * البصمة في اسم الملف تُبطل التخزين المؤقّت من تلقائها: تغيّر المحتوى
- * يغيّر الاسم، وثباته يُبقيه فيستفيد الزائر من ذاكرته.
+ * The fingerprint in the file name busts the cache on its own: changed content changes
+ * the name, and unchanged content keeps it, so the visitor benefits from their cache.
  *
- * ⚠️ حزمة admin تُحمِّل store أولاً (راجع cssBundleFiles)، والترتيب
- * محفوظ في المسارين.
+ * ⚠️ The admin bundle loads store first (see cssBundleFiles), and the order is
+ * preserved on both paths.
  */
 function cssBundle(string $bundle = 'store'): string
 {
@@ -98,57 +99,64 @@ function cssBundle(string $bundle = 'store'): string
 }
 
 /**
- * يطبع وسم <script> لملف JS مع إبطال تخزين مؤقّت مبنيّ على المحتوى.
+ * Prints a <script> tag for a JavaScript file, with content-based cache busting.
  *
- * ── العطل الذي وُجدت له ─────────────────────────────────────
+ * ── The fault it exists for ─────────────────────────────────
  *
- * ملفات js/ كانت تُخدَّم بلا Cache-Control إطلاقاً — بـETag و
- * Last-Modified وحدهما. وهذا يترك القرار للمتصفح، وكثير منها يخزّن
- * الملف heuristically ولا يسأل عنه أصلاً.
+ * The files under js/ were served with no Cache-Control at all — with an ETag and a
+ * Last-Modified alone. That leaves the decision to the browser, and many of them cache
+ * the file heuristically and never ask about it again.
  *
- * والأثر مقيس لا مفترض: بعد إصلاح دالة في js/core/utils.js، كان
- * الملف المخدوم يحوي الإصلاح بينما window لا تعرفه — أي أن المتصفح
- * يشغّل نسخة قديمة. تحقّقنا بـfetch(cache:'reload') فظهر الفرق.
+ * And the effect was measured, not supposed: after fixing a function in
+ * js/core/utils.js, the served file contained the fix while window did not know it — the
+ * browser was running an old copy. Verified with fetch(cache:'reload'), which showed the
+ * difference.
  *
- * وهذا أخطر ما يمكن أن يحدث لإصلاح أمني: يُنشر ولا يصل.
+ * And that is the worst thing that can happen to a security fix: it ships and never
+ * arrives.
  *
- * ── الحلّ ───────────────────────────────────────────────────
+ * ── The fix ─────────────────────────────────────────────────
  *
- * `?v=<بصمة>` من محتوى الملف. تغيّر المحتوى يغيّر الرابط فيُبطل
- * التخزين حتماً، وثباته يُبقيه فيستفيد الزائر من ذاكرته.
+ * `?v=<fingerprint>` derived from the file's content. Changed content changes the URL
+ * and busts the cache with certainty, and unchanged content keeps it, so the visitor
+ * benefits from their cache.
  *
- * والبصمة من المحتوى لا من الوقت: الطابع الزمني يتغيّر عند كل نسخ
- * للملفات فيُبطل التخزين بلا سبب، وكل نشر يعيد تنزيل كل شيء.
+ * And the fingerprint comes from the content rather than the time: a timestamp changes
+ * on every copy of the files, busting the cache for no reason, and every deployment
+ * re-downloads everything.
  *
- * ⚠️ لماذا استعلام لا اسم مبصوم مثل حزم CSS؟ لأن ملفات JS يشير
- * بعضها إلى بعض بالاسم، ولأنها ليست ناتج بناء — تُحرَّر مباشرةً.
- * الاستعلام يعطي الإبطال نفسه بلا خطوة بناء.
+ * ⚠️ Why a query string rather than a fingerprinted name, as with the CSS bundles?
+ * Because the JavaScript files reference one another by name, and because they are not
+ * build output — they are edited directly. The query gives the same busting with no
+ * build step.
  *
- * @param string $path مسار نسبي تحت public/ مثل 'js/core/utils.js'
+ * @param string $path A relative path under public/, such as 'js/core/utils.js'
  * @param bool   $defer
  */
 /**
- * المكتبات الخارجية: النسخة والبصمة، معرَّفتان مرّة واحدة.
+ * The external libraries: version and integrity hash, defined once.
  *
- * ── لماذا هنا لا في الـviews ──────────────────────────────────
+ * ── Why here rather than in the views ────────────────────────
  *
- * كان الوسم مكتوباً بيده في **سبعة** مواضع: layout المتجر ولوحة
- * التحكّم وصفحتا head، وثلاث صفحات bare مستقلّة (admin/login و
- * store-reauth و auth/reset-password). ورقم النسخة مكرّر في كلٍّ منها.
+ * The tag used to be hand-written in **seven** places: the store and admin layouts,
+ * the two head files, and three standalone bare pages (admin/login, store-reauth and
+ * auth/reset-password). With the version number repeated in every one of them.
  *
- * والتكرار هنا ليس قبحاً بل خطر أمني مباشر: إضافة `integrity` أو
- * ترقية نسخة تُطبَّق على ستّة مواضع ويُنسى السابع — وهو بالضبط ما كان
- * قائماً فعلاً قبل هذه المرحلة: `head-bare.php` وحده كان يحمل بصمة،
- * والستّة الباقية بلا شيء. ولأن الوسوم متفرّقة، لم يكن أحد يرى الفرق.
+ * And the duplication here is not ugliness but a direct security risk: adding
+ * `integrity` or upgrading a version gets applied to six places and forgotten in the
+ * seventh — which is exactly what was actually the case before this phase:
+ * `head-bare.php` alone carried an integrity hash, and the other six carried nothing.
+ * And because the tags were scattered, nobody could see the difference.
  *
- * الآن النسخة والبصمة في ثابت واحد، والترقية تعديل سطرين.
+ * Now the version and the hash live in one constant, and an upgrade is a two-line edit.
  *
- * ── تجديد البصمة عند ترقية نسخة ───────────────────────────────
+ * ── Refreshing the hash when upgrading a version ─────────────
  *
  *   curl -sL <url> | openssl dgst -sha384 -binary | openssl base64 -A
  *
- * ⚠️ بصمة خاطئة تعني أن المتصفح **يرفض الملف بصمت** — لا خطأ في
- * الصفحة، فقط مكتبة غائبة ومودالات لا تفتح. غيّر الاثنين معاً دائماً.
+ * ⚠️ A wrong hash means the browser **refuses the file silently** — no error on the
+ * page, just a missing library and modals that do not open. Always change the two
+ * together.
  *
  * @var array<string, array{url: string, sri: string}>
  */
@@ -162,26 +170,26 @@ const VENDOR_ASSETS = [
         'sri' => 'sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz',
     ],
 
-    // ⚠️ كان `sweetalert2@11` — نطاقاً مفتوحاً يجلب أي إصدار 11.x
-    // يُنشر غداً، أياً كان محتواه، على صفحة الدفع ولوحة التحكّم معاً.
-    // الرقم هنا هو ما كان النطاق يحلّه وقت التثبيت، فلا تغيير في
-    // السلوك — التغيير أن السلوك صار **معروفاً**.
+    // ⚠️ It used to be `sweetalert2@11` — an open range pulling in whatever 11.x is
+    // published tomorrow, whatever it contains, onto the checkout page and the admin
+    // panel alike. The number here is what that range resolved to at install time, so
+    // there is no behavioural change — the change is that the behaviour is now **known**.
     //
-    // ⚠️ وهي `sweetalert2.min.js` لا `sweetalert2.all.min.js`.
+    // ⚠️ And it is `sweetalert2.min.js`, not `sweetalert2.all.min.js`.
     //
-    // الفرق ليس في الحجم: نسخة `all` تحمل أنماطها **داخل الجافاسكربت**
-    // وتحقنها وقت التشغيل في وسم <style> تنشئه بنفسها. وسياسة أمن
-    // المحتوى في public/.htaccess تمنع `style-src 'unsafe-inline'` —
-    // فكان المتصفّح يرفض ذلك الوسم، ويظهر كل حوار SweetAlert نصّاً
-    // عارياً أسفل الصفحة بلا تصميم ولا موضع.
+    // The difference is not size: the `all` build carries its styles **inside the
+    // JavaScript** and injects them at runtime into a <style> tag it creates itself. And
+    // the content security policy in public/.htaccess forbids `style-src 'unsafe-inline'`
+    // — so the browser refused that tag, and every SweetAlert dialog appeared as bare
+    // text at the bottom of the page, with no styling and no positioning.
     //
-    // وأثر ذلك تجاوز الشكل إلى الوظيفة: `orders.js` ينتظر تأكيد
-    // `await Swal.fire(...)` قبل أن يأخذ الطلب، وزر التأكيد لم يكن
-    // يُرى أصلاً — فبدا أن «أخذ الطلب» معطّل وهو سليم.
+    // And the effect went past appearance into function: `orders.js` awaits confirmation
+    // from `await Swal.fire(...)` before taking an order, and the confirm button was not
+    // visible at all — so "take order" looked broken while being perfectly sound.
     //
-    // النسخة العارية لا تحقن شيئاً، وأنماطها تأتي من 'sweetalert2-css'
-    // أدناه كورقة خارجية يسمح بها `style-src`. **الاثنان يُدرَجان
-    // معاً دائماً** — أحدهما بلا الآخر يعيد العطل نفسه.
+    // The bare build injects nothing, and its styles come from 'sweetalert2-css' below as
+    // an external stylesheet that `style-src` permits. **The two are always included
+    // together** — either without the other reproduces the same fault.
     'sweetalert2' => [
         'url' => 'https://cdn.jsdelivr.net/npm/sweetalert2@11.26.25/dist/sweetalert2.min.js',
         'sri' => 'sha384-hW8ZCQHtRH+nVOAkHZ4amZvYsAtKn1ZOvMV6dNag1Rb1thWmLZMBKTRxFV0cOxiK',
@@ -191,12 +199,12 @@ const VENDOR_ASSETS = [
         'sri' => 'sha384-dCW5imOdApH6OwpFau8cZNKjqVbJYnCA5q+8YsMYP3XwXKsV6Jfz1u6MZLnXaBsS',
     ],
 
-    // Chart.js — لوحة تحكّم الأدمن وحدها.
+    // Chart.js — the admin dashboard alone.
     //
-    // كان الوسم مطبوعاً من AdminDashboardController نصّاً، بلا
-    // `integrity` ولا `crossorigin` — أي أن أي شيء يرسله المضيف كان
-    // يُنفَّذ على صفحة تعرض المبيعات وبيانات المستخدمين. ووجوده هنا
-    // يعيده إلى نفس العقد الذي تخضع له بقيّة المكتبات.
+    // The tag used to be printed as a string from AdminDashboardController, with neither
+    // `integrity` nor `crossorigin` — meaning whatever the host sent was executed on a
+    // page displaying sales and user data. Having it here returns it to the same contract
+    // the other libraries are bound by.
     'chartjs' => [
         'url' => 'https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js',
         'sri' => 'sha384-e6nUZLBkQ86NJ6TVVKAeSaK8jWa3NhkYWZFomE39AvDbQWeie9PlQqM3pmYW5d1g',
@@ -204,14 +212,14 @@ const VENDOR_ASSETS = [
 ];
 
 /**
- * وسم <script> لمكتبة خارجية، مبصوم.
+ * A <script> tag for an external library, with its integrity hash.
  *
- * `crossorigin="anonymous"` لازم لا زينة: بدونه لا يقرأ المتصفح
- * الاستجابة عبر الأصول، فلا يستطيع التحقّق من البصمة أصلاً — ويصير
- * `integrity` سطراً بلا أثر.
+ * `crossorigin="anonymous"` is required, not decoration: without it the browser does
+ * not read the cross-origin response, so it cannot verify the hash at all — and
+ * `integrity` becomes a line with no effect.
  *
- * @throws \InvalidArgumentException على مفتاح غير معروف — خطأ برمجي
- *         لا حالة وقت تشغيل، والفشل الصاخب أفضل من وسم صامت ناقص.
+ * @throws \InvalidArgumentException On an unknown key — a programming error rather than
+ *         a runtime condition, and failing loudly beats a silently incomplete tag.
  */
 function vendorJs(string $key, bool $defer = true): string
 {
@@ -226,7 +234,7 @@ function vendorJs(string $key, bool $defer = true): string
         . ($defer ? ' defer' : '') . '></script>' . "\n";
 }
 
-/** وسم <link> لورقة أنماط خارجية، مبصوم. */
+/** A <link> tag for an external stylesheet, with its integrity hash. */
 function vendorCss(string $key): string
 {
     $asset = VENDOR_ASSETS[$key] ?? null;
@@ -247,8 +255,8 @@ function jsTag(string $path, bool $defer = true): string
 
     if (!isset($stamps[$relative])) {
         $disk = ROOTPATH . '/public/' . $relative;
-        // غياب الملف ليس سبباً لإيقاف الصفحة: نطبع الوسم بلا بصمة
-        // ويظهر 404 في الطرفية — وهو تشخيص أوضح من صفحة بيضاء.
+        // A missing file is no reason to stop the page: the tag is printed without a
+        // fingerprint and a 404 shows in the console — a clearer diagnosis than a blank page.
         $stamps[$relative] = is_file($disk)
             ? substr(hash_file('sha256', $disk), 0, 10)
             : '';
@@ -262,7 +270,7 @@ function jsTag(string $path, bool $defer = true): string
 }
 
 /**
- * بيان حزم JS الذي ينتجه `npm run build`.
+ * The JavaScript bundle manifest `npm run build` produces.
  *
  * @return array<string, string>
  */
@@ -284,34 +292,36 @@ function jsManifest(): array
 }
 
 /**
- * يطبع وسم <script> لحزمة مدموجة — أو وسوم الملفات المفردة إن لم تُبنَ.
+ * Prints a <script> tag for a concatenated bundle — or the individual file tags when
+ * nothing has been built.
  *
- * ── لماذا ───────────────────────────────────────────────────
+ * ── Why ─────────────────────────────────────────────────────
  *
- * الصفحة الرئيسية كانت تطلب **ثمانية عشر ملف JS**. والمتصفح يسمح بستّ
- * اتصالات متزامنة لكل نطاق على HTTP/1.1، فتقف في طابور. مقيس:
+ * The home page used to request **eighteen JavaScript files**. And a browser allows six
+ * concurrent connections per host over HTTP/1.1, so they queue. Measured:
  *
- *     أول ملف يبدأ:      467 ms
- *     آخر ملف ينتهي:     999 ms
+ *     first file starts:  467 ms
+ *     last file finishes: 999 ms
  *     DOMContentLoaded: 1051 ms
  *
- * والسلايدر لا وجود له في HTML: يبنيه products-catalog.js — الرابع عشر
- * في الطابور. فيبقى مكانه فارغاً أكثر من ثانية بعد ظهور الصفحة.
+ * And the slider does not exist in the HTML: products-catalog.js builds it — the
+ * fourteenth in the queue. So its space stays empty for more than a second after the
+ * page appears.
  *
- * ── المساران ───────────────────────────────────────────────
+ * ── The two paths ──────────────────────────────────────────
  *
- * **مبنيّ**: وسم واحد. و**غير مبنيّ**: الملفات مفردة كما كانت — وهو
- * وضع التطوير المفضَّل، إذ يظهر كل ملف منفصلاً في DevTools ويظهر
- * تعديله فوراً بلا إعادة بناء.
+ * **Built**: one tag. **Not built**: the individual files as they were — the preferred
+ * development mode, since every file appears separately in DevTools and an edit to one
+ * shows immediately with no rebuild.
  *
- * ووجود البيان هو الاختيار، تماماً كما في cssBundle.
+ * And the manifest's existence is the choice, exactly as in cssBundle.
  *
- * ⚠️ الترتيب داخل الحزمة هو ترتيب هذه القوائم في build/build-js.mjs،
- * وهو ترتيب الـfooter حرفاً بحرف. الملفات تتشارك النطاق العام ويعتمد
- * اللاحق على ما عرّفه السابق — فأي إعادة ترتيب تكسره بصمت.
+ * ⚠️ The order inside a bundle is the order of these lists in build/build-js.mjs, which
+ * is the footer's order character for character. The files share the global scope and
+ * each depends on what the previous one defined — so any reordering breaks it silently.
  *
- * @param string       $bundle اسم الحزمة: store | admin | store-auth
- * @param list<string> $fallback مسارات الملفات المفردة عند غياب البناء
+ * @param string       $bundle The bundle name: store | admin | store-auth
+ * @param list<string> $fallback The individual file paths, for when nothing is built
  * @param bool         $defer
  */
 function jsBundle(string $bundle, array $fallback, bool $defer = true): string
@@ -320,7 +330,7 @@ function jsBundle(string $bundle, array $fallback, bool $defer = true): string
 
     if (isset($manifest[$bundle])) {
         $path = $manifest[$bundle];
-        // البصمة في الاسم تُبطل التخزين المؤقّت، فلا حاجة لـ?v=
+        // The fingerprint in the name busts the cache, so no ?v= is needed
         return '<script src="' . URLROOT . '/' . $path . '"'
             . ($defer ? ' defer' : '') . '></script>' . "
 ";
@@ -335,40 +345,42 @@ function jsBundle(string $bundle, array $fallback, bool $defer = true): string
 }
 
 /**
- * يطبع جزيرة بيانات JSON تُنقَل إلى النطاق العام.
+ * Prints a JSON data island that is copied into the global scope.
  *
- * ── لماذا ────────────────────────────────────────────────────
+ * ── Why ─────────────────────────────────────────────────────
  *
- * أربع عشرة صفحة كانت تمرّر بياناتها إلى JS بكتلة <script> مضمّنة:
+ * Fourteen pages used to pass their data to JavaScript through an inline <script>
+ * block:
  *
  *     <script>window.dbProducts = <?= json_encode(...) ?>;</script>
  *
- * وهي **كتلة قابلة للتنفيذ**، فأي سياسة CSP جادّة تحجبها. ولهذا بقيت
- * سياسة المشروع بوضع الإبلاغ فقط: تفعيلها كان يكسر الصفحات الأربع عشرة.
+ * And that is **an executable block**, so any serious CSP blocks it. Which is why the
+ * project's policy stayed in report-only mode: enforcing it would have broken all
+ * fourteen pages.
  *
- * ── الحلّ ───────────────────────────────────────────────────
+ * ── The fix ─────────────────────────────────────────────────
  *
- * `<script type="application/json">` **ليست كتلة تنفيذ**. المتصفح لا
- * ينفّذها، وCSP لا يعنيها `script-src` أصلاً. فتصير البيانات عنصراً
- * في الصفحة يقرأه js/core/page-data.js وينسخه إلى window.
+ * `<script type="application/json">` **is not an executable block**. The browser does
+ * not run it, and `script-src` does not concern it at all. So the data becomes an element
+ * on the page that js/core/page-data.js reads and copies onto window.
  *
- * ── ما لم يتغيّر ────────────────────────────────────────────
+ * ── What did not change ─────────────────────────────────────
  *
- * **عقد `window.X` كما هو حرفياً.** الأسماء نفسها والقيم نفسها، فلا
- * يتغيّر سطر واحد في ملفات JS الأربعة والثلاثين. البيانات تصل بطريق
- * آخر، ومن يقرأها لا يعلم بالفرق.
+ * **The `window.X` contract, exactly as it was.** The same names and the same values,
+ * so not one line changes across the thirty-four JavaScript files. The data arrives by
+ * another route, and whoever reads it cannot tell the difference.
  *
- * ⚠️ ثلاثة قيود على المحتوى:
+ * ⚠️ Three constraints on the content:
  *
- *   1. JSON_HEX_TAG لازم: قيمة تحوي `</script>` كانت ستُنهي الوسم
- *      وتفتح باب حقن. الترميز يحوّل < و > إلى < و>.
- *   2. البيانات تُقرأ عند DOMContentLoaded، لذا يجب أن يُطبع هذا
- *      الوسم **قبل** أي سكربت يقرأ window، وهو كذلك: الـviews تُطبع
- *      قبل الـfooter.
- *   3. القيم تمرّ كما هي إلى JSON — لا تضع فيها ما لا يجوز أن يراه
- *      الزائر. هذا لم يتغيّر عن السلوك السابق.
+ *   1. JSON_HEX_TAG is required: a value containing `</script>` would have closed the
+ *      tag and opened an injection route. The encoding turns < and > into \u003C and
+ *      \u003E.
+ *   2. The data is read at DOMContentLoaded, so this tag must be printed **before** any
+ *      script that reads window — and it is: the views print before the footer.
+ *   3. The values pass into the JSON as they are — do not put anything in them the
+ *      visitor must not see. This has not changed from the previous behaviour.
  *
- * @param array<string, mixed> $data أزواج اسم/قيمة تُنسخ إلى window
+ * @param array<string, mixed> $data Name/value pairs to copy onto window
  */
 function pageData(array $data): string
 {
@@ -382,7 +394,7 @@ function pageData(array $data): string
     );
 
     if ($json === false) {
-        error_log('[Cairo Store] pageData: json_encode فشل — ' . json_last_error_msg());
+        error_log('[Cairo Store] pageData: json_encode failed — ' . json_last_error_msg());
         return '';
     }
 
@@ -391,8 +403,8 @@ function pageData(array $data): string
 }
 
 /**
- * وسم <link> لملف CSS خاص بصفحة واحدة (يُستدعى من الـ Controllers
- * عبر extraHead).
+ * A <link> tag for a single page's own CSS file (called from the controllers through
+ * extraHead).
  */
 function pageCss(string ...$paths): string
 {
@@ -404,24 +416,38 @@ function pageCss(string ...$paths): string
 }
 
 /**
- * سكربت صغير يُطبع داخل <head> قبل أي محتوى مرئي.
+ * A small script printed inside <head> before any visible content.
  *
- * يقرأ الثيم المحفوظ ويضبط data-bs-theme على <html> فوراً. سببان:
+ * It reads the stored theme and sets data-bs-theme on <html> immediately. Two reasons:
  *
- * 1) Bootstrap 5.3 يقرأ وضعه المظلم من data-bs-theme على <html> فقط.
- *    المشروع كان يضبط body.dark-mode وحدها، فبقيت كل مكوّنات
- *    Bootstrap (الـ pagination، القوائم المنسدلة، .text-muted،
- *    سهم الـ select …) على ألوان النهار فوق خلفية داكنة.
+ * 1) Bootstrap 5.3 reads its dark mode from data-bs-theme on <html> alone. The project
+ *    used to set body.dark-mode only, so every Bootstrap component (the pagination, the
+ *    dropdowns, .text-muted, the select arrow…) stayed on daylight colours over a dark
+ *    background.
  *
- * 2) js/core/theme.js يعمل بعد رسم الصفحة، فكانت تظهر ومضة بيضاء
- *    عند كل تنقّل في الوضع الليلي. ضبط السمة هنا يسبق أول رسم.
+ * 2) js/core/theme.js runs after the page paints, so a white flash appeared on every
+ *    navigation in dark mode. Setting the attribute here precedes the first paint.
  *
- * class="dark-mode" على <body> يبقى كما هو — كل CSS المشروع يعتمد
- * عليها — ويضيفه theme.js عند التحميل.
+ * class="dark-mode" on <body> stays as it is — all of the project's CSS depends on it —
+ * and theme.js adds it on load.
  */
 function themeBootScript(): string
 {
-    return <<<'HTML'
+    // ⚠️ Line endings are normalised to LF before the string leaves this function.
+    //
+    // The CSP hash in public/.htaccess is computed over the tag's contents byte for
+    // byte, newlines included. And .gitattributes checks this file out as CRLF on
+    // Windows and LF everywhere else — so the same source produces two different
+    // hashes on two platforms, and whichever one is written into the policy, the
+    // script is blocked on the other. It was measured both ways:
+    //
+    //     CRLF (Windows / XAMPP)  sha256-6TLKQaFcqhxCDjTk0QjqyBctIHNhyj10R3cAU65yIvQ=
+    //     LF   (Linux / Docker)   sha256-n33GJ973YEUTpbG1xOj611JYTc5wI4V+8xmEtfPaLjk=
+    //
+    // Normalising here makes the emitted bytes — and therefore the hash — the same
+    // everywhere, so one value in the policy is correct on every platform. This is
+    // the same reason Migrator::checksum normalises before hashing.
+    return str_replace("\r\n", "\n", <<<'HTML'
     <script>
     (function () {
         try {
@@ -433,29 +459,30 @@ function themeBootScript(): string
     })();
     </script>
 
-HTML;
+HTML);
 }
 
 /**
  * publicFileToDelete(string $relPath): ?string
  *
- * يحوّل مساراً نسبياً مخزَّناً في قاعدة البيانات (مثل images/x.jpg) إلى
- * مسار مطلق على القرص **بشرط أن يبقى داخل public/**، ويرجع null إن خرج
- * عنه أو لم يوجد.
+ * Turns a relative path stored in the database (images/x.jpg, say) into an absolute
+ * path on disk **provided it stays inside public/**, and returns null if it escapes or
+ * does not exist.
  *
- * لماذا وُجدت: مواضع حذف صور المنتجات كانت تبني المسار بـ
- * `ROOTPATH . '/public/' . ltrim($p, '/')`. و`ltrim` تزيل الشرطات
- * البادئة **ولا تمنع `..`** — فقيمة مثل `../../.env` كانت تخرج من
- * المجلد. مصادر القيم اليوم آمنة (`uploadVariantImage` يولّد الاسم
- * كاملاً على الخادم: product_<time>_<hex>.<ext>)، فلا ثغرة قائمة —
- * لكن الحارس يجب أن يكون في الدالة لا في عادة المستدعي، لأن أي مسار
- * كتابة جديد إلى العمود يصير ثغرة صامتة.
+ * Why it exists: the places deleting product images used to build the path as
+ * `ROOTPATH . '/public/' . ltrim($p, '/')`. And `ltrim` strips leading slashes **without
+ * stopping `..`** — so a value like `../../.env` escaped the directory. The sources of
+ * these values are safe today (`uploadVariantImage` generates the whole name on the
+ * server: product_<time>_<hex>.<ext>), so no hole is open — but the guard belongs in the
+ * function rather than in the caller's habits, because any new write path into that
+ * column becomes a silent hole.
  *
- * الاحتواء بـrealpath لا بفحص نصّي: realpath يفكّ `..` والوصلات الرمزية
- * معاً، والمقارنة على الناتج المُفكَّك هي وحدها التي لا تُخدع.
+ * Containment through realpath rather than a string check: realpath resolves both `..`
+ * and symbolic links, and comparing on the resolved result is the only comparison that
+ * cannot be fooled.
  *
- * @param  string $relPath المسار كما هو مخزَّن (نسبي لـpublic/)
- * @return string|null المسار المطلق الصالح للحذف، أو null إن رُفض
+ * @param  string $relPath The path as stored (relative to public/)
+ * @return string|null The absolute path safe to delete, or null if refused
  */
 function publicFileToDelete(string $relPath): ?string
 {
@@ -471,13 +498,13 @@ function publicFileToDelete(string $relPath): ?string
 
     $candidate = realpath($publicRoot . DIRECTORY_SEPARATOR . ltrim($relPath, '/\\'));
     if ($candidate === false || !is_file($candidate)) {
-        return null;   // غير موجود، أو مجلد
+        return null;   // Missing, or a directory
     }
 
-    // الفاصل في النهاية مقصود: بدونه يمرّ مجلد شقيق اسمه بادئة
-    // (public_backup مثلاً) على فحص str_starts_with.
+    // The trailing separator is deliberate: without it a sibling directory whose name is
+    // a prefix (public_backup, say) passes the str_starts_with check.
     if (!str_starts_with($candidate, $publicRoot . DIRECTORY_SEPARATOR)) {
-        error_log('[Cairo Store] رُفض حذف ملف خارج public/: ' . $relPath);
+        error_log('[Cairo Store] refused to delete a file outside public/: ' . $relPath);
         return null;
     }
 

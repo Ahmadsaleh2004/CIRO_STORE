@@ -2,15 +2,16 @@
 
 /**
  * app/helpers/product_variant_helper.php
- * دوال مشتركة لاختيار "اللون المعروض افتراضيًا" لمنتج له عدة Variants.
+ * Shared functions for choosing the default displayed colour of a product with several
+ * variants.
  */
 
 /**
- * أولوية الاختيار:
- *  1) لون يطابق جنس الزائر وله مخزون > 0
- *  2) لون "both" وله مخزون > 0
- *  3) أي لون له مخزون > 0
- *  4) is_default=1 أو أول لون بالقائمة
+ * The order of preference:
+ *  1) a colour matching the visitor's gender with stock > 0
+ *  2) a "both" colour with stock > 0
+ *  3) any colour with stock > 0
+ *  4) is_default=1, or the first colour in the list
  *
  * @param list<array<string, mixed>> $variants
  * @return array<string, mixed>|null
@@ -51,18 +52,18 @@ function pickDisplayVariant(array $variants, ?string $visitorGender): ?array
 }
 
 /**
- * جنس الزائر الحالي من ملفه الشخصي، أو null للزائر غير المسجّل.
+ * The current visitor's gender from their profile, or null for a signed-out visitor.
  *
- * $pdo اختياري: تُمرَّر عند وجود اتصال جاهز في السياق، وإلا تفتح الدالة
- * اتصالها بنفسها. جُعل اختيارياً كي لا تضطر الكنترولرز لاستيراد
- * Database لمجرّد تمريره.
+ * $pdo is optional: pass it when a connection is already available in context;
+ * otherwise the function opens its own. It was made optional so controllers need not
+ * import Database merely to pass it along.
  */
 function getVisitorGender(?PDO $pdo = null): ?string
 {
-    // الحارس مقصود ويبقى: هذه الدالة قد تُستدعى من سكربتات CLI في
-    // scripts/ التي تحمّل الهيلبرز بترتيبها الخاص، فلا نفترض أن
-    // auth_helper.php محمَّل. باقي حُرّاس function_exists في المشروع
-    // كانت تحرس دوالّ محمَّلة دائماً وأُزيلت.
+    // The guard is deliberate and stays: this function may be called from the CLI
+    // scripts under scripts/, which load the helpers in their own order, so
+    // auth_helper.php cannot be assumed loaded. The project's other function_exists
+    // guards protected functions that were always loaded, and were removed.
     if (!function_exists('isUser') || !isUser()) {
         return null;
     }

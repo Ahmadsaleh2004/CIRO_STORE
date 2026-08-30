@@ -2,25 +2,25 @@
 
 /**
  * app/helpers/stock_badge_helper.php
- * دالة موحّدة لتحديد باج المخزون (Limited/Out of Stock).
+ * A single function deciding the stock badge (Limited / Out of Stock).
  */
 /**
- * @param bool $showInStock هل نُرجع بادجاً أخضر عند توفّر مخزون وفير؟
+ * @param bool $showInStock Return a green badge when stock is plentiful?
  *
- * صفحة قائمة المنتجات لا تريده — بادج على كل بطاقة ضجيج بصري. صفحة
- * تفاصيل المنتج تريده، وكانت **تعيد كتابة الخريطة كلها** بـif/elseif
- * من أجل هذا الفرع الثالث وحده. الوسيط يجمع النسختين بلا أن يُفقد أياً
- * منهما سلوكها.
+ * The product list page does not want one — a badge on every card is visual noise. The
+ * product details page does, and it used to **rewrite the whole mapping** as an
+ * if/elseif chain for the sake of that third branch alone. The parameter unifies the two
+ * versions without either losing its behaviour.
  *
- * ملاحظة على الحدود: العمودان products.stock_quantity و
- * product_variants.stock_quantity كلاهما int unsigned، فالقيمة السالبة
- * غير ممكنة ولا فرع لها هنا.
+ * A note on the bounds: both products.stock_quantity and
+ * product_variants.stock_quantity are int unsigned, so a negative value is impossible
+ * and there is no branch for one here.
  *
- * ⚠️ **لهذه الدالة مرآة في JS**: stockBadge() في js/core/utils.js، تخدم
- * البطاقات التي يبنيها المتصفح (المفضّلة وتفاصيل المنتج). العتبة 50
- * والنصوص والأصناف مكرّرة بين اللغتين عمداً — لا سبيل لتفادي ذلك في
- * مشروع بلا خطوة بناء تشارك الثوابت. **إن غيّرت شيئاً هنا فغيّره هناك
- * أيضاً.**
+ * ⚠️ **This function has a mirror in JavaScript**: stockBadge() in js/core/utils.js,
+ * serving the cards the browser builds (the wishlist and the product details). The
+ * threshold of 50, the labels and the classes are duplicated across the two languages
+ * deliberately — there is no way around it in a project with no build step to share the
+ * constants. **If you change something here, change it there as well.**
  * @return array<string, mixed>
  */
 function getStockBadge(int $stock, bool $showInStock = false): ?array

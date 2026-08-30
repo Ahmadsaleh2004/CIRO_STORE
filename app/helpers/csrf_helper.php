@@ -2,11 +2,11 @@
 
 /**
  * app/helpers/csrf_helper.php
- * إدارة CSRF Token — توليد + تحقق.
+ * CSRF token management — generation and verification.
  *
- * ملاحظة: لا يستدعي هذا الملف session_start() على مستوى الملف.
- * يُفترض أن الجلسة المناسبة بدأت مسبقاً (PHPSESSID أو admin_session)
- * قبل استدعاء generateCsrfToken() أو verifyCsrfToken().
+ * Note: this file does not call session_start() at file level. The appropriate session
+ * (PHPSESSID or admin_session) is assumed to have been started before
+ * generateCsrfToken() or verifyCsrfToken() is called.
  */
 
 function generateCsrfToken(): string
@@ -29,43 +29,44 @@ function verifyCsrfToken(string $token): bool
 }
 
 /**
- * يُبطل التوكن الحالي ويُصدر غيره — عند **تغيّر الصلاحية وحده**.
+ * Invalidates the current token and issues another — **on a privilege change alone**.
  *
  * ══════════════════════════════════════════════════════════════
- * الثغرة التي يغلقها
+ * The hole it closes
  * ══════════════════════════════════════════════════════════════
  *
- * `session_regenerate_id(true)` تُبدّل معرّف الجلسة وتُبقي **محتواها**
- * كما هو — وهذا غرضها. لكن المحتوى يشمل `csrf_token`.
+ * `session_regenerate_id(true)` replaces the session id and keeps **its contents** as
+ * they are — which is its purpose. But those contents include `csrf_token`.
  *
- * فالتوكن الذي حصل عليه زائرٌ مجهول قبل الدخول يبقى صالحاً بعده
- * بحرفه. ومن استطاع أن يقرأ توكناً قبل المصادقة — عبر نافذة مشتركة،
- * أو صفحة عامّة، أو نطاق فرعي — يملك توكناً صالحاً لجلسة **مصادَقة**
- * لم تكن موجودة حين قرأه. والحمايةُ من ذلك هي بالضبط سبب استدعاء
- * `session_regenerate_id` في السطر الذي يسبق: نُبدّل المعرّف لئلّا
- * يُورَّث، ثم نورّث التوكن.
+ * So the token an anonymous visitor obtained before signing in stays valid afterwards,
+ * character for character. And anyone who managed to read a token before authentication
+ * — through a shared window, a public page, or a subdomain — holds a token valid for an
+ * **authenticated** session that did not exist when they read it. Guarding against that
+ * is precisely why `session_regenerate_id` is called on the preceding line: we replace
+ * the id so it is not inherited, and then inherit the token.
  *
- * ── لماذا هنا لا بعد كل POST ناجح ─────────────────────────────
+ * ── Why here rather than after every successful POST ─────────
  *
- * التدوير بعد كل طلب مُعدِّل كان الخيار الأوّل، ورُفض بالقياس:
+ * Rotating after every state-changing request was the first option, and it was rejected
+ * on measurement:
  *
- *   · التوكن في هذا المشروع **واحد لكل جلسة** ويقرؤه كل نموذج مفتوح.
- *     فتدويره بعد كل POST يُبطل نماذج التبويبات الأخرى فوراً — وكل
- *     منها يدفع طلباً ضائعاً لإعادة المحاولة عبر js/core/csrf.js.
- *     أي ضعف الطلبات على نصف أفعال المستخدم، وأخطرها صفحة الدفع.
- *   · والمكسب الأمني مقابل ذلك ضئيل: التوكن يسافر في **جسم** الطلب لا
- *     في الرابط، فلا يتسرّب إلى سجلّ خادم ولا إلى ترويسة Referer.
- *     التدوير الدوري يعالج تسرّباً لا يحدث بهذه البنية.
+ *   · the token in this project is **one per session**, and every open form reads it.
+ *     So rotating it after every POST invalidates the forms in other tabs immediately —
+ *     and each of them spends a wasted request retrying through js/core/csrf.js. That is
+ *     double the requests on half the user's actions, the checkout page worst of all.
+ *   · and the security gain against that is slight: the token travels in the request
+ *     **body** rather than the URL, so it leaks into neither a server log nor a Referer
+ *     header. Periodic rotation addresses a leak that does not occur with this design.
  *
- * أمّا تغيّر الصلاحية فحالة أخرى تماماً: هناك التسرّب **مفترض** لا
- * محتمل — نحن نفترض أصلاً أن ما قبل المصادقة قد يكون معروفاً، ولذلك
- * نبدّل معرّف الجلسة. فالتوكن يجب أن يتبعه.
+ * A privilege change is an entirely different case: there the leak is **assumed**
+ * rather than merely possible — we already assume that what preceded authentication may
+ * be known, which is why the session id is replaced. So the token must follow it.
  *
- * ⚠️ استدعِها **بعد** `session_regenerate_id()` لا قبلها.
+ * ⚠️ Call it **after** `session_regenerate_id()`, not before.
  *
- * @return string التوكن الجديد — أعِدْه في جسم الاستجابة كي يحدّثه
- *                js/core/csrf.js فوراً بدل أن يكتشف بطلان القديم
- *                بطلبٍ فاشل ثم يعيد المحاولة.
+ * @return string The new token — return it in the response body so js/core/csrf.js
+ *                updates immediately, rather than discovering the old one is stale
+ *                through a failed request and then retrying.
  */
 function rotateCsrfToken(): string
 {

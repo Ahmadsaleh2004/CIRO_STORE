@@ -77,14 +77,24 @@
     #             preg_match('#<script>(.*?)</script>#s', themeBootScript(), \$m);
     #             echo 'sha256-'.base64_encode(hash('sha256', \$m[1], true));"
     #
-    # ⚠️ وهذا التحذير لم يكن كافياً: البصمة المكتوبة هنا كانت
-    # `sha256-n33GJ973YEUTpbG1xOj611JYTc5wI4V+8xmEtfPaLjk=` بينما
-    # محتوى الدالة يُنتج `sha256-6TLKQaFcqhxCDjTk0QjqyBctIHNhyj10R3cAU65yIvQ=`.
-    # أي أن سكربت الثيم كان **محجوباً في كل تحميل صفحة** — بلا عطل
-    # ظاهر سوى ومضة بيضاء وسطر رفض في الـconsole، وهو بالضبط الفشل
-    # الصامت الذي يجعل تعليقاً تحذيرياً بلا فائدة.
+    # ⚠️ وهذا التحذير لم يكن كافياً، والسبب أعمق من سهو: البصمة تُحسب
+    # على المحتوى بما فيه **نهايات الأسطر**، و.gitattributes يُخرج هذا
+    # الملف بـCRLF على ويندوز وبـLF على غيره. فالمصدر الواحد كان يُنتج
+    # بصمتين، مقيستين:
     #
-    # الحارس الآن اختبار لا تعليق:
+    #     CRLF (ويندوز/XAMPP)   sha256-6TLKQaFcqhxCDjTk0QjqyBctIHNhyj10R3cAU65yIvQ=
+    #     LF   (لينكس/Docker)   sha256-n33GJ973YEUTpbG1xOj611JYTc5wI4V+8xmEtfPaLjk=
+    #
+    # أياً كانت المكتوبة هنا، يبقى السكربت **محجوباً على المنصّة الأخرى**
+    # — بلا عطل ظاهر سوى ومضة بيضاء وسطر رفض في الـconsole. وهذا يعني
+    # أن إصلاح البصمة محلياً على ويندوز كان يكسرها على خادم النشر.
+    #
+    # العلاج في المصدر لا هنا: themeBootScript() تُوحّد نهايات الأسطر
+    # إلى LF قبل أن يغادر النصّ الدالة، فتصير البصمة واحدة في كل مكان
+    # وتصحّ القيمة أدناه على المنصّتين. وهو نفس ما تفعله
+    # Migrator::checksum للسبب نفسه.
+    #
+    # والحارس اختبار لا تعليق:
     # tests/Unit/SecurityHeadersTest.php يحسب البصمة من الدالة نفسها
     # ويقارنها بهذا السطر، فيسقط البناء عند أول انحراف.
     #
@@ -130,7 +140,7 @@
     # وما بقي من مضيفات صار مقيّداً بـintegrity في الوسوم نفسها —
     # راجع app/views/inc/footer.php. فالسماح بالمضيف لم يعد يعني
     # الثقة بأي ملف يرسله.
-    Header always set Content-Security-Policy "default-src 'self'; script-src 'self' 'sha256-6TLKQaFcqhxCDjTk0QjqyBctIHNhyj10R3cAU65yIvQ=' https://cdn.jsdelivr.net https://js.hcaptcha.com https://*.hcaptcha.com; style-src 'self' https://cdn.jsdelivr.net https://*.hcaptcha.com; img-src 'self' data:; font-src 'self' data: https://cdn.jsdelivr.net; connect-src 'self' https://*.hcaptcha.com; frame-src https://*.hcaptcha.com; form-action 'self'; frame-ancestors 'self'; base-uri 'self'; object-src 'none'"
+    Header always set Content-Security-Policy "default-src 'self'; script-src 'self' 'sha256-n33GJ973YEUTpbG1xOj611JYTc5wI4V+8xmEtfPaLjk=' https://cdn.jsdelivr.net https://js.hcaptcha.com https://*.hcaptcha.com; style-src 'self' https://cdn.jsdelivr.net https://*.hcaptcha.com; img-src 'self' data:; font-src 'self' data: https://cdn.jsdelivr.net; connect-src 'self' https://*.hcaptcha.com; frame-src https://*.hcaptcha.com; form-action 'self'; frame-ancestors 'self'; base-uri 'self'; object-src 'none'"
 
 
 </IfModule>

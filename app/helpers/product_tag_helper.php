@@ -2,22 +2,23 @@
 
 /**
  * app/helpers/product_tag_helper.php
- * وسم المنتج التسويقي: best-seller | new | limited | regular.
+ * The product's marketing tag: best-seller | new | limited | regular.
  *
- * كانت productTag() معرَّفة باسم getTag() **داخل** app/views/product/product.php
- * — دالة عامة تُعرَّف في ملف عرض. مشكلتان: لا يمكن استدعاؤها من أي view
- * آخر، ولو عُرض ذلك الـview مرتين في طلب واحد لسقط بـ«Cannot redeclare».
- * (المرحلة 4 حوّلت require_once إلى require فصار ذلك ممكناً فعلاً.)
+ * productTag() used to be defined as getTag() **inside**
+ * app/views/product/product.php — a global function declared in a view file. Two
+ * problems: it could not be called from any other view, and rendering that view twice
+ * in one request would fail with "Cannot redeclare". (Phase 4 changed require_once to
+ * require, which made that genuinely possible.)
  *
- * الوسم نفسه يُستهلك في مكانين: بطاقات المنتجات المبنية على الخادم،
- * ومصفوفة JSON التي يقرأها js/features/products-catalog.js لبناء
- * أشرطة «الأكثر مبيعاً» و«الجديد».
+ * The tag itself is consumed in two places: the server-rendered product cards, and the
+ * JSON array js/features/products-catalog.js reads to build the "best sellers" and "new
+ * arrivals" rows.
  */
 
 /**
- * @param array<string, mixed> $p صفّ المنتج، ويُقرأ منه:
+ * @param array<string, mixed> $p The product row, from which it reads:
  *                sales_count · date_added · _display.stock_quantity
- *                (أو stock_quantity عند غياب المتغيّر المعروض)
+ *                (or stock_quantity when there is no displayed variant)
  */
 function productTag(array $p): string
 {
