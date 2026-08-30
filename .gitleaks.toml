@@ -1,76 +1,77 @@
 # ══════════════════════════════════════════════════════════════
-# قواعد gitleaks — Cairo Store
+# gitleaks rules — Cairo Store
 # ══════════════════════════════════════════════════════════════
 #
-# القواعد الافتراضية ممتازة لتوكنات المزوّدين: اختُبرت هنا على ستة
-# أنواع (AWS · مفتاح RSA خاص · GitHub · Google API · Slack · Stripe)
-# فأمسكتها كلها. لكنها **لا تمسك**:
+# The default rules are excellent for provider tokens: they were tested here against six
+# kinds (AWS · an RSA private key · GitHub · a Google API key · Slack · Stripe) and caught
+# every one. But they **do not catch**:
 #
-#   1. كلمة سر مكتوبة حرفياً في الكود
-#   2. سلسلة اتصال قاعدة بيانات تحمل كلمة السر داخلها
+#   1. a password written literally in the code
+#   2. a database connection string carrying the password inside it
 #
-# وهذا بالضبط ما يخصّ هذا المشروع: ملف .env يحمل DB_PASSWORD، وأي نسخة
-# منه تتسرّب إلى ملف متتبَّع تمرّ بلا اعتراض.
+# And that is exactly what concerns this project: the .env file holds DB_PASSWORD, and any
+# copy of it leaking into a tracked file would pass unchallenged.
 #
-# ⚠️ لا تحذف `useDefault = true` — بدونه تُستبدل القواعد المئة الافتراضية
-# بالقاعدتين أدناه وحدهما، فتفقد تغطية التوكنات كلها.
+# ⚠️ Do not remove `useDefault = true` — without it the hundred default rules are replaced
+# by the two below alone, and all token coverage is lost.
 
-title = "Cairo Store — قواعد موسَّعة"
+title = "Cairo Store — extended rules"
 
 [extend]
 useDefault = true
 
 # ══════════════════════════════════════════════════════════════
-# 1. كلمة سر أو سرّ مكتوب حرفياً
+# 1. A password or secret written literally
 # ══════════════════════════════════════════════════════════════
 #
-# التصميم مبنيّ على مسح المستودع الحقيقي قبل كتابة القاعدة. الإنذارات
-# المحتملة كلها كانت **تسلسل متغيّرات** لا قيماً حرفية:
+# The design rests on a sweep of the real repository made before the rule was written. Every
+# potential alarm turned out to be **string concatenation** rather than a literal value:
 #
 #     '/auth/reset?token=' . $resetToken . '&email='
 #     'csrf_token=' + encodeURIComponent(window._csrfToken || '')
 #     'password=' . $q(DB_PASS) . "\n"
 #
-# ولاحظ أن ما بعد علامة المساواة في كلٍّ منها **يحوي مسافات** — لأنه
-# كود لا قيمة. فالقيمة في القاعدة تُشترط بلا أي مسافة، وهذا وحده يُسقط
-# الثلاثة. والـentropy تُسقط ما تبقّى من نصوص مقروءة مثل "changeme".
+# And note that what follows the equals sign in each of them **contains spaces** — because
+# it is code, not a value. So the rule requires the value to contain no space at all, and
+# that alone drops all three. And the entropy threshold drops whatever readable text remains,
+# such as "changeme".
 [[rules]]
 id = "cairo-hardcoded-password"
-description = "كلمة سر أو سرّ مكتوب حرفياً في الكود"
+description = "A password or secret written literally in the code"
 regex = '''(?i)["']?\b(password|passwd|pwd|secret|api[_-]?key|access[_-]?token|auth[_-]?token|private[_-]?key)\b["']?\s*(?::|=>|=)\s*["']([^"'\s]{8,})["']'''
 secretGroup = 2
 entropy = 3.0
 keywords = ["password", "passwd", "pwd", "secret", "api_key", "apikey", "access_token", "auth_token", "private_key"]
 
 [rules.allowlist]
-# ملفات القوالب تحمل قيماً وهمية بحكم وظيفتها
+# Template files carry dummy values by the nature of their job
 paths = [
     '''\.env\.example$''',
     '''(^|/)SECURITY-TOOLING\.md$''',
     '''(^|/)CLEANUP-REPORT.*\.md$''',
     '''(^|/)CLEANUP-PLAN.*\.md$''',
 ]
-# قيم نائبة معروفة — وجودها إعلان صريح أنها ليست سرّاً
+# Known placeholder values — their presence is an explicit declaration of not being a secret
 regexes = [
     '''(?i)^(your|my|the)?[_-]?(password|secret|api[_-]?key|token|key)[_-]?(here|value|goes[_-]?here)?$''',
     '''(?i)^(changeme|change[_-]?me|placeholder|example|sample|dummy|test|xxx+|\*+|\.\.\.)$''',
     '''(?i)^(true|false|null|none|undefined)$''',
-    '''^\$\{?[A-Za-z_][A-Za-z0-9_]*\}?$''',   # ${VAR} أو $VAR
+    '''^\$\{?[A-Za-z_][A-Za-z0-9_]*\}?$''',   # ${VAR} or $VAR
     '''^<[^>]+>$''',                          # <your-key>
 ]
 
 # ══════════════════════════════════════════════════════════════
-# 2. سلسلة اتصال تحمل كلمة السر
+# 2. A connection string carrying the password
 # ══════════════════════════════════════════════════════════════
 #
-# mysql://user:PASS@host — الصيغة الأكثر شيوعاً لتسريب بيانات قاعدة
-# البيانات، ولا تمسكها القواعد الافتراضية لأنها ليست توكن مزوّد.
+# mysql://user:PASS@host — the most common shape for leaking database credentials, and the
+# default rules do not catch it because it is not a provider token.
 #
-# المجموعة الثانية (كلمة السر) هي السرّ لا السلسلة كلها، كي لا يُطبع
-# اسم المضيف والمستخدم في السجل بلا داعٍ.
+# The second group (the password) is the secret rather than the whole string, so the host
+# and user names are not printed into the log needlessly.
 [[rules]]
 id = "cairo-db-connection-string"
-description = "سلسلة اتصال قاعدة بيانات تحمل كلمة السر"
+description = "A database connection string carrying the password"
 regex = '''(?i)\b(?:mysqli?|postgres(?:ql)?|mongodb(?:\+srv)?|redis|amqps?|mssql|sqlserver|ftp)://[^:@\s/]+:([^@\s/]{3,})@'''
 secretGroup = 1
 keywords = ["mysql://", "mysqli://", "postgres://", "postgresql://", "mongodb://", "mongodb+srv://", "redis://", "amqp://", "amqps://", "mssql://", "sqlserver://", "ftp://"]
@@ -88,13 +89,14 @@ regexes = [
 ]
 
 # ══════════════════════════════════════════════════════════════
-# استثناءات عامة
+# General exceptions
 # ══════════════════════════════════════════════════════════════
 #
-# vendor/ متجاهَل في git أصلاً فلا يصل الفحص إليه، لكن ذكره هنا يحمي
-# لو تغيّرت .gitignore يوماً. والصور تُفحص بلا فائدة وتبطئ.
+# vendor/ is git-ignored in the first place so the scan never reaches it, but naming it here
+# protects against .gitignore changing one day. And images are scanned to no purpose and
+# slow things down.
 [allowlist]
-description = "مسارات لا يُفحص محتواها"
+description = "Paths whose contents are not scanned"
 paths = [
     '''(^|/)vendor/''',
     '''(^|/)node_modules/''',
@@ -102,17 +104,17 @@ paths = [
     '''(^|/)storage/backups/''',
     '''\.(png|jpe?g|gif|webp|ico|svg|woff2?|ttf|eot|pdf|zip|sql)$''',
 ]
-# متجهات المعايير المنشورة.
+# Published standard test vectors.
 #
-# gitleaks أمسك RFC_SECRET في tests/Unit/TotpTest.php (عشوائية 3.58)
-# وكان محقّاً شكلاً — السلسلة تبدو كمفتاح تماماً. لكنها **متجه اختبار
-# منشور في RFC 6238** نصّاً: السرّ "12345678901234567890" بترميز
-# Base32. قيمتها في كونها معروفة للجميع، إذ بها وحدها يُثبَت أن تطبيق
-# TOTP متوافق مع Google Authenticator.
+# gitleaks caught RFC_SECRET in tests/Unit/TotpTest.php (entropy 3.58) and was right in
+# form — the string looks exactly like a key. But it is a **test vector published verbatim
+# in RFC 6238**: the secret "12345678901234567890" in Base32. Its whole value lies in being
+# known to everyone, since it alone proves a TOTP implementation agrees with Google
+# Authenticator.
 #
-# الاستثناء بالقيمة الحرفية لا بالمسار عمداً: استثناء
-# tests/Unit/TotpTest.php كله كان سيُعمي الفحص عن أي سرّ حقيقي يُكتب
-# في الملف لاحقاً. هكذا يبقى الملف مفحوصاً، وهذه السلسلة وحدها معفاة.
+# The exception is by literal value rather than by path, deliberately: excluding the whole
+# of tests/Unit/TotpTest.php would have blinded the scan to any real secret written into
+# that file later. This way the file stays scanned and this one string alone is exempt.
 regexes = [
     '''^GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ$''',
 ]

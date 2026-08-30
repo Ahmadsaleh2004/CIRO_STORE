@@ -1,37 +1,39 @@
 /**
  * build/build-css.mjs
- * يدمج سلاسل @import في ملف واحد مضغوط لكل حزمة، ببصمة محتوى.
+ * Merges the @import chains into one minified file per bundle, with a content fingerprint.
  *
- * ── المشكلة ──────────────────────────────────────────────────
+ * ── The problem ──────────────────────────────────────────────
  *
- * store.css و admin.css ملفا @import فقط: 36 و19 استيراداً. والمتصفح
- * لا يعرف بوجود أيٍّ منها حتى ينزّل الملف الأب ويحلّله — فالتنزيل
- * متسلسل بطبعه، لا متوازٍ. خمسة وخمسون طلباً مرتّباً على اتصال بطيء
- * تعني صفحة بيضاء طويلة.
+ * store.css and admin.css are files of nothing but @import: 36 and 19 of them. And the
+ * browser does not know any of them exists until it has downloaded the parent file and
+ * parsed it — so the downloading is sequential by nature, not parallel. Fifty-five ordered
+ * requests over a slow connection means a long white page.
  *
- * وassets_helper.php كان يوثّق هذه الترقية بنفسه منذ البداية:
- * «إن احتجنا لاحقاً طلباً واحداً فقط، الترقية هي دمج الملفات في
- * public/css/dist/<bundle>.css وإرجاع وسم واحد من هنا — بلا أي تغيير
- * في الـViews». هذا هو تنفيذها حرفياً.
+ * And assets_helper.php had documented this upgrade itself from the beginning:
+ * "If we later need a single request, the upgrade is to merge the files into
+ * public/css/dist/<bundle>.css and return one tag from here — with no change in the views
+ * at all." This is that, carried out literally.
  *
- * ── ما يحرسه هذا السكربت ─────────────────────────────────────
+ * ── What this script guards ──────────────────────────────────
  *
- * **الترتيب حمّال معنى.** store.css يقول ذلك صراحةً في رأسه: كثير من
- * القواعد تتصادم عند نفس الـspecificity، والأخير يفوز. فالدمج يتبع
- * ترتيب @import حرفياً، ولا يعيد ترتيب شيء، ولا يحذف تكراراً.
+ * **The order carries meaning.** store.css says so plainly in its header: many rules collide
+ * at the same specificity, and the last one wins. So the merge follows the @import order
+ * literally, reorders nothing, and removes no duplicates.
  *
- * **البصمة من المحتوى لا من الوقت.** اسم الملف يحمل sha256 مقتطعاً،
- * فتغيّر المحتوى يغيّر الرابط ويُبطل التخزين المؤقّت من تلقائه — وثبات
- * المحتوى يُبقي الرابط فيستفيد الزائر من ذاكرته. الطابع الزمني كان
- * سيُبطل التخزين عند كل نشر ولو لم يتغيّر حرف.
+ * **The fingerprint comes from the content, not from the clock.** The file's name carries a
+ * truncated sha256, so a change in content changes the URL and invalidates the cache by
+ * itself — while unchanged content keeps the URL, so the visitor benefits from their cache.
+ * A timestamp would have invalidated the cache on every deploy even if not one character
+ * had changed.
  *
- * ── فخّان فُحصا قبل الكتابة ──────────────────────────────────
+ * ── Two traps checked before this was written ────────────────
  *
- *   · **استيراد متداخل**: لا يوجد (مفحوص) — كل الاستيراد في ملفَي
- *     الدخول وحدهما. فلا حاجة لحلّ تعاودي، ولو ظهر لاحقاً يفشل
- *     السكربت صراحةً بدل أن يُسقط الملف بصمت.
- *   · **مسارات نسبية داخل url()**: صفر (مفحوص). لو وُجدت لانكسرت عند
- *     نقل المحتوى إلى dist/ الأعمق بمستوى — والسكربت يرفض حينها.
+ *   · **Nested imports**: none (verified) — every import lives in the two entry files
+ *     alone. So no recursive resolution is needed, and were one to appear later the script
+ *     fails plainly rather than dropping the file silently.
+ *   · **Relative paths inside url()**: zero (verified). Had any existed they would break
+ *     when the content moves into dist/, one level deeper — and the script refuses in that
+ *     case.
  */
 
 import { createHash } from 'node:crypto';
@@ -47,7 +49,7 @@ const distDir = join(cssRoot, 'dist');
 
 const BUNDLES = ['store', 'admin'];
 
-/** يقرأ ترتيب @import من ملف الدخول — بالترتيب، بلا فرز ولا إزالة تكرار. */
+/** Reads the @import order from an entry file — in order, unsorted and undeduplicated. */
 function readImports(entryPath) {
   const source = readFileSync(entryPath, 'utf8');
   const pattern = /@import\s+url\(\s*["']([^"']+)["']\s*\)\s*;/g;
@@ -62,10 +64,11 @@ function readImports(entryPath) {
 }
 
 /**
- * يُرجع أول مسار نسبي داخل url()، أو null إن لم يوجد.
+ * Returns the first relative path inside a url(), or null if there is none.
  *
- * يقبل: data: و http(s): و // و / و # و متغيّرات var().
- * يرفض: كل ما عداها — لأنه يُحلّ نسبةً إلى موضع الملف، وموضعه يتغيّر.
+ * It accepts: data:, http(s):, //, /, # and var() variables.
+ * It rejects everything else — because that resolves relative to the file's location, and
+ * the location changes.
  */
 function findRelativeUrl(css) {
   const pattern = /url\(\s*(?:"([^"]*)"|'([^']*)'|([^)]*))\)/g;
@@ -88,7 +91,7 @@ function fail(message) {
   process.exit(1);
 }
 
-// ── التنظيف: بصمات قديمة لا تُترك تتراكم ──────────────────────
+// ── The cleanup: old fingerprints are not left to pile up ─────
 if (existsSync(distDir)) {
   for (const file of readdirSync(distDir)) {
     rmSync(join(distDir, file));
@@ -102,12 +105,12 @@ const manifest = {};
 for (const bundle of BUNDLES) {
   const entry = join(cssRoot, `${bundle}.css`);
   if (!existsSync(entry)) {
-    fail(`ملف الدخول غائب: public/css/${bundle}.css`);
+    fail(`Missing entry file: public/css/${bundle}.css`);
   }
 
   const imports = readImports(entry);
   if (imports.length === 0) {
-    fail(`لا @import في public/css/${bundle}.css — هل تغيّرت صيغتها؟`);
+    fail(`No @import in public/css/${bundle}.css — has its form changed?`);
   }
 
   const parts = [];
@@ -115,27 +118,27 @@ for (const bundle of BUNDLES) {
   for (const relative of imports) {
     const path = join(cssRoot, relative);
     if (!existsSync(path)) {
-      fail(`ملف مستورَد غائب: public/css/${relative}`);
+      fail(`Missing imported file: public/css/${relative}`);
     }
 
     const content = readFileSync(path, 'utf8');
 
     if (/@import/.test(content)) {
-      fail(`استيراد متداخل في ${relative} — السكربت يفكّ مستوى واحداً فقط.`);
+      fail(`A nested import in ${relative} — the script resolves one level only.`);
     }
 
-    // url() نسبي كان سينكسر: المحتوى ينتقل إلى dist/ الأعمق بمستوى.
+    // A relative url() would break: the content moves into dist/, one level deeper.
     //
-    // ⚠️ القيمة تُستخرج ثم تُفحص، ولا تُختبَر بنافية داخل النمط.
-    // المحاولة الأولى كانت:
+    // ⚠️ The value is extracted and then checked; it is not tested with a negative
+    // lookahead inside the pattern. The first attempt was:
     //     /url\(\s*['"]?(?!data:|https?:|\/|#)/
-    // وهي معطوبة: `['"]?` اختيارية، فحين تفشل النافية بعد علامة
-    // الاقتباس يتراجع المحرّك إلى مطابقة صفرية للعلامة ويفحص النافية
-    // عند العلامة نفسها — و`"` ليست data: فتنجح النافية ويقع إنذار
-    // كاذب. وقع فعلاً على data:image/svg+xml في bootstrap-forms.css.
+    // and it is broken: `['"]?` is optional, so when the lookahead fails after the quote
+    // the engine backtracks to a zero-width match of the quote and tests the lookahead at
+    // the quote itself — and `"` is not data:, so the lookahead succeeds and a false alarm
+    // fires. It actually fired on data:image/svg+xml in bootstrap-forms.css.
     const relativeUrl = findRelativeUrl(content);
     if (relativeUrl !== null) {
-      fail(`مسار نسبي داخل url() في ${relative}: ${relativeUrl} — سينكسر بعد الدمج.`);
+      fail(`A relative path inside url() in ${relative}: ${relativeUrl} — it will break after the merge.`);
     }
 
     parts.push(`/* ${relative} */\n${content}`);
@@ -147,8 +150,8 @@ for (const bundle of BUNDLES) {
     filename: `${bundle}.css`,
     code: Buffer.from(merged),
     minify: true,
-    // لا targets: الضغط وحده. تحويل الصيغ الحديثة إلى قديمة قد يغيّر
-    // دلالة قاعدة، والمشروع لم يطلب ذلك ولم يُقس أثره.
+    // No targets: minification alone. Lowering modern syntax to older forms can change a
+    // rule's meaning, and the project neither asked for that nor measured its effect.
   });
 
   const hash = createHash('sha256').update(code).digest('hex').slice(0, 12);
@@ -160,13 +163,13 @@ for (const bundle of BUNDLES) {
   const before = Buffer.byteLength(merged);
   const after = code.length;
   process.stdout.write(
-    `  ✓ ${bundle.padEnd(6)} ${String(imports.length).padStart(2)} ملفاً · ` +
+    `  ✓ ${bundle.padEnd(6)} ${String(imports.length).padStart(2)} files · ` +
       `${(before / 1024).toFixed(1)} KB → ${(after / 1024).toFixed(1)} KB ` +
-      `(${Math.round((1 - after / before) * 100)}% أقل) → ${name}\n`
+      `(${Math.round((1 - after / before) * 100)}% smaller) → ${name}\n`
   );
 }
 
-// البيان هو ما تقرأه assets_helper.php لتعرف اسم الملف المبصوم.
+// The manifest is what assets_helper.php reads to learn the fingerprinted file's name.
 writeFileSync(join(distDir, 'manifest.json'), `${JSON.stringify(manifest, null, 2)}\n`);
 
 process.stdout.write('\n  ✓ public/css/dist/manifest.json\n\n');

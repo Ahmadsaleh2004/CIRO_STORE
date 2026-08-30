@@ -1,33 +1,34 @@
 /**
  * build/build-js.mjs
- * يدمج ملفات JS في حزم مضغوطة مبصومة — كما يفعل build-css.mjs بالأنماط.
+ * Merges the JS files into minified, fingerprinted bundles — as build-css.mjs does for the
+ * styles.
  *
- * ── المشكلة، مقيسة ─────────────────────────────────────────
+ * ── The problem, measured ──────────────────────────────────
  *
- * الصفحة الرئيسية كانت تطلب **ثمانية عشر ملف JS**. والمتصفح يسمح بستّ
- * اتصالات متزامنة لكل نطاق على HTTP/1.1، فتقف الملفات في طابور:
+ * The home page used to request **eighteen JS files**. And a browser allows six concurrent
+ * connections per host on HTTP/1.1, so the files queue up:
  *
- *     أول ملف يبدأ:      467 ms
- *     آخر ملف ينتهي:     999 ms
- *     DOMContentLoaded: 1051 ms
+ *     first file starts:  467 ms
+ *     last file finishes: 999 ms
+ *     DOMContentLoaded:  1051 ms
  *
- * والسلايدر لا وجود له في HTML إطلاقاً: يبنيه products-catalog.js من
- * window.dbHomeSliders. وهو الرابع عشر في الطابور — فيبقى مكانه فارغاً
- * أكثر من ثانية بعد ظهور الصفحة. وهذا بالضبط ما يُحسّ بطئاً.
+ * And the slider does not exist in the HTML at all: products-catalog.js builds it from
+ * window.dbHomeSliders. And that is fourteenth in the queue — so its place stays empty for
+ * more than a second after the page appears. Which is exactly what feels slow.
  *
- * ── الترتيب هو العقد ───────────────────────────────────────
+ * ── The order is the contract ──────────────────────────────
  *
- * ملفات المشروع ليست وحدات ES: تتشارك نطاقاً عاماً، ويعتمد اللاحق على
- * ما عرّفه السابق. فالدمج يتبع ترتيب الـfooter **حرفاً بحرف** — وهو
- * نفس ترتيب تنفيذ وسوم <script>.
+ * The project's files are not ES modules: they share a global scope, and each later one
+ * depends on what an earlier one defined. So the merge follows the footer's order **letter
+ * for letter** — which is the same order the <script> tags execute in.
  *
- * ولهذا لا bundling ذكي ولا شجرة اعتماد: مجرّد ضمّ بالترتيب. أي إعادة
- * ترتيب تكسر النطاق العام بصمت.
+ * Which is why there is no clever bundling and no dependency graph: just concatenation in
+ * order. Any reordering breaks the global scope silently.
  *
- * ── حزم مستقلّة لا حزمة واحدة ──────────────────────────────
+ * ── Separate bundles rather than one ───────────────────────
  *
- * لأن صفحات الأدمن تُحمّل ملفات لا تحتاجها صفحات المتجر والعكس. حزمة
- * واحدة كانت ستُجبر زائر المتجر على تنزيل لوحة التحكّم كاملة.
+ * Because the admin pages load files the store pages do not need, and the reverse. A single
+ * bundle would have forced a store visitor to download the whole control panel.
  */
 
 import { createHash } from 'node:crypto';
@@ -42,12 +43,12 @@ const jsRoot = join(root, 'public', 'js');
 const distDir = join(jsRoot, 'dist');
 
 /**
- * الحزم — كل قائمة تعكس ترتيب الـfooter المقابل حرفاً بحرف.
+ * The bundles — each list mirrors its footer's order letter for letter.
  *
- * ⚠️ page-data.js **ليس في أي حزمة**. يبقى وسماً منفصلاً بلا defer
- * لأنه ينسخ جزيرة بيانات الصفحة إلى window، وكل ما تحته يقرأ منها.
- * ضمّه إلى الحزمة يبقيه أوّلاً داخلها، لكن الحزمة نفسها defer — فتصير
- * البيانات متاحة متأخّرةً عمّا هي عليه اليوم.
+ * ⚠️ page-data.js is **in no bundle**. It stays a separate tag without defer because it
+ * copies the page's data island onto window, and everything below it reads from there.
+ * Folding it into the bundle would keep it first inside the bundle, but the bundle itself
+ * is deferred — so the data would become available later than it does today.
  */
 const BUNDLES = {
     // app/views/inc/footer.php
@@ -59,9 +60,9 @@ const BUNDLES = {
         'core/flash-toast.js',
         'core/theme.js',
         'core/modal-input-colors.js',
-        // يلوّن أزرار الـvariants من data-swatch عبر الـCSSOM — لون
-        // الـvariant يأتي من القاعدة فلا يصير class، ولا يجوز أن يبقى
-        // style= بعد حذف 'unsafe-inline' من style-src.
+        // Colours the variant buttons from data-swatch through the CSSOM — a variant's
+        // colour comes from the database so it cannot become a class, and a style= cannot
+        // remain once 'unsafe-inline' is removed from style-src.
         'store/variant-swatches.js',
         'features/cart.js',
         'features/products-catalog.js',
@@ -96,7 +97,7 @@ const BUNDLES = {
         'main.js',
     ],
 
-    // يُحمَّل فوق حزمة المتجر للمستخدم المسجّل وحده.
+    // Loaded on top of the store bundle for a signed-in user alone.
     'store-auth': ['features/notifications.js'],
 };
 
@@ -123,19 +124,19 @@ for (const [name, files] of Object.entries(BUNDLES)) {
     for (const relative of files) {
         const path = join(jsRoot, relative);
         if (!existsSync(path)) {
-            fail(`ملف غائب في حزمة ${name}: js/${relative}`);
+            fail(`Missing file in the ${name} bundle: js/${relative}`);
         }
 
         const code = readFileSync(path, 'utf8');
 
-        // ⚠️ 'use strict' في ملف يصير عامّاً على الحزمة كلها بعد الضمّ.
-        // ملفات المشروع تعتمد على النطاق العام غير الصارم (إسناد إلى
-        // window، ودوال في المستوى الأعلى)، فتفعيل الوضع الصارم على
-        // ملف لا يقصده يكسره بصمت. كل ملف يُغلَّف في دالة تنفَّذ فوراً
-        // كي يبقى وضعه الصارم محبوساً فيه.
+        // ⚠️ A 'use strict' in one file becomes global to the whole bundle after
+        // concatenation. The project's files rely on the non-strict global scope (assigning
+        // to window, and functions at the top level), so switching strict mode on for a
+        // file that did not ask for it breaks it silently. Each file is wrapped in an
+        // immediately-invoked function so its strict mode stays confined to it.
         //
-        // والتغليف لا يخفي شيئاً: التصريحات في المستوى الأعلى في هذه
-        // الملفات إمّا مُسندة إلى window صراحةً، أو مقصود بها الخصوصية.
+        // And the wrapping hides nothing: the top-level declarations in these files are
+        // either assigned to window explicitly, or private by intent.
         const needsWrapper = /^\s*(['"])use strict\1/m.test(code);
         parts.push(
             needsWrapper
@@ -149,8 +150,9 @@ for (const [name, files] of Object.entries(BUNDLES)) {
     const { code, warnings } = transformSync(merged, {
         loader: 'js',
         minify: true,
-        // es2017: يطابق ما تكتبه الملفات فعلاً (async/await، لا مزيد).
-        // هدف أحدث لا يفيد، وأقدم يعيد كتابة async إلى مولّدات ضخمة.
+        // es2017: it matches what the files actually use (async/await, no more).
+        // A newer target gains nothing, and an older one rewrites async into huge
+        // generators.
         target: 'es2017',
         legalComments: 'none',
     });
@@ -171,15 +173,15 @@ for (const [name, files] of Object.entries(BUNDLES)) {
     totalAfter += after;
 
     process.stdout.write(
-        `  ✓ ${name.padEnd(11)} ${String(files.length).padStart(2)} ملفاً · ` +
+        `  ✓ ${name.padEnd(11)} ${String(files.length).padStart(2)} files · ` +
             `${(before / 1024).toFixed(1)} KB → ${(after / 1024).toFixed(1)} KB ` +
-            `(${Math.round((1 - after / before) * 100)}% أقل)\n`
+            `(${Math.round((1 - after / before) * 100)}% smaller)\n`
     );
 }
 
 writeFileSync(join(distDir, 'manifest.json'), `${JSON.stringify(manifest, null, 2)}\n`);
 
 process.stdout.write(
-    `\n  المجموع: ${(totalBefore / 1024).toFixed(1)} KB → ${(totalAfter / 1024).toFixed(1)} KB\n` +
+    `\n  Total: ${(totalBefore / 1024).toFixed(1)} KB → ${(totalAfter / 1024).toFixed(1)} KB\n` +
         '  ✓ public/js/dist/manifest.json\n\n'
 );

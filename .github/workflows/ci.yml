@@ -2,50 +2,54 @@
 # CI — Cairo Store
 # ══════════════════════════════════════════════════════════════
 #
-# المبدأ: **كل أداة تعمل في خطّافات pre-commit تعمل هنا أيضاً.**
+# The principle: **every tool that runs in the pre-commit hooks runs here too.**
 #
-# قبل هذا الملف كانت الحماية كلها معلّقة على جهاز واحد: من يستنسخ
-# المستودع بلا `pre-commit install` يمرّر كل شيء — لا فحص أسرار ولا
-# semgrep ولا اختبار. الخطّاف المحلي يحمي من ينصّبه؛ وCI يحمي المستودع.
+# Before this file the whole protection hung off one machine: anyone cloning the repository
+# without `pre-commit install` passed everything — no secret scan, no semgrep, no tests. The
+# local hook protects whoever installs it; CI protects the repository.
 #
-# ما يزيده CI على الخطّافات: اختبارات على قاعدة بيانات حقيقية، وقياس
-# التغطية (لا xdebug ولا pcov على جهاز التطوير)، ومصفوفة نسختي PHP.
+# What CI adds over the hooks: tests against a real database, a coverage measurement
+# (neither xdebug nor pcov is on the development machine), and a matrix of two PHP versions.
 #
 # ══════════════════════════════════════════════════════════════
-# تثبيت الإجراءات — قرار مقصود، لا سهو
+# Pinning the actions — a deliberate decision, not an oversight
 # ══════════════════════════════════════════════════════════════
 #
-# semgrep يبلّغ عن كل `uses: …@vN` بقاعدة mutable-action-tag: الوسم
-# مؤشّر متحرّك يملك صاحب المستودع تحريكه إلى أي كومِت، فما ينفّذه CI
-# غداً قد لا يكون ما ينفّذه اليوم. القاعدة صحيحة، والحكم عليها يختلف
-# من إجراء لآخر — ولذلك القرار هنا مفصَّل لا شامل:
+# semgrep reports every `uses: …@vN` under its mutable-action-tag rule: a tag is a moving
+# pointer its owner can move to any commit, so what CI runs tomorrow may not be what it runs
+# today. The rule is right, and the judgement on it differs from action to action — which is
+# why the decision here is itemised rather than blanket:
 #
-#   · aquasecurity/trivy-action  →  **مثبَّت ببصمة**. كان `@master`، أي
-#     فرعاً حيّاً لا وسماً أصلاً. أخطر ما في الملف، وقد عولج.
+#   · aquasecurity/trivy-action  →  **pinned to a digest**. It was `@master`, that is, a
+#     live branch and not a tag at all. The most dangerous thing in the file, and it has
+#     been dealt with.
 #
-#   · returntocorp/semgrep-action → **حُذف**. مهجور (المُصدِر انتقل إلى
-#     semgrep). استُبدل بتشغيل semgrep عبر pip بنسخة مثبَّتة.
+#   · returntocorp/semgrep-action → **removed**. Abandoned (the publisher moved to semgrep).
+#     Replaced by running semgrep through pip at a pinned version.
 #
-#   · actions/checkout · actions/cache · actions/setup-node  →  تبقى
-#     بوسومها. من GitHub نفسها، والوسم يجلب تصحيحاتها الأمنية تلقائياً.
-#     تثبيتها ببصمة يبادل خطر «تحرّك الوسم» بخطر «التجمّد على نسخة
-#     قديمة بثغرة معروفة» — وهو الخطر الأكبر بلا Dependabot يتابعها.
+#   · actions/checkout · actions/cache · actions/setup-node  →  they stay on their tags.
+#     They come from GitHub itself, and the tag brings their security patches
+#     automatically. Pinning them to a digest trades the risk of "the tag moved" for the
+#     risk of "frozen on an old version with a known vulnerability" — the larger risk
+#     without a Dependabot watching them.
 #
-#   · shivammathur/setup-php · gitleaks/gitleaks-action  →  تبقى
-#     بوسومها. أطراف ثالثة لكن واسعة الانتشار ومصانَة بنشاط.
+#   · shivammathur/setup-php · gitleaks/gitleaks-action  →  they stay on their tags. Third
+#     parties, but widely used and actively maintained.
 #
-# والسياق هو ما يجعل هذا القرار مقبولاً، وهو مقيس لا مفترض:
-# `permissions: contents: read` وحدها · لا `pull_request_target` (وهو
-# الفخّ الذي يمنح PR خارجياً أسرار المستودع) · ولا سرّ في الملف غير
-# GITHUB_TOKEN في خطوة واحدة. فالضرر الأقصى من إجراء مخترَق هنا: قراءة
-# كود عامّ أصلاً، وحرق دقائق CI. ليس تسريب أسرار ولا كتابة في المستودع.
+# And the context is what makes this decision acceptable, and it is measured rather than
+# assumed: `permissions: contents: read` alone · no `pull_request_target` (the trap that
+# hands an outside PR the repository's secrets) · and no secret in the file beyond
+# GITHUB_TOKEN in one step. So the worst harm from a compromised action here is: reading
+# code that is public anyway, and burning CI minutes. Not leaked secrets, and not a write to
+# the repository.
 #
-# ⚠️ لو أُضيف يوماً `pull_request_target`، أو رُفعت الصلاحيات إلى
-# `contents: write`، أو دخل سرّ نشر إلى هذا الملف — يسقط هذا التحليل
-# كلّه ويجب تثبيت الإجراءات جميعاً ببصماتها.
+# ⚠️ Were `pull_request_target` ever added, or the permissions raised to
+# `contents: write`, or a deployment secret to enter this file — this whole analysis falls
+# and every action must be pinned to its digest.
 #
-# القرار المؤجَّل: SHA لكل شيء + Dependabot يرفع PR شهرياً بالتحديثات.
-# وهو الحلّ الكامل، ويحتاج ملف إعداد إضافي وقراراً مستقلاً.
+# The deferred decision: a SHA for everything + Dependabot raising a monthly PR with the
+# updates. That is the complete answer, and it needs an extra configuration file and a
+# decision of its own.
 
 name: CI
 
@@ -63,9 +67,9 @@ permissions:
   contents: read
 
 jobs:
-  # ── اختبارات على قاعدة حقيقية ────────────────────────────────
+  # ── Tests against a real database ────────────────────────────
   tests:
-    name: اختبارات · PHP ${{ matrix.php }}
+    name: Tests · PHP ${{ matrix.php }}
     runs-on: ubuntu-latest
 
     strategy:
@@ -90,31 +94,32 @@ jobs:
       # nosemgrep: yaml.github-actions.security.github-actions-mutable-action-tag.github-actions-mutable-action-tag
       - uses: actions/checkout@v4
 
-      - name: تهيئة PHP
+      - name: Set up PHP
         # nosemgrep: yaml.github-actions.security.github-actions-mutable-action-tag.github-actions-mutable-action-tag
         uses: shivammathur/setup-php@v2
         with:
           php-version: ${{ matrix.php }}
           extensions: pdo_mysql, mbstring, curl, json
-          # pcov لا xdebug: أسرع بكثير لقياس التغطية وحده، وهذا كل ما نريده.
+          # pcov rather than xdebug: far faster for coverage alone, which is all we want.
           coverage: pcov
 
-      - name: ذاكرة composer المؤقتة
+      - name: The composer cache
         # nosemgrep: yaml.github-actions.security.github-actions-mutable-action-tag.github-actions-mutable-action-tag
         uses: actions/cache@v4
         with:
           path: ~/.composer/cache
           key: composer-${{ matrix.php }}-${{ hashFiles('composer.lock') }}
 
-      - name: التحقّق من composer.json
+      - name: Validate composer.json
         run: composer validate --strict
 
-      - name: تثبيت الاعتماديات
+      - name: Install the dependencies
         run: composer install --prefer-dist --no-interaction --no-progress
 
-      # الاختبارات تقرأ إعداداتها من .env مثل التطبيق تماماً. كتابته هنا
-      # لا نسخ .env.example: الأخير يحمل قيماً فارغة عمداً.
-      - name: بناء .env لبيئة CI
+      # The tests read their settings from .env exactly as the application does. It is
+      # written here rather than copied from .env.example: that file holds empty values on
+      # purpose.
+      - name: Build a .env for the CI environment
         run: |
           cat > .env <<'EOF'
           APP_ENV=testing
@@ -128,56 +133,58 @@ jobs:
           DB_PASSWORD=
           EOF
 
-      - name: انتظار MySQL
+      - name: Wait for MySQL
         run: |
           for i in $(seq 1 30); do
             mysqladmin ping -h 127.0.0.1 -u root --silent && exit 0
             sleep 2
           done
-          echo "MySQL لم يستجب"; exit 1
+          echo "MySQL did not respond"; exit 1
 
-      # المخطّط يُحمَّل في قاعدة التطوير أيضاً كي تعمل صفحات التطبيق التي
-      # يفحصها اختبار HTTP. أما قاعدة الاختبار (ciro_db_test) فيبنيها
-      # tests/bootstrap.php بنفسه.
-      - name: تحميل المخطّط
+      # The schema is loaded into the development database as well, so the application
+      # pages the HTTP test hits actually work. The test database (ciro_db_test) is built by
+      # tests/bootstrap.php itself.
+      - name: Load the schema
         run: mysql -h 127.0.0.1 -u root ciro_db < tests/fixtures/schema.sql
 
-      # المخطّط المرجعي يحوي أثر الهجرات السبع، فتُسجَّل كمطبَّقة بلا
-      # تنفيذ. ثم يجب ألّا يبقى شيء معلّق: هجرة أُضيفت بلا تحديث
-      # tests/fixtures/schema.sql تعني أن الاختبارات ستعمل على بنية
-      # لا تطابق ما ستراه الإنتاج.
-      - name: الهجرات محدَّثة مقابل المخطّط
+      # The reference schema already carries the effect of the seven migrations, so they
+      # are recorded as applied without being run. After that nothing may remain pending: a
+      # migration added without updating tests/fixtures/schema.sql means the tests run
+      # against a structure that does not match what production will see.
+      - name: Migrations up to date against the schema
         run: |
           php scripts/migrate.php baseline
-          PENDING=$(php scripts/migrate.php status | grep -c 'معلّقة$' || true)
+          PENDING=$(php scripts/migrate.php status | grep -c -- '— pending$' || true)
           if [ "$PENDING" != "0" ]; then
-            echo "::error::هجرات معلّقة بعد baseline — شغّل 'composer test:schema' والتزم الناتج."
+            echo "::error::Migrations pending after baseline — run 'composer test:schema' and commit the result."
             php scripts/migrate.php status
             exit 1
           fi
-          echo "لا هجرات معلّقة."
+          echo "No pending migrations."
 
-      # اختبار عقد CSRF يفحص نقاط HTTP حيّة. بلا خادم يتخطّى نفسه —
-      # أي يصير حارساً لا يحرس. الخادم المدمج يكفي: يخدم الملفات
-      # الموجودة ويحوّل الباقي إلى index.php تماماً كقاعدة mod_rewrite.
-      - name: تشغيل خادم التطبيق
+      # The CSRF contract test hits live HTTP endpoints. Without a server it skips itself —
+      # that is, it becomes a guard that guards nothing. The built-in server is enough: it
+      # serves the files that exist and routes the rest to index.php, exactly as the
+      # mod_rewrite rule does.
+      - name: Start the application server
         run: |
           php -S 127.0.0.1:8080 -t public public/index.php > /tmp/server.log 2>&1 &
           for i in $(seq 1 20); do
             curl -sf http://127.0.0.1:8080/ > /dev/null && exit 0
             sleep 1
           done
-          echo "الخادم لم يستجب:"; cat /tmp/server.log; exit 1
+          echo "The server did not respond:"; cat /tmp/server.log; exit 1
 
-      - name: الاختبارات مع التغطية
+      - name: Tests with coverage
         env:
           TEST_BASE_URL: http://127.0.0.1:8080
         run: vendor/bin/phpunit --coverage-clover=coverage.xml --coverage-text
 
-      # ⚠️ البوّابة عند 25% مؤقتاً — وهي النسبة الفعلية اليوم لا الهدف.
-      # هدف الخطة 70%. وضعها عند 70 الآن يجعل CI أحمر دائماً فيُتجاهَل،
-      # ووضعها عند 0 يجعلها بلا معنى. تُرفع مع كل دفعة اختبارات جديدة.
-      - name: بوّابة التغطية
+      # ⚠️ The gate sits at 25% for now — the figure actually reached today, not the goal.
+      # The plan's goal is 70%. Setting it at 70 now makes CI permanently red and therefore
+      # ignored, and setting it at 0 makes it meaningless. It is raised with every new batch
+      # of tests.
+      - name: The coverage gate
         if: matrix.php == '8.3'
         run: |
           PCT=$(php -r '
@@ -185,13 +192,13 @@ jobs:
             $m = $x->project->metrics;
             printf("%.1f", (int)$m["statements"] ? (int)$m["coveredstatements"] / (int)$m["statements"] * 100 : 0);
           ')
-          echo "تغطية الأسطر: ${PCT}%"
+          echo "Line coverage: ${PCT}%"
           php -r "exit((float)'$PCT' >= 25.0 ? 0 : 1);" \
-            || { echo "::error::التغطية ${PCT}% دون الحدّ الأدنى 25%"; exit 1; }
+            || { echo "::error::Coverage of ${PCT}% is below the 25% minimum"; exit 1; }
 
-  # ── جودة الكود ───────────────────────────────────────────────
+  # ── Code quality ─────────────────────────────────────────────
   static-analysis:
-    name: تحليل ثابت
+    name: Static analysis
     runs-on: ubuntu-latest
     steps:
       # nosemgrep: yaml.github-actions.security.github-actions-mutable-action-tag.github-actions-mutable-action-tag
@@ -204,7 +211,7 @@ jobs:
           extensions: pdo_mysql, mbstring, curl, json
           coverage: none
 
-      - name: تثبيت الاعتماديات
+      - name: Install the dependencies
         run: composer install --prefer-dist --no-interaction --no-progress
 
       - name: PHPStan
@@ -213,32 +220,34 @@ jobs:
       - name: PSR-12
         run: vendor/bin/phpcs --report=full
 
-      # بوّابة الهروب: كل `<?= ?>` في الـviews مصنَّفة، وNEEDS — الإخراج
-      # في جسم الصفحة حيث ينفَّذ أي <script> محقون — يجب أن تبقى صفراً.
-      # كانت الأداة تقريراً يقرؤه من يتذكّر تشغيله؛ والتقرير الذي لا
-      # يُفشل شيئاً يتحوّل إلى رقم يكبر بهدوء.
-      - name: بوّابة الهروب في الـviews
+      # The escaping gate: every `<?= ?>` in the views is classified, and NEEDS — output in
+      # the page's body, where an injected <script> runs — must stay at zero.
+      # The tool used to be a report read by whoever remembered to run it; and a report that
+      # fails nothing turns into a number that grows quietly.
+      - name: The escaping gate over the views
         run: php scripts/audit-escaping.php --gate
 
-      # أرقام README تُقاس من الكود لا تُكتب بيد. كانت كلّها منحرفة:
-      # 77 اختباراً بينما هي 250، و28 جدولاً بينما هي 31، وجملة «CSP
-      # بوضع الإبلاغ فقط» بينما السياسة مفروضة بالكامل. الواجهة الأولى
-      # للمشروع صارت تصف مشروعاً أقدم من الموجود.
+      # The README's numbers are measured from the code rather than written by hand. Every
+      # one of them had drifted: 77 tests when there were 250, and 28 tables when there were
+      # 31, and a sentence saying "the CSP is report-only" while the policy was fully
+      # enforced. The project's front door had come to describe an older project than the one
+      # that exists.
       #
-      # نفس منطق بوّابة OpenAPI أدناه: ما يُكتب بيد يشيخ، وما يُولَّد لا.
-      - name: أرقام README محدَّثة
+      # The same logic as the OpenAPI gate below: what is written by hand ages, what is
+      # generated does not.
+      - name: The README's numbers are current
         run: php scripts/sync-readme-stats.php --check
 
-  # ── مواصفة الـAPI ────────────────────────────────────────────
+  # ── The API specification ────────────────────────────────────
   #
-  # المواصفة مولَّدة من سمات PHP، فالخطأ فيها لا يظهر إلا لمن يفتح
-  # صفحة /docs — وقد لا يفعل أحد لأشهر. الفحص يجعل مواصفة مكسورة تُفشل
-  # البناء بدل أن تنتظر مكتشفاً.
+  # The specification is generated from PHP attributes, so an error in it shows up only to
+  # somebody opening the /docs page — and nobody may do that for months. This check makes a
+  # broken specification fail the build rather than wait for a discoverer.
   #
-  # وبوّابة التغطية (كل راوت موثّق، ولا عملية بلا راوت) في
-  # tests/Integration/OpenApiCoverageTest.php ضمن وظيفة الاختبارات.
+  # And the coverage gate (every route documented, and no operation without a route) lives
+  # in tests/Integration/OpenApiCoverageTest.php within the tests job.
   openapi:
-    name: مواصفة OpenAPI
+    name: The OpenAPI specification
     runs-on: ubuntu-latest
     steps:
       # nosemgrep: yaml.github-actions.security.github-actions-mutable-action-tag.github-actions-mutable-action-tag
@@ -250,29 +259,29 @@ jobs:
           php-version: '8.3'
           coverage: none
 
-      - name: تثبيت الاعتماديات
+      - name: Install the dependencies
         run: composer install --prefer-dist --no-interaction --no-progress
 
-      # المواصفة متتبَّعة في git ومولَّدة معاً، فقد تتخلّف عن الشيفرة:
-      # يعدّل أحدهم سمة OA وينسى docs:generate. إعادة التوليد ثم مقارنة
-      # الناتج بالمُلتزَم تمسك ذلك مباشرةً.
-      - name: التحقّق أن المواصفة محدَّثة
+      # The specification is both tracked in git and generated, so it can fall behind the
+      # code: somebody edits an OA attribute and forgets docs:generate. Regenerating it and
+      # comparing the result with what was committed catches that immediately.
+      - name: Check that the specification is current
         run: |
           cp public/docs/openapi.yaml /tmp/committed.yaml
           composer docs:generate
           if ! diff -q /tmp/committed.yaml public/docs/openapi.yaml > /dev/null; then
-            echo "::error::openapi.yaml متخلّف عن سمات OA — شغّل 'composer docs:generate' والتزم الناتج."
+            echo "::error::openapi.yaml is behind the OA attributes — run 'composer docs:generate' and commit the result."
             diff /tmp/committed.yaml public/docs/openapi.yaml | head -40
             exit 1
           fi
-          echo "المواصفة مطابقة للشيفرة."
+          echo "The specification matches the code."
 
-      - name: spectral — فحص المواصفة
+      - name: spectral — lint the specification
         run: npx --yes @stoplight/spectral-cli lint public/docs/openapi.yaml --ruleset .spectral.yaml
 
-  # ── الواجهة ──────────────────────────────────────────────────
+  # ── The front end ────────────────────────────────────────────
   frontend:
-    name: الواجهة
+    name: Front end
     runs-on: ubuntu-latest
     steps:
       # nosemgrep: yaml.github-actions.security.github-actions-mutable-action-tag.github-actions-mutable-action-tag
@@ -292,36 +301,37 @@ jobs:
       - name: Stylelint
         run: npx stylelint "public/css/**/*.css"
 
-      # اختبارات الواجهة تحمّل ملفات public/js في jsdom على النطاق
-      # العام — كما يفعل المتصفح. فما يُختبَر هو الكود العامل نفسه، لا
-      # نسخة معدَّلة منه صُنعت لتكون قابلة للاختبار.
+      # The front-end tests load the public/js files into jsdom on the global scope — as
+      # the browser does. So what is tested is the working code itself, not an altered copy
+      # of it made to be testable.
       - name: Vitest
         run: npx vitest run
 
-      # حزم CSS متتبَّعة في git ومولَّدة معاً، فقد تتخلّف: يعدّل أحدهم
-      # ملف CSS وينسى `npm run build`، فيبقى المرفوع يخدم النسخة
-      # القديمة — وهي الأسوأ من كل الحالات: الكود صحيح والمعروض قديم.
-      # إعادة البناء ومقارنة البصمة تمسك ذلك مباشرةً.
-      - name: حزم CSS محدَّثة
+      # The CSS bundles are both tracked in git and generated, so they can fall behind:
+      # somebody edits a CSS file and forgets `npm run build`, and what is deployed keeps
+      # serving the old version — the worst case of all: the code is right and what is shown
+      # is old. Rebuilding and comparing the fingerprint catches that immediately.
+      - name: The CSS bundles are current
         run: |
           cp public/css/dist/manifest.json /tmp/committed.json
           npm run build
           if ! diff -q /tmp/committed.json public/css/dist/manifest.json > /dev/null; then
-            echo "::error::حزم CSS متخلّفة — شغّل 'npm run build' والتزم public/css/dist/."
-            echo "المُلتزَم:"; cat /tmp/committed.json
-            echo "المتوقّع:"; cat public/css/dist/manifest.json
+            echo "::error::The CSS bundles are behind — run 'npm run build' and commit public/css/dist/."
+            echo "Committed:"; cat /tmp/committed.json
+            echo "Expected:"; cat public/css/dist/manifest.json
             exit 1
           fi
-          echo "الحزم مطابقة للمصدر."
+          echo "The bundles match the source."
 
-  # ── ميزانية الأداء وإمكانية الوصول ───────────────────────────
+  # ── The performance and accessibility budget ─────────────────
   #
-  # الحدود مبنيّة على ما يحقّقه المشروع اليوم لا على أمنيات: بوّابة
-  # تفشل من أول يوم تُطفأ بعد أسبوع. الأداء وSEO تحذيران، وإمكانية
-  # الوصول وأفضل الممارسات خطأ — لأنهما لا يتذبذبان مع الشبكة.
+  # The thresholds are built on what the project achieves today rather than on wishes: a
+  # gate that fails from day one is switched off within a week. Performance and SEO are
+  # warnings, while accessibility and best practices are errors — because those two do not
+  # fluctuate with the network.
   #
-  # مسارات ثابتة عمداً: الصفحة الرئيسية (سلايدر وبطاقات)، وقائمة
-  # المنتجات (أثقل صفحة)، وصفحة ثابتة كضبط مرجعي.
+  # Deliberately fixed paths: the home page (a slider and cards), the product listing (the
+  # heaviest page), and a static page as a control.
   lighthouse:
     name: Lighthouse
     runs-on: ubuntu-latest
@@ -355,10 +365,10 @@ jobs:
       - run: composer install --prefer-dist --no-interaction --no-progress
       - run: npm ci
 
-      - name: بناء الحزم
+      - name: Build the bundles
         run: npm run build
 
-      - name: بناء .env وتحميل المخطّط
+      - name: Build a .env and load the schema
         run: |
           cat > .env <<'ENVEOF'
           APP_ENV=production
@@ -373,7 +383,7 @@ jobs:
           for i in $(seq 1 30); do mysqladmin ping -h 127.0.0.1 -u root --silent && break; sleep 2; done
           mysql -h 127.0.0.1 -u root ciro_db < tests/fixtures/schema.sql
 
-      - name: تشغيل الخادم
+      - name: Start the server
         run: |
           php -S 127.0.0.1:8080 -t public public/index.php > /tmp/lh-server.log 2>&1 &
           for i in $(seq 1 20); do curl -sf http://127.0.0.1:8080/ > /dev/null && exit 0; sleep 1; done
@@ -382,51 +392,52 @@ jobs:
       - name: Lighthouse CI
         run: npx --yes @lhci/cli@0.14.x autorun
 
-  # ── أمن ──────────────────────────────────────────────────────
-  # الأدوات الثلاث نفسها التي تعمل في .pre-commit-config.yaml.
+  # ── Security ─────────────────────────────────────────────────
+  # The same three tools that run in .pre-commit-config.yaml.
   security:
-    name: فحص أمني
+    name: Security scan
     runs-on: ubuntu-latest
     steps:
       # nosemgrep: yaml.github-actions.security.github-actions-mutable-action-tag.github-actions-mutable-action-tag
       - uses: actions/checkout@v4
         with:
-          # gitleaks يحتاج التاريخ كاملاً: سرّ حُذف في آخر commit يبقى
-          # في التاريخ، وفحص اللقطة الأخيرة وحدها لا يراه.
+          # gitleaks needs the full history: a secret deleted in the last commit remains in
+          # the history, and scanning the final snapshot alone does not see it.
           fetch-depth: 0
 
-      - name: gitleaks — أسرار في التاريخ كله
+      - name: gitleaks — secrets across the whole history
         # nosemgrep: yaml.github-actions.security.github-actions-mutable-action-tag.github-actions-mutable-action-tag
         uses: gitleaks/gitleaks-action@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITLEAKS_CONFIG: .gitleaks.toml
 
-      # ⚠️ كان هنا `uses: returntocorp/semgrep-action@v1` — وهو **مهجور**:
-      # المُصدِر انتقل من returntocorp إلى semgrep، والإجراء لم يعد
-      # مصانَاً. تثبيته ببصمة كان سيُخضِر البوابة ويُجمّده على كود متروك،
-      # أي يُخفي المشكلة لا يحلّها.
+      # ⚠️ This used to be `uses: returntocorp/semgrep-action@v1` — which is **abandoned**:
+      # the publisher moved from returntocorp to semgrep, and the action is no longer
+      # maintained. Pinning it to a digest would have turned the gate green while freezing it
+      # on abandoned code — hiding the problem rather than solving it.
       #
-      # البديل هنا هو نفس ما تفعله خطّافات pre-commit حرفياً — الأمر
-      # ذاته والقواعد ذاتها. وهذا يخدم مبدأ هذا الملف المعلن أعلاه:
-      # «كل أداة تعمل في خطّافات pre-commit تعمل هنا أيضاً». واعتماد
-      # أقلّ: حزمة pip مثبَّتة النسخة بدل إجراء طرف ثالث كامل.
+      # What replaces it here is literally what the pre-commit hooks do — the same command
+      # and the same rules. Which serves this file's principle stated above: "every tool that
+      # runs in the pre-commit hooks runs here too". And it is one dependency fewer: a
+      # version-pinned pip package instead of a whole third-party action.
       #
-      # `--error` لازمة: بدونها يطبع semgrep النتائج ويخرج بكود 0 فيبدو
-      # ناجحاً وهو يبلّغ عن ثغرات.
-      - name: semgrep — ثغرات كود
+      # `--error` is required: without it semgrep prints the findings and exits 0, so it
+      # looks successful while reporting vulnerabilities.
+      - name: semgrep — code vulnerabilities
         run: |
           python -m pip install --disable-pip-version-check semgrep==1.145.0
           semgrep --config p/php --config .semgrep/ --error .
 
-      - name: trivy — ثغرات الاعتماديات
-        # ⚠️ مثبَّت ببصمة الكومِت لا بوسم. كان `@master` — وهو **فرع حيّ**
-        # لا وسم إطلاقاً: يتغيّر مع كل دفعة إلى المشرّع، فما ينفّذه CI
-        # غداً قد لا يكون ما ينفّذه اليوم.
+      - name: trivy — dependency vulnerabilities
+        # ⚠️ Pinned to a commit digest rather than a tag. It was `@master` — a **live branch**
+        # and not a tag at all: it changes with every push to upstream, so what CI runs
+        # tomorrow may not be what it runs today.
         #
-        # البصمة أدناه هي وسم v0.36.0 مفكوكاً إلى كومِته. لتحديثه:
+        # The digest below is the v0.36.0 tag resolved to its commit. To update it:
         #   curl -s https://api.github.com/repos/aquasecurity/trivy-action/git/ref/tags/<tag>
-        #   ثم فُكّ كائن الوسم إن كان type=tag — Actions تقبل بصمة الكومِت وحدها.
+        #   then dereference the tag object if type=tag — Actions accepts the commit digest
+        #   alone.
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25  # v0.36.0
         with:
           scan-type: fs

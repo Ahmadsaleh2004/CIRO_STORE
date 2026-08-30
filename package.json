@@ -2,7 +2,7 @@
   "name": "cairo-store-frontend",
   "version": "1.0.0",
   "private": true,
-  "description": "أدوات بناء وفحص الواجهة — Cairo Store",
+  "description": "Front-end build and lint tooling — Cairo Store",
   "license": "MIT",
   "type": "module",
   "scripts": {

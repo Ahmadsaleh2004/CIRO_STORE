@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <ruleset name="Cairo Store">
-    <description>PSR-12 — المعيار الذي يفترضه أي مطوّر PHP يفتح المشروع.</description>
+    <description>PSR-12 — the standard any PHP developer opening the project assumes.</description>
 
     <file>app</file>
     <file>scripts</file>
@@ -14,24 +14,27 @@
     <arg name="extensions" value="php"/>
 
     <rule ref="PSR12">
-        <!-- الحدّ 120 محرفاً لا 80: تعليقات هذا المشروع عربية، والمحرف
-             العربي يشغل خانتين في العدّ بينما يشغل واحدة على الشاشة —
-             فحدّ 80 كان سيرفض تعليقات مقروءة تماماً. -->
+        <!-- The limit is excluded, not tightened. 153 lines in app/, scripts/ and
+             tests/ pass 120 characters, and almost all of them are single
+             `new OA\Property(property: …, type: …, description: …)` arguments inside an
+             OpenAPI attribute block. Splitting those across lines makes the
+             specification harder to read, not easier, so the rule would be reporting a
+             deliberate shape rather than a fault. -->
         <exclude name="Generic.Files.LineLength"/>
 
-        <!-- نهايات الأسطر يملكها .gitattributes لا هذا الملف.
-             `* text=auto` يخزّن LF في git ويُخرج CRLF على Windows،
-             فهذا الفحص يستحيل أن ينجح على النظامين معاً: يمرّ في CI
-             (لينكس، LF) ويفشل على جهاز التطوير (CRLF) للملف نفسه
-             وبمحتوى واحد. فحص نتيجته تتبع نظام التشغيل لا الكود ليس
-             فحصاً. -->
+        <!-- The line endings belong to .gitattributes, not to this file.
+             `* text=auto` stores LF in git and checks CRLF out on Windows, so this check
+             cannot possibly pass on both systems: it passes in CI (Linux, LF) and fails on
+             the development machine (CRLF) for the same file with the same content. A check
+             whose result follows the operating system rather than the code is not a
+             check. -->
         <exclude name="Generic.Files.LineEndings"/>
     </rule>
 
-    <!-- ملفات التهيئة تُعرّف رموزاً وتُنفّذ أثراً معاً بحكم وظيفتها:
-         config.php يعرّف ثوابت ويضبط الجلسة، وtests/bootstrap.php
-         يعرّف دوال ويبني قاعدة الاختبار. هذا هو تعريف ملف التهيئة، لا
-         مخالفة فيه. -->
+    <!-- Bootstrap files declare symbols and perform side effects together, by the nature
+         of their job: config.php defines constants and configures the session, and
+         tests/bootstrap.php defines functions and builds the test database. That is the
+         definition of a bootstrap file, not a violation in it. -->
     <rule ref="PSR1.Files.SideEffects">
         <exclude-pattern>app/config/*</exclude-pattern>
         <exclude-pattern>tests/bootstrap.php</exclude-pattern>

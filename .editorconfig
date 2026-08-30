@@ -1,13 +1,12 @@
 # ══════════════════════════════════════════════════════════════
-# إعدادات المحرّر — Cairo Store
+# Editor settings — Cairo Store
 # ══════════════════════════════════════════════════════════════
 #
-# يكمّل .gitattributes لا يعارضه: ذاك يحكم ما يُخزَّن في git، وهذا
-# يحكم ما يكتبه المحرّر قبل أن يصل إليه.
+# It complements .gitattributes rather than contradicting it: that governs what is stored
+# in git, and this governs what the editor writes before it gets there.
 #
-# end_of_line = lf مقصود ومتّسق مع `* text=auto`: git يخزّن LF دائماً،
-# ويُخرج CRLF على Windows وحده. الكتابة بـLF تعني ألّا يحمل أي ملف
-# نهايات مختلطة.
+# end_of_line = lf is deliberate and consistent with `* text=auto`: git always stores LF,
+# and checks CRLF out on Windows alone. Writing LF means no file ever carries mixed endings.
 
 root = true
 
@@ -19,7 +18,7 @@ trim_trailing_whitespace = true
 indent_style = space
 indent_size = 4
 
-# PSR-12 يوجب أربع مسافات — راجع phpcs.xml
+# PSR-12 requires four spaces — see phpcs.xml
 [*.php]
 indent_size = 4
 
@@ -30,7 +29,7 @@ indent_size = 4
 indent_size = 2
 
 [*.md]
-# المسافات في آخر السطر في Markdown تعني فاصل سطر مقصوداً.
+# Trailing spaces in Markdown mean a deliberate line break.
 trim_trailing_whitespace = false
 
 [*.{sql,sh}]

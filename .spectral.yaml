@@ -1,64 +1,70 @@
 # ══════════════════════════════════════════════════════════════
-# فحص مواصفة OpenAPI — Cairo Store
+# Linting the OpenAPI specification — Cairo Store
 # ══════════════════════════════════════════════════════════════
 #
-# يُشغَّل في CI على public/docs/openapi.yaml:
+# Run in CI over public/docs/openapi.yaml:
 #     npx @stoplight/spectral-cli lint public/docs/openapi.yaml
 #
-# لماذا فحص للمواصفة أصلاً؟ لأنها مولَّدة من سمات PHP، فالخطأ فيها لا
-# يظهر إلا لمن يفتح صفحة /docs — وقد لا يفعل أحد لأشهر. الفحص يجعل
-# مواصفة مكسورة تُفشل البناء لا تنتظر مكتشفاً.
+# Why lint the specification at all? Because it is generated from PHP attributes, so an
+# error in it shows up only to somebody opening the /docs page — and nobody may do that for
+# months. Linting makes a broken specification fail the build rather than wait for a
+# discoverer.
 
 extends: ["spectral:oas"]
 
 rules:
-  # ── قواعد مرفوعة إلى خطأ ────────────────────────────────────
+  # ── Rules raised to error ───────────────────────────────────
 
-  # مرجع مكسور يعني حقلاً لا يعرف قارئ المواصفة شكله. أخطر ما يمكن أن
-  # يحدث لمواصفة تعتمد على 128 مرجعاً.
+  # A broken reference means a field whose shape the specification's reader cannot know. The
+  # worst thing that can happen to a specification resting on 128 references.
   oas3-valid-schema-example: error
   oas3-schema: error
 
-  # ── قواعد مطفأة، ولكل واحدة سببها ───────────────────────────
+  # ── Rules switched off, each with its reason ────────────────
 
-  # الوصف الإنجليزي غير مطلوب: توثيق هذا المشروع عربي بالكامل، وقاعدة
-  # «الجملة تبدأ بحرف كبير» بلا معنى في نصّ عربي.
+  # Every one of the 109 operations carries a `summary`; only 28 add a longer `description`
+  # on top of it. So the rule would produce 81 warnings asking for a second sentence where
+  # one already says what the operation does — a demand about documentation style, not a
+  # fault. (Measured: enabling it as a warning gives exactly 81 findings.)
   oas3-api-servers: warn
   operation-description: off
   info-contact: off
   info-license: off
 
-  # الوسوم موصوفة في openapi_info.php لا في كل عملية.
+  # The tags are described in openapi_info.php rather than on every operation.
   operation-tag-defined: warn
 
-  # معرّفات العمليات مولَّدة من أسماء الدوال، وتفرّدها مضمون بذلك.
+  # The operation ids are generated from the function names, which guarantees their
+  # uniqueness.
   operation-operationId-unique: error
   operation-operationId: warn
 
-# ── ملاحظة على قاعدة 4xx ──────────────────────────────────────
+# ── A note on the 4xx rule ────────────────────────────────────
 #
-# لا توجد هنا قاعدة تطالب كل عملية بردّ 4xx، وهذا مقصود.
+# There is no rule here requiring every operation to have a 4xx response, and that is
+# deliberate.
 #
-# نقاط JSON في هذا المشروع تُرجع **200 حتى عند الفشل**، والنتيجة تُقرأ
-# من الحقل success لا من كود HTTP. سلوك قائم يعتمد عليه الـfrontend في
-# 34 ملف JS، وتغييره تغييرٌ كاسر لا مسألة توثيق. فقاعدة كهذه كانت
-# ستفشل على كل نقطة JSON — أي أنها تصف واجهة أخرى غير هذه.
+# The JSON endpoints in this project return **200 even on failure**, and the outcome is read
+# from the success field rather than from the HTTP code. That is existing behaviour, relied
+# on by the front end across 34 JS files, and changing it is a breaking change rather than a
+# documentation matter. So such a rule would fail on every JSON endpoint — that is, it would
+# be describing some other API than this one.
 #
-# والمواصفة تصف ما هو كائن لا ما ينبغي أن يكون. حين تُحوَّل النقاط إلى
-# أكواد HTTP حقيقية تُضاف القاعدة في الالتزام نفسه.
+# And the specification describes what exists rather than what ought to. When the endpoints
+# are moved to real HTTP codes, the rule is added in that same commit.
 #
-# ⚠️ جُرّب وضعها هنا باسم `operation-4xx-response` فرفضها spectral:
-# «Cannot extend non-existing rule» — الاسم ليس من مجموعة spectral:oas.
-# التبرير بقي تعليقاً بدل قاعدة معطّلة لا وجود لها.
+# ⚠️ It was tried here under the name `operation-4xx-response` and spectral rejected it:
+# "Cannot extend non-existing rule" — the name is not part of the spectral:oas set. The
+# justification stayed a comment rather than a disabled rule that does not exist.
 
-# ── تحذيرات «مكوّن غير مستعمل» — 15 اليوم ────────────────────
+# ── The "unused component" warnings — 15 today ───────────────
 #
-# ليست أخطاءً وليست ضجيجاً: هي **قائمة عمل صريحة**.
+# They are neither errors nor noise: they are **an explicit to-do list**.
 #
-# مفردات المخططات بُنيت كاملة (Product، Order، User، Admin…) لكن
-# العمليات التي تُرجع هذه الكيانات ما زالت تصف استجاباتها بالغلاف العام
-# ApiResponse وحده. ربط كل عملية بمخطّط كيانها هو الزيادة التالية،
-# وحينها تختفي هذه التحذيرات واحداً واحداً.
+# The schema vocabulary was built out in full (Product, Order, User, Admin…) but the
+# operations returning those entities still describe their responses with the generic
+# ApiResponse wrapper alone. Wiring every operation to its entity's schema is the next
+# increment, and these warnings will then disappear one by one.
 #
-# تُركت ظاهرة عمداً بدل إطفاء القاعدة: مخطّط مُعرَّف بلا مستعمل توثيق
-# ميّت، وإخفاء المؤشّر عليه لا يُحييه.
+# They are left visible on purpose rather than switching the rule off: a schema defined with
+# no user is dead documentation, and hiding the indicator does not revive it.

@@ -2,25 +2,25 @@
 // ESLint — Cairo Store
 // ══════════════════════════════════════════════════════════════
 //
-// المشروع بلا خطوة بناء للـJS: 34 ملفاً تُحمَّل بوسوم <script> وتتشارك
-// نطاقاً عاماً واحداً، و62 دالة معلّقة على window عمداً كي تراها ملفات
-// أخرى. ولهذا `sourceType: 'script'` لا 'module'، و`no-undef` مضبوطة
-// على globals المتصفح — لا على افتراض وحدات ES.
+// The project has no build step for the JS: 34 files are loaded by <script> tags and share
+// one global scope, with 62 functions hung on window deliberately so other files can see
+// them. Which is why `sourceType: 'script'` rather than 'module', and why `no-undef` is set
+// against the browser globals — not against an assumption of ES modules.
 //
-// القواعد هنا تصف الكود كما هو، ثم تشدّ عليه. القاعدة التي تُفشل مئة
-// ملف في أول تشغيل لا تُصلح شيئاً — تُطفأ بعد يوم.
+// The rules here describe the code as it is, and then tighten around it. A rule that fails
+// a hundred files on its first run fixes nothing — it is switched off within a day.
 
 import globals from 'globals';
 
 export default [
-  // ⚠️ ناتج البناء يُستثنى. كان `npm run lint:js` يفشل دائماً بـ182
-  // خطأً — كلها في public/js/dist/*.js، أي في الحزم **المصغَّرة**:
-  // أسماء من حرف واحد، وإسناد داخل if، واستعمال قبل التعريف. هذا ما
-  // يفعله المصغِّر عمداً، وليس شيئاً يُصلَح.
+  // ⚠️ The build output is excluded. `npm run lint:js` used to fail every time with 182
+  // errors — all of them in public/js/dist/*.js, that is, in the **minified** bundles:
+  // single-letter names, assignment inside an if, use before definition. That is what the
+  // minifier does on purpose, and not something to be fixed.
   //
-  // والأثر أن البوابة لم تكن تحرس شيئاً: مخرجات حمراء دائماً تُقرأ
-  // كضجيج، فلا يُلاحَظ فيها خطأ حقيقي في ملف مصدري. (dist متتبَّع عن
-  // قصد — انظر .gitignore — فوجوده ليس مصادفة محلية.)
+  // And the effect was that the gate guarded nothing: permanently red output reads as
+  // noise, so a real error in a source file goes unnoticed inside it. (dist is tracked
+  // deliberately — see .gitignore — so its presence is not a local accident.)
   {
     ignores: ['public/js/dist/**'],
   },
@@ -31,26 +31,26 @@ export default [
       sourceType: 'script',
       globals: {
         ...globals.browser,
-        // دوال المشروع المشتركة عبر النطاق العام. تعدادها هنا يجعل
-        // no-undef مفيدة: أي اسم غير مذكور خطأ مطبعي حقيقي.
+        // The project's functions shared through the global scope. Listing them here is
+        // what makes no-undef useful: any name not among them is a real typo.
         bootstrap: 'readonly',
         Swal: 'readonly',
         hcaptcha: 'readonly',
         URLROOT: 'readonly',
 
-        // ── النطاق العام المشترك للمشروع ────────────────────
+        // ── The project's shared global scope ───────────────
         //
-        // 76 اسماً، مستخرجة **آلياً** من الكود نفسه: كل `window.X =`
-        // وكل دالة أو ثابت في المستوى الأعلى. القائمة اليدوية كانت
-        // ستتقادم عند أول ملف جديد.
+        // 76 names, extracted **mechanically** from the code itself: every `window.X =`
+        // and every top-level function or constant. A hand-written list would have gone
+        // stale at the first new file.
         //
-        // بلا هذه القائمة تنتج no-undef مئتين وسبعة وسبعين خطأً كلها
-        // كاذبة — والقاعدة التي تُفشل كل شيء تُطفأ بعد يوم فتُفقد
-        // فائدتها الحقيقية: الاسم الذي **ليس** هنا خطأ مطبعي فعلي.
+        // Without this list, no-undef produces two hundred and seventy-seven errors, all
+        // of them false — and a rule that fails everything is switched off within a day,
+        // losing its real value: a name that is **not** here is an actual typo.
         //
-        // 'writable' لا 'readonly': الملفات تُعيد الإسناد عليها فعلاً.
+        // 'writable' rather than 'readonly': the files really do reassign them.
         //
-        // لتحديثها: راجع build/ أو أعد توليدها بالنمط نفسه.
+        // To update it: see build/, or regenerate it the same way.
         REGULAR_USER_FLAG: 'writable',
         _csrfToken: 'writable',
         addToCartDB: 'writable',
@@ -130,13 +130,14 @@ export default [
       },
     },
     rules: {
-      // ── أخطاء حقيقية ──────────────────────────────────────
+      // ── Real errors ───────────────────────────────────────
       'no-undef': 'error',
       'no-unused-vars': ['error', { args: 'none', varsIgnorePattern: '^_' }],
-      // builtinGlobals: false مقصود. الأسماء المشتركة مُعلَنة أعلاه
-      // كـglobals **وهي أيضاً** معرَّفة فعلاً في ملف واحد — فبقاء
-      // الفحص على الافتراضي يجعل كل تعريف أصلي «إعادة تعريف» للعام.
-      // هذا وصف خاطئ للبنية: الملف الذي يُعرّفها هو مصدرها لا ناسخها.
+      // builtinGlobals: false is deliberate. The shared names are declared above as
+      // globals **and are also** genuinely defined in one file — so leaving the check at
+      // its default makes every original definition a "redeclaration" of the global. That
+      // is a wrong description of the structure: the file that defines a name is its
+      // source, not a copy of it.
       'no-redeclare': ['error', { builtinGlobals: false }],
       'no-dupe-keys': 'error',
       'no-dupe-args': 'error',
@@ -145,32 +146,33 @@ export default [
       'valid-typeof': 'error',
       'use-isnan': 'error',
 
-      // TDZ: عطل وقع فعلاً في account.js — متغيّر استُعمل قبل تعريفه
-      // بـlet فانفجر وقت التشغيل لا وقت التحليل.
+      // TDZ: a fault that actually happened in account.js — a variable used before its
+      // let declaration, so it blew up at run time rather than at analysis time.
       'no-use-before-define': ['error', { functions: false, classes: true, variables: true }],
 
-      // إسناد داخل شرط: يكاد لا يكون مقصوداً أبداً.
+      // Assignment inside a condition: it is almost never intended.
       'no-cond-assign': ['error', 'always'],
 
-      // ── ما يمنع أعطالاً صامتة ─────────────────────────────
-      // ⚠️ تحذير لا خطأ، **ولهذا سبب لا تهاون**.
+      // ── What prevents silent faults ───────────────────────
+      // ⚠️ A warning rather than an error, **and that has a reason, not a shrug**.
       //
-      // اثنتان وثلاثون حالة، وأغلبها من نمط واحد:
+      // Thirty-two cases, most of them one pattern:
       //     allNotifs.find(n => n.id == id)
-      // حيث `id` قادم من dataset في الـDOM — أي **نصّ دائماً** — و
-      // `n.id` رقم من JSON. فالمقارنة الفضفاضة هنا هي ما يجعل الكود
-      // يعمل، وتحويلها إلى === تحويلاً أعمى يكسر كل بحث بالمعرّف في
-      // المشروع: الإشعارات والسلّة والمفضّلة والطلبات.
+      // where `id` comes from a dataset in the DOM — that is, **always a string** — and
+      // `n.id` is a number from JSON. So the loose comparison here is what makes the code
+      // work, and converting it to === blindly breaks every lookup by id in the project:
+      // the notifications, the cart, the wishlist and the orders.
       //
-      // الإصلاح الصحيح تحويل النوع صراحةً عند الحدّ (Number(id))، وهو
-      // تغيير يحتاج مراجعة كل موضع على حدة لا استبدالاً جماعياً.
-      // فتُترك تحذيراً مرئياً بدل خطأ يُجبر على إطفاء القاعدة كلها.
+      // The right fix is an explicit conversion at the boundary (Number(id)), a change that
+      // needs each site reviewed on its own rather than a bulk replacement. So it is left
+      // as a visible warning instead of an error that forces the whole rule off.
       eqeqeq: ['warn', 'smart'],
-      'no-implicit-globals': 'off', // النطاق العام مقصود هنا
+      'no-implicit-globals': 'off', // The global scope is intended here
       'no-var': 'warn',
       'prefer-const': 'warn',
 
-      // console.log منسيّ في الإنتاج ضجيج لا عطل — تحذير لا خطأ.
+      // A console.log forgotten in production is noise rather than a fault — a warning,
+      // not an error.
       'no-console': ['warn', { allow: ['warn', 'error'] }],
     },
   },

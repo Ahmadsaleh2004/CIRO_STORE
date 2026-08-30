@@ -1,41 +1,41 @@
 parameters:
-    # المستوى 5 نقطة بداية مقيسة لا اعتباطية: أدنى منه لا يمسك شيئاً
-    # ذا قيمة في مشروع بهذا الحجم، وأعلى منه ينتج خطّ أساس ضخماً يُخفي
-    # الأخطاء الجديدة بين آلاف القديمة.
+    # Level 5 was a measured starting point rather than an arbitrary one: below it nothing
+    # of value is caught in a project this size, and above it a huge baseline is produced
+    # that hides the new errors among thousands of old ones.
     #
-    # ── المستوى 6: مرفوع ونظيف ────────────────────────────────
+    # ── Level 6: raised, and clean ────────────────────────────
     #
-    # كان القياس قبل الرفع **156 خطأً — وصفر منها خطأ منطقي**:
+    # The measurement before raising it was **156 errors — and none of them a logic error**:
     #
     #     missingType.iterableValue   152
     #     missingType.parameter         3
     #     missingType.return            1
     #
-    # أي أن الرفع كان عملاً توثيقياً لا صيدَ أعطال — وهو خبر جيّد عن
-    # المستوى 5: لم يكن يختبئ تحته منطق مكسور.
+    # That is, raising it was documentation work rather than a hunt for faults — which is
+    # good news about level 5: no broken logic had been hiding under it.
     #
-    # وأُنجز **بلا baseline**. تمريره بها كان ينهي البند في دقيقة
-    # ويناقض السطر الثاني أعلاه مناقضةً مباشرة: يُنتج بالضبط خطّ الأساس
-    # الضخم الذي يُخفي الأخطاء الجديدة بين القديمة.
+    # And it was done **without a baseline**. Passing one would have closed the item in a
+    # minute while contradicting the second line above outright: it produces exactly the huge
+    # baseline that hides new errors among the old.
     #
-    # ── وأثبت المستوى قيمته أثناء الرفع نفسه ──────────────────
+    # ── And the level proved its worth during the raise itself ─
     #
-    # أمسك ستّة تعليقات **خاطئة** كُتبت أثناء العمل:
+    # It caught six **wrong** annotations written along the way:
     #
-    #   · AdminModel::createAdmin — `$perms` خريطة «اسم ← منح» لا قائمة
-    #     أسماء، بخلاف findByPermsAndRanks التي تستقبل قائمة. الاسم
-    #     واحد والشكل مختلف، وهو فرق لا يظهر في توقيع `array` المجرّد.
-    #   · ProductModel::findStockByIds — تُرجع خريطة مفهرسة بالمعرّف لا
-    #     قائمة.
-    #   · AdminController::sendCsv — أضيق ممّا يمرّره مستدعيه فعلاً.
-    #   · وثلاثة عوائد في scripts/ ظُنّت قوائم وهي أشكال مسمّاة.
+    #   · AdminModel::createAdmin — `$perms` is a map of "name → grant", not a list of
+    #     names, unlike findByPermsAndRanks which takes a list. The name is the same and the
+    #     shape is different, a difference invisible in a bare `array` signature.
+    #   · ProductModel::findStockByIds — returns a map keyed by id, not a list.
+    #   · AdminController::sendCsv — narrower than what its caller actually passes.
+    #   · and three returns in scripts/ thought to be lists while they are named shapes.
     #
-    # وهذا هو الخطر الحقيقي في هذا المستوى، لا الكسر: **تعليق نوع خاطئ
-    # أسوأ من غيابه** — يبني عليه المحلّل فيسكت عن أخطاء حقيقية، ولا
-    # يمسكه اختبار ولا هو نفسه. القاعدة المتبعة: لا يُكتب نوع لا يُرى
-    # في الكود، وعند الشكّ `array<string, mixed>` لا تخمينٌ أضيق.
+    # And that is the real danger at this level, not breakage: **a wrong type annotation is
+    # worse than none** — the analyser builds on it and falls silent about real errors, and
+    # neither a test nor the analyser itself catches it. The rule followed: no type is
+    # written that cannot be seen in the code, and when in doubt `array<string, mixed>`
+    # rather than a narrower guess.
     #
-    # المستوى 7 هو التالي، ويحتاج قياساً مستقلاً قبل أي وعد.
+    # Level 7 is next, and it needs a measurement of its own before any promise.
     level: 6
 
     paths:
@@ -43,18 +43,19 @@ parameters:
         - scripts
         - tests
 
-    # الـviews قوالب إخراج تعتمد على متغيّرات يحقنها Controller::view()
-    # عبر extract() — لا يستطيع أي محلّل ثابت تتبّعها، فكل سطر فيها
-    # سيصير إنذاراً كاذباً.
+    # The views are output templates relying on variables injected by Controller::view()
+    # through extract() — no static analyser can trace those, so every line in them would
+    # become a false alarm.
     excludePaths:
         - app/views/*
 
-    # الثوابت التي يعرّفها config.php وقت التشغيل. بلا إعلانها هنا يرى
-    # المحلّل كل استعمال لها خطأً — وهي مستعملة في 63 ملفاً.
+    # The constants config.php defines at run time. Without declaring them here the
+    # analyser sees every use of them as an error — and they are used across 63 files.
     bootstrapFiles:
         - tests/phpstan-bootstrap.php
 
-    # دوال الهيلبرز تُحمَّل عبر composer autoload.files، فالمحلّل يراها.
+    # The helper functions are loaded through composer autoload.files, so the analyser sees
+    # them.
     scanFiles:
         - app/helpers/functions.php
         - app/helpers/assets_helper.php

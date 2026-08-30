@@ -1,156 +1,158 @@
 # ══════════════════════════════════════════════════════════════
-# فحوص أمنية آلية — Cairo Store
+# Automated security checks — Cairo Store
 # ══════════════════════════════════════════════════════════════
 #
-# أداتان آليتان، لكل واحدة لحظتها. التقسيم مبني على قياس لا تقدير،
-# والقياسات التي بُني عليها مشروحة أدناه في موضعها.
+# Two automated tools, each at its own moment. The split rests on measurement rather than
+# estimation, and the measurements it rests on are explained below, each in its place.
 #
-#   gitleaks  →  pre-commit   ~19 ث   أسرار في التغيير المُدرَج
-#   semgrep   →  pre-push    ~141 ث   ثغرات كود في المستودع كله
+#   gitleaks  →  pre-commit   ~19 s   secrets in the staged change
+#   semgrep   →  pre-push    ~141 s   code vulnerabilities across the whole repository
 #
-# لماذا الفصل: محاولة commit بالأداتين معاً كلّفت **174 ثانية**. وقياس
-# semgrep أظهر أن التكلفة في تحميل قواعده من السجلّ لا في الفحص — ملف
-# واحد يكلّف 78 ثانية والمستودع كله 90. فتصغير النطاق لا يوفّر شيئاً،
-# والحلّ نقل الأداة إلى لحظة تحتمل تكلفتها.
+# Why the split: attempting a commit with both tools cost **174 seconds**. And measuring
+# semgrep showed the cost is in loading its rules from the registry rather than in the scan
+# — one file costs 78 seconds and the whole repository 90. So narrowing the scope saves
+# nothing, and the answer is to move the tool to a moment that can bear its cost.
 #
-# المبدأ: سرّ يدخل التاريخ لا يُمحى بسهولة، فيُمنع عند الالتزام. وثغرة
-# كود تُصلَح بـcommit تالٍ، فيكفي منعها قبل مغادرة الجهاز.
+# The principle: a secret that enters the history is not easily erased, so it is blocked at
+# commit time. A code vulnerability is fixed by a following commit, so blocking it before it
+# leaves the machine is enough.
 #
-# ── التركيب على جهاز جديد ────────────────────────────────────
+# ── Setting up on a new machine ──────────────────────────────
 #   winget install Gitleaks.Gitleaks
 #   pip install semgrep
 #   pre-commit install --hook-type pre-commit --hook-type pre-push
 #
-# ⚠️ السطر الأخير **لازم**: بلا `--hook-type pre-push` يبقى
-# .git/hooks/pre-push غير موجود ولا يعمل semgrep إطلاقاً — والإعداد
-# وحده لا يكفي.
+# ⚠️ The last line is **required**: without `--hook-type pre-push`, .git/hooks/pre-push is
+# never created and semgrep does not run at all — the configuration alone is not enough.
 #
-# ⚠️ الأدوات تُنادى بأسمائها المجرّدة، فيجب أن تكون على PATH الذي يراه
-# git. بعد تثبيت جديد أغلق الطرفية وافتحها — العملية القائمة ترث PATH
-# قديماً ولا ترى التثبيت الجديد.
+# ⚠️ The tools are called by their bare names, so they must be on the PATH that git sees.
+# After a fresh install, close the terminal and open it again — the running process
+# inherited an older PATH and cannot see the new installation.
 #
-# ── لماذا repo: local و language: system ─────────────────────
-# الخطّاف الرسمي لـgitleaks معرَّف بـlanguage: golang، فيطلب من
-# pre-commit أن **يبني** الملف التنفيذي بـGo. وGo غير مثبَّت هنا، فكان
-# كل commit يُرفض بـ«Executable gitleaks not found» — خطّاف يمنع العمل
-# بلا أن يفحص سطراً واحداً. النداء المباشر للملف المثبَّت يتفادى ذلك:
-# بلا Go ولا بناء ولا شبكة.
+# ── Why repo: local and language: system ─────────────────────
+# The official gitleaks hook is declared with language: golang, which asks pre-commit to
+# **build** the executable with Go. And Go is not installed here, so every commit was
+# rejected with "Executable gitleaks not found" — a hook that blocks the work without
+# checking a single line. Calling the installed binary directly avoids that: no Go, no
+# build, no network.
 
 repos:
   - repo: local
     hooks:
 
-      # ── أسرار في التغيير المُدرَج ─────────────────────────
+      # ── Secrets in the staged change ─────────────────────
       #
-      # ⚠️ `--staged` **ليست اختيارية**. بدونها تفحص `--pre-commit`
-      # تغييرات العمل غير المُدرَجة، لا ما سيدخل التاريخ. مقيس على سرّ
-      # AWS مزروع ومُدرَج:
-      #     بلا --staged → «no leaks found» · كود 0 ← يسمح بالـcommit
-      #     مع  --staged → كود 1 ← يمنع
-      # وقد مرّ سرّ فعلاً من هذه الثغرة وأمسكه semgrep بالصدفة — أي أن
-      # الحماية كانت تتّكئ على تداخل عرضي بين أداتين لا على الأداة
-      # المخصّصة للأسرار.
+      # ⚠️ `--staged` is **not optional**. Without it, `--pre-commit` scans the unstaged
+      # working-tree changes rather than what is about to enter the history. Measured
+      # against a planted, staged AWS secret:
+      #     without --staged → "no leaks found" · code 0 ← the commit is allowed
+      #     with    --staged → code 1 ← it is blocked
+      # And a secret did pass through that gap, caught by semgrep by chance — which is to
+      # say the protection was leaning on an accidental overlap between two tools rather
+      # than on the tool meant for secrets.
       #
-      # `--redact` يمنع طباعة السرّ في الطرفية: لا معنى لمنعه من
-      # المستودع ثم تسريبه إلى سجلّ الطرفية.
+      # `--redact` stops the secret being printed in the terminal: there is no sense in
+      # keeping it out of the repository and then leaking it into the terminal's scrollback.
       #
-      # `stages: [pre-commit]` مقصود: عند pre-push لا يوجد فهرس، فكان
-      # يفحص **27 بايتاً** ثم يطبع «Passed» — تسع عشرة ثانية على فحص
-      # العدم، وطمأنينة بلا سبب.
+      # `stages: [pre-commit]` is deliberate: at pre-push there is no index, so it scanned
+      # **27 bytes** and printed "Passed" — nineteen seconds spent checking nothing, and
+      # reassurance without cause.
       #
-      # `pass_filenames: false` لأن gitleaks يقرأ الفهرس بنفسه؛ وتمرير
-      # الأسماء يجعله يفحص الملفات كاملة لا التغيير.
+      # `pass_filenames: false` because gitleaks reads the index itself; passing it names
+      # makes it scan whole files rather than the change.
       - id: gitleaks
-        name: gitleaks — أسرار في التغيير المُدرَج
+        name: gitleaks — secrets in the staged change
         entry: gitleaks git --pre-commit --staged --redact -v
         language: system
         pass_filenames: false
         stages: [pre-commit]
 
-      # ── ثغرات كود في المستودع كله ────────────────────────
+      # ── Code vulnerabilities across the whole repository ─
       #
-      # `--error` لازمة: بدونها يطبع semgrep النتائج ويخرج بكود 0،
-      # فيمرّ الدفع رغم وجود ثغرات.
+      # `--error` is required: without it semgrep prints the findings and exits 0, so the
+      # push goes through despite the vulnerabilities.
       #
-      # `--config auto` يجلب مجموعة قواعد مناسبة للغات المشروع من
-      # السجلّ — يحتاج شبكة، وهو سبب الـ141 ثانية.
+      # `--config auto` pulls a rule set suited to the project's languages from the registry
+      # — it needs a network, and it is the reason for the 141 seconds.
       #
-      # النقطة في آخر الأمر تعني «المستودع كله»، و`pass_filenames:
-      # false` يمنع pre-commit من إلحاق أسماء الملفات بعدها.
+      # The dot at the end of the command means "the whole repository", and
+      # `pass_filenames: false` stops pre-commit appending file names after it.
       #
-      # الإنذارات الكاذبة تُوثَّق بـ`// nosemgrep: <rule>` **ملاصقاً
-      # لسطر النتيجة** مع سبب مكتوب فوقه — لا في ملف تجاهل بعيد عن
-      # الكود، كي يموت الاستثناء مع السطر الذي بُرّر له.
+      # False positives are documented with a `// nosemgrep: <rule>` **on the finding's own
+      # line**, with the reason written above it — not in an ignore file far from the code,
+      # so the exemption dies with the line it was justified for.
       - id: semgrep
-        name: semgrep — ثغرات كود في المستودع كله
+        name: semgrep — code vulnerabilities across the whole repository
         entry: semgrep --config auto --error .
         language: system
         pass_filenames: false
         stages: [pre-push]
 
-      # ── قواعد المشروع المحلية ────────────────────────────
+      # ── The project's local rules ────────────────────────
       #
-      # أربع قواعد في .semgrep/ تُشفّر أعطالاً **وقعت في هذا المشروع**
-      # ولم تكشفها قاعدة عامة قط. كل واحدة مُثبَتة على النسخة المعطوبة
-      # من التاريخ: تُطلق قبل الإصلاح وتسكت بعده.
+      # Six rules in .semgrep/ encode faults that **occurred in this project** and were
+      # never caught by a general rule. Each is proven against the broken version in the
+      # history: it fires before the fix and falls silent after it.
       #
-      # ولا تحتاج شبكة ولا حساباً — القواعد ملف محلي.
+      # And they need neither a network nor an account — the rules are a local file.
       #
-      # ⚠️ لكن **لا توفّر وقتاً**: قِستُها بعد كتابتها فكانت 112 ثانية
-      # مقابل 141 للفحص الكامل. كنتُ كتبتُ هنا «تكلفتها ثوانٍ لا
-      # دقائق» وصحّحته بعد القياس — تكلفة semgrep في **بدء التشغيل**
-      # لا في عدد القواعد، والدليل: فحص ملف واحد بـauto يكلّف 78
-      # ثانية والمستودع كله 90. فالمكسب هنا **دقّة الاستهداف** لا
-      # السرعة، وبلا تبعية شبكة أو حساب.
+      # ⚠️ But they **save no time**: measured after they were written, they took 112
+      # seconds against 141 for the full scan. I had written here that "they cost seconds,
+      # not minutes" and corrected it after measuring — semgrep's cost is in **startup**
+      # rather than in the number of rules, and the proof: scanning one file with auto costs
+      # 78 seconds and the whole repository 90. So the gain here is **precision of aim**,
+      # not speed, and it comes without a network or account dependency.
       #
-      # كانت على `manual` مؤقّتاً لأن القاعدة الثالثة تُطلق على
-      # `AdminProductModel::update`. أُغلقت تلك النتيجة (عقد ثلاثي
-      # صريح + فحص وجود)، فرُفعت هنا. والقاعدة تسكت الآن عن
-      # المستودع كله: **صفر نتيجة**.
+      # They sat on `manual` for a while because the third rule fired on
+      # `AdminProductModel::update`. That finding was closed (an explicit three-way contract
+      # plus an existence check), so they were promoted here. And the rule is now silent
+      # across the whole repository: **zero findings**.
       #
-      # ولا تُرفع قاعدة إلى pre-push وهي تُطلق على الكود الحالي:
-      # بوابة تحجب كل دفع يُلتفّ حولها بعد يومين، فتصير أسوأ من
-      # غيابها. أغلق النتيجة أولاً أو وثّقها بـnosemgrep.
+      # And a rule is never promoted to pre-push while it fires on the current code: a gate
+      # that blocks every push is worked around within two days, which makes it worse than
+      # its absence. Close the finding first, or document it with a nosemgrep.
       #
-      # ويمكن تشغيلها يدوياً أيضاً:
+      # They can also be run by hand:
       #     pre-commit run semgrep-local --hook-stage manual
       - id: semgrep-local
-        name: semgrep — قواعد المشروع المحلية
+        name: semgrep — the project's local rules
         entry: semgrep --config .semgrep/ --error .
         language: system
         pass_filenames: false
         stages: [pre-push, manual]
 
-      # ── ثغرات معروفة في الاعتماديات ──────────────────────
+      # ── Known vulnerabilities in the dependencies ────────
       #
-      # `files` هو جوهر هذا الخطّاف. الخياران الشائعان كلاهما ناقص:
+      # `files` is the heart of this hook. Both of the common choices fall short:
       #
-      #   يدوي فقط        → تنساه. تضيف حزمة مثغورة وتكتشف بعد شهر.
-      #   على كل commit   → ثانيتان × كل commit على ملف يتغيّر مرة كل
-      #                     شهرين. وقد يفشل commit لم تلمس فيه شيئاً،
-      #                     لأن قاعدة الثغرات تتغيّر بلا أن يتغيّر كودك.
+      #   manual only     → you forget it. You add a vulnerable package and find out a
+      #                     month later.
+      #   on every commit → two seconds × every commit, over a file that changes once every
+      #                     couple of months. And a commit in which you touched nothing may
+      #                     fail, because the vulnerability database changes without your
+      #                     code changing.
       #
-      # و`files: ^composer\.lock$` يعطي الثالث: pre-commit يتخطّى
-      # الخطّاف كلياً ما لم يكن `composer.lock` **مُدرَجاً** — أي أنه
-      # يعمل تلقائياً في اللحظة الوحيدة التي تدخل فيها حزمة جديدة،
-      # وبصفر تكلفة على كل commit آخر.
+      # And `files: ^composer\.lock$` gives the third: pre-commit skips the hook entirely
+      # unless `composer.lock` is **staged** — that is, it runs automatically at the one
+      # moment a new package enters, and at zero cost on every other commit.
       #
-      # و`manual` باقية للفحص الدوري — لأن ثغرة قد تُعلَن عن حزمة
-      # موجودة عندك منذ شهور بلا أن يتغيّر الملف:
+      # And `manual` remains for the periodic sweep — because a vulnerability may be
+      # announced for a package you have had for months, without the file changing:
       #     pre-commit run trivy --hook-stage manual
       #
-      # ولماذا `composer.lock` لا `.`: هذا هو ما تضيفه الأداة فعلاً —
-      # ثغرات **معروفة (CVE)** في الاعتماديات، وهو ما لا يفعله gitleaks
-      # ولا semgrep. وفحص المجلد كله يستغرق 91 ثانية ولا يجد هدفاً
-      # آخر — الملف نفسه هو كل ما فُحص.
+      # And why `composer.lock` rather than `.`: this is what the tool actually adds —
+      # **known (CVE)** vulnerabilities in the dependencies, which neither gitleaks nor
+      # semgrep does. And scanning the whole directory takes 91 seconds and finds no other
+      # target — the file itself is all that was scanned.
       #
-      # `--exit-code 1` لازمة: بدونها يطبع trivy النتائج ويخرج بكود 0
-      # فيبدو ناجحاً وهو يبلّغ عن ثغرات — نفس فخّ `--error` في semgrep.
+      # `--exit-code 1` is required: without it trivy prints the findings and exits 0, so it
+      # looks successful while reporting vulnerabilities — the same trap as `--error` in
+      # semgrep.
       #
-      # `--scanners vuln` وحدها: فحص الأسرار عند gitleaks والإعدادات
-      # الخاطئة لا هدف لها هنا (لا Dockerfile ولا Kubernetes).
+      # `--scanners vuln` alone: the secret scanning belongs to gitleaks, and
+      # misconfiguration scanning has no target here (no Dockerfile rules, no Kubernetes).
       - id: trivy
-        name: trivy — ثغرات معروفة في اعتماديات composer
+        name: trivy — known vulnerabilities in the composer dependencies
         entry: trivy fs --scanners vuln --exit-code 1 composer.lock
         language: system
         pass_filenames: false

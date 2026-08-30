@@ -1,36 +1,37 @@
 # ══════════════════════════════════════════════════════════════
-# Dependabot — تحديثات الاعتماديات
+# Dependabot — dependency updates
 # ══════════════════════════════════════════════════════════════
 #
-# هذا هو «القرار المؤجَّل» المكتوب في رأس .github/workflows/ci.yml:
+# This is the "deferred decision" written at the top of .github/workflows/ci.yml:
 #
-#     «SHA لكل شيء + Dependabot يرفع PR شهرياً بالتحديثات. وهو الحلّ
-#      الكامل، ويحتاج ملف إعداد إضافي وقراراً مستقلاً.»
+#     "A SHA for everything + Dependabot raising a monthly PR with the updates. That is the
+#      complete answer, and it needs an extra configuration file and a decision of its own."
 #
-# والقرار الآن: نعم للنصف الثاني. ولذلك يشمل هذا الملف
-# `github-actions` أيضاً — فالتحليل المكتوب في CI يبرّر ترك الإجراءات
-# بوسومها **بشرط** أن تصلها تصحيحاتها الأمنية، وDependabot هو من
-# يضمن ذلك بدل الاعتماد على أن يتذكّر أحدهم.
+# And the decision now is: yes to the second half. Which is why this file covers
+# `github-actions` as well — the analysis written in CI justifies leaving the actions on
+# their tags **on the condition** that their security patches reach them, and Dependabot is
+# what guarantees that rather than relying on somebody remembering.
 #
-# ── لماذا شهرياً لا أسبوعياً ────────────────────────────────
+# ── Why monthly rather than weekly ──────────────────────────
 #
-# مشروع بمشرف واحد. تدفّق PR أسبوعي في أربع أنظمة يعني تراكم PRات لا
-# تُراجَع — وطابور تحديثات مهملة أسوأ من غيابه: يعطي انطباع التغطية
-# بلا تغطية، ويدرّب صاحبه على إغلاق الإشعارات بلا قراءة.
+# A project with one maintainer. A weekly PR stream across four ecosystems means a pile-up
+# of unreviewed PRs — and a neglected queue of updates is worse than none: it gives the
+# impression of coverage without the coverage, and trains its owner to close notifications
+# unread.
 #
-# والأمان لا ينتظر الجدول على أي حال: تنبيهات Dependabot الأمنية
-# ترفع PR فور صدور الثغرة بلا علاقة بهذه الوتيرة، وtrivy في CI يفشل
-# البناء عند أي ثغرة معروفة في composer.lock.
+# And security does not wait for the schedule in any case: Dependabot's security alerts
+# raise a PR the moment a vulnerability is published, regardless of this cadence, and trivy
+# in CI fails the build on any known vulnerability in composer.lock.
 #
 # ── open-pull-requests-limit ────────────────────────────────
 #
-# محدود عمداً. الرقم الافتراضي (5 لكل نظام) يعني عشرين PR مفتوحاً في
-# أسوأ الأحوال على مستودع يراجعه شخص واحد.
+# Deliberately capped. The default (5 per ecosystem) means twenty open PRs at worst on a
+# repository reviewed by one person.
 
 version: 2
 
 updates:
-  # ── اعتماديات PHP ──────────────────────────────────────────
+  # ── The PHP dependencies ───────────────────────────────────
   - package-ecosystem: composer
     directory: /
     schedule:
@@ -41,9 +42,9 @@ updates:
     commit-message:
       prefix: "deps"
     groups:
-      # تحديثات الصيانة تُجمَع في PR واحد: هي ما لا يكسر شيئاً
-      # بحكم semver، ومراجعتها واحداً واحداً عمل بلا عائد.
-      # والتحديثات الكبرى تبقى منفصلة لأنها هي التي تحتاج قراءة.
+      # The maintenance updates are grouped into one PR: they are the ones that break
+      # nothing by semver's rule, and reviewing them one by one is work with no return.
+      # The major updates stay separate because they are the ones needing a read.
       php-patch-and-minor:
         patterns:
           - "*"
@@ -51,7 +52,7 @@ updates:
           - minor
           - patch
 
-  # ── أدوات الواجهة ──────────────────────────────────────────
+  # ── The front-end tooling ──────────────────────────────────
   - package-ecosystem: npm
     directory: /
     schedule:
@@ -69,12 +70,12 @@ updates:
           - minor
           - patch
 
-  # ── إجراءات GitHub ─────────────────────────────────────────
+  # ── The GitHub actions ─────────────────────────────────────
   #
-  # ci.yml يترك actions/checkout وأخواتها بوسومها عمداً، ويبرّر ذلك
-  # بأن الوسم يجلب تصحيحاتها الأمنية تلقائياً. وهذا صحيح للتصحيحات
-  # داخل النسخة الكبرى وحدها — أمّا الانتقال من v4 إلى v5 فلا يحدث
-  # وحده. هنا يأتي دور هذا القسم.
+  # ci.yml deliberately leaves actions/checkout and its siblings on their tags, and
+  # justifies that by the tag bringing their security patches automatically. Which is true
+  # for patches within the same major version alone — the move from v4 to v5 does not happen
+  # by itself. That is where this section comes in.
   - package-ecosystem: github-actions
     directory: /
     schedule:
@@ -84,11 +85,11 @@ updates:
       - dependencies
       - ci
 
-  # ── صورة الحاوية ───────────────────────────────────────────
+  # ── The container image ────────────────────────────────────
   #
-  # Dockerfile يثبّت php:8.3-apache. الوسم يتحرّك مع تصحيحات PHP،
-  # لكن الانتقال إلى 8.4 قرارٌ يجب أن يُرى في PR لا أن يقع صامتاً
-  # عند إعادة بناء الصورة.
+  # The Dockerfile pins php:8.3-apache. The tag moves with PHP's patches, but the move to
+  # 8.4 is a decision that should be seen in a PR rather than happening silently on the next
+  # image rebuild.
   - package-ecosystem: docker
     directory: /
     schedule:
