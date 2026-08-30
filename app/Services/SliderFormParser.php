@@ -73,9 +73,11 @@ final class SliderFormParser
 
                 $productId          = (int) ($itemData['product_id'] ?? 0) ?: null;
                 $productLinkUrl     = trim($itemData['product_link_url'] ?? '') ?: null;
+                $productTitle       = trim($itemData['product_title'] ?? '') ?: null;
                 $productDescription = trim($itemData['product_description'] ?? '') ?: null;
 
                 $manualLinkUrl     = trim($itemData['manual_link_url'] ?? '') ?: null;
+                $manualTitle       = trim($itemData['manual_title'] ?? '') ?: null;
                 $manualDescription = trim($itemData['manual_description'] ?? '') ?: null;
 
                 if (self::isUnsafeUrl($productLinkUrl) || self::isUnsafeUrl($manualLinkUrl)) {
@@ -111,9 +113,11 @@ final class SliderFormParser
                     'active_mode'         => $activeMode,
                     'product_id'          => $productId,
                     'product_link_url'    => $productLinkUrl,
+                    'product_title'       => $productTitle,
                     'product_description' => $productDescription,
                     'manual_image_path'   => $manualImagePath,
                     'manual_link_url'     => $manualLinkUrl,
+                    'manual_title'        => $manualTitle,
                     'manual_description'  => $manualDescription,
                 ];
             }

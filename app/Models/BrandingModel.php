@@ -79,7 +79,8 @@ class BrandingModel extends Model
      * محسوبة حسب active_mode داخل الـ SQL نفسه. يتجاهل العناصر غير المكتملة
      * (Product بلا منتج فعلي، أو Manual بلا صورة).
      *
-     * @return list<array<string, mixed>> مصفوفة شرائح كل واحدة: {id, items: [{image_path, link_url, description}]}
+     * @return list<array<string, mixed>> مصفوفة شرائح كل واحدة:
+     *         {id, items: [{image_path, link_url, title, description}]}
      */
     public static function getActiveSlidersForHome(): array
     {
@@ -106,6 +107,10 @@ class BrandingModel extends Model
                          ELSE si.manual_link_url
                     END AS link_url,
                     CASE WHEN si.active_mode = 'product'
+                         THEN COALESCE(NULLIF(si.product_title, ''), p.name)
+                         ELSE si.manual_title
+                    END AS title,
+                    CASE WHEN si.active_mode = 'product'
                          THEN COALESCE(NULLIF(si.product_description, ''), p.description)
                          ELSE si.manual_description
                     END AS description
@@ -124,6 +129,7 @@ class BrandingModel extends Model
                 $bySlider[(int)$it['slider_id']][] = [
                     'image_path'  => fixImagePath($it['image_path']),
                     'link_url'    => $it['link_url'] ?: null,
+                    'title'       => $it['title'] ?: '',
                     'description' => $it['description'] ?: '',
                 ];
             }
@@ -209,9 +215,9 @@ class BrandingModel extends Model
             $itemIns = $db->prepare("
                 INSERT INTO home_slider_items
                     (slider_id, sort_order, active_mode,
-                     product_id, product_link_url, product_description,
-                     manual_image_path, manual_link_url, manual_description)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                     product_id, product_link_url, product_title, product_description,
+                     manual_image_path, manual_link_url, manual_title, manual_description)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ");
 
             foreach ($slides as $slideIndex => $slide) {
@@ -225,9 +231,11 @@ class BrandingModel extends Model
                         $item['active_mode'],
                         $item['product_id'] ?: null,
                         $item['product_link_url'] ?: null,
+                        $item['product_title'] ?: null,
                         $item['product_description'] ?: null,
                         $item['manual_image_path'] ?: null,
                         $item['manual_link_url'] ?: null,
+                        $item['manual_title'] ?: null,
                         $item['manual_description'] ?: null,
                     ]);
                 }

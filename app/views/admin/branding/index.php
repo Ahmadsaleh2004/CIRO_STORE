@@ -43,7 +43,7 @@ require APPROOT . '/views/shared/flash-toast.php';
         <button type="submit" id="saveBrandingBtn" class="btn btn-success" disabled>
             💾 Save Changes
         </button>
-        <span class="text-muted small align-self-center" id="brandingDirtyHint" class="d-none">
+        <span class="text-muted small align-self-center d-none" id="brandingDirtyHint">
             You have unsaved changes.
         </span>
     </div>

@@ -40,8 +40,9 @@ $homeSliders = $data['homeSliders'] ?? [];
                     <div class="slide-items-row <?= $countClass ?>">
                         <?php foreach ($items as $i => $item): ?>
                             <?php
-                            $desc = (string) ($item['description'] ?? '');
-                            $img  = fixImagePath($item['image_path'] ?? '');
+                            $title = (string) ($item['title'] ?? '');
+                            $desc  = (string) ($item['description'] ?? '');
+                            $img   = fixImagePath($item['image_path'] ?? '');
                             // ⚠️ الشريحة الأولى **ليست** lazy: هي أكبر
                             // عنصر مرئي في الصفحة، وتأجيلها يؤجّل ما
                             // يقيسه المتصفح كـLCP. الباقي lazy عن حقّ.
@@ -51,12 +52,20 @@ $homeSliders = $data['homeSliders'] ?? [];
                             <a href="<?= htmlspecialchars($item['link_url'], ENT_QUOTES) ?>" class="slide-item-link">
                             <?php endif; ?>
                                 <div class="slide-item">
+                                    <?php // alt يفضّل العنوان: هو ما يُعرّف الصورة، والوصف يشرحها. ?>
                                     <img src="<?= htmlspecialchars($img, ENT_QUOTES) ?>"
-                                         alt="<?= htmlspecialchars($desc, ENT_QUOTES) ?>"
+                                         alt="<?= htmlspecialchars($title !== '' ? $title : $desc, ENT_QUOTES) ?>"
                                          class="slide-item-img"
                                          <?= $eager ? 'fetchpriority="high" decoding="async"' : 'loading="lazy"' ?>>
-                                    <?php if ($desc !== ''): ?>
-                                    <div class="slide-item-caption"><?= htmlspecialchars($desc) ?></div>
+                                    <?php if ($title !== '' || $desc !== ''): ?>
+                                    <div class="slide-item-caption">
+                                        <?php if ($title !== ''): ?>
+                                        <div class="slide-item-title"><?= htmlspecialchars($title) ?></div>
+                                        <?php endif; ?>
+                                        <?php if ($desc !== ''): ?>
+                                        <div class="slide-item-desc"><?= htmlspecialchars($desc) ?></div>
+                                        <?php endif; ?>
+                                    </div>
                                     <?php endif; ?>
                                 </div>
                             <?php if (!empty($item['link_url'])): ?>

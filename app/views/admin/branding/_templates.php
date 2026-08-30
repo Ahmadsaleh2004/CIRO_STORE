@@ -48,19 +48,32 @@
             </button>
 
             <div class="product-preview d-none mb-2 text-center">
-                <img class="product-preview-img" src="" alt=""
-                     class="u-thumb-preview">
+                <img class="product-preview-img u-thumb-preview" src="" alt="">
                 <div class="small fw-semibold product-preview-name mt-1"></div>
             </div>
             <input type="hidden" class="field-product-id" value="">
 
+            <?php /*
+الصورة تعرض سطرين: العنوان فوق الوصف. والحقلان يُملآن
+                 تلقائياً عند اختيار منتج (الاسم والوصف من القاعدة)
+                 ويبقيان قابلَين للتعديل — راجع selectProduct في
+                 js/admin/branding.js.
+
+                 وتركُ العنوان فارغاً ليس نقصاً: القراءة تسقط إلى
+                 products.name، فالشريحة تعرض اسم منتجها دائماً.
+                 الحقل موجود ليختصر الاسم الطويل لا ليكرّره.
+*/ ?>
+            <div class="float-group mb-2">
+                <input type="text" class="field-product-title" placeholder=" " maxlength="200">
+                <label class="small">Title on image (defaults to product name)</label>
+            </div>
+            <div class="float-group mb-2">
+                <textarea class="field-product-description" rows="2" placeholder=" " maxlength="500"></textarea>
+                <label class="small">Description — second line, smaller</label>
+            </div>
             <div class="float-group mb-2">
                 <input type="text" class="field-product-link" placeholder=" ">
                 <label class="small">Link (optional)</label>
-            </div>
-            <div class="float-group mb-2">
-                <textarea class="field-product-description" rows="2" placeholder=" "></textarea>
-                <label class="small">Description shown on image</label>
             </div>
 
             <button type="button" class="btn btn-sm w-100 default-btn" data-panel="product">
@@ -71,20 +84,31 @@
         <?php // ══ تبويب Manual ═══════════════════════════════════ ?>
         <div class="mode-panel manual-panel d-none">
             <div class="manual-preview d-none mb-2 text-center">
-                <img class="manual-preview-img" src="" alt=""
-                     class="u-thumb-preview">
+                <img class="manual-preview-img u-thumb-preview" src="" alt="">
             </div>
             <input type="file" class="field-manual-image form-control form-control-sm mb-2"
                    accept="image/jpeg,image/png,image/webp,image/gif">
             <input type="hidden" class="field-existing-manual-image" value="">
 
+            <?php /*
+⚠️ لا تعبئة تلقائية هنا — بخلاف لوحة Product.
+
+                 الصورة اليدوية ملفٌّ يرفعه الأدمن، ولا مصدر بيانات
+                 يُشتقّ منه عنوان أو وصف. فالحقلان يبقيان فارغين حتى
+                 يكتبهما، والعنوان الفارغ يعني بلا سطر عنوان — لا
+                 بديل له كما في وضع المنتج.
+*/ ?>
+            <div class="float-group mb-2">
+                <input type="text" class="field-manual-title" placeholder=" " maxlength="200">
+                <label class="small">Title on image</label>
+            </div>
+            <div class="float-group mb-2">
+                <textarea class="field-manual-description" rows="2" placeholder=" " maxlength="500"></textarea>
+                <label class="small">Description — second line, smaller</label>
+            </div>
             <div class="float-group mb-2">
                 <input type="text" class="field-manual-link" placeholder=" ">
                 <label class="small">Link (optional)</label>
-            </div>
-            <div class="float-group mb-2">
-                <textarea class="field-manual-description" rows="2" placeholder=" "></textarea>
-                <label class="small">Description shown on image</label>
             </div>
 
             <button type="button" class="btn btn-sm w-100 default-btn" data-panel="manual">

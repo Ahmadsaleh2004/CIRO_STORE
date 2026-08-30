@@ -71,6 +71,13 @@ document.addEventListener('DOMContentLoaded', () => {
             prev.querySelector('.product-preview-name').textContent = data.product_name || '';
         }
         itemEl.querySelector('.field-product-link').value = data.product_link_url || '';
+
+        // العنوان: المحفوظ إن وُجد، وإلا اسم المنتج — وهو بالضبط ما
+        // تُرجعه القراءة في BrandingModel (COALESCE على products.name).
+        // فما يراه الأدمن في الحقل هو ما يراه الزائر على الصورة.
+        itemEl.querySelector('.field-product-title').value =
+            data.product_title || data.product_name || '';
+
         itemEl.querySelector('.field-product-description').value =
             data.product_description || data.product_default_description || '';
 
@@ -82,6 +89,11 @@ document.addEventListener('DOMContentLoaded', () => {
             prev.querySelector('.manual-preview-img').src = data.manual_image_url || '';
         }
         itemEl.querySelector('.field-manual-link').value = data.manual_link_url || '';
+
+        // ⚠️ بلا بديل — بخلاف وضع المنتج. لا مصدر يُشتقّ منه عنوان
+        // لصورة رفعها الأدمن، والفارغ هنا يعني «بلا سطر عنوان» لا
+        // «املأه من مكان ما».
+        itemEl.querySelector('.field-manual-title').value = data.manual_title || '';
         itemEl.querySelector('.field-manual-description').value = data.manual_description || '';
 
         // أيّ تبويب ظاهر افتراضياً = نفس active_mode المحفوظ
@@ -196,13 +208,25 @@ document.addEventListener('DOMContentLoaded', () => {
                     resultsEl.innerHTML = '<div class="text-center py-3 text-muted">No products found.</div>';
                     return;
                 }
+                // ⚠️ سمة class واحدة مدموجة — كانت مكرّرة هنا:
+                // `class="d-flex … product-picker-row"` ثم
+                // `class="u-picker-card"`. والمتصفّح يأخذ الأولى ويُسقط
+                // الثانية بصمت، فلم يُطبَّق u-picker-card قط.
+                //
+                // وهي نفس عائلة الأعطال التي عولجت في الـviews، لكن
+                // اختبار DuplicateAttributeTest كان يمسح app/views
+                // وحدها — والماركب المُولَّد من جافاسكربت خارج مداه.
+                // وُسّع المسح ليشمل public/js.
+                //
+                // ⚠️ و`src` مهرَّبة كأخواتها: كانت `${p.image}` خامّاً
+                // بينما كل سمة بجانبها تمرّ بـescHtml. ومسارٌ فيه
+                // علامة اقتباس يكسر السمة ويفتح ما بعدها.
                 resultsEl.innerHTML = data.products.map(p => `
-                    <div class="d-flex align-items-center gap-2 p-2 product-picker-row"
-                         class="u-picker-card"
+                    <div class="d-flex align-items-center gap-2 p-2 product-picker-row u-picker-card"
                          data-id="${p.id}" data-name="${escHtml(p.name)}"
                          data-image="${escHtml(p.image)}" data-desc="${escHtml(p.description)}"
                          data-link="${escHtml(p.link)}">
-                        <img src="${p.image}" class="u-thumb-48-cover">
+                        <img src="${escHtml(p.image)}" class="u-thumb-48-cover" alt="">
                         <span class="fw-semibold">${escHtml(p.name)}</span>
                     </div>
                 `).join('');
@@ -224,10 +248,18 @@ document.addEventListener('DOMContentLoaded', () => {
         prev.querySelector('.product-preview-name').textContent = data.name;
 
         // تعبئة تلقائية — الأدمن يقدر يعدّلها بعدين لأنها حقول عادية مو مقفولة
-        const linkField = itemEl.querySelector('.field-product-link');
-        const descField = itemEl.querySelector('.field-product-description');
-        if (!linkField.value) linkField.value = data.link;
-        if (!descField.value) descField.value = data.desc;
+        //
+        // والشرط `if (!field.value)` مقصود في الثلاثة: من اختصر عنواناً
+        // أو حرّر وصفاً ثم بدّل المنتج لا يُفاجأ بمحو ما كتبه.
+        //
+        // ⚠️ وهذه اللوحة وحدها. لوحة Manual بلا تعبئة تلقائية لأن لا
+        // مصدر لها: صورة مرفوعة لا تحمل اسماً ولا وصفاً.
+        const linkField  = itemEl.querySelector('.field-product-link');
+        const titleField = itemEl.querySelector('.field-product-title');
+        const descField  = itemEl.querySelector('.field-product-description');
+        if (!linkField.value)  linkField.value  = data.link;
+        if (!titleField.value) titleField.value = data.name;
+        if (!descField.value)  descField.value  = data.desc;
 
         bootstrap.Modal.getInstance(document.getElementById('productPickerModal')).hide();
         markDirty();
@@ -237,7 +269,8 @@ document.addEventListener('DOMContentLoaded', () => {
     function markDirty() {
         saveBtn.disabled = false;
         saveBtn.classList.remove('btn-disabled-faded');
-        dirtyHint.style.display = 'inline';
+        // `d-none` في الترميز تحمل !important — لا يزيلها إلا classList.
+        dirtyHint.classList.remove('d-none');
     }
 
     // ── 11) قبل الإرسال: انسخ active_mode المخزّن بـ dataset لكل عنصر إلى حقل مخفي ──
@@ -252,10 +285,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 const prefix = `slides[${sIdx}][items][${iIdx}]`;
                 setName(itemEl, '.field-product-id',              `${prefix}[product_id]`);
                 setName(itemEl, '.field-product-link',            `${prefix}[product_link_url]`);
+                setName(itemEl, '.field-product-title',           `${prefix}[product_title]`);
                 setName(itemEl, '.field-product-description',     `${prefix}[product_description]`);
                 setName(itemEl, '.field-manual-image',            `${prefix}[manual_image]`);
                 setName(itemEl, '.field-existing-manual-image',   `${prefix}[existing_manual_image]`);
                 setName(itemEl, '.field-manual-link',             `${prefix}[manual_link_url]`);
+                setName(itemEl, '.field-manual-title',            `${prefix}[manual_title]`);
                 setName(itemEl, '.field-manual-description',      `${prefix}[manual_description]`);
 
                 // active_mode كحقل مخفي — أضِفه ديناميكياً إذا لم يكن موجوداً
