@@ -12,10 +12,10 @@
 
 -- @UP
 -- ════════════════════════════════════════════════════════════════════════
--- Migration: User Strikes — إنذارات المستخدمين (3 إنذارات = حظر تلقائي
--- + إلغاء الطلبات المعلّقة عبر OrderModel::cancelAllPendingForUser)
--- يعتمد على جدولين: users + admins
--- بنية مطابقة للمشروع القديم (config/schema.sql) — العمود issued_by_admin_id
+-- Migration: user strikes — three strikes mean an automatic block, plus cancelling the
+-- pending orders through OrderModel::cancelAllPendingForUser.
+-- Depends on two tables: users and admins.
+-- The structure matches the old project (config/schema.sql) — the issued_by_admin_id column
 -- ════════════════════════════════════════════════════════════════════════
 CREATE TABLE IF NOT EXISTS `user_strikes` (
     `id`                 INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,

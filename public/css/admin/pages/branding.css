@@ -1,16 +1,17 @@
-/* public/css/admin/branding.css — أنماط صفحة Manage Slider
-   كل الألوان عبر متغيرات الثيم (--bg-color, --card-bg, --section-border, --accent, --placeholder-color) */
+/* public/css/admin/branding.css — the Manage Slider page's styles.
+   Every colour goes through the theme's variables (--bg-color, --card-bg,
+   --section-border, --accent, --placeholder-color). */
 
 .slide-card { background: var(--card-bg); }
 
-/* البطاقات تتساوى ارتفاعاً بمحتواها لا بصورها.
+/* The cards match in height by their content, not by their images.
    ─────────────────────────────────────────────────────────────
-   `.items-container` هي `d-flex flex-wrap`، أي `align-items:stretch`
-   افتراضاً — فارتفاع الصف يتبع أطول بطاقة فيه. وقد كان ذلك يعني أن
-   صورة معاينة واحدة غير منضبطة الارتفاع تمطّ الصف كلّه.
+   `.items-container` is `d-flex flex-wrap`, which means `align-items:stretch` by default —
+   so a row's height follows its tallest card. And that meant a single preview image with
+   an unconstrained height stretched the entire row.
 
-   ضبط الصور في .u-thumb-preview هو الإصلاح الجذري؛ وهذا يمنع بقيّة
-   المحتوى (اسم منتج طويل، وصف من سطرين) من إحداث نفس الأثر. */
+   Constraining the images in .u-thumb-preview is the root fix; this stops the rest of the
+   content (a long product name, a two-line description) having the same effect. */
 .slide-item-card {
     background: var(--bg-color);
     align-self: flex-start;

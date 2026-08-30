@@ -12,12 +12,12 @@
 
 -- @UP
 -- ════════════════════════════════════════════════════════════════════════
--- Migration: Admin Notifications — رسائل فردية + Broadcast بين الأدمنية
--- يعتمد على جدول admins (موجود بـ admin_auth.sql)
+-- Migration: admin notifications — direct messages and broadcasts between admins.
+-- Depends on the admins table (created in admin_auth.sql)
 -- ════════════════════════════════════════════════════════════════════════
 CREATE TABLE `admin_notifications` (
     `id`               INT UNSIGNED NOT NULL AUTO_INCREMENT,
-    `admin_id`         INT UNSIGNED NOT NULL COMMENT 'المستلم',
+    `admin_id`         INT UNSIGNED NOT NULL COMMENT 'The recipient',
     `title`            VARCHAR(200) NOT NULL,
     `message`          TEXT         NOT NULL,
     `type`             VARCHAR(50)  NOT NULL DEFAULT 'system',

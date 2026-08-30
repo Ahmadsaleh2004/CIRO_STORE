@@ -1,5 +1,5 @@
 /* ==================================================
-   css/pages/products.css — أنماط صفحة المنتجات (Products Catalog)
+   css/pages/products.css — the products catalogue page's styles
    ================================================== */
 
 
@@ -40,7 +40,7 @@
    Quantity & Action Buttons — Redesign
    ═══════════════════════════════════════════════════════════════════ */
 
-/* Stepper موحّد — حاوية واحدة متصلة الحواف */
+/* A unified stepper — one container with continuous edges */
 .quantity-box {
     display: inline-flex !important;
     align-items: center;
@@ -57,24 +57,24 @@
     border: none !important;
 }
 
-/* فواصل داخلية بين العناصر */
+/* Internal separators between the elements */
 .quantity-box > *:not(:last-child) {
     border-right: 1px solid var(--card-border-color) !important;
 }
 
-/* أول عنصر: radius على اليسار */
+/* The first element: a radius on the left */
 .quantity-box > *:first-child {
     border-top-left-radius: 7px !important;
     border-bottom-left-radius: 7px !important;
 }
 
-/* آخر عنصر: radius على اليمين */
+/* The last element: a radius on the right */
 .quantity-box > *:last-child {
     border-top-right-radius: 7px !important;
     border-bottom-right-radius: 7px !important;
 }
 
-/* أزرار +/- داخل الحاوية */
+/* The +/− buttons inside the container */
 .quantity-box .btn {
     width: 40px;
     height: 40px;
@@ -98,7 +98,7 @@
     background: var(--section-border) !important;
 }
 
-/* حقل الكمية: بلا حدود، شفاف، مركّز */
+/* The quantity field: borderless, transparent, centred */
 .quantity-input {
     width: 56px !important;
     height: 40px !important;
@@ -125,7 +125,7 @@
     box-shadow: none !important;
 }
 
-/* زر Add to Cart / Notify Me أسفل الستِبر */
+/* The Add to Cart / Notify Me button beneath the stepper */
 .quantity-box + .btn,
 .quantity-box + form .btn {
     border-radius: 8px !important;
@@ -142,8 +142,8 @@
 /* ═══════════════════════════════════════════════════════════════════
    Product Card Hover Effect — Restored
    ═══════════════════════════════════════════════════════════════════ */
-/* الكارد الرئيسي في product.php يحمل: class="card product-card h-100 shadow border-0 position-relative" */
-/* الصورة الداخلية: class="card-img-top product-image" */
+/* The main card in product.php carries: class="card product-card h-100 shadow border-0 position-relative" */
+/* The inner image: class="card-img-top product-image" */
 
 #products-container .product-card {
     transition: box-shadow var(--dur-base) var(--ease-decelerate), border-color var(--dur-base) var(--ease-decelerate) !important;
@@ -183,7 +183,7 @@
     }
 }
 
-/* احترام prefers-reduced-motion */
+/* Respecting prefers-reduced-motion */
 @media (prefers-reduced-motion: reduce) {
     #products-container .product-card,
     #products-container .product-card .product-image {

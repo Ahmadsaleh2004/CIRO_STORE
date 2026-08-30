@@ -8,45 +8,45 @@
 
 -- @UP
 -- ════════════════════════════════════════════════════════════════════════════
--- Migration: السلّة تتبع المستخدم لا المتصفّح
+-- Migration: the cart follows the user, not the browser
 --
--- كانت السلّة كلّها في `localStorage`. وهذا يعني ثلاثة أشياء:
+-- The cart used to live entirely in `localStorage`. Which meant three things:
 --
---   · من يضيف على هاتفه لا يجد شيئاً على حاسوبه.
---   · مسحُ بيانات المتصفّح — أو نافذة خاصة — يمحو سلّة مليئة. وضياع
---     سلّة مليئة خسارة بيع مباشرة لا إزعاج واجهة.
---   · و«ما الذي يضعه الناس ولا يشترونه؟» سؤال لا جواب له إطلاقاً،
---     لأن البيانات لم تصل الخادم قط.
+--   · somebody adding on their phone found nothing on their computer;
+--   · clearing browser data — or a private window — erased a full cart. And losing a full
+--     cart is a direct lost sale, not a UI annoyance;
+--   · and "what do people put in and not buy?" was a question with no answer at all,
+--     because the data never reached the server.
 --
--- ── لا سلّة زائر — وهذا ما يبسّط الجدول ──────────────────────
+-- ── No guest cart — which is what keeps the table simple ────
 --
--- زرّ السلّة وزرّ «أضف للسلّة» كلاهما محروس بتسجيل الدخول في القوالب
--- الثلاثة (navbar.php · product.php · product_dit.php)، وغير المسجَّل
--- يُدفع إلى نافذة الدخول. فلا وجود لسلّة زائر أصلاً.
+-- The cart button and the "add to cart" button are both login-guarded in all three
+-- templates (navbar.php · product.php · product_dit.php), and a signed-out visitor is
+-- pushed to the login modal. So a guest cart does not exist in the first place.
 --
--- ولذلك لا حاجة إلى session_id ولا إلى منطق دمج عند الدخول: لكل صفّ
--- مالكٌ معروف منذ لحظة إنشائه.
+-- Which is why there is no need for a session_id and no need for merge-on-sign-in logic:
+-- every row has a known owner from the moment it is created.
 --
--- ── لا عمود سعر — عمداً ──────────────────────────────────────
+-- ── No price column — deliberately ──────────────────────────
 --
--- ⚠️ الجدول يخزّن «ماذا وكم» فقط. السعر يُقرأ من القاعدة لحظة الطلب
--- (راجع OrderModel::placeOrder). وعمود سعر هنا يعيد فتح الباب الذي
--- أُغلق في المرحلة الأولى: قيمة مالية مخزَّنة خارج مصدرها تصير مع
--- الوقت مصدرَ حقيقة ثانياً، ثم يقرأها أحدهم يوماً.
+-- ⚠️ The table stores "what and how many" and nothing else. The price is read from the
+-- database at the moment of the order (see OrderModel::placeOrder). A price column here
+-- would reopen the door closed in the first phase: a monetary value stored away from its
+-- source becomes, over time, a second source of truth, and one day somebody reads it.
 --
--- ── المفتاح الفريد هو المنطق ────────────────────────────────
+-- ── The unique key is the logic ─────────────────────────────
 --
--- UNIQUE(user_id, variant_id) يجعل «أضف نفس اللون مرّتين» تحديثاً
--- لكميّة صفّ واحد لا صفّاً ثانياً — بـINSERT ... ON DUPLICATE KEY
--- UPDATE، أي في رحلة واحدة وبلا سباق بين تبويبين.
+-- UNIQUE(user_id, variant_id) makes "add the same colour twice" an update to one row's
+-- quantity rather than a second row — through INSERT … ON DUPLICATE KEY UPDATE, that is, in
+-- one round trip and with no race between two tabs.
 --
--- والـvariant هو المفتاح لا المنتج: نفس المنتج بلونين سطران مستقلّان،
--- وهو ما تعرضه السلّة فعلاً.
+-- And the variant is the key rather than the product: the same product in two colours is
+-- two independent lines, which is what the cart actually shows.
 --
--- ── CASCADE على الثلاثة ─────────────────────────────────────
+-- ── CASCADE on all three ───────────────────────────────────
 --
--- حذف مستخدم أو منتج أو variant يمسح صفوف السلّة المعلّقة به. سلّة
--- تشير إلى منتج محذوف ليست بياناً بل عطلاً ينتظر من يقرأه.
+-- Deleting a user, a product or a variant clears the cart rows hanging off it. A cart
+-- pointing at a deleted product is not data but a fault waiting for somebody to read it.
 -- ════════════════════════════════════════════════════════════════════════════
 
 CREATE TABLE IF NOT EXISTS `cart_items` (
@@ -60,10 +60,10 @@ CREATE TABLE IF NOT EXISTS `cart_items` (
 
     PRIMARY KEY (`id`),
 
-    -- سطر واحد لكل (مستخدم، لون). راجع التعليق أعلاه.
+    -- One row per (user, colour). See the comment above.
     UNIQUE KEY `uniq_user_variant` (`user_id`, `variant_id`),
 
-    -- الاستعلام الوحيد المتكرّر: «سلّة هذا المستخدم».
+    -- The one recurring query: "this user's cart".
     KEY `idx_user` (`user_id`),
 
     CONSTRAINT `fk_cart_user`

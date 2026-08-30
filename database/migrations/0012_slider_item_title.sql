@@ -8,47 +8,51 @@
 
 -- @UP
 -- ════════════════════════════════════════════════════════════════════════════
--- Migration: سطر عنوان على صورة السلايدر، فوق الوصف
+-- Migration: a title line on the slider image, above the description
 --
--- كان لكل عنصر سلايدر نصٌّ واحد يُرسم على الصورة، عموده
--- `product_description` / `manual_description`. ولأنه الوحيد، كان
--- الأدمنية يكتبون فيه ما يقع تحت أيديهم: في عناصر المنتجات يُملأ
--- تلقائياً بوصف المنتج («Portable gaming console.»)، وفي العناصر
--- اليدوية كُتب فيه **اسم** منتج («Galaxy S24 Ultra»).
+-- Each slider item used to have one piece of text drawn over the image, in its
+-- `product_description` / `manual_description` column. And because it was the only one,
+-- admins wrote into it whatever came to hand: on product items it was filled automatically
+-- with the product's description ("Portable gaming console."), and on manual items a
+-- product's **name** was typed into it ("Galaxy S24 Ultra").
 --
--- أي أن الحقل الواحد كان يحمل دورين متنافسين: عنوانٌ يُعرِّف، ووصفٌ
--- يشرح. والنتيجة أن الصورة تعرض أحدهما ولا تعرض الآخر أبداً.
+-- Which is to say one field carried two competing roles: a title that identifies and a
+-- description that explains. The result was that the image showed one of them and never the
+-- other.
 --
--- ── لماذا عمود لا اشتقاق من products.name ────────────────────
+-- ── Why a column rather than deriving from products.name ────
 --
--- لأن اسم المنتج مكتوب للكتالوج لا للسلايدر. اسمٌ مثل
+-- Because a product's name is written for the catalogue, not for the slider. A name like
 -- «Apple AirPods Pro (2nd generation) with MagSafe Charging Case»
--- صحيح في صفحة المنتج، وعلى صورة سلايدر يلتفّ ثلاثة أسطر ويغطّيها.
+-- is right on the product page, and on a slider image it wraps to three lines and covers it.
 --
--- فالعمود يعطي الأدمن اختصاراً للعرض **دون أن يمسّ اسم المنتج**.
--- وهو نفس عقد الحقول المجاورة: تُملأ تلقائياً وتبقى قابلة للتعديل.
+-- So the column gives the admin a shorter form for display **without touching the
+-- product's name**. It is the same contract as the neighbouring fields: filled
+-- automatically and left editable.
 --
--- ── ولماذا NULL بلا backfill ─────────────────────────────────
+-- ── And why NULL with no backfill ───────────────────────────
 --
--- لأن القراءة تستعمل COALESCE(NULLIF(product_title,''), p.name).
--- فكل شريحة قائمة تعرض اسم منتجها فور تطبيق الهجرة بلا سطر بيانات
--- واحد يُكتب — والعمود يبقى فارغاً حتى يقرّر الأدمن اختصاراً.
+-- Because the read uses COALESCE(NULLIF(product_title,''), p.name).
+-- So every existing slide shows its product's name the moment the migration is applied,
+-- without a single row of data
+-- being written — and the column stays empty until an admin decides on a shorter form.
 --
--- ونسخُ الاسم في backfill كان سيُنتج نسخةً ثانية تشيخ: يُعاد تسمية
--- المنتج فيبقى السلايدر على الاسم القديم بلا أن يعلم أحد.
+-- And copying the name in a backfill would have produced a second copy that goes stale:
+-- the product gets renamed and the slider keeps the old name, with nobody the wiser.
 --
--- ⚠️ manual_title بلا بديل عمداً: لا منتج يُشتقّ منه اسم، فالعنصر
--- اليدوي بلا عنوان يُرسم بوصفه وحده. وهذا يصف الواقع: العناصر
--- اليدوية اليوم تحمل نصّها في خانة الوصف، ونقلُه إلى العنوان قرار
--- تحريري يخصّ الأدمن لا الهجرة.
+-- ⚠️ manual_title has no fallback, deliberately: there is no product to derive a name
+-- from, so a manual item without a title is drawn with its description alone. And that
+-- describes the reality: the manual items today carry their text in the description field,
+-- and moving it to the title is an editorial decision belonging to the admin, not to the
+-- migration.
 -- ════════════════════════════════════════════════════════════════════════════
 
 ALTER TABLE `home_slider_items`
     ADD COLUMN `product_title` varchar(200) DEFAULT NULL
-        COMMENT 'عنوان يُرسم فوق الوصف — فارغ يعني: استعمل products.name'
+        COMMENT 'A title drawn above the description — empty means: use products.name'
         AFTER `product_link_url`,
     ADD COLUMN `manual_title` varchar(200) DEFAULT NULL
-        COMMENT 'عنوان العنصر اليدوي — لا بديل له، فالفارغ يعني بلا عنوان'
+        COMMENT 'A manual item''s title — it has no fallback, so empty means no title at all'
         AFTER `manual_link_url`;
 
 -- @DOWN

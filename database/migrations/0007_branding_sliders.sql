@@ -12,34 +12,35 @@
 
 -- @UP
 -- ════════════════════════════════════════════════════════════════════════════
--- Migration: Branding / Home Slider — إدارة سلايدر الصفحة الرئيسية
--- يجب تنفيذ هذا الملف يدوياً على قاعدة البيانات: ciro_db
--- الترتيب: 1) عمود صلاحية جديدة على admin_permissions
---          2) جدول home_sliders (الشرائح)
---          3) جدول home_slider_items (الصور داخل كل شريحة)
--- يعتمد على: admins, admin_permissions (موجودة مسبقاً من admin_auth.sql)
---            products (موجودة مسبقاً من سكيما المنتجات الأساسية)
+-- Migration: branding / the home slider — managing the home page's slider.
+-- This file must be run by hand against the ciro_db database.
+-- The order: 1) a new permission column on admin_permissions
+--            2) the home_sliders table (the slides)
+--            3) the home_slider_items table (the images inside each slide)
+-- Depends on: admins and admin_permissions (already created by admin_auth.sql)
+--             products (already created by the base product schema)
 -- ════════════════════════════════════════════════════════════════════════════
 
--- ── 1. صلاحية جديدة: إدارة السلايدر/البراندنج ────────────────────────────────
+-- ── 1. A new permission: managing the slider and branding ───────────────────
 ALTER TABLE `admin_permissions`
     ADD COLUMN `can_manage_branding` TINYINT(1) NOT NULL DEFAULT 0
     AFTER `can_edit_site_content`;
 
--- منح الأدمن الأساسي (Role A، أول سجل) هذه الصلاحية تلقائياً حتى لا يُحرَم منها
--- بعد الترقية — لا تفترض id=1 دائماً، حدّثه بشرط role='A'.
+-- Grant the root admin (rank A, the first record) this permission automatically so they
+-- are not left without it after the upgrade — do not assume id=1; update on the condition
+-- role='A'.
 UPDATE `admin_permissions` ap
     JOIN `admins` a ON a.id = ap.admin_id
     SET ap.can_manage_branding = 1
     WHERE a.role = 'A';
 
--- ── 2. جدول الشرائح (كل صف = فريم واحد بالكاروسيل) ──────────────────────────
+-- ── 2. The slides table (each row is one carousel frame) ────────────────────
 CREATE TABLE IF NOT EXISTS `home_sliders` (
     `id`                  INT UNSIGNED NOT NULL AUTO_INCREMENT,
     `sort_order`          INT UNSIGNED NOT NULL DEFAULT 0
-                          COMMENT 'ترتيب ظهور الشريحة بالكاروسيل — يُعاد بناؤه بالكامل عند كل حفظ',
+                          COMMENT 'The slide order in the carousel — rebuilt entirely on every save',
     `updated_by_admin_id` INT UNSIGNED DEFAULT NULL
-                          COMMENT 'آخر أدمن قام بالحفظ الكامل للسلايدر (لكل الصفحة وليس فقط هذه الشريحة)',
+                          COMMENT 'The last admin to perform a full slider save (for the whole page, not this slide alone)',
     `created_at`          DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     `updated_at`          DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (`id`),
@@ -48,28 +49,29 @@ CREATE TABLE IF NOT EXISTS `home_sliders` (
         FOREIGN KEY (`updated_by_admin_id`) REFERENCES `admins`(`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- ── 3. جدول الصور/العناصر داخل كل شريحة ──────────────────────────────────────
--- كل صف يحتفظ ببيانات وضعي Product و Manual معاً (لا يُحذف أي منهما عند التبديل)
--- والعمود active_mode يحدد أيهما "Default" فعلياً يُعرض بالموقع.
+-- ── 3. The images / items table inside each slide ───────────────────────────
+-- Each row holds the data for both the Product and Manual modes (neither is deleted when
+-- switching), and the active_mode column decides which is genuinely the "default" shown on
+-- the site.
 CREATE TABLE IF NOT EXISTS `home_slider_items` (
     `id`         INT UNSIGNED NOT NULL AUTO_INCREMENT,
     `slider_id`  INT UNSIGNED NOT NULL,
     `sort_order` INT UNSIGNED NOT NULL DEFAULT 0
-                COMMENT 'ترتيب الصورة داخل نفس الشريحة (من اليسار لليمين)',
+                COMMENT 'The image order within its slide (left to right)',
 
-    -- أيّ الوضعين فعليّ (هذا هو "Default" الذي اختاره الأدمن) ─────────────────
+    -- Which of the two modes is in effect (the "default" the admin chose) ────────
     `active_mode` ENUM('product','manual') NOT NULL DEFAULT 'manual',
 
-    -- بيانات وضع Product ────────────────────────────────────────────────────
+    -- The Product mode's data ───────────────────────────────────────────────
     `product_id`          INT UNSIGNED DEFAULT NULL
-                          COMMENT 'FK اختياري — يبقى NULL إذا لم يُهيّئ الأدمن هذا الوضع إطلاقاً',
+                          COMMENT 'An optional foreign key — it stays NULL if the admin never configured this mode',
     `product_link_url`    VARCHAR(500) DEFAULT NULL
-                          COMMENT 'يُترك فارغاً = استخدم رابط تفاصيل المنتج الافتراضي /product?id=',
+                          COMMENT 'Left empty means: use the default product details link, /product?id=',
     `product_description` VARCHAR(500) DEFAULT NULL,
 
-    -- بيانات وضع Manual ─────────────────────────────────────────────────────
+    -- The Manual mode's data ────────────────────────────────────────────────
     `manual_image_path`   VARCHAR(255) DEFAULT NULL
-                          COMMENT 'مسار نسبي مثل images/slider_xxx.jpg — يُرفع عبر BrandingModel',
+                          COMMENT 'A relative path such as images/slider_xxx.jpg — uploaded through BrandingModel',
     `manual_link_url`     VARCHAR(500) DEFAULT NULL,
     `manual_description`  VARCHAR(500) DEFAULT NULL,
 

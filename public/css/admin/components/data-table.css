@@ -57,14 +57,14 @@
     .admin-table td { padding: 5px 4px; font-size: 0.68rem; }
 }
 
-/* ── صفوف قابلة للنقر ──
-   كانت كل قاعدة منهما كتلة \3c style> مضمّنة من سطر واحد في الـview
-   الخاص بها: .clickable-row في manage-admins/index و .user-row في
-   users/index. الصنفان مختلفان اسماً ومتطابقان سلوكاً، وكلاهما يخصّ
-   جدول الأدمن — فمكانهما هنا.
+/* ── Clickable rows ──
+   Each of these rules used to be a one-line inline \3c style> block in its own view:
+   .clickable-row in manage-admins/index and .user-row in users/index. The two classes
+   differ in name and are identical in behaviour, and both belong to the admin table — so
+   this is where they belong.
 
-   الصنفان لا يُوحَّدان في اسم واحد: يقرأهما JS
-   (js/admin/manage-admins.js و js/admin/users.js) بهذين الاسمين. */
+   The two classes are not unified into one name: JavaScript reads them under these names
+   (js/admin/manage-admins.js and js/admin/users.js). */
 .clickable-row,
 .user-row {
     cursor: pointer;

@@ -59,7 +59,7 @@
 }
 .notif-item {
     padding: 16px;
-    padding-right: 32px; /* مساحة لزر X */
+    padding-right: 32px; /* Room for the ✕ button */
     border-bottom: 1px solid var(--section-border);
     cursor: pointer;
     position: relative;
@@ -67,7 +67,7 @@
     color: var(--text-color);
 }
 
-/* ── زر X لحذف إشعار واحد ── */
+/* ── The ✕ button that deletes one notification ── */
 .notif-dismiss-btn {
     position: absolute;
     top: 8px;

@@ -6,8 +6,8 @@
    Fix Bootstrap padding-right on body (modal/offcanvas)
    ================================================== */
 body {
-    /* overflow-x: clip بدلاً من hidden حتى لا يُنشئ scroll container
-       يكسر position: sticky على الناف بار (مطلوب لتأثير initNavbarBlur) */
+    /* overflow-x: clip rather than hidden, so it does not create a scroll container that
+       breaks position: sticky on the navbar (which initNavbarBlur's effect needs) */
     overflow-x: clip !important;
     padding-right: 0 !important;
     min-height: 100vh;

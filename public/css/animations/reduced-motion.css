@@ -2,7 +2,7 @@
    animations/reduced-motion.css — prefers-reduced-motion. MUST be imported LAST so it wins.
    ================================================== */
 
-/* prefers-reduced-motion — احترام إعدادات المستخدم */
+/* prefers-reduced-motion — respecting the user's settings */
 @media (prefers-reduced-motion: reduce) {
     main[role="main"] { animation: none !important; }
     #page-overlay     { transition: none !important; }

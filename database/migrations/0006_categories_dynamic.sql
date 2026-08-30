@@ -13,55 +13,58 @@
 -- @UP
 -- ══════════════════════════════════════════════════════════════
 -- categories_dynamic.sql
--- يحوّل categories.name من ENUM ثابت إلى VARCHAR ديناميكي
--- ويضيف عمود is_core لتمييز الأربع الكاتوجريز الأساسية غير القابلة للحذف
--- شغّله مرة واحدة فقط على قاعدة بيانات موجودة فيها الجدول أصلاً بصيغة ENUM.
+-- Converts categories.name from a fixed ENUM to a dynamic VARCHAR, and adds an is_core
+-- column marking the four core categories that cannot be deleted.
+-- Run it once only, against a database where the table already exists in its ENUM form.
 -- ══════════════════════════════════════════════════════════════
 
 START TRANSACTION;
 
--- 1) تحويل العمود من ENUM إلى VARCHAR(50) مع الإبقاء على UNIQUE
---    (DROP UNIQUE أولاً لأن MySQL لا يسمح تعديل ENUM column مع unique constraint مباشرة)
---    اسم الـ index الحالي هو 'name' (كما أنشأه MySQL تلقائياً من UNIQUE KEY على ENUM)
+-- 1) Convert the column from ENUM to VARCHAR(50) while keeping it UNIQUE.
+--    (DROP UNIQUE first, because MySQL does not allow altering an ENUM column with a
+--    unique constraint directly.)
+--    The current index is named 'name' (as MySQL created it automatically from the UNIQUE
+--    KEY on the ENUM).
 ALTER TABLE categories
     DROP INDEX `name`;
 
 ALTER TABLE categories
     MODIFY COLUMN name VARCHAR(50) NOT NULL;
 
--- 2) إضافة عمود is_core (0 = كاتوجري إضافية قابلة للحذف، 1 = أساسية محمية)
+-- 2) Add the is_core column (0 = an extra category that can be deleted, 1 = a protected core one)
 ALTER TABLE categories
     ADD COLUMN is_core TINYINT(1) NOT NULL DEFAULT 0 AFTER name;
 
--- 3) تعليم الأربع الأساسية كـ is_core = 1
+-- 3) Mark the four core categories as is_core = 1
 UPDATE categories
 SET is_core = 1
 WHERE name IN ('phone', 'computer', 'accessories', 'gaming');
 
--- 4) التأكد من عدم وجود تكرار بالاسم بعد التحويل (safety check)
---    إذا رجع صفوف: يجب حل التكرار يدوياً قبل الاستمرار
+-- 4) Confirm no duplicate names after the conversion (a safety check).
+--    If it returns rows: the duplication must be resolved by hand before continuing.
 -- SELECT name, COUNT(*) c FROM categories GROUP BY name HAVING c > 1;
 
--- 5) إعادة UNIQUE index على name صراحةً (كان ضمنياً بالـ ENUM، نعيد تأكيده)
+-- 5) Restore the UNIQUE index on name explicitly (it was implicit with the ENUM; this reasserts it)
 ALTER TABLE categories
     ADD UNIQUE KEY uq_categories_name (name);
 
 COMMIT;
 
 -- ══════════════════════════════════════════════════════════════
--- تحقق ما بعد التنفيذ — شغّله يدوياً للتأكد:
+-- A post-run check — run it by hand to confirm:
 -- SELECT id, name, is_core FROM categories WHERE is_core = 1 ORDER BY id;
--- المتوقع: 4 صفوف (accessories, phone, computer, gaming)
+-- Expected: 4 rows (accessories, phone, computer, gaming)
 -- ══════════════════════════════════════════════════════════════
 
 -- @DOWN
--- ⚠️ لا تراجع آمناً عن هذه الهجرة.
+-- ⚠️ There is no safe rollback for this migration.
 --
--- تحوّل categories.name من ENUM ثابت إلى VARCHAR ديناميكي. والعودة
--- تعني حصر القيم في الأربع الأصلية — فأي تصنيف أضافه أدمن بعدها
--- يفقد اسمه أو يمنع التحويل من إتمامه.
+-- It converts categories.name from a fixed ENUM to a dynamic VARCHAR. Going back means
+-- confining the values to the original four — so any category an admin added afterwards
+-- either loses its name or stops the conversion from completing.
 --
--- التراجع هنا يتطلّب قراراً بشرياً عن مصير تلك الصفوف، لا سكربتاً.
--- كُتب القسم صراحةً بدل تركه فارغاً كي يقرأ من يحاول التراجعَ سببَ
--- المنع بدل أن يرى رسالة «بلا قسم @DOWN» فيظنّها سهواً.
-SELECT 'IRREVERSIBLE: categories_dynamic — راجع التعليق أعلاه' AS refusal;
+-- Rolling back here requires a human decision about those rows' fate, not a script.
+-- The section was written out rather than left empty, so whoever attempts a rollback reads
+-- the reason for the refusal instead of seeing a "no @DOWN section" message and taking it
+-- for an oversight.
+SELECT 'IRREVERSIBLE: categories_dynamic — see the comment above' AS refusal;

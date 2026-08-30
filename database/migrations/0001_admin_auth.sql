@@ -12,12 +12,12 @@
 
 -- @UP
 -- ════════════════════════════════════════════════════════════════════════════
--- Migration: Admin Auth Tables — نظام صلاحيات A/B/C/D
--- يجب تنفيذ هذا الملف على قاعدة البيانات: ciro_db
--- الترتيب مهم: admins → admin_permissions → admin_audit_log → admin_login_attempts
+-- Migration: admin auth tables — the A/B/C/D permission system.
+-- This file must be run against the ciro_db database.
+-- The order matters: admins → admin_permissions → admin_audit_log → admin_login_attempts
 -- ════════════════════════════════════════════════════════════════════════════
 
--- ── 1. جدول الأدمنز ──────────────────────────────────────────────────────────
+-- ── 1. The admins table ─────────────────────────────────────────────────────
 CREATE TABLE `admins` (
     `id`            INT UNSIGNED    NOT NULL AUTO_INCREMENT,
     `full_name`     VARCHAR(100)    NOT NULL,
@@ -27,10 +27,10 @@ CREATE TABLE `admins` (
     `role`          ENUM('A','B','C','D') NOT NULL DEFAULT 'B'
                     COMMENT 'A=Super Admin, B=Admin, C=Moderator, D=Support',
     `added_by`      INT UNSIGNED    DEFAULT NULL
-                    COMMENT 'معرّف الأدمن الذي أنشأ هذا الحساب',
+                    COMMENT 'The id of the admin who created this account',
     `is_active`     TINYINT(1)      NOT NULL DEFAULT 1,
     `last_activity` DATETIME        NULL
-                    COMMENT 'آخر نشاط — تُحدَّث عند كل طلب محمي',
+                    COMMENT 'Last activity — updated on every protected request',
     `created_at`    DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
     `updated_at`    DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (`id`),
@@ -40,7 +40,7 @@ CREATE TABLE `admins` (
         FOREIGN KEY (`added_by`) REFERENCES `admins`(`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- ── 2. جدول صلاحيات الأدمن (علاقة 1:1 مع admins) ────────────────────────────
+-- ── 2. The admin permissions table (a 1:1 relation with admins) ─────────────
 CREATE TABLE `admin_permissions` (
     `id`                           INT UNSIGNED NOT NULL AUTO_INCREMENT,
     `admin_id`                     INT UNSIGNED NOT NULL,
@@ -58,7 +58,7 @@ CREATE TABLE `admin_permissions` (
         FOREIGN KEY (`admin_id`) REFERENCES `admins`(`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- ── 3. جدول سجل العمليات (Audit Log) ─────────────────────────────────────────
+-- ── 3. The audit log table ──────────────────────────────────────────────────
 CREATE TABLE `admin_audit_log` (
     `id`          INT UNSIGNED  NOT NULL AUTO_INCREMENT,
     `admin_id`    INT UNSIGNED  NOT NULL,
@@ -74,12 +74,12 @@ CREATE TABLE `admin_audit_log` (
         FOREIGN KEY (`admin_id`) REFERENCES `admins`(`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- ── 4. جدول محاولات تسجيل دخول الأدمن (Rate Limiting) ───────────────────────
--- محتفظ به من النسخة السابقة — يدعم AdminModel::isRateLimited() وlogLoginAttempt()
+-- ── 4. The admin sign-in attempts table (rate limiting) ─────────────────────
+-- Kept from the previous version — it backs AdminModel::isRateLimited() and logLoginAttempt()
 CREATE TABLE `admin_login_attempts` (
     `id`           INT UNSIGNED NOT NULL AUTO_INCREMENT,
     `email`        VARCHAR(150) NOT NULL,
-    `ip_address`   VARCHAR(45)  NOT NULL COMMENT 'يدعم IPv6',
+    `ip_address`   VARCHAR(45)  NOT NULL COMMENT 'Wide enough for IPv6',
     `attempted_at` DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
     `success`      TINYINT(1)   NOT NULL DEFAULT 0,
     PRIMARY KEY (`id`),
@@ -87,10 +87,10 @@ CREATE TABLE `admin_login_attempts` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ════════════════════════════════════════════════════════════════════════════
--- Seed: أدمن رئيسي role='A' بكل الصلاحيات مفعّلة
--- ⚠️ كلمة المرور PLACEHOLDER — تُضبط عبر سكربت seed منفصل قبل الاستخدام:
+-- Seed: a root admin with role='A' and every permission granted.
+-- ⚠️ The password is a PLACEHOLDER — set it through a separate seed script before use:
 --    php -r "echo password_hash('YourPassword', PASSWORD_BCRYPT, ['cost' => 12]);"
---    ثم UPDATE admins SET password='<hash>' WHERE email='admin@example.com';
+--    then UPDATE admins SET password='<hash>' WHERE email='admin@example.com';
 -- ════════════════════════════════════════════════════════════════════════════
 INSERT INTO `admins`
     (`full_name`, `email`, `password`, `phone_number`, `role`, `added_by`)

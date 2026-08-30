@@ -6,7 +6,7 @@
    Page Transition — Professional Slide + Blur
    ================================================== */
 
-/* Enter animation — الصفحة الجديدة تدخل من الأسفل */
+/* Enter animation — the new page arrives from below */
 @keyframes pageEnter {
     0%   { opacity: 0; transform: translateY(12px); }
     100% { opacity: 1; transform: translateY(0); }
@@ -16,7 +16,7 @@ main[role="main"] {
     animation: pageEnter var(--dur-base) var(--ease-decelerate) both;
 }
 
-/* Overlay — يغطي الشاشة عند الخروج */
+/* Overlay — it covers the screen on the way out */
 #page-overlay {
     position: fixed;
     inset: 0;
@@ -32,7 +32,7 @@ main[role="main"] {
     pointer-events: all;
 }
 
-/* Loading bar — أعلى الصفحة مثل YouTube */
+/* Loading bar — at the top of the page, the way YouTube does it */
 @keyframes progressBar {
     0%   { width: 0%;   opacity: 1; }
     60%  { width: 75%;  opacity: 1; }

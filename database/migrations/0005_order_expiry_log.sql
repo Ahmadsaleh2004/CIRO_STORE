@@ -12,16 +12,17 @@
 
 -- @UP
 -- ════════════════════════════════════════════════════════════════════════
--- Migration: Order Expiry Log — سجل الطلبات التي رجعت تلقائياً لـ not_taken
--- بعد انتهاء مهلة الـ 3 ساعات دون تسليم (يُستخدم من OrderModel::releaseExpiredTakenOrders())
--- يعتمد على جدولين: orders + admins
+-- Migration: the order expiry log — a record of the orders returned automatically to
+-- not_taken after the 3-hour deadline passed without delivery (used by
+-- OrderModel::releaseExpiredTakenOrders()).
+-- Depends on two tables: orders and admins
 -- ════════════════════════════════════════════════════════════════════════
 CREATE TABLE IF NOT EXISTS `order_expiry_log` (
     `id`                INT UNSIGNED NOT NULL AUTO_INCREMENT,
     `order_id`          INT UNSIGNED NOT NULL,
-    `previous_admin_id` INT UNSIGNED DEFAULT NULL COMMENT 'الأدمن الذي كان قد أخذ الطلب قبل انتهاء المهلة',
-    `taken_at`          DATETIME NOT NULL COMMENT 'وقت أخذ الطلب الأصلي',
-    `reverted_at`       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'وقت الإرجاع التلقائي',
+    `previous_admin_id` INT UNSIGNED DEFAULT NULL COMMENT 'The admin holding the order before the deadline passed',
+    `taken_at`          DATETIME NOT NULL COMMENT 'When the order was originally taken',
+    `reverted_at`       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'When it was released automatically',
     PRIMARY KEY (`id`),
     INDEX `idx_order` (`order_id`),
     INDEX `idx_reverted` (`reverted_at`),

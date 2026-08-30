@@ -184,25 +184,23 @@
 .u-thumb-42 { width: 42px; height: 42px; object-fit: cover; border-radius: 6px; }
 .u-thumb-48 { width: 48px; height: 48px; object-fit: contain; border-radius: 6px; }
 .u-thumb-80 { width: 80px; height: 80px; object-fit: contain; border-radius: 8px; border: 1px solid var(--section-border); }
-/* ⚠️ `height` لا `max-height` — وهو ما كان معطوباً هنا.
+/* ⚠️ `height` rather than `max-height` — which is what was broken here.
    ─────────────────────────────────────────────────────────────
-   كانت القاعدة `max-width:100%; max-height:100px; object-fit:cover`،
-   وهي تحمل تناقضاً صامتاً: `object-fit` لا يفعل شيئاً ما لم يكن
-   للعنصر **مقاسٌ مضبوط** يملأه. ومع `max-*` وحدها تبقى الأبعاد تابعة
-   لنسبة الصورة الأصلية — فصورة عريضة تخرج بارتفاع 40px وأخرى طويلة
-   بارتفاع 100px.
+   The rule used to be `max-width:100%; max-height:100px; object-fit:cover`, and it carries
+   a silent contradiction: `object-fit` does nothing unless the element has a **fixed size**
+   to fill. With `max-*` alone the dimensions stay tied to the image's own aspect ratio — so
+   a wide image comes out 40px tall and a tall one 100px.
 
-   والأثر في صفحة Manage Slider: البطاقات في `.items-container`
-   بـ`d-flex` أي `align-items: stretch` افتراضاً، فترتفع بطاقات الصف
-   كلّها إلى أطولها. صورةٌ واحدة طويلة كانت تمطّ الصف بأكمله —
-   وهو بلاغ «أحجام الصور تؤثر على الحاوية».
+   And the effect on the Manage Slider page: the cards in `.items-container` are `d-flex`,
+   which means `align-items: stretch` by default, so every card in a row rises to the
+   tallest. One tall image stretched the whole row — which was the report "the image sizes
+   affect the container".
 
-   وبقيّة أخوات هذه الأداة (u-thumb-36/42/48/80) تضبط width وheight
-   معاً منذ البداية؛ كانت هذه وحدها شاذّة.
+   And this utility's siblings (u-thumb-36/42/48/80) have set width and height together
+   from the start; this one alone was the outlier.
 
-   ⚠️ ولاحظ أن هذا لم يكن ظاهراً أصلاً: سمة class مكرّرة في
-   _templates.php كانت تُسقط الأداة كلّها، فلم يكن للصور أي تحديد
-   حجم إطلاقاً. */
+   ⚠️ And note this was not even visible: a duplicated class attribute in _templates.php
+   dropped the utility entirely, so the images had no size constraint at all. */
 .u-thumb-preview {
     width: 100%;
     height: 100px;

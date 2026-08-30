@@ -80,7 +80,7 @@
     animation: modalSlideIn var(--dur-slow) var(--ease-bounce);
 }
 
-/* Header ملون مع gradient */
+/* A coloured header with a gradient */
 .modal-header.modal-header-login {
     background: linear-gradient(135deg, var(--navbar-bg), #2d2f6e) !important;
     padding: 28px 28px 20px !important;
@@ -143,7 +143,7 @@
     background: var(--section-border);
 }
 
-/* Input labels داخل الـ modal — محجوزة للاستخدام المستقبلي */
+/* Input labels inside the modal — reserved for future use */
 
 
 /* --- Responsive, part 2 (runs AFTER the enhanced design) --- */

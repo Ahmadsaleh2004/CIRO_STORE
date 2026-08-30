@@ -1,15 +1,15 @@
 /* ==================================================
-   css/store/pages/confirmation.css — صفحة تأكيد الطلب
+   css/store/pages/confirmation.css — the order confirmation page
    ==================================================
-   نُقلت من كتلة \3c style> مضمّنة داخل
-   app/views/checkout/confirmation.php. كان التعليق هناك يقول إن
-   «الصفحة لا تحمّل ملف أنماط خاصاً بها فالإصلاح مضمّن» — صار لها ملف.
+   Moved out of an inline \3c style> block inside app/views/checkout/confirmation.php.
+   The comment there said "the page loads no stylesheet of its own, so the fix is inline" —
+   it now has one.
    ================================================== */
 
 @media (max-width: 375px) {
-    /* !important مقصودة وليست من صراع مع ملف آخر: الصنف p-5 من
-       Bootstrap مُعرَّف بـ`padding: 3rem !important` كبقية أدوات
-       التباعد، فلا يُغلَب إلا بـ!important. */
+    /* The !important is deliberate and not the result of competing with another file:
+       Bootstrap's p-5 class is defined as `padding: 3rem !important`, like the rest of its
+       spacing utilities, so nothing but an !important beats it. */
     #main-content .card {
         padding: 1.5rem !important;
     }

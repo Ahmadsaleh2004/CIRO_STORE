@@ -8,52 +8,52 @@
 
 -- @UP
 -- ════════════════════════════════════════════════════════════════════════════
--- Migration: عنوان الطلب لقطة لا مرجع
+-- Migration: an order's address is a snapshot, not a reference
 --
--- كان `orders.address_id` مفتاحاً أجنبياً حيّاً إلى `user_addresses`
--- بـ`ON DELETE SET NULL`. أي أن عنوان الطلب ليس ملكاً للطلب: يتبع
--- الصفَّ الذي يشير إليه أينما ذهب.
+-- `orders.address_id` used to be a live foreign key into `user_addresses` with
+-- `ON DELETE SET NULL`. Which is to say the order's address did not belong to the order: it
+-- followed the row it pointed at wherever that went.
 --
--- والأثر ليس نظرياً:
+-- And the effect is not theoretical:
 --
---   · المستخدم يعدّل عنوانه بعد التسليم → يتغيّر عنوان طلب **سُلّم
---     فعلاً** بأثر رجعي. السجلّ يقول إن الشحنة ذهبت إلى مكان لم تذهب
---     إليه قط.
---   · المستخدم يحذف عنواناً قديماً → `SET NULL`، فطلبات مكتملة تفقد
---     عنوانها **نهائياً**. ولا نسخة في أي مكان آخر.
+--   · a user edits their address after delivery → the address of an order that was
+--     **actually delivered** changes retroactively. The record says the shipment went
+--     somewhere it never went.
+--   · a user deletes an old address → `SET NULL`, and completed orders lose their address
+--     **permanently**. With no copy anywhere else.
 --
--- وهذا صنف الخطأ الذي لا يظهر في أي اختبار وظيفي ولا في أي شاشة —
--- يظهر يوم يُسأل «أين أُرسل هذا الطلب؟» فلا يكون للسؤال جواب.
+-- And this is the class of error that appears in no functional test and on no screen — it
+-- appears the day somebody asks "where was this order sent?" and the question has no answer.
 --
--- ── لماذا لقطة لا جدول تاريخ ──────────────────────────────────
+-- ── Why a snapshot rather than a history table ───────────────
 --
--- الجدول التاريخي (نسخة لكل تعديل عنوان) يحلّ المشكلة نفسها ويزيد
--- عليها استعلام ربط عند كل عرض، وجدولاً ينمو بلا حدّ، ومنطقَ «أي
--- نسخة كانت سارية لحظة الطلب» يجب أن يُكتب ويُختبَر.
+-- A history table (a copy per address edit) solves the same problem and adds to it a join
+-- on every display, a table that grows without bound, and "which version was in effect at
+-- the moment of the order" logic that must be written and tested.
 --
--- والطلب لا يحتاج شيئاً من ذلك: يحتاج **أين أُرسل**، مرّة، بلا تغيير.
--- فالنصّ المسطَّح في صفّ الطلب أرخص وأصدق.
+-- And an order needs none of that: it needs **where it was sent**, once, unchanging.
+-- So flat text in the order's row is both cheaper and more honest.
 --
--- ── لماذا يبقى address_id ─────────────────────────────────────
+-- ── Why address_id stays ─────────────────────────────────────
 --
--- الحذف كان سيكسر شاشات الأدمن التي تربط الطلب بعنوان المستخدم
--- لعرض بياناته الحيّة. المفتاح يبقى للربط، واللقطة هي المرجع
--- التاريخي — وعند التعارض تفوز اللقطة دائماً.
+-- Removing it would have broken the admin screens that join the order to the user's
+-- address to show their live details. The key stays for the relationship, and the snapshot
+-- is the historical record — and where they conflict, the snapshot always wins.
 --
--- ── الأعمدة NULL عمداً ────────────────────────────────────────
+-- ── The columns are NULL deliberately ────────────────────────
 --
--- الطلبات القائمة قبل هذه الهجرة لا لقطة لها، وملؤها بنصّ فارغ كان
--- سيكذب: «العنوان معروف وهو فراغ» غير «العنوان غير مسجَّل». وسطر
--- الـUPDATE أدناه يملؤها ممّا تبقّى من مراجع حيّة — وهو أفضل ما يمكن
--- استرجاعه، ويبقى NULL لما ضاع مرجعه أصلاً.
+-- Orders existing before this migration have no snapshot, and filling them with an empty
+-- string would lie: "the address is known and it is blank" is not "no address on record".
+-- The UPDATE below fills them from whatever live references remain — the best that can be
+-- recovered — and leaves NULL for those whose reference is already gone.
 -- ════════════════════════════════════════════════════════════════════════════
 
 ALTER TABLE `orders`
     ADD COLUMN `address_snapshot`      TEXT        DEFAULT NULL AFTER `address_id`,
     ADD COLUMN `address_phone_snapshot` VARCHAR(30) DEFAULT NULL AFTER `address_snapshot`;
 
--- ملء الطلبات القائمة ممّا لم يُحذف بعد من العناوين.
--- CONCAT_WS يتخطّى NULL من تلقائه، فلا تظهر فواصل معلّقة.
+-- Filling the existing orders from the addresses not yet deleted.
+-- CONCAT_WS skips NULLs on its own, so no dangling commas appear.
 UPDATE `orders` o
     JOIN `user_addresses` a ON a.id = o.address_id
 SET

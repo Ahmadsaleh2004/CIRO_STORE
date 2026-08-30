@@ -51,7 +51,7 @@ html[data-bs-theme="dark"] body .home-tile .tile-icon { background: rgba(255,255
     text-align: center;
 }
 
-/* حالة المربع الواحد */
+/* The single-tile case */
 .single-tile-wrap {
     display: flex;
     flex-direction: column;

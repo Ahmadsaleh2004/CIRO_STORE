@@ -1,17 +1,18 @@
 /* ══════════════════════════════════════════════════════════════
-   home-slider.css — صور مرنة + Hover احترافي حسب عدد الصور بالشريحة
+   home-slider.css — flexible images plus a hover behaviour that follows the slide's image count
    ══════════════════════════════════════════════════════════════ */
 
 .slide-items-row {
     display: flex;
     width: 100%;
-    height: 480px; /* عدّل حسب ارتفاع السلايدر الحالي بالمشروع (راجع slider-image بـ home.css) */
+    height: 480px; /* Adjust to the project's current slider height (see slider-image in home.css) */
     overflow: hidden;
     gap: 2px;
 }
 
-/* كل عنصر إما <div class="slide-item"> أو <a class="slide-item-link"><div class="slide-item">…
-   فعنصر flex نفسه هو .slide-item أو .slide-item-link — لذا كل القواعد الهوفرية تشمل الاثنين. */
+/* Each item is either <div class="slide-item"> or <a class="slide-item-link"><div class="slide-item">…
+   so the flex item itself is either .slide-item or .slide-item-link — which is why every
+   hover rule covers both. */
 .slide-item,
 .slide-item-link {
     position: relative;
@@ -34,27 +35,27 @@
     transition: transform .45s cubic-bezier(.22, 1, .36, 1);
 }
 
-/* الوصف: في وسط الصورة أفقياً ورأسياً، بظلّ يحمله وحده.
+/* The description: centred horizontally and vertically over the image, carried by a shadow alone.
    ─────────────────────────────────────────────────────────────
-   كان مثبَّتاً أسفل الصورة (left:0 right:0 bottom:0) ومحاذياً
-   لليسار، ويعتمد في وضوحه على تدرّج أسود يغطّي أسفل الصورة.
+   It used to be pinned to the bottom of the image (left:0 right:0 bottom:0) and aligned
+   left, relying for its legibility on a black gradient covering the image's lower part.
 
-   ولذلك التدرّج ثمن: يحجب ثُلث الصورة السفلي دائماً، حتى حين يكون
-   الوصف كلمة واحدة. والظلّ `0 1px 3px` كان خافتاً جداً ليقوم مقامه
-   لو رُفع التدرّج — فالنص يذوب على أي صورة فاتحة.
+   And that gradient has a price: it always obscures the image's lower third, even when the
+   description is a single word. And the `0 1px 3px` shadow was far too faint to take its
+   place if the gradient were removed — the text dissolves over any light image.
 
-   الآن: توسيط أفقي بـtranslateX، وموضع رأسي في الأسفل مع فسحة —
-   لا ملتصقاً بالحافّة كما كان، ولا في منتصف الصورة تماماً. وظلّ
-   حقيقي (2px 2px 6px) يجعل النص مقروءاً على أي خلفية بلا حجبها.
+   Now: centred horizontally with translateX, and positioned low with some breathing room —
+   neither flush against the edge as before, nor at the image's exact middle. And a real
+   shadow (2px 2px 6px) makes the text legible over any background without obscuring it.
 
-   ⚠️ `bottom` بنسبة مئوية لا بالبكسل: ارتفاع الشريحة نفسه يتغيّر
-   بين الحاسوب (480px) والجوال (320px)، فقيمةٌ ثابتة تعني فسحةً
-   مناسبة في مقاس وخانقة في الآخر. */
-/* الحاوية تحمل الموضع والتوسيط والظلّ، والسطران يرثانه.
+   ⚠️ `bottom` as a percentage rather than in pixels: the slide's own height changes between
+   desktop (480px) and mobile (320px), so a fixed value means comfortable spacing at one
+   size and a cramped one at the other. */
+/* The container carries the position, the centring and the shadow; the two lines inherit them.
    ─────────────────────────────────────────────────────────────
-   سطران: العنوان (اسم المنتج) ثم الوصف تحته أصغر بدرجة. وكلاهما
-   اختياري — عنوان بلا وصف يبقى وحده متوسّطاً بلا فراغ تحته، لأن
-   الـview لا يطبع عنصراً لنصّ فارغ أصلاً. */
+   Two lines: the title (the product's name) and then the description beneath it, a step
+   smaller. Both are optional — a title with no description stays centred on its own with no
+   gap below, because the view prints no element for empty text in the first place. */
 .slide-item-caption {
     position: absolute;
     left: 50%;
@@ -73,19 +74,19 @@
     font-size: 1.35rem;
     line-height: 1.3;
 
-    /* ⚠️ القصّ على سطرين هنا أيضاً — أُضيف مع تكبير الخط.
-       العنوان غير مقصوص كان مقبولاً عند 1.05rem؛ وعند 1.35rem يكفي
-       اسمٌ طويل («Apple AirPods Pro (2nd generation) with MagSafe
-       Charging Case») ليغطّي الصورة كلّها على شريحة ضيّقة. */
+    /* ⚠️ Clamped to two lines here as well — added along with the larger type.
+       An unclamped title was acceptable at 1.05rem; at 1.35rem one long name ("Apple AirPods
+       Pro (2nd generation) with MagSafe Charging Case") is enough to cover an entire image on
+       a narrow slide. */
     display: -webkit-box;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
 }
 
-/* أصغر بدرجة واحدة لا بقفزة: 1.05rem مقابل 1.35rem — نفس النسبة
-   التي كانت بين 0.9 و1.05 قبل التكبير. والتباين يأتي من الوزن
-   والشفافية معاً كي يبقى الوصف مقروءاً وتابعاً لا منافساً. */
+/* One step smaller rather than a jump: 1.05rem against 1.35rem — the same ratio that held
+   between 0.9 and 1.05 before the increase. And the contrast comes from the weight and the
+   opacity together, so the description stays legible and subordinate rather than competing. */
 .slide-item-desc {
     margin-top: 4px;
     font-weight: 500;
@@ -93,32 +94,32 @@
     line-height: 1.35;
     opacity: .92;
 
-    /* ── القصّ على سطرين ───────────────────────────────────────
-       الوصف الافتراضي يأتي من `products.description` — وهو مكتوب
-       لصفحة المنتج لا للسلايدر، فبعضه جملتان أو ثلاث. وتركه بلا حدّ
-       يجعله يتسلّق الصورة ويغطّيها.
+    /* ── Clamped to two lines ──────────────────────────────────
+       The default description comes from `products.description` — written for the product
+       page rather than the slider, so some of it runs to two or three sentences. Leaving it
+       unbounded lets it climb the image and cover it.
 
-       ⚠️ والقصّ بالـCSS لا بالجافاسكربت ولا في SQL، عن قصد:
-         · قياس النصّ في JS يعني قراءة تخطيط بعد الرسم (reflow) لكل
-           صورة في السلايدر — وهو أكثر ما يبطّئ أكبر عنصر في الصفحة.
-         · القصّ في SQL يقطع بعدد المحارف لا بعرض السطر، فيختلف
-           الناتج بين الهاتف والحاسوب ويقطع كلمة في منتصفها.
-       المتصفّح يعرف العرض الحقيقي ويقصّ عنده بلا أي كلفة تشغيل. */
+       ⚠️ And clamped in CSS rather than in JavaScript or in SQL, deliberately:
+         · measuring the text in JavaScript means reading layout after paint (a reflow) for
+           every image in the slider — the surest way to slow the page's largest element.
+         · clamping in SQL cuts by character count rather than by line width, so the result
+           differs between phone and desktop and cuts a word in half.
+       The browser knows the real width and clamps there, at no runtime cost. */
     display: -webkit-box;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
 }
 
-/* الجوال يكبر معهما بنفس النسبة — لا يبقى على المقاس القديم، وإلا
-   صار الفرق بين الشاشتين قفزةً بدل تدرّج. وارتفاع الشريحة هناك
-   320px لا 480px، فالحدّ أضيق. */
+/* Mobile scales up with them at the same ratio — it does not stay at the old size, or the
+   difference between the two screens becomes a jump rather than a gradation. And the slide's
+   height there is 320px rather than 480px, so the bound is tighter. */
 @media (max-width: 767px) {
     .slide-item-title { font-size: 1.1rem; }
     .slide-item-desc  { font-size: .9rem; }
 }
 
-/* ── حالة 1-4 صور: هوفر بسيط تقليدي ─────────────────────────── */
+/* ── The 1–4 image case: a simple, conventional hover ──────── */
 .slide-items-row.count-1 > .slide-item:hover > .slide-item-img,
 .slide-items-row.count-2 > .slide-item:hover > .slide-item-img,
 .slide-items-row.count-3 > .slide-item:hover > .slide-item-img,
@@ -130,27 +131,27 @@
     transform: scale(1.04);
 }
 
-/* ── حالة 5+ صور: هوفر يكبّر لربع عرض السلايدر تقريباً ──────── */
+/* ── The 5+ image case: a hover that expands to roughly a quarter of the slider ── */
 .slide-items-row.compact-count .slide-item,
 .slide-items-row.compact-count .slide-item-link {
-    flex-grow: 1; /* الحالة الطبيعية: توزيع متساوٍ */
+    flex-grow: 1; /* The normal state: an even distribution */
 }
 .slide-items-row.compact-count:hover > .slide-item,
 .slide-items-row.compact-count:hover > .slide-item-link {
-    flex-grow: 0.6; /* الصور غير المُحوَّم عليها تنكمش قليلاً لإفساح المجال */
+    flex-grow: 0.6; /* The images not hovered shrink a little to make room */
 }
 .slide-items-row.compact-count > .slide-item:hover,
 .slide-items-row.compact-count > .slide-item-link:hover {
-    flex-grow: 4;              /* يقارب 25% من العرض الكلي حسب عدد العناصر */
+    flex-grow: 4;              /* Approaching 25% of the total width, depending on the item count */
     z-index: 5;
     box-shadow: 0 12px 32px rgba(0,0,0,.35);
 }
 .slide-items-row.compact-count .slide-item-link:hover > .slide-item > .slide-item-img,
 .slide-items-row.compact-count .slide-item:hover > .slide-item-img {
-    transform: scale(1.02); /* تكبير إضافي طفيف جداً فوق التوسّع بالـ flex نفسه */
+    transform: scale(1.02); /* A very slight extra enlargement on top of the flex expansion itself */
 }
 
-/* الوصف يظهر بوضوح أكبر فقط بالحالة الموسّعة (تقليل الزحمة البصرية بالوضع الرفيع) */
+/* The description becomes clearer only in the expanded state (reducing visual clutter in the narrow one) */
 .slide-items-row.compact-count .slide-item .slide-item-caption,
 .slide-items-row.compact-count .slide-item-link .slide-item-caption {
     opacity: 0;
@@ -161,11 +162,11 @@
     opacity: 1;
 }
 
-/* ── الاستجابة على الجوال: عمود بدل صف عند الشاشات الصغيرة ───── */
+/* ── Mobile response: a column rather than a row on small screens ── */
 @media (max-width: 767px) {
     .slide-items-row { height: 320px; }
     .slide-items-row.compact-count:hover > .slide-item,
-    .slide-items-row.compact-count:hover > .slide-item-link { flex-grow: 1; } /* لا تكبير عند اللمس بالجوال */
+    .slide-items-row.compact-count:hover > .slide-item-link { flex-grow: 1; } /* No enlargement on touch */
     .slide-items-row.compact-count > .slide-item:hover,
     .slide-items-row.compact-count > .slide-item-link:hover {
         flex-grow: 1; box-shadow: none; z-index: auto;
@@ -175,31 +176,31 @@
 /* ═══════════════════════════════════════════════════════════════════
    Slider Navigation Arrows — Compact & Non-blocking
    ═══════════════════════════════════════════════════════════════════
-   الهدف: تصغير منطقة الزر (hitbox) من full-height/15%-width الافتراضي
-   إلى دائرة صغيرة، وجعلها مخفية افتراضيًا (opacity:0 + pointer-events:none)
-   لتتوقف عن حجب Hover على أول/آخر منتج في الشريحة.
-   يظهر السهم فقط عند hover على السلايدر ككل (#mainSlider:hover).
+   The aim: shrinking the button's hit area from the default full height and 15% width down
+   to a small circle, and hiding it by default (opacity:0 plus pointer-events:none) so it
+   stops blocking the hover on the first and last product in a slide.
+   The arrow appears only on hovering the slider as a whole (#mainSlider:hover).
    ═══════════════════════════════════════════════════════════════════ */
 
-/* إلغاء تنسيقات Bootstrap الافتراضية للزر (عرض/ارتفاع كامل، تدرّج شفاف) */
+/* Cancelling Bootstrap's default button styling (full width and height, a transparent gradient) */
 #mainSlider .carousel-control-prev,
 #mainSlider .carousel-control-next {
     position: absolute;
     top: 50%;
     transform: translateY(-50%);
-    width: 44px !important;        /* حجم دائرة ثابت بدل 15% عرض السلايدر */
-    height: 44px !important;       /* بدل full-height */
-    min-width: 0 !important;       /* إلغاء min-width: 15% من Bootstrap */
-    opacity: 0;                    /* مخفي افتراضيًا */
-    pointer-events: none;          /* لا يعترض كليكات/hover على العناصر تحته — المفتاح التقني */
-    background: rgba(0, 0, 0, 0.35);  /* خلفية دائرية شبه شفافة */
-    border-radius: 50%;            /* دائرة */
-    backdrop-filter: blur(4px);    /* تأثير زجاجي (مدعوم حديثًا) */
+    width: 44px !important;        /* A fixed circle size rather than 15% of the slider's width */
+    height: 44px !important;       /* Rather than full height */
+    min-width: 0 !important;       /* Cancelling Bootstrap's min-width: 15% */
+    opacity: 0;                    /* Hidden by default */
+    pointer-events: none;          /* It intercepts no clicks or hovers on what lies beneath — the key detail */
+    background: rgba(0, 0, 0, 0.35);  /* A semi-transparent circular background */
+    border-radius: 50%;            /* A circle */
+    backdrop-filter: blur(4px);    /* A glass effect (supported in recent browsers) */
     -webkit-backdrop-filter: blur(4px);
     border: none;
     box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);
     transition: opacity 0.3s ease, transform 0.25s ease, background-color 0.25s ease, box-shadow 0.25s ease;
-    z-index: 10;                   /* فوق الصور، لكن pointer-events:none يجعله غير معترض */
+    z-index: 10;                   /* Above the images, but pointer-events:none keeps it non-intercepting */
     display: flex;
     align-items: center;
     justify-content: center;
@@ -208,23 +209,23 @@
 #mainSlider .carousel-control-prev { left: 12px !important; }
 #mainSlider .carousel-control-next { right: 12px !important; }
 
-/* أيقونة السهم: تصغير حجمها داخل الدائرة */
+/* The arrow icon: shrunk inside the circle */
 #mainSlider .carousel-control-prev-icon,
 #mainSlider .carousel-control-next-icon {
     width: 20px !important;
     height: 20px !important;
-    background-size: 45% 45% !important;  /* بدل الحجم الكبير الافتراضي */
+    background-size: 45% 45% !important;  /* Rather than the large default */
     filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.5));
 }
 
-/* إظهار الأسهم عند hover على السلايدر ككل */
+/* Showing the arrows on hovering the slider as a whole */
 #mainSlider:hover .carousel-control-prev,
 #mainSlider:hover .carousel-control-next {
     opacity: 0.85;
-    pointer-events: auto;  /* الآن يمكن التفاعل معها */
+    pointer-events: auto;  /* Now they can be interacted with */
 }
 
-/* Hover على السهم نفسه */
+/* Hovering the arrow itself */
 #mainSlider .carousel-control-prev:hover,
 #mainSlider .carousel-control-next:hover {
     opacity: 1;
@@ -233,14 +234,14 @@
     box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
 }
 
-/* ── استجابة الجوال: دوائر أصغر، تظهر بثبات أكبر (لأن لا hover باللمس) ───── */
+/* ── Mobile response: smaller circles, shown more persistently (since touch has no hover) ── */
 @media (max-width: 767px) {
     #mainSlider .carousel-control-prev,
     #mainSlider .carousel-control-next {
         width: 36px !important;
         height: 36px !important;
-        opacity: 0.55;           /* مرئية دائمًا بخفوت على الجوال */
-        pointer-events: auto;    /* قابلة للنقر مباشرة */
+        opacity: 0.55;           /* Always faintly visible on mobile */
+        pointer-events: auto;    /* Directly tappable */
     }
     #mainSlider .carousel-control-prev { left: 8px !important; }
     #mainSlider .carousel-control-next { right: 8px !important; }
@@ -252,15 +253,14 @@
 }
 
 /* ──────────────────────────────────────────────────────────────────
-   Alternative Design (Commented) — مؤشرات نقاط + أسهم تظهر فقط عند حافة 40px
+   An alternative design (commented out) — dot indicators plus arrows that appear only within a 40px edge
    ═══════════════════════════════════════════════════════════════════
-   تصميم بديل أكثر احترافية: إخفاء الأسهم بالكامل، واستخدام
-   .carousel-indicators كنقاط صغيرة أسفل السلايدر، والأسهم تظهر
-   فقط عند hover الحافة القصوى (أول/آخر 40px من العرض).
-   هذا يلغي التغطية على المنتجات نهائيًا لأن منطقة الكشف تكون
-   خارج نطاق الصور غالبًا.
+   A more polished alternative: hiding the arrows entirely, using .carousel-indicators as
+   small dots beneath the slider, and revealing the arrows only on hovering the extreme edge
+   (the first or last 40px of the width). This removes any covering of the products
+   completely, because the reveal area falls outside the images in most cases.
    
-   لتفعيله: ألغِ التعليق عن الكود أدناه وأخفِ الحل الأساسي أعلاه.
+   To enable it: uncomment the code below and hide the primary solution above.
    
    #mainSlider .carousel-control-prev,
    #mainSlider .carousel-control-next {

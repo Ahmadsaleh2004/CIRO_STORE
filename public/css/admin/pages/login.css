@@ -6,7 +6,7 @@
    its own reset. Nothing here depends on the theme tokens.
    ================================================== */
 
-/* ── صفحة Login المستقلة ── */
+/* ── The standalone sign-in page ── */
 :root {
     --admin-bg:       #0f1117;
     --admin-card-bg:  #1a1d27;
@@ -148,7 +148,7 @@ html, body {
     cursor: not-allowed;
 }
 
-/* رسائل الخطأ والنجاح */
+/* The error and success messages */
 .alert-msg {
     border-radius: 8px;
     padding: 0.7rem 0.9rem;
@@ -161,19 +161,19 @@ html, body {
 .alert-msg.success { background: rgba(34,197,94,0.12);  border: 1px solid rgba(34,197,94,0.3);  color: #86efac; }
 .alert-msg.visible { display: block; }
 
-/* حاوية hCaptcha
-   الويدجت له عرض ثابت تقريبًا (~302px) ولا يمكن تصغيره عبر
-   transform:scale بدون كسر مناطق النقر — إذا كانت الشاشة أضيق
-   من ذلك (≤375px تقريبًا) يسمح لهذا العنصر بالتمرير أفقيًا
-   ضمن حدوده الخاصة بدل كسر تخطيط الكارد أو الصفحة كلها. */
+/* The hCaptcha container.
+   The widget has an all but fixed width (~302px) and cannot be shrunk with
+   transform:scale without breaking its click targets — so on a screen narrower than that
+   (roughly ≤375px) this element is allowed to scroll horizontally within its own bounds,
+   rather than breaking the card's layout or the whole page's. */
 #captcha-container {
     margin-bottom: 1rem;
-    display: none; /* تُظهرها admin-auth.js بعد أول فشل */
+    display: none; /* admin-auth.js reveals it after the first failure */
     max-width: 100%;
     overflow-x: auto;
 }
 
-/* مؤقت الحظر */
+/* The lockout timer */
 .lockout-timer {
     text-align: center;
     font-size: 0.82rem;
@@ -184,7 +184,7 @@ html, body {
 
 .lockout-timer span { color: var(--admin-danger); font-weight: 700; }
 
-/* رابط العودة للمتجر — مخفي متعمد، موجود للـ accessibility فقط */
+/* The link back to the store — deliberately hidden, present for accessibility alone */
 .back-link {
     display: block;
     text-align: center;
@@ -198,7 +198,7 @@ html, body {
 
 .back-link:hover { opacity: 1; color: var(--admin-muted); }
 
-/* مؤشر التحميل */
+/* The loading indicator */
 .spinner {
     display: inline-block;
     width: 16px;

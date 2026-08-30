@@ -18,7 +18,7 @@
 .btn:hover  { transform: translateY(-2px) scale(1.02); }
 .btn:active { transform: translateY(1px)  scale(0.97) !important; }
 
-/* --- الزر الأخضر الموحد (الافتراضي لكل الصفحات) --- */
+/* --- The unified green button (the default across every page) --- */
 .btn-success,
 .btn-primary,
 .btn-secondary,
@@ -39,7 +39,7 @@
     color: #fff !important;
 }
 
-/* --- أزرار الـ Modals فقط — زرقاء --- */
+/* --- The modals' buttons alone — blue --- */
 #loginModal    .btn-dark,
 #registerModal .btn-success,
 #forgotModal   .btn-warning {
@@ -57,7 +57,7 @@
     box-shadow: 0 6px 20px rgba(37, 99, 235, 0.45) !important;
 }
 
-/* --- Proceed to Checkout — يبقى أخضر --- */
+/* --- Proceed to Checkout — it stays green --- */
 #cartSidebar .btn-warning {
     background: linear-gradient(135deg, #16a34a, #15803d) !important;
     color: #fff !important;
@@ -69,7 +69,7 @@
     box-shadow: 0 6px 20px rgba(22, 163, 74, 0.40) !important;
 }
 
-/* --- أزرار الكمية ± تبقى neutral --- */
+/* --- The ± quantity buttons stay neutral --- */
 .btn-outline-secondary.btn-sm {
     background: transparent !important;
     border: 1px solid var(--input-border) !important;
@@ -84,7 +84,7 @@
     box-shadow: none !important;
 }
 
-/* --- Theme toggle يبقى كما هو --- */
+/* --- The theme toggle stays as it is --- */
 #theme-toggle {
     border-radius: 50% !important;
     width: 38px;

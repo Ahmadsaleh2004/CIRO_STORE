@@ -75,13 +75,13 @@
     box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15) !important;
 }
 
-/* داخل input-group عند الفوكس كذلك */
+/* Inside an input-group on focus as well */
 .float-group .input-group input:focus {
     background-color: var(--input-bg) !important;
     color: var(--input-text) !important;
 }
 
-/* input-group داخل float-group للـ password */
+/* An input-group inside a float-group, for the password */
 .float-group .input-group input {
     border-right: none !important;
     border-radius: 10px 0 0 10px !important;

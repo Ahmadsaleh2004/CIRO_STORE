@@ -8,32 +8,33 @@
 
 -- @UP
 -- ════════════════════════════════════════════════════════════════════════════
--- Migration: طابور البريد — إخراج SMTP من مسار الطلب
+-- Migration: the mail queue — taking SMTP out of the request path
 --
--- كان Mailer::send يفتح اتصال Gmail SMTP **داخل الطلب نفسه**: يتصل
--- ويصادق ويرسل قبل أن يرى الزائر أي استجابة. أثر ذلك ثلاثي:
+-- Mailer::send used to open a Gmail SMTP connection **inside the request itself**: it
+-- connected, authenticated and sent before the visitor saw any response. The effect was
+-- threefold:
 --
---   · تسجيل دخول الأدمن ينتظر Gmail في كل مرّة.
---   · تباطؤ SMTP أو سقوطه يعلّق خيوط PHP لا يبطّئها فقط.
---   · وأخطرها مع /auth/forgot: كل طلب = اتصال SMTP جديد، فالإغراق
---     لا يستنزف الحصّة وحدها بل خيوط الخادم معها.
+--   · the admin sign-in waited on Gmail every time;
+--   · a slow or down SMTP server hung PHP threads rather than merely slowing them;
+--   · and worst of all with /auth/forgot: every request meant a new SMTP connection, so
+--     flooding it drained not only the quota but the server's threads with it.
 --
--- الطابور يفصل «قرار الإرسال» عن «فعل الإرسال»: الطلب يكتب صفّاً
--- ويعود، والعامل (scripts/mail-worker.php) يرسل خارج مسار الطلب.
+-- The queue separates "deciding to send" from "sending": the request writes a row and
+-- returns, and the worker (scripts/mail-worker.php) sends outside the request path.
 --
--- ملاحظات على البنية:
+-- Notes on the structure:
 --
---   · status كـENUM لا VARCHAR: القيم الثلاث معروفة ومغلقة، وENUM
---     يمنع كتابة حالة رابعة بخطأ مطبعي تبقى معلّقة إلى الأبد.
+--   · status as an ENUM rather than a VARCHAR: the three values are known and closed, and
+--     an ENUM prevents a fourth state being written by a typo and hanging there forever.
 --
---   · attempts وlast_error معاً: بلا العدّاد تدور رسالة فاشلة دائمة
---     في الطابور بلا نهاية، وبلا نصّ الخطأ لا يُعرف لماذا فشلت.
+--   · attempts and last_error together: without the counter, a permanently failing message
+--     circulates in the queue forever, and without the error text nobody knows why it failed.
 --
---   · الفهرس على (status, id): العامل يسأل سؤالاً واحداً — «أقدم
---     الرسائل المعلّقة» — والفهرس المركّب يجيبه بلا مسح الجدول.
+--   · the index on (status, id): the worker asks one question — "the oldest pending
+--     messages" — and the composite index answers it without scanning the table.
 --
---   · body هو MEDIUMTEXT: قوالب HTML مع روابط طويلة تتجاوز TEXT
---     في الحالات الحدّية، والفرق في التخزين لا يُذكر.
+--   · body is a MEDIUMTEXT: HTML templates with long links exceed TEXT in edge cases, and
+--     the difference in storage is negligible.
 -- ════════════════════════════════════════════════════════════════════════════
 
 CREATE TABLE IF NOT EXISTS `mail_queue` (

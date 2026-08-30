@@ -3,7 +3,7 @@
    ================================================== */
 
 /* ==================================================
-   نظام الألوان المتغير — CSS Variables
+   The variable colour system — CSS custom properties
    ================================================== */
 :root {
     --bg-color:          #f0f2f5;
@@ -67,11 +67,11 @@
     --space-6: 32px;
 }
 
-/* الوضع الليلي.
-   السيلكتور الثاني موجود لمنع الومضة البيضاء (FOUC): سكربت صغير في
-   <head> (themeBootScript في assets_helper.php) يضبط data-bs-theme
-   على <html> قبل أول رسم، بينما class="dark-mode" لا يُضاف إلا بعد
-   تحميل الـ body. الاثنان معاً يعنيان أن الألوان صحيحة من أول إطار.
+/* Dark mode.
+   The second selector exists to prevent the flash of unstyled content: a small script in
+   <head> (themeBootScript in assets_helper.php) sets data-bs-theme on <html> before the
+   first paint, while class="dark-mode" is not added until the body has loaded. The two
+   together mean the colours are correct from the first frame.
    ================================================== */
 body.dark-mode,
 html[data-bs-theme="dark"] body {

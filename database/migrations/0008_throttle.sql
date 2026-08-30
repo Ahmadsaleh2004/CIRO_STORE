@@ -8,39 +8,39 @@
 
 -- @UP
 -- ════════════════════════════════════════════════════════════════════════════
--- Migration: خنق موحَّد لنقاط الدخول الحسّاسة + منع إعادة استخدام كود TOTP
+-- Migration: a unified throttle for the sensitive entry points, plus preventing TOTP code reuse
 --
--- 1) throttle_attempts — عدّاد محاولات عامّ يخدم كل نقاط الدخول.
+-- 1) throttle_attempts — a general attempt counter serving every entry point.
 --
---    لماذا جدول جديد بدل توسيع login_attempts؟ لأن الجدولين القائمين
---    (`login_attempts` و`admin_login_attempts`) مرتبطان بالبريد: كلاهما
---    يجيب عن سؤال «كم مرّة فشل الدخول إلى **هذا الحساب**»، والواجهة
---    تعرض الناتج للأدمن كـfailed_attempts. وهو سؤال يبقى مطلوباً.
+--    Why a new table rather than extending login_attempts? Because the two existing tables
+--    (`login_attempts` and `admin_login_attempts`) are tied to an email address: both answer
+--    the question "how many times has sign-in to **this account** failed", and the interface
+--    shows the result to the admin as failed_attempts. That question is still needed.
 --
---    الجدول هنا يجيب عن سؤال آخر لم يكن أحد يسأله: «كم طلباً أرسل
---    **هذا المصدر** إلى هذه النقطة». هو ما يوقف من يجرّب مليون كود
---    TOTP، أو يستدعي استعادة كلمة المرور ألف مرّة ليغرق صندوق بريد.
---    دمج السؤالين في جدول واحد كان سيجبر أحدهما على الكذب.
+--    This table answers another question nobody was asking: "how many requests has **this
+--    source** sent to this endpoint". It is what stops somebody trying a million TOTP codes,
+--    or calling password recovery a thousand times to flood an inbox.
+--    Merging the two questions into one table would have forced one of them to lie.
 --
---    المفتاح مركّب لأن كل استعلام يسأل عن الثلاثة معاً: أي دلو،
---    لأي مصدر، خلال أي نافذة. الترتيب attempted_at أخيراً مقصود —
---    فهو الحقل الوحيد الذي يُسأل عنه بمدى لا بمساواة.
+--    The key is composite because every query asks about all three together: which bucket,
+--    for which source, within which window. attempted_at coming last is deliberate — it is
+--    the only field queried by range rather than by equality.
 --
--- 2) admins.last_totp_slice — آخر شريحة زمنية استُهلكت.
+-- 2) admins.last_totp_slice — the last time slice consumed.
 --
---    verifyCode تقبل نافذة ±30 ثانية، فالكود الواحد يبقى صالحاً تسعين
---    ثانية. من يلتقط كوداً صالحاً (فوق كتف، أو من سجلّ) يعيد استعماله
---    داخل النافذة. تخزين الشريحة المستهلَكة يجعل كل كود صالحاً مرّة
---    واحدة فقط. BIGINT لا INT: الشريحة هي time()/30، وتتجاوز حدّ
---    الـINT الموقَّع سنة 2038.
+--    verifyCode accepts a ±30-second window, so one code stays valid for ninety seconds.
+--    Anyone catching a valid code (over a shoulder, or from a log) can reuse it inside that
+--    window. Storing the consumed slice makes every code single-use.
+--    BIGINT rather than INT: the slice is time()/30, and it passes the signed INT limit in
+--    2038.
 -- ════════════════════════════════════════════════════════════════════════════
 
 CREATE TABLE IF NOT EXISTS `throttle_attempts` (
     `id`           BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
     `bucket`       VARCHAR(40)     NOT NULL
-                   COMMENT 'اسم النقطة المحروسة — login, forgot, twofa …',
+                   COMMENT 'The guarded endpoint''s name — login, forgot, twofa …',
     `identifier`   VARCHAR(64)     NOT NULL
-                   COMMENT 'المصدر المحروس — عنوان IP حالياً (يدعم IPv6)',
+                   COMMENT 'The guarded source — an IP address today (wide enough for IPv6)',
     `attempted_at` DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (`id`),
     KEY `idx_bucket_identifier_time` (`bucket`, `identifier`, `attempted_at`)
@@ -48,7 +48,7 @@ CREATE TABLE IF NOT EXISTS `throttle_attempts` (
 
 ALTER TABLE `admins`
     ADD COLUMN `last_totp_slice` BIGINT NULL DEFAULT NULL
-    COMMENT 'آخر شريحة TOTP استُهلكت — يمنع إعادة استخدام الكود نفسه'
+    COMMENT 'The last TOTP slice consumed — it prevents reusing the same code'
     AFTER `totp_enabled`;
 
 -- @DOWN

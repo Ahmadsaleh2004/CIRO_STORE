@@ -3,7 +3,7 @@
    ================================================== */
 
 /* ==================================================
-   Store Mode Bar — يظهر للأدمن أثناء تصفح المتجر كزائر
+   The store-mode bar — shown to an admin while browsing the store as a visitor
    ================================================== */
 .store-mode-bar {
     background: linear-gradient(90deg, #1e293b, #4338ca);

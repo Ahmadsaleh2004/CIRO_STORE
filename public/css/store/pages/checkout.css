@@ -1,15 +1,15 @@
 /* ==================================================
-   css/store/pages/checkout.css — أنماط صفحة إتمام الطلب (Checkout)
+   css/store/pages/checkout.css — the checkout page's styles
    ==================================================
-   كان هذا الملف يتصارع مع كتلة \3c style> مضمّنة داخل
-   app/views/checkout/checkout.php: الكتلة تُطبع في جسم الصفحة فتُحمَّل
-   بعد هذا الملف (المربوط في <head>)، فتغلبه في أي تعادل بترتيب المصدر.
-   لذلك كانت **عشرون قاعدة هنا تحتاج !important** لتعمل أصلاً.
+   This file used to compete with an inline \3c style> block inside
+   app/views/checkout/checkout.php: the block is printed in the page's body, so it loads
+   after this file (linked in <head>) and wins any tie on source order. Which is why
+   **twenty rules here needed !important** to take effect at all.
 
-   أُخرجت الكتلة المضمّنة ودُمجت هنا، فسقط سبب كل تلك الـ!important
-   وحُذفت. القواعد أدناه تحمل القيم **الفعّالة** قبل الدمج — أي أن ما
-   كانت الكتلة المضمّنة تغلب فيه بقي هو الفائز، وما انفرد به هذا الملف
-   بقي كما هو.
+   The inline block was extracted and merged in here, which removed the reason for every
+   one of those !important declarations, and they were deleted. The rules below carry the
+   values that were **in effect** before the merge — that is, whatever the inline block won
+   remains the winner, and whatever this file alone declared stays as it was.
    ================================================== */
 
 /* ── Steps Bar ── */
@@ -30,9 +30,10 @@
     position: relative;
 }
 
-/* دمج: العرض والارتفاع ونصف القطر والوزن كانا متطابقين في النسختين.
-   الخلفية واللون والانتقال والحدّ وتوسيط flex من الكتلة المضمّنة (كانت
-   تغلب)، وline-height و text-align و margin من هذا الملف (انفرد بها). */
+/* Merged: the width, height, radius and weight were identical in both copies.
+   The background, colour, transition, border and flex centring come from the inline block
+   (which was winning), and the line-height, text-align and margin from this file (which
+   declared them alone). */
 .step-circle {
     width: 38px;
     height: 38px;
@@ -63,24 +64,25 @@
     color: #fff;
 }
 
-/* دمج: حجم الخط من الكتلة المضمّنة (.72rem — كانت تغلب 0.8rem هنا)،
-   والوزن 600 من هذا الملف. */
+/* Merged: the font size from the inline block (.72rem — it was beating the 0.8rem here),
+   and the weight of 600 from this file. */
 .step-label {
     font-size: .72rem;
     font-weight: 600;
     color: var(--muted-text);
 }
 
-/* دمج: اللون من الكتلة المضمّنة (var(--accent) كان يغلب var(--text-color)). */
+/* Merged: the colour from the inline block (var(--accent) was beating var(--text-color)). */
 .step-item.active .step-label {
     color: var(--accent);
     font-weight: 600;
 }
 
-/* الخط الواصل بين الخطوات.
-   left + width من الكتلة المضمّنة، وz-index من هذا الملف.
-   right يبقى مكتوباً كما كان: مع position:absolute ووجود left و width
-   معاً يتجاهله المتصفح في الاتجاه ltr، لكن حذفه تغيير لا داعي له. */
+/* The connecting line between the steps.
+   left and width from the inline block, and z-index from this file.
+   right stays written as it was: with position:absolute and both left and width present,
+   the browser ignores it in the ltr direction — but removing it is a change with no
+   purpose. */
 .step-item:not(:last-child)::after {
     content: '';
     position: absolute;
@@ -97,8 +99,8 @@
     background: var(--accent);
 }
 
-/* ترتيب مقصود: .done بعد .active كما كان — الخطوة المكتملة تغلب
-   المفعّلة لو حملت الصفتين معاً. */
+/* A deliberate order: .done after .active, as it was — a completed step beats an active
+   one should it carry both. */
 .step-item.done:not(:last-child)::after {
     background: #16a34a;
 }
@@ -121,8 +123,9 @@
 }
 
 /* ── Saved Address Cards ──
-   الـ!important هنا **ليست** من صراع الكتلة المضمّنة — كانت مكتوبة
-   داخلها أصلاً لتغلب حدود Bootstrap على عناصر الفورم. بقيت كما هي. */
+   The !important here is **not** from the inline block's competition — it was written
+   inside it in the first place, to beat Bootstrap's borders on the form elements. It stays
+   as it is. */
 .addr-label {
     border: 2px solid var(--section-border) !important;
     border-radius: 10px;
@@ -142,14 +145,14 @@
 
 /* ==================================================
    Responsive — Step Bar
-   لا !important بعد الآن: القواعد الأساسية أعلاه في هذا الملف نفسه،
-   فاستعلامات الوسائط تغلبها بترتيب المصدر وحده.
+   No !important any more: the base rules above are in this same file, so the media queries
+   beat them on source order alone.
    ================================================== */
 @media (max-width: 575px) {
     .step-item { max-width: 90px; }
 
-    /* إزاحة الخط الواصل محسوبة من نصف قطر الدائرة. الدائرة تصير 32px
-       عند هذا الحدّ (أسفل هذا الملف) — أبقِ الرقمين متوافقين. */
+    /* The connecting line's offset is computed from the circle's radius. The circle becomes
+       32px at this breakpoint (further down this file) — keep the two numbers in step. */
     .step-item:not(:last-child)::after {
         left: calc(50% + 16px);
         width: calc(100% - 32px);
@@ -161,7 +164,7 @@
 }
 
 @media (max-width: 320px) {
-    /* الدائرة تصير 28px عند هذا الحدّ */
+    /* The circle becomes 28px at this breakpoint */
     .step-item:not(:last-child)::after {
         left: calc(50% + 14px);
         width: calc(100% - 28px);
@@ -170,9 +173,9 @@
 
 /* ==================================================
    Responsive — Order Review (Step 3)
-   صفوف #reviewCartList يبنيها JS صفحة الدفع كـ
-   `d-flex justify-content-between` — نسمح بالالتفاف كي لا يدفع اسم
-   منتج طويل السعرَ خارج السطر.
+   The #reviewCartList rows are built by the checkout page's JavaScript as
+   `d-flex justify-content-between` — wrapping is allowed so a long product name does not
+   push the price off the line.
    ================================================== */
 #reviewCartList li {
     flex-wrap: wrap;
@@ -180,11 +183,11 @@
 }
 
 /* ==================================================
-   Responsive — مقاس الدائرة والتسمية
+   Responsive — the circle's size and its label
    ==================================================
-   نُقلت هنا من style.css كي يعيش قياس الدائرة والإزاحات المحسوبة منه
-   في ملف واحد. حسابات الخط الواصل أعلاه تفترض هذين المقاسين بالضبط:
-   32px عند <=575 و 28px عند <=320.
+   Moved here from style.css so the circle's size and the offsets computed from it live in
+   one file. The connecting line's calculations above assume exactly these two sizes: 32px
+   at <=575 and 28px at <=320.
    ================================================== */
 @media (max-width: 575px) {
     .step-circle {
@@ -211,7 +214,7 @@
     }
 }
 
-/* ملاحظة: قواعد .checkout-step و .checkout-step.active كانت مكرّرة هنا
-   وفي animations/micro-interactions.css بنصّ واحد. حُذفت النسخة هنا
-   وبقيت هناك — مكانها الصحيح مع بقية انتقالات الواجهة، وهي محمَّلة
-   على كل صفحة عبر store.css. */
+/* Note: the .checkout-step and .checkout-step.active rules were duplicated here and in
+   animations/micro-interactions.css with identical text. The copy here was removed and the
+   one there kept — its correct home is with the rest of the interface's transitions, and it
+   is loaded on every page through store.css. */

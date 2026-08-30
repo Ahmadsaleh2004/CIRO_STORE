@@ -58,7 +58,7 @@ select:-webkit-autofill:focus {
 }
 
 
-/* --- Auth Modals: تثبيت لون الـ inputs عند الـ focus --- */
+/* --- The auth modals: pinning the inputs' colour on focus --- */
 #loginModal    .float-group input:focus,
 #registerModal .float-group input:focus,
 #registerModal .float-group textarea:focus,
@@ -74,7 +74,7 @@ select:-webkit-autofill:focus {
     -webkit-text-fill-color: var(--input-text) !important;
 }
 
-/* --- إلغاء autofill المتصفح الأبيض داخل الـ Modals --- */
+/* --- Cancelling the browser's white autofill inside the modals --- */
 #loginModal    input:-webkit-autofill,
 #loginModal    input:-webkit-autofill:focus,
 #registerModal input:-webkit-autofill,
@@ -86,7 +86,7 @@ select:-webkit-autofill:focus {
     caret-color: var(--input-text) !important;
 }
 
-/* dark mode: قيم ثابتة لأن webkit لا يقرأ CSS vars داخل inset shadow */
+/* Dark mode: fixed values, because WebKit does not read CSS variables inside an inset shadow */
 body.dark-mode #loginModal    input,
 html[data-bs-theme="dark"] body #loginModal    input,
 body.dark-mode #loginModal    input:focus,
@@ -129,9 +129,9 @@ html[data-bs-theme="dark"] body #forgotModal   input:-webkit-autofill:focus {
 
 
 /* ==================================================
-   Dark Mode — إصلاح شامل لكل الحقول بالموقع
-   (تغطية عامة لأي حقل خارج الـ Auth Modals الثلاثة)
-   WebKit لا يقرأ CSS Variables داخل inset box-shadow
+   Dark mode — a blanket fix for every field on the site
+   (general coverage for any field outside the three auth modals)
+   WebKit does not read CSS custom properties inside an inset box-shadow
    ================================================== */
 body.dark-mode input,
 html[data-bs-theme="dark"] body input,
