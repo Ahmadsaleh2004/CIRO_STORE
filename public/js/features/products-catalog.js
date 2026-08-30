@@ -73,12 +73,26 @@ function renderSlider(homeSliders) {
         const countClass = count >= 5 ? 'compact-count' : ('count-' + count);
 
         const itemsHtml = items.map(item => {
-            const img = `<img src="${item.image_path}" alt="${escHtml(item.description || '')}"
+            // ⚠️ البنية هنا يجب أن تطابق app/views/home.php حرفاً بحرف.
+            //
+            // الصفحة تُرسَم من الخادم أوّلاً (لأن السلايدر هو LCP)،
+            // وهذه الدالة تعيد بناءها عند التحديث الحيّ. اختلاف بنية
+            // بينهما يعني أن ما يراه الزائر يتغيّر شكله بعد التحديث
+            // بلا سبب مفهوم — و home-slider.css مكتوبة لبنية واحدة.
+            const title = item.title || '';
+            const desc  = item.description || '';
+
+            const img = `<img src="${item.image_path}" alt="${escHtml(title || desc)}"
                               class="slide-item-img" loading="lazy">`;
-            const desc = item.description
-                ? `<div class="slide-item-caption">${escHtml(item.description)}</div>`
+
+            const caption = (title || desc)
+                ? `<div class="slide-item-caption">`
+                    + (title ? `<div class="slide-item-title">${escHtml(title)}</div>` : '')
+                    + (desc ? `<div class="slide-item-desc">${escHtml(desc)}</div>` : '')
+                    + `</div>`
                 : '';
-            const inner = `<div class="slide-item">${img}${desc}</div>`;
+
+            const inner = `<div class="slide-item">${img}${caption}</div>`;
 
             return item.link_url
                 ? `<a href="${escHtml(item.link_url)}" class="slide-item-link">${inner}</a>`
@@ -157,36 +171,100 @@ function renderHomeSections(allProducts) {
 window.renderHomeSections = renderHomeSections;
 
 // ── Catalog Helpers (used in pages/products.php) ──────────────
+
+// ══════════════════════════════════════════════════════════════
+// سقف عدّاد البطاقة = المخزون **ناقص ما في السلّة**
+// ══════════════════════════════════════════════════════════════
+//
+// بطاقات القائمة تطبع `max="<?= $stock ?>"` — المخزون المطلق. وهو
+// نفس عطل صفحة التفاصيل: من عنده خمس قطع واثنتان في سلّته يرفع
+// العدّاد إلى خمس، ثم يُرفض عند الضغط بتوست «Only 3 more available».
+// المنع بعد الاختيار لا قبله.
+//
+// والبيانات كلّها في البطاقة أصلاً: زرّ الإضافة يحمل data-product-id
+// وdata-variant-id وdata-stock. فلا حاجة إلى شيء من الخادم.
+function cartQtyForCard(productId, variantId) {
+    const cart = window.getCartData ? window.getCartData() : [];
+    const line = cart.find(
+        i => Number(i.id) === Number(productId)
+          && Number(i.variant_id) === Number(variantId)
+    );
+
+    return line ? Number(line.quantity) || 0 : 0;
+}
+
+/** يعيد ضبط `max` لكل بطاقة ظاهرة، ويعطّل ما نفد المتاح منه. */
+function applyCatalogQtyLimits() {
+    document.querySelectorAll('[data-action="add-to-cart"]').forEach(btn => {
+        const productId = btn.getAttribute('data-product-id');
+        const variantId = btn.getAttribute('data-variant-id');
+        const stock     = Number(btn.getAttribute('data-stock')) || 0;
+
+        const remaining = Math.max(0, stock - cartQtyForCard(productId, variantId));
+
+        const input = document.getElementById('qty-' + productId);
+        if (input) {
+            input.max = String(remaining);
+            if (Number(input.value) > remaining) {
+                input.value = String(Math.max(remaining, 1));
+            }
+        }
+
+        btn.disabled = remaining === 0;
+        btn.title = remaining === 0
+            ? 'You already have all available stock in your cart.'
+            : '';
+    });
+}
+
+// كل تغيّر في السلّة يعيد الحساب — حذف سطر من السلّة الجانبية يجب أن
+// يُعيد المتاح في البطاقات فوراً. والحدث يبثّه refreshCartUI في
+// cart.js بعد الجلب الأوّلي وبعد كل تعديل.
+document.addEventListener('cart:updated', applyCatalogQtyLimits);
+document.addEventListener('DOMContentLoaded', applyCatalogQtyLimits);
+
+window.applyCatalogQtyLimits = applyCatalogQtyLimits;
+
 window.changeQtyDB = (id, val) => {
     const input = document.getElementById('qty-' + id);
     if (!input) return;
-    const max = parseInt(input.getAttribute('max')) || Infinity;
-    const v = parseInt(input.value) + val;
+
+    // ⚠️ `Number.isNaN` لا `|| Infinity`.
+    //
+    // كان `parseInt(max) || Infinity`، و`parseInt('0')` يساوي صفراً —
+    // وهو زائف. فبطاقةٌ متاحها صفر (كلّ مخزونها في السلّة) كانت تسقط
+    // إلى Infinity، أي إلى **لا سقف إطلاقاً**: العدّاد يرتفع بلا حدّ
+    // في الحالة الوحيدة التي يجب أن يقف فيها تماماً.
+    const parsed = parseInt(input.getAttribute('max'), 10);
+    const max    = Number.isNaN(parsed) ? Infinity : parsed;
+
+    const v = parseInt(input.value, 10) + val;
     if (v >= 1 && v <= max) input.value = v;
 };
 
-window.addToCartDB = (id, variantId, price, stock) => {
+// ⚠️ لم تعد تكتب في localStorage: السلّة على الخادم منذ هجرة 0011،
+// وcartAdd في js/features/cart.js هي المدخل الوحيد للكتابة.
+//
+// وفحص المخزون يبقى هنا رغم أنه فحصٌ في العميل: غرضه رسالةٌ فورية
+// («بقيت قطعتان») لا حماية. الحماية في placeOrder داخل معاملة تقفل
+// الصفّ — والسلّة نيّةٌ لا حجز.
+window.addToCartDB = async (id, variantId, price, stock) => {
     const input = document.getElementById('qty-' + id);
     const qty   = parseInt(input?.value || 1);
-    const p = window.dbProducts?.find(x => x.id == id);
-    if (!p) return;
-    let cart = JSON.parse(localStorage.getItem('cart') || '[]');
-    const ex = cart.find(i => i.id == id && i.variant_id == variantId);
-    const currentQtyInCart = ex ? ex.quantity : 0;
+    if (!window.dbProducts?.find(x => x.id == id)) return;
+
+    const existing = (window.getCartData ? window.getCartData() : [])
+        .find(i => i.id == id && i.variant_id == variantId);
+    const currentQtyInCart = existing ? existing.quantity : 0;
 
     if (currentQtyInCart + qty > stock) {
         if (typeof showToast === 'function') showToast(`Only ${stock - currentQtyInCart} more available!`, 'error');
         return;
     }
 
-    if (ex) { ex.quantity += qty; ex.stock = stock; }
-    else cart.push({
-        id, variant_id: variantId, color_name: p.color_name,
-        name: p.name, price, image_path: p.image_path, quantity: qty, stock: stock,
-    });
-    localStorage.setItem('cart', JSON.stringify(cart));
-    if (typeof refreshCartUI === 'function') refreshCartUI();
-    if (typeof showToast    === 'function') showToast('Added to cart!', 'success');
+    if (!(await window.cartAdd(id, variantId, qty))) return;
+
+    if (typeof showToast === 'function') showToast('Added to cart!', 'success');
     if (input) input.value = 1;
     const cb = document.querySelector('[data-bs-target="#cartSidebar"]');
     if (cb) { cb.classList.add('cart-bounce'); setTimeout(() => cb.classList.remove('cart-bounce'), 500); }

@@ -29,7 +29,7 @@ require APPROOT . '/views/inc/head-bare.php';
     <p class="display-1 mb-2" aria-hidden="true">🔒</p>
     <h1 class="h3 mb-3">Access denied</h1>
     <p class="text-muted mb-4">
-        ليس لديك صلاحية الوصول إلى هذه الصفحة.
+        You do not have permission to view this page.
     </p>
     <a class="btn btn-primary" href="<?= htmlspecialchars($backUrl) ?>">
         <?= htmlspecialchars($backLabel) ?>

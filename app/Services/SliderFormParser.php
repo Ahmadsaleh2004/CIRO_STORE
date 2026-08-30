@@ -29,8 +29,8 @@ final class SliderFormParser
     public const MAX_ITEMS_PER_SLIDE = 10;
 
     /**
-     * @param  array  $rawSlides   $_POST['slides']
-     * @param  array  $filesSlides $_FILES['slides']
+     * @param  list<array<string, mixed>> $rawSlides   $_POST['slides']
+     * @param  array<string, mixed> $filesSlides $_FILES['slides']
      * @param  string $uploadDir   المجلد المطلق لحفظ الصور
      * @return array{slides: list<array>, images: list<string>, uploaded: list<string>, error: string|null}
      *         `slides` الشرائح الجاهزة · `images` كل مسارات الصور بعد
@@ -73,9 +73,11 @@ final class SliderFormParser
 
                 $productId          = (int) ($itemData['product_id'] ?? 0) ?: null;
                 $productLinkUrl     = trim($itemData['product_link_url'] ?? '') ?: null;
+                $productTitle       = trim($itemData['product_title'] ?? '') ?: null;
                 $productDescription = trim($itemData['product_description'] ?? '') ?: null;
 
                 $manualLinkUrl     = trim($itemData['manual_link_url'] ?? '') ?: null;
+                $manualTitle       = trim($itemData['manual_title'] ?? '') ?: null;
                 $manualDescription = trim($itemData['manual_description'] ?? '') ?: null;
 
                 if (self::isUnsafeUrl($productLinkUrl) || self::isUnsafeUrl($manualLinkUrl)) {
@@ -111,9 +113,11 @@ final class SliderFormParser
                     'active_mode'         => $activeMode,
                     'product_id'          => $productId,
                     'product_link_url'    => $productLinkUrl,
+                    'product_title'       => $productTitle,
                     'product_description' => $productDescription,
                     'manual_image_path'   => $manualImagePath,
                     'manual_link_url'     => $manualLinkUrl,
+                    'manual_title'        => $manualTitle,
                     'manual_description'  => $manualDescription,
                 ];
             }
@@ -164,6 +168,11 @@ final class SliderFormParser
      *
      * أي أن الخصائص الخمس تُقرأ من خمسة مسارات متوازية، لا من مصفوفة
      * واحدة. هذا هو سبب وجود هذه الدالة أصلاً.
+     *
+     * @param array<string, mixed> $filesSlides
+     * @param int $slideIndex
+     * @param int $itemIndex
+     * @return array<string, mixed>|null
      */
     public static function extractFileEntry(array $filesSlides, $slideIndex, $itemIndex): ?array
     {

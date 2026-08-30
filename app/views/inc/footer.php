@@ -47,8 +47,48 @@ $csrfToken = generateCsrfToken();
         </div>
     </div>
 
-    <!-- ══ Partials ════════════════════════════════════════════ -->
-    <?php require __DIR__ . '/modals/cart.php'; ?>
+    <?php // ══ Partials ════════════════════════════════════════════ ?>
+    <?php
+    /*
+     * ⚠️ مودال السلّة محروس بتسجيل الدخول — وكان يُطبع للجميع.
+     *
+     * زرّ السلّة في الـnavbar محروس منذ البداية، فكان الزائر يتلقّى
+     * الشريط الجانبي كاملاً في صفحته بلا زرّ يفتحه: ترميزٌ ميّت على
+     * كل صفحة.
+     *
+     * وصار الأمر أثقل بعد انتقال السلّة إلى الخادم: cart.js يستدلّ
+     * على «هل للمستخدم سلّة؟» بوجود #cartSidebar، فكان يجدها عند
+     * الزائر ويطلب /cart في كل تحميل صفحة — طلبٌ يردّ 401 دائماً
+     * (مقيس)، وخطأٌ في طرفية كل زائر.
+     *
+     * الحارس هنا يطابق حارس الزرّ، فيتفق الاثنان على معنى واحد.
+     */
+    ?>
+    <?php if (isset($userLoggedIn) && $userLoggedIn): ?>
+        <?php require __DIR__ . '/modals/cart.php'; ?>
+        <?php
+        /*
+         * توكن CSRF إلى window._csrfToken — نفس ما تفعله لوحة التحكّم
+         * في admin/inc/navbar.php.
+         *
+         * ⚠️ كانت صفحات المتجر تمرّره في حقول مخفيّة وحدها، ولا شيء
+         * يضبط `window._csrfToken`. وcart.js يقرأ منه، فكان يرسل نصّاً
+         * فارغاً في كل عملية سلّة.
+         *
+         * ولم يكن ذلك عطلاً ظاهراً — شبكة أمان csrf.js تلتقط الفشل
+         * وتجلب توكناً وتُعيد الطلب — لكنه كان **ثلاثة طلبات بدل
+         * واحد** في كل إضافة أو زيادة أو حذف. مقيس في المتصفّح:
+         *
+         *     POST /cart/add  →  GET /auth/csrf  →  POST /cart/add
+         *
+         * وهذا الثمن يُدفع على كل نقرة، وفي أثقل لحظة: زبونٌ يملأ سلّته.
+         *
+         * وللمسجَّل وحده: الزائر لا سلّة له، ولا داعي لإرسال توكن لمن
+         * لا يملك نقطة يستعمله فيها.
+         */
+        ?>
+        <?= pageData(['_csrfToken' => $csrfToken]) ?>
+    <?php endif; ?>
     <?php require __DIR__ . '/modals/login.php'; ?>
     <?php require __DIR__ . '/modals/register.php'; ?>
     <?php require __DIR__ . '/modals/forgot-password.php'; ?>
@@ -59,16 +99,28 @@ $csrfToken = generateCsrfToken();
     <?php endif; ?>
 
 
-    <!-- ══ Scripts ═════════════════════════════════════════════ -->
+    <?php // ══ Scripts ═════════════════════════════════════════════ ?>
     <?php // ⚠️ أوّلاً وبلا defer: ينسخ جزيرة بيانات الصفحة إلى window،
          // وكل ما تحته يقرأ منها. نقله لاحقاً يكسر كل صفحة تمرّر بيانات. ?>
     <?= jsTag('js/core/page-data.js', false) ?>
 
-    <script src="https://code.jquery.com/jquery-3.7.1.min.js" defer></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11" defer></script>
+    <?php
+    /*
+     * ⚠️ jQuery حُذف من هنا. كان يُحمَّل على **كل صفحة** ولا يُستعمل في
+     * سطر واحد — مفحوص: صفر `$(` وصفر `jQuery` في public/js وapp/views
+     * جميعاً. الكود كلّه vanilla. فكان الوسم يكلّف طلب شبكة على كل
+     * صفحة، ويُبقي `code.jquery.com` مسموحاً به في CSP — أي نطاقاً
+     * يستطيع تنفيذ جافاسكربت على صفحة الدفع — مقابل لا شيء.
+     *
+     * الروابط والبصمات في VENDOR_ASSETS داخل assets_helper.php.
+     * bootstrap بلا defer عمداً: هذا هو السلوك القائم، وبعض الصفحات
+     * تنشئ مودالات فور تحميلها.
+     */
+    ?>
+    <?= vendorJs('bootstrap-js', false) ?>
+    <?= vendorJs('sweetalert2') ?>
 
-    <!-- Core JS -->
+    <?php // Core JS ?>
     <?php
     // حزمة واحدة بدل ثلاثة عشر وسماً. راجع jsBundle في
     // assets_helper.php — القائمة هنا هي الارتداد عند غياب البناء،

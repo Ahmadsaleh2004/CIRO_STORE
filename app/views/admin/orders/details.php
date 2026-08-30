@@ -30,10 +30,11 @@ if ($order['status'] === 'completed' && !empty($order['handler_admin_name'])) {
 }
 ?>
 
-<!-- ── Page Header + Take Button ──────────────────────────── -->
+<?php // ── Page Header + Take Button ──────────────────────────── ?>
 <div class="admin-page-header d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4">
     <h1>
         🧾 Order #<?= (int)$order['order_id'] ?>
+        <?php // @escaping-safe: HTML يبنيه هذا الملف — القيم المتغيّرة مهرَّبة عند البناء ?>
         <?= $statusBadge ?>
     </h1>
     <div class="d-flex gap-2 align-items-center flex-wrap">
@@ -48,16 +49,19 @@ if ($order['status'] === 'completed' && !empty($order['handler_admin_name'])) {
     </div>
 </div>
 <?php if ($handlerLine): ?>
+<?php // @escaping-safe: HTML يبنيه هذا الملف — القيم المتغيّرة مهرَّبة عند البناء ?>
 <p class="text-muted small mb-4"><?= $handlerLine ?></p>
 <?php endif; ?>
 
 <div class="row g-4">
-    <!-- ════════════════════════════════════════════════════════
+    <?php /*
+════════════════════════════════════════════════════════
          العمود الأيسر (الرئيسي) — col-lg-8
-         ════════════════════════════════════════════════════════ -->
+         ════════════════════════════════════════════════════════
+*/ ?>
     <div class="col-12 col-lg-8">
 
-        <!-- 📋 Order Information -->
+        <?php // 📋 Order Information ?>
         <div class="card p-4 mb-4">
             <h5 class="mb-3">📋 Order Information</h5>
             <div class="table-responsive">
@@ -76,7 +80,7 @@ if ($order['status'] === 'completed' && !empty($order['handler_admin_name'])) {
             </div>
         </div>
 
-        <!-- 🛍️ Items Ordered -->
+        <?php // 🛍️ Items Ordered ?>
         <div class="card p-4 mb-4">
             <h5 class="mb-3">🛍️ Items Ordered (<?= count($items) ?>)</h5>
             <?php if (empty($items)): ?>
@@ -120,7 +124,7 @@ if ($order['status'] === 'completed' && !empty($order['handler_admin_name'])) {
             <?php endif; ?>
         </div>
 
-        <!-- 📍 Shipping Details -->
+        <?php // 📍 Shipping Details ?>
         <div class="card p-4 mb-4">
             <h5 class="mb-3">📍 Shipping Details</h5>
             <div class="table-responsive">
@@ -150,7 +154,7 @@ if ($order['status'] === 'completed' && !empty($order['handler_admin_name'])) {
             </div>
         </div>
 
-        <!-- 🚨 Report an Issue -->
+        <?php // 🚨 Report an Issue ?>
         <div class="card p-4 mb-4">
             <h5 class="mb-3">🚨 Report an Issue</h5>
             <textarea id="reportReason" class="form-control mb-2" rows="3"
@@ -160,12 +164,14 @@ if ($order['status'] === 'completed' && !empty($order['handler_admin_name'])) {
 
     </div>
 
-    <!-- ════════════════════════════════════════════════════════
+    <?php /*
+════════════════════════════════════════════════════════
          العمود الأيمن (الجانبي) — col-lg-4
-         ════════════════════════════════════════════════════════ -->
+         ════════════════════════════════════════════════════════
+*/ ?>
     <div class="col-12 col-lg-4">
 
-        <!-- 👤 Client -->
+        <?php // 👤 Client ?>
         <div class="card p-4 mb-4">
             <h5 class="mb-3">👤 Client</h5>
             <div class="table-responsive">
@@ -198,7 +204,7 @@ if ($order['status'] === 'completed' && !empty($order['handler_admin_name'])) {
                class="btn btn-sm btn-outline-warning mt-3">View Profile</a>
         </div>
 
-        <!-- ⚙️ Delivery Actions -->
+        <?php // ⚙️ Delivery Actions ?>
         <div class="card p-4 mb-4">
             <h5 class="mb-3">⚙️ Delivery Actions</h5>
             <?php if ($order['status'] === 'taken'): ?>
@@ -223,7 +229,7 @@ if ($order['status'] === 'completed' && !empty($order['handler_admin_name'])) {
 </div>
 
 <?php
-// بيانات الصفحة للـ JS (يُخرجها footer.php عبر $extraScripts).
+// بيانات الصفحة للـ JS.
 //
 // ⚠️ كانت تُبنى بضمّ نصوص داخل <script>:
 //     'orderId: ' . (int)$order['order_id'] . ','
@@ -231,7 +237,24 @@ if ($order['status'] === 'completed' && !empty($order['handler_admin_name'])) {
 // لكنه شكلٌ يكفي فيه سهوٌ واحد (قيمة نصّية تُضمّ بلا json_encode)
 // ليصير حقن سكربت. والآن البيانات بيانات، وjson_encode في pageData
 // يتولّى الترميز كلّه — بما فيه </script> عبر JSON_HEX_TAG.
-$extraScripts = pageData([
+//
+// ⚠️⚠️ وتُطبع **هنا في جسم الـview**، لا عبر $extraScripts.
+//
+// كانت مُسنَدة إلى $extraScripts، وهو ما يجعل الجزيرة تُطبع في
+// admin/inc/footer.php **بعد** وسم js/core/page-data.js. وذلك الملف
+// متزامن لا مؤجَّل — ينفَّذ لحظة يبلغه المحلّل — فكان يمسح المستند
+// وقتها ولا يجد سوى جزيرتَي head وnavbar. جزيرة هذه الصفحة لم تكن
+// قد وُلدت بعد، فلم تصل window أبداً.
+//
+// والنتيجة عطلٌ كامل صامت: orders.js يستدعي initOrderDetails بشرط
+// `typeof window.ADMIN_ORDER_DETAILS !== 'undefined'` — وهو شرط لم
+// يتحقّق قط. وداخل تلك الدالة تُعرَّف window.handleTakeIt. فكان زرّ
+// «Take It» يُنقر، ويفوّض inline-actions.js الفعل، فلا يجد الدالة،
+// فيكتب سطراً في console وينتهي. لا حوار، لا طلب، لا رسالة — بدا
+// أن أخذ الطلبات معطّل في الخادم وهو سليم تماماً.
+//
+// الجزيرة تسبق الفوتر هنا، فيلتقطها page-data.js كما يلتقط البقيّة.
+echo pageData([
     'ADMIN_ORDER_DETAILS' => [
         'orderId'      => (int) $order['order_id'],
         'productNames' => $productNames,

@@ -2,7 +2,19 @@
    كل الألوان عبر متغيرات الثيم (--bg-color, --card-bg, --section-border, --accent, --placeholder-color) */
 
 .slide-card { background: var(--card-bg); }
-.slide-item-card { background: var(--bg-color); }
+
+/* البطاقات تتساوى ارتفاعاً بمحتواها لا بصورها.
+   ─────────────────────────────────────────────────────────────
+   `.items-container` هي `d-flex flex-wrap`، أي `align-items:stretch`
+   افتراضاً — فارتفاع الصف يتبع أطول بطاقة فيه. وقد كان ذلك يعني أن
+   صورة معاينة واحدة غير منضبطة الارتفاع تمطّ الصف كلّه.
+
+   ضبط الصور في .u-thumb-preview هو الإصلاح الجذري؛ وهذا يمنع بقيّة
+   المحتوى (اسم منتج طويل، وصف من سطرين) من إحداث نفس الأثر. */
+.slide-item-card {
+    background: var(--bg-color);
+    align-self: flex-start;
+}
 .mode-toggle-btn.active { font-weight: 600; }
 .default-btn { transition: all .15s ease; }
 #brandingDirtyHint { color: var(--muted-text); }

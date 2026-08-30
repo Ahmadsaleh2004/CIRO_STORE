@@ -8,7 +8,7 @@
 
 <main id="main-content" role="main">
 
-<!-- Slider -->
+<?php // Slider ?>
 <?php
 // ⚠️ السلايدر يُصيَّر **على الخادم**، لا في المتصفح.
 //
@@ -40,8 +40,9 @@ $homeSliders = $data['homeSliders'] ?? [];
                     <div class="slide-items-row <?= $countClass ?>">
                         <?php foreach ($items as $i => $item): ?>
                             <?php
-                            $desc = (string) ($item['description'] ?? '');
-                            $img  = fixImagePath($item['image_path'] ?? '');
+                            $title = (string) ($item['title'] ?? '');
+                            $desc  = (string) ($item['description'] ?? '');
+                            $img   = fixImagePath($item['image_path'] ?? '');
                             // ⚠️ الشريحة الأولى **ليست** lazy: هي أكبر
                             // عنصر مرئي في الصفحة، وتأجيلها يؤجّل ما
                             // يقيسه المتصفح كـLCP. الباقي lazy عن حقّ.
@@ -51,12 +52,20 @@ $homeSliders = $data['homeSliders'] ?? [];
                             <a href="<?= htmlspecialchars($item['link_url'], ENT_QUOTES) ?>" class="slide-item-link">
                             <?php endif; ?>
                                 <div class="slide-item">
+                                    <?php // alt يفضّل العنوان: هو ما يُعرّف الصورة، والوصف يشرحها. ?>
                                     <img src="<?= htmlspecialchars($img, ENT_QUOTES) ?>"
-                                         alt="<?= htmlspecialchars($desc, ENT_QUOTES) ?>"
+                                         alt="<?= htmlspecialchars($title !== '' ? $title : $desc, ENT_QUOTES) ?>"
                                          class="slide-item-img"
                                          <?= $eager ? 'fetchpriority="high" decoding="async"' : 'loading="lazy"' ?>>
-                                    <?php if ($desc !== ''): ?>
-                                    <div class="slide-item-caption"><?= htmlspecialchars($desc) ?></div>
+                                    <?php if ($title !== '' || $desc !== ''): ?>
+                                    <div class="slide-item-caption">
+                                        <?php if ($title !== ''): ?>
+                                        <div class="slide-item-title"><?= htmlspecialchars($title) ?></div>
+                                        <?php endif; ?>
+                                        <?php if ($desc !== ''): ?>
+                                        <div class="slide-item-desc"><?= htmlspecialchars($desc) ?></div>
+                                        <?php endif; ?>
+                                    </div>
                                     <?php endif; ?>
                                 </div>
                             <?php if (!empty($item['link_url'])): ?>
@@ -68,15 +77,17 @@ $homeSliders = $data['homeSliders'] ?? [];
             <?php endforeach; ?>
         </div>
         <button class="carousel-control-prev" type="button" data-bs-target="#mainSlider" data-bs-slide="prev">
-            <span class="carousel-control-prev-icon"></span>
+            <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+            <span class="visually-hidden">Previous slide</span>
         </button>
         <button class="carousel-control-next" type="button" data-bs-target="#mainSlider" data-bs-slide="next">
-            <span class="carousel-control-next-icon"></span>
+            <span class="carousel-control-next-icon" aria-hidden="true"></span>
+            <span class="visually-hidden">Next slide</span>
         </button>
     </div>
 </section>
 
-<!-- Shop By Category -->
+<?php // Shop By Category ?>
 <section class="container py-5">
     <h2 class="section-title">Shop By Category</h2>
     <div class="d-flex justify-content-center flex-wrap gap-3">
@@ -87,13 +98,14 @@ $homeSliders = $data['homeSliders'] ?? [];
         ?>
         <a href="<?= URLROOT ?>/products?cat=<?= urlencode($cat['name']) ?>"
            class="btn btn-outline-dark px-4 py-2">
+            <?php // @escaping-safe: categoryEmoji ترجع رمزاً من خريطة داخلية ?>
             <?= $emoji ?> <?= htmlspecialchars(ucfirst($cat['name'])) ?>
         </a>
         <?php endforeach; ?>
     </div>
 </section>
 
-<!-- Best Sellers -->
+<?php // Best Sellers ?>
 <section class="container py-4">
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h2 class="section-title mb-0">Best Sellers</h2>
@@ -106,7 +118,7 @@ $homeSliders = $data['homeSliders'] ?? [];
     </div>
 </section>
 
-<!-- New Arrivals -->
+<?php // New Arrivals ?>
 <section class="container py-4">
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h2 class="section-title mb-0">New Arrivals</h2>
@@ -119,7 +131,7 @@ $homeSliders = $data['homeSliders'] ?? [];
     </div>
 </section>
 
-<!-- Explore More -->
+<?php // Explore More ?>
 <section class="container py-4">
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h2 class="section-title mb-0">Explore More</h2>

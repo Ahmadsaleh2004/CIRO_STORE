@@ -22,6 +22,9 @@ final class SliderFormParserTest extends TestCase
     private const DIR = '/tmp/does-not-matter';
 
     /** شريحة صالحة واحدة بصورة موجودة مسبقاً. */
+    /**
+     * @return list<array<string, mixed>>
+     */
     private function validSlides(): array
     {
         return [
@@ -45,6 +48,64 @@ final class SliderFormParserTest extends TestCase
         $this->assertSame('images/old.jpg', $r['slides'][0]['items'][0]['manual_image_path']);
         $this->assertSame(['images/old.jpg'], $r['images']);
         $this->assertSame([], $r['uploaded']);
+    }
+
+    // ════════════════════════════════════════════════════════
+    // سطر العنوان
+    // ════════════════════════════════════════════════════════
+
+    public function testTitlesArePassedThroughTrimmed(): void
+    {
+        $r = SliderFormParser::parse([
+            [
+                'items' => [
+                    [
+                        'active_mode'           => 'manual',
+                        'existing_manual_image' => 'images/old.jpg',
+                        'manual_title'          => '  Galaxy S24 Ultra  ',
+                        'manual_description'    => '  Flagship phone.  ',
+                    ],
+                ],
+            ],
+        ], [], self::DIR);
+
+        $this->assertNull($r['error']);
+        $this->assertSame('Galaxy S24 Ultra', $r['slides'][0]['items'][0]['manual_title']);
+        $this->assertSame('Flagship phone.', $r['slides'][0]['items'][0]['manual_description']);
+    }
+
+    public function testAnEmptyTitleBecomesNullNotAnEmptyString(): void
+    {
+        $r = SliderFormParser::parse([
+            [
+                'items' => [
+                    [
+                        'active_mode'           => 'manual',
+                        'existing_manual_image' => 'images/old.jpg',
+                        'manual_title'          => '   ',
+                    ],
+                ],
+            ],
+        ], [], self::DIR);
+
+        // الفرق ليس تجميلياً: القراءة في BrandingModel تستعمل
+        // COALESCE(NULLIF(product_title,''), p.name) — و`''` تمرّ من
+        // COALESCE لكن NULLIF تحوّلها، بينما null تمرّ مباشرةً. توحيد
+        // الفارغ على null يُبقي عمود القاعدة يعني شيئاً واحداً:
+        // «لم يكتب الأدمن عنواناً».
+        $this->assertNull($r['slides'][0]['items'][0]['manual_title']);
+    }
+
+    /**
+     * العنوان غير مطلوب — عنصر بلا عنوان يمرّ ويُرسم بوصفه وحده.
+     */
+    public function testAnItemWithoutATitleIsStillValid(): void
+    {
+        $r = SliderFormParser::parse($this->validSlides(), [], self::DIR);
+
+        $this->assertNull($r['error']);
+        $this->assertNull($r['slides'][0]['items'][0]['manual_title']);
+        $this->assertNull($r['slides'][0]['items'][0]['product_title']);
     }
 
     public function testAnEmptyFormIsRejected(): void

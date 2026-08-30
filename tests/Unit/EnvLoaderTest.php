@@ -13,6 +13,7 @@ use PHPUnit\Framework\TestCase;
  */
 final class EnvLoaderTest extends TestCase
 {
+    /** @var array<string, mixed> نسخة $_ENV قبل الاختبار، تُعاد في tearDown */
     private array $backup;
 
     protected function setUp(): void

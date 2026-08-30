@@ -49,7 +49,7 @@ final class ImageUpload
      * اسمه: الاسم يأتي من العميل، والمحتوى لا. والاسم المحفوظ عشوائي
      * كلياً، فلا يتحكّم الرافع بمسار ما يُكتب على القرص.
      *
-     * @param  array  $fileEntry مصفوفة ملف واحدة من $_FILES
+     * @param  array<string, mixed> $fileEntry مصفوفة ملف واحدة من $_FILES
      * @param  string $uploadDir المجلد المطلق
      * @param  string $prefix    بادئة اسم الملف (product_ / slider_)
      * @return string|null       المسار النسبي (images/xxx.jpg) أو null

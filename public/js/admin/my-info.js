@@ -85,8 +85,14 @@
                     enableBtn.disabled = false;
                     return;
                 }
+                // ⚠️ twofaSetupStep يحمل `d-none` في الترميز، وهي
+                // `display:none !important` — فـstyle.display='block'
+                // لا يظهرها. كانت خطوة إعداد المصادقة الثنائية لا تُفتح
+                // إطلاقاً: يُنشأ السرّ على الخادم ولا يراه الأدمن.
+                //
+                // twofaSetup لا يحمل d-none، فيبقى إخفاؤه بـstyle.
                 document.getElementById('twofaSetup').style.display = 'none';
-                document.getElementById('twofaSetupStep').style.display = 'block';
+                document.getElementById('twofaSetupStep').classList.remove('d-none');
                 document.getElementById('twofaQr').src  = d.qrcode_url;
                 document.getElementById('twofaSecret').textContent = d.secret;
                 document.getElementById('twofaCode').focus();
@@ -98,7 +104,7 @@
 
         // إلغاء الإعداد
         document.getElementById('twofaCancelBtn').addEventListener('click', () => {
-            document.getElementById('twofaSetupStep').style.display = 'none';
+            document.getElementById('twofaSetupStep').classList.add('d-none');
             document.getElementById('twofaSetup').style.display = 'block';
             enableBtn.disabled = false;
         });

@@ -10,6 +10,8 @@ class ProductModel extends Model
 {
     /**
      * جلب كافة المنتجات المتاحة للعرض من قاعدة البيانات
+     *
+     * @return list<array<string, mixed>>
      */
     public static function findVisible(): array
     {
@@ -40,6 +42,14 @@ class ProductModel extends Model
 
     /**
      * جلب المنتجات المرئية صفحة صفحة مع أسماء الأقسام (categories)
+     *
+     * ⚠️ تُرجع **الصفوف وحدها** لا بيانات ترقيم، خلافاً لأخواتها
+     * (UserModel::getAllForAdmin و OrderModel::getAdminOrdersList
+     * تُرجعان خريطة فيها rows وtotal). الاسم يوحي بغير ذلك — والتعليق
+     * هنا كُتب أوّل مرّة بالقياس عليهما، فكان كاذباً حتى كشفه تدقيقٌ
+     * وقت التشغيل.
+     *
+     * @return list<array<string, mixed>>
      */
     public static function findVisiblePaginated(int $limit, int $offset): array
     {
@@ -67,6 +77,8 @@ class ProductModel extends Model
 
     /**
      * جلب منتج واحد بواسطة الـ ID
+     *
+     * @return array<string, mixed>|null
      */
     public static function findById(int $id): ?array
     {
@@ -84,6 +96,8 @@ class ProductModel extends Model
 
     /**
      * جلب خيارات/أنواع المنتج (Variants)
+     *
+     * @return list<array<string, mixed>>
      */
     public static function getVariants(int $productId): array
     {
@@ -100,6 +114,8 @@ class ProductModel extends Model
 
     /**
      * جلب كافة التقييمات الخاصة بمنتج معين مع أسماء المستخدمين
+     *
+     * @return list<array<string, mixed>>
      */
     public static function getReviews(int $productId): array
     {
@@ -122,6 +138,8 @@ class ProductModel extends Model
 
     /**
      * جلب تقييم مستخدم محدد لمنتج معين
+     *
+     * @return array<string, mixed>|null
      */
     public static function getUserReview(int $productId, int $userId): ?array
     {
@@ -139,6 +157,8 @@ class ProductModel extends Model
 
     /**
      * جلب المنتجات المشابهة (بناءً على التصنيف أو الشركة المصنعة)
+     *
+     * @return list<array<string, mixed>>
      */
     public static function getRelated(int $productId, ?string $manufacturer = null): array
     {
@@ -173,6 +193,14 @@ class ProductModel extends Model
     }
     /**
      * جلب بيانات المخزون/السعر الحية لمجموعة IDs — تُستخدم من صفحة الويش ليست
+     *
+     * @param list<int> $ids
+     * ⚠️ المفتاح **عدد صحيح** لا نصّ رغم `(string)` في البناء: PHP
+     * يُحوّل المفاتيح النصّية العددية إلى أعداد صحيحة تلقائياً، فالصبّ
+     * هناك بلا أثر. كُتب التعليق أوّل مرّة اتّباعاً للصبّ الظاهر، وكشف
+     * تدقيقُ وقت التشغيل أنه يصف نيّةً لا واقعاً.
+     *
+     * @return array<int, array{stock_quantity: int, price: float, discount_percentage: float, price_after_discount: float, is_visible: int}> مفهرسة بمعرّف المنتج
      */
     public static function findStockByIds(array $ids): array
     {
@@ -197,7 +225,17 @@ class ProductModel extends Model
 
             $result = [];
             foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
-                $result[(string)$row['id']] = [
+                // ⚠️ لا صبّ إلى نصّ. كان هنا `(string)$row['id']` وهو
+                // **بلا أثر**: PHP يُحوّل أي مفتاح نصّي عددي إلى عدد
+                // صحيح تلقائياً، فالمفتاح كان int دائماً رغم الصبّ.
+                //
+                // وضرره أنه يُضلّل قارئين: البشر يظنّون المفاتيح نصّية،
+                // وPHPStan يستنتج ذلك أيضاً فيقبل تعليقاً كاذباً. كشفه
+                // تدقيقُ وقت التشغيل حين قارن الشكل المُعلَن بالفعلي.
+                //
+                // والعميل يقرأها بـString(variant_id) على أي حال، وهو
+                // يعمل مع الحالتين — فالحذف لا يمسّ سلوكاً.
+                $result[(int)$row['id']] = [
                     'stock_quantity'       => (int)$row['stock_quantity'],
                     'price'                => (float)$row['price'],
                     'discount_percentage'  => (float)$row['discount_percentage'],
@@ -214,6 +252,8 @@ class ProductModel extends Model
 
     /**
      * إضافة/تحديث تقييم مستخدم لمنتج (Upsert) — تُرجع مصفوفة ['ok' => bool, 'message' => string]
+     *
+     * @return array{ok: bool, message: string}
      */
     public static function saveReview(int $productId, int $userId, int $rating, string $comment): array
     {
@@ -305,7 +345,76 @@ class ProductModel extends Model
             return $stmt->fetchAll();
         } catch (Exception $e) {
             error_log("ProductModel::findVariantsStock Error: " . $e->getMessage());
+            reportException($e);
             return [];
         }
+    }
+
+    /**
+     * نفس بيانات findVariantsStock لكن **بقفل للكتابة**، ومفهرسة بمعرّف
+     * الـvariant — للاستعمال داخل معاملة إنشاء الطلب وحدها.
+     *
+     * ── لماذا نسخة ثانية بدل وسيط `$forUpdate` ────────────────────
+     *
+     * لأن الاثنتين تخدمان عقدين مختلفين. findVariantsStock تُستدعى من
+     * نقطة عامة (/cart/check-stock) خارج أي معاملة، و`FOR UPDATE` هناك
+     * بلا معنى: بلا معاملة يُفكّ القفل فوراً. أسوأ من ذلك، لو صارت
+     * الدالة الواحدة تقفل أحياناً، لصار سلوكها معلّقاً بسياق المُستدعي
+     * — وهو ما لا يراه من يقرأ سطر النداء.
+     *
+     * ⚠️ لا تستدعِ هذه خارج معاملة مفتوحة. القفل يمتدّ حتى COMMIT أو
+     * ROLLBACK؛ وبلا معاملة يسقط في نفس اللحظة فتحصل على تكلفة القفل
+     * بلا فائدته.
+     *
+     * القفل يشمل صفوف `products` أيضاً لأن الاستعلام يضمّها — وMariaDB
+     * لا تدعم `FOR UPDATE OF` التي كانت ستحصر القفل في `pv` وحدها،
+     * وCI يعمل على MySQL 8. الصياغة المجرّدة تعمل على الاثنين، والاتّساع
+     * مقبول: الطلب يقرأ هذه الصفوف ليكتب مخزونها بعد سطور.
+     *
+     * الفهرسة بمعرّف الـvariant لا قائمة مسطّحة: المستدعي يبحث عن سطر
+     * بعينه لكل عنصر سلّة، والبحث الخطّي في حلقة هو ما يجعل طلباً من
+     * عشرين عنصراً يمسح المصفوفة عشرين مرة.
+     *
+     * @param  int[] $variantIds
+     * @return array<int,array<string,mixed>> مفهرسة بـvariant_id
+     */
+    public static function findVariantsForUpdate(array $variantIds): array
+    {
+        $variantIds = array_values(array_filter(array_map('intval', $variantIds)));
+        if (!$variantIds) {
+            return [];
+        }
+
+        $placeholders = implode(',', array_fill(0, count($variantIds), '?'));
+
+        // بلا try/catch عن قصد — خلافاً لأخوات هذه الدالة.
+        //
+        // تلك تبتلع الاستثناء وتُرجع [] لأنها تخدم عرضاً: قائمة فارغة
+        // تعني «لا بيانات» ولا ضرر. أمّا هنا فالقائمة الفارغة تعني
+        // «لا سعر معروف»، وابتلاعُها داخل معاملة يحوّل عطلاً تقنياً إلى
+        // «سعرك تغيّر» — رسالة كاذبة تُخفي العطل عن السجلّ وعن الزبون.
+        // الاستثناء يصعد إلى placeOrder التي تتراجع وتسجّل السبب الحقيقي.
+        $stmt = self::db()->prepare("
+            SELECT
+                pv.id            AS variant_id,
+                p.id             AS product_id,
+                p.name           AS product_name,
+                pv.color_name,
+                pv.price_after_discount,
+                pv.stock_quantity
+            FROM product_variants pv
+            JOIN products p ON p.id = pv.product_id
+            WHERE pv.id IN ({$placeholders})
+              AND p.is_visible = 1
+            FOR UPDATE
+        ");
+        $stmt->execute($variantIds);
+
+        $byId = [];
+        foreach ($stmt->fetchAll() as $row) {
+            $byId[(int) $row['variant_id']] = $row;
+        }
+
+        return $byId;
     }
 }

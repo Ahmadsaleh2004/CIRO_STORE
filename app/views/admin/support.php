@@ -14,7 +14,7 @@
     </span>
 </div>
 
-<!-- ── Search Bar ─────────────────────────────────────────── -->
+<?php // ── Search Bar ─────────────────────────────────────────── ?>
 <div class="float-group mb-4">
     <form method="GET" action="<?= URLROOT ?>/admin/support" class="d-flex gap-2 flex-wrap align-items-center">
         <input
@@ -31,7 +31,7 @@
     </form>
 </div>
 
-<!-- ── Messages List ──────────────────────────────────────── -->
+<?php // ── Messages List ──────────────────────────────────────── ?>
 <?php if (empty($messages)): ?>
 <div class="text-center py-5 u-muted">
     <p class="u-fs-110">No messages found<?= $search !== '' ? ' for "' . htmlspecialchars($search) . '"' : '' ?>.</p>
@@ -42,11 +42,10 @@
     <?php foreach ($messages as $m): ?>
     <div class="col-12 col-md-6 col-lg-4" id="msg-card-<?= (int) $m['id'] ?>">
         <div
-            class="support-msg-card card p-3 h-100"
+            class="support-msg-card card p-3 h-100 u-clickable"
             data-msg-id="<?= (int) $m['id'] ?>"
             data-user-id="<?= (int) ($m['user_id'] ?? 0) ?>"
             data-user-name="<?= htmlspecialchars($m['user_name'] ?? $m['full_name']) ?>"
-            class="u-clickable"
         >
             <div class="d-flex justify-content-between align-items-start mb-2">
                 <div>
@@ -66,7 +65,7 @@
                 ✉️ <?= htmlspecialchars($m['email']) ?>
             </p>
 
-            <p class="mb-3" class="u-message-body">
+            <p class="mb-3 u-message-body">
                 <?= nl2br(htmlspecialchars($m['message'])) ?>
             </p>
 
@@ -94,17 +93,17 @@
 
 <?php endif; ?>
 
-<!--
-    حقل CSRF يقرأه support.js عند كل إرسال.
+<?php /*
+حقل CSRF يقرأه support.js عند كل إرسال.
     سمة name مطلوبة لا زائدة: updateCsrfToken() في js/core/csrf.js تستهدف
     input[name="csrf_token"]، فبلا الاسم كان الحقل يبقى على التوكن القديم
     بعد أي تعافٍ — ويحتاج أول إرسال يدوي تالٍ جولة تعافٍ أخرى بلا داعٍ.
     والحقل خارج أي <form> (فورم البحث أعلى الصفحة مغلق قبله)، وsupport.js
     يبني FormData يدوياً، فالاسم لا يدخل أي إرسال بغير قصد.
--->
+*/ ?>
 <input type="hidden" name="csrf_token" id="csrfTokenSupport" value="<?= htmlspecialchars($csrf) ?>">
 
-<!-- ── Pagination ─────────────────────────────────────────── -->
+<?php // ── Pagination ─────────────────────────────────────────── ?>
 <?php if ($totalPages > 1): ?>
 <nav class="mt-4" aria-label="Support messages pagination">
     <ul class="pagination justify-content-center flex-wrap">

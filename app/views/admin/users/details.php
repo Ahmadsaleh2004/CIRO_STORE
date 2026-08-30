@@ -17,7 +17,7 @@ $strikesBadge    = $strikesCount >= 3 ? 'bg-danger' : ($strikesCount > 0 ? 'bg-w
 $strikesLabel    = $strikesCount >= 3 ? 'Blocked' : ($strikesCount > 0 ? 'Warnings' : 'Clean');
 ?>
 
-<!-- ── Page Header ────────────────────────────────────────── -->
+<?php // ── Page Header ────────────────────────────────────────── ?>
 <div class="admin-page-header">
     <h1>🔍 User Details</h1>
     <div class="d-flex gap-2 flex-wrap">
@@ -30,9 +30,11 @@ $strikesLabel    = $strikesCount >= 3 ? 'Blocked' : ($strikesCount > 0 ? 'Warnin
     </div>
 </div>
 
-<!-- ════════════════════════════════════════════════════════
+<?php /*
+════════════════════════════════════════════════════════
      Section 1+2 — Basic Info | Strikes
-     ════════════════════════════════════════════════════════ -->
+     ════════════════════════════════════════════════════════
+*/ ?>
 <div class="row g-4 mb-4">
     <div class="col-12 col-lg-6">
         <div class="card p-4 h-100">
@@ -104,6 +106,7 @@ $strikesLabel    = $strikesCount >= 3 ? 'Blocked' : ($strikesCount > 0 ? 'Warnin
                         data-active="<?= $active ? '1' : '0' ?>"
                         data-user-id="<?= (int)$target['id'] ?>"
                         title="<?= $active ? 'Click to remove this strike' : 'Click to add a strike' ?>">
+                    <?php // @escaping-safe: رمز حرفي أو $i عدّاد صحيح ?>
                     <?= $active ? '❌' : $i ?>
                 </button>
                 <div class="strike-reason">
@@ -122,9 +125,11 @@ $strikesLabel    = $strikesCount >= 3 ? 'Blocked' : ($strikesCount > 0 ? 'Warnin
     </div>
 </div>
 
-<!-- ════════════════════════════════════════════════════════
+<?php /*
+════════════════════════════════════════════════════════
      Section 3 — Saved Addresses
-     ════════════════════════════════════════════════════════ -->
+     ════════════════════════════════════════════════════════
+*/ ?>
 <div class="card p-4 mb-4">
     <h5 class="mb-3">🏠 Saved Addresses (<?= count($addresses) ?>)</h5>
     <?php if (empty($addresses)): ?>
@@ -163,9 +168,11 @@ $strikesLabel    = $strikesCount >= 3 ? 'Blocked' : ($strikesCount > 0 ? 'Warnin
     <?php endif; ?>
 </div>
 
-<!-- ════════════════════════════════════════════════════════
+<?php /*
+════════════════════════════════════════════════════════
      Section 4 — Order History
-     ════════════════════════════════════════════════════════ -->
+     ════════════════════════════════════════════════════════
+*/ ?>
 <div class="card p-4 mb-4">
     <h5 class="mb-3">📦 Order History</h5>
     <?php if (empty($orders)): ?>
@@ -199,9 +206,11 @@ $strikesLabel    = $strikesCount >= 3 ? 'Blocked' : ($strikesCount > 0 ? 'Warnin
     <?php endif; ?>
 </div>
 
-<!-- ════════════════════════════════════════════════════════
+<?php /*
+════════════════════════════════════════════════════════
      Section — Support Messages
-     ════════════════════════════════════════════════════════ -->
+     ════════════════════════════════════════════════════════
+*/ ?>
 <div class="card p-4 mb-4">
     <h5 class="mb-3">💬 Support Messages (<?= count($messages) ?>)</h5>
     <?php if (empty($messages)): ?>
@@ -219,9 +228,11 @@ $strikesLabel    = $strikesCount >= 3 ? 'Blocked' : ($strikesCount > 0 ? 'Warnin
     <?php endif; ?>
 </div>
 
-<!-- ════════════════════════════════════════════════════════
+<?php /*
+════════════════════════════════════════════════════════
      Section 5 — Audit Log (آخر قسم)
-     ════════════════════════════════════════════════════════ -->
+     ════════════════════════════════════════════════════════
+*/ ?>
 <div class="card p-4 mb-4">
     <h5 class="mb-3">📜 Admin Actions Log (<?= count($auditLog) ?>)</h5>
     <?php if (empty($auditLog)): ?>
@@ -252,5 +263,5 @@ $strikesLabel    = $strikesCount >= 3 ? 'Blocked' : ($strikesCount > 0 ? 'Warnin
     <?php endif; ?>
 </div>
 
-<!-- ── Modals ─────────────────────────────────────────────── -->
+<?php // ── Modals ─────────────────────────────────────────────── ?>
 <?php include __DIR__ . '/../notify-modal.php'; ?>

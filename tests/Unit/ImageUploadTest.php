@@ -48,6 +48,9 @@ final class ImageUploadTest extends TestCase
         return base64_decode('R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7');
     }
 
+    /**
+     * @return array<string, mixed>
+     */
     private function entry(string $path): array
     {
         return ['tmp_name' => $path, 'error' => UPLOAD_ERR_OK];

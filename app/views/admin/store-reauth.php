@@ -16,20 +16,20 @@ $bareCss   = ['css/admin/pages/login.css'];
 require APPROOT . '/views/inc/head-bare.php';
 ?>
 
-<!-- URLROOT يُعرَّف هنا لأن هذه الصفحة مستقلة عن layout الأدمن (لا head.php) -->
+<?php // URLROOT يُعرَّف هنا لأن هذه الصفحة مستقلة عن layout الأدمن (لا head.php) ?>
 <?= pageData(['URLROOT' => URLROOT]) ?>
 
 <div class="login-wrapper">
     <div class="login-card">
 
-        <!-- Logo / Header -->
+        <?php // Logo / Header ?>
         <div class="login-logo">
             <div class="lock-icon">👑</div>
             <h1>Cairo Store</h1>
             <p>Return to Admin Panel</p>
         </div>
 
-        <!-- رسالة الخطأ / النجاح -->
+        <?php // رسالة الخطأ / النجاح ?>
         <div class="alert-msg" id="alertMsg" role="alert" aria-live="polite"></div>
 
         <p class="store-mode-hint">
@@ -37,16 +37,16 @@ require APPROOT . '/views/inc/head-bare.php';
             Enter your password to return to the admin panel.
         </p>
 
-        <!-- فورم إعادة التحقق بكلمة السر قبل الرجوع للوحة -->
+        <?php // فورم إعادة التحقق بكلمة السر قبل الرجوع للوحة ?>
         <form id="storeReauthForm" novalidate autocomplete="off">
 
-            <!-- CSRF -->
+            <?php // CSRF ?>
             <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(generateCsrfToken()) ?>">
 
-            <!-- وجهة العودة — مُحمّاة ضد Open Redirect server-side -->
+            <?php // وجهة العودة — مُحمّاة ضد Open Redirect server-side ?>
             <input type="hidden" name="return" value="<?= htmlspecialchars($return ?? URLROOT . '/admin/home') ?>">
 
-            <!-- كلمة المرور -->
+            <?php // كلمة المرور ?>
             <div class="form-group">
                 <label class="form-label" for="reauthPassword">Password</label>
                 <input
@@ -63,25 +63,22 @@ require APPROOT . '/views/inc/head-bare.php';
                 >
             </div>
 
-            <!-- زر التحقق -->
+            <?php // زر التحقق ?>
             <button type="submit" id="reauthBtn" class="btn-login">
                 Verify &amp; Return
             </button>
         </form>
 
-        <!-- رابط التراجع عن وضع المتجر — يحذف العلم ويبقى بالمتجر -->
+        <?php // رابط التراجع عن وضع المتجر — يحذف العلم ويبقى بالمتجر ?>
         <a href="<?= URLROOT ?>/" class="back-link" tabindex="-1">← Continue browsing the store</a>
 
     </div>
 </div>
 
-<!-- Bootstrap JS — يُحمَّل فعلياً عبر CDN -->
-<script
-    src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
-    defer
-></script>
+<?php // Bootstrap JS — يُحمَّل فعلياً عبر CDN ?>
+<?= vendorJs('bootstrap-js') ?>
 
-<!-- csrf.js + theme.js — تُحمَّل بمسارات مطلقة عبر URLROOT (لا مسارات نسبية تتكسر) -->
+<?php // csrf.js + theme.js — تُحمَّل بمسارات مطلقة عبر URLROOT (لا مسارات نسبية تتكسر) ?>
 <script src="<?= URLROOT ?>/js/core/theme.js" defer></script>
 <script src="<?= URLROOT ?>/js/core/csrf.js" defer></script>
 <script src="<?= URLROOT ?>/js/admin/admin-auth.js" defer></script>

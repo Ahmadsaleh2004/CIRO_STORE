@@ -21,9 +21,9 @@ require APPROOT . '/views/inc/head-bare.php';
     <p class="display-1 mb-2" aria-hidden="true">🧭</p>
     <h1 class="h3 mb-3">Page not found</h1>
     <p class="text-muted mb-4">
-        الصفحة التي طلبتها غير موجودة أو تم نقلها.
+        The page you requested does not exist, or it has moved.
     </p>
-    <a class="btn btn-primary" href="<?= URLROOT ?>/">العودة للصفحة الرئيسية</a>
+    <a class="btn btn-primary" href="<?= URLROOT ?>/">Back to home</a>
 </main>
 
 <?php require APPROOT . '/views/inc/footer-bare.php'; ?>

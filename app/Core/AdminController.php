@@ -33,7 +33,7 @@ abstract class AdminController extends Controller
      *
      * @param string $view  اسم الـ view بدون المسار أو الامتداد
      *                      (يُبحث عنه بـ app/views/admin/<view>.php)
-     * @param array  $data  متغيرات إضافية تُمرَّر للـ view
+     * @param array<string, mixed> $data متغيرات إضافية تُمرَّر للـ view
      */
     protected function adminView(string $view, array $data = []): void
     {
@@ -59,8 +59,8 @@ abstract class AdminController extends Controller
      * (Admins/Users/Orders/Products...) لتفادي تكرار نفس الكود.
      *
      * @param string $filename اسم الملف عند التحميل (مع .csv)
-     * @param array  $headers  أسماء الأعمدة (صف أول بالملف)
-     * @param array  $rows     كل صف بيانات كـ array مسطّح بنفس ترتيب $headers
+     * @param list<string> $headers أسماء الأعمدة (صف أول بالملف)
+     * @param array<array-key, array<array-key, mixed>> $rows كل صف بيانات كـ array مسطّح بنفس ترتيب $headers
      */
     protected function sendCsv(string $filename, array $headers, array $rows): void
     {

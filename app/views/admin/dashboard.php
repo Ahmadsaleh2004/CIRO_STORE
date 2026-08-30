@@ -11,7 +11,7 @@
     <h1>📊 Dashboard</h1>
 </div>
 
-<!-- ── Stats ──────────────────────────────────────────────── -->
+<?php // ── Stats ──────────────────────────────────────────────── ?>
 <div class="row g-3 mb-4">
     <div class="col-6 col-lg-3">
         <div class="stat-card">
@@ -57,7 +57,7 @@
     </div>
 </div>
 
-<!-- ── Charts ─────────────────────────────────────────────── -->
+<?php // ── Charts ─────────────────────────────────────────────── ?>
 <div class="row g-4 mb-4">
     <div class="col-lg-8">
         <div class="chart-card">
@@ -68,6 +68,22 @@
                 </span>
             </div>
             <div class="u-chart-box"><canvas id="salesChart"></canvas></div>
+            <?php
+            // أرقام الرسم البياني — بيانات في جزيرة JSON، لا كود.
+            //
+            // كانت تُحقن داخل كتلة <script> يبنيها الـController بضمّ
+            // النصوص، وهي كتلة تنفيذ تحجبها CSP ولا يمكن بصمها لأن
+            // محتواها يتغيّر يومياً. راجع AdminDashboardController.
+            //
+            // وموضعها هنا لا في $extraScripts: الفوتر يطبع
+            // $extraScripts بعد js/core/page-data.js المتزامن.
+            echo pageData([
+                'ADMIN_SALES_CHART' => [
+                    'labels' => $chartLabels,
+                    'values' => $chartValues,
+                ],
+            ]);
+            ?>
         </div>
     </div>
     <div class="col-lg-4">
@@ -95,7 +111,7 @@
     </div>
 </div>
 
-<!-- ── Best Sellers ───────────────────────────────────────── -->
+<?php // ── Best Sellers ───────────────────────────────────────── ?>
 <div class="card p-4">
     <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
         <h5 class="mb-0">⭐ Best Selling Products</h5>

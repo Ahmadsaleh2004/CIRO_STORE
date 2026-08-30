@@ -6,20 +6,20 @@
  */
 ?>
 <!DOCTYPE html>
-<!-- الـ Controller سيمرر لغة واتجاه الصفحة (مثلاً en/ltr أو ar/rtl) -->
+<?php // الـ Controller سيمرر لغة واتجاه الصفحة (مثلاً en/ltr أو ar/rtl) ?>
 <html lang="<?= htmlspecialchars($data['htmlLang'] ?? 'en') ?>" dir="<?= htmlspecialchars($data['htmlDir'] ?? 'ltr') ?>">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     
-    <!-- تأكد أن الـ Controller يمرر متغيراً اسمه $data['title'] -->
+    <?php // تأكد أن الـ Controller يمرر متغيراً اسمه $data['title'] ?>
     <title><?= htmlspecialchars($data['title'] ?? 'Cairo Store') ?></title>
     
-    <!-- Meta Tags الخاصة بـ SEO -->
+    <?php // Meta Tags الخاصة بـ SEO ?>
     <meta name="description" content="<?= htmlspecialchars($data['desc'] ?? 'Cairo Store Best Electronics') ?>">
     <meta name="robots" content="<?= htmlspecialchars($data['robots'] ?? 'index, follow') ?>">
     
-    <!-- Meta Tags الخاصة بـ Social Media (Open Graph & Twitter) -->
+    <?php // Meta Tags الخاصة بـ Social Media (Open Graph & Twitter) ?>
     <?php if (isset($data['pageImage']) && $data['pageImage']): ?>
     <meta property="og:image" content="<?= htmlspecialchars($data['pageImage']) ?>">
     <?php endif; ?>
@@ -30,19 +30,29 @@
     <meta name="twitter:title"      content="<?= htmlspecialchars($data['title'] ?? 'Cairo Store') ?>">
     <meta name="twitter:description"content="<?= htmlspecialchars($data['desc'] ?? 'Cairo Store Best Electronics') ?>">
     
-    <!-- ضبط الثيم قبل أول رسم — يمنع الومضة البيضاء ويجعل مكوّنات
-         Bootstrap تقرأ الوضع الليلي. راجع assets_helper.php. -->
+    <?php /*
+ضبط الثيم قبل أول رسم — يمنع الومضة البيضاء ويجعل مكوّنات
+         Bootstrap تقرأ الوضع الليلي. راجع assets_helper.php.
+*/ ?>
 <?= themeBootScript() ?>
-    <!-- روابط ملفات الـ CSS الخارجية والداخلية -->
+    <?php // روابط ملفات الـ CSS الخارجية والداخلية ?>
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<?= vendorCss('bootstrap-css') ?>
+    <?php /*
+أنماط SweetAlert2 — ورقة خارجية لا حقنٌ من الجافاسكربت.
+         تُدرَج مع vendorJs('sweetalert2') في الفوتر ولا تنفصل عنه.
+         راجع assets_helper.php للسبب.
+*/ ?>
+<?= vendorCss('sweetalert2-css') ?>
 
-    <!-- حزمة المتجر — ملف @import واحد يجمع base/vendor/layout/
-         components/animations. راجع public/css/store.css للترتيب. -->
+    <?php /*
+حزمة المتجر — ملف @import واحد يجمع base/vendor/layout/
+         components/animations. راجع public/css/store.css للترتيب.
+*/ ?>
 <?= cssBundle('store') ?>
 
-    <!-- إذا كان هناك أكواد إضافية للـ head من صفحات معينة -->
+    <?php // إذا كان هناك أكواد إضافية للـ head من صفحات معينة ?>
     <?php if (isset($extraHead)) echo $extraHead; elseif (isset($data['extraHead'])) echo $data['extraHead']; ?>
 </head>
 <body class="page-transitioning">
-    <!-- Skip to content و BASE_URL سيوضعان في بداية ملف الـ Navbar -->
+    <?php // Skip to content و BASE_URL سيوضعان في بداية ملف الـ Navbar ?>

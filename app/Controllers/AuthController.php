@@ -86,6 +86,11 @@ class AuthController extends Controller
             \App\Core\Throttle::clear('store-login', \App\Core\Throttle::clientIp());
             session_regenerate_id(true);
 
+            // التوكن يتبع المعرّف. regenerate_id تُبقي محتوى الجلسة —
+            // ومنه csrf_token — فيبقى توكنُ ما قبل المصادقة صالحاً
+            // لجلسة مصادَقة. راجع rotateCsrfToken في csrf_helper.php.
+            $freshCsrf = rotateCsrfToken();
+
             $_SESSION['user_id']     = (int)$user['id'];
             $_SESSION['user_name']   = $user['full_name'];
             $_SESSION['user_email']  = $user['email'];
@@ -100,6 +105,11 @@ class AuthController extends Controller
             $this->respond(true, 'Welcome, ' . $user['full_name'], [
                 'redirect' => $redirectAfter,
                 'type'     => 'user',
+                // js/core/csrf.js يلتقط csrf_token من أي استجابة ويحدّث
+                // كل حقول الصفحة به. إرساله هنا يجعل التدوير بلا تكلفة:
+                // بدونه يكتشف العميل بطلان توكنه بطلبٍ فاشل ثم يعيد
+                // المحاولة — طلبان بدل واحد بعد كل تسجيل دخول.
+                'csrf_token' => $freshCsrf,
             ]);
         }
 
@@ -702,6 +712,12 @@ class AuthController extends Controller
             }
 
             session_regenerate_id(true);
+
+            // كمسار الدخول بكلمة السر — التوكن يتبع المعرّف. ولا يُعاد
+            // في جسم استجابة هنا: هذا المسار ينتهي بـredirect، والصفحة
+            // التالية تُطبع بالتوكن الجديد أصلاً.
+            rotateCsrfToken();
+
             $_SESSION['user_id']     = $userId;
             $_SESSION['user_name']   = $user['full_name'] ?? $name;
             $_SESSION['user_email']  = $email;
@@ -720,6 +736,9 @@ class AuthController extends Controller
     }
 
     /** POST بسيط باستخدام cURL (بدون أي مكتبة خارجية) */
+    /**
+     * @param array<string, string> $fields
+     */
     private function httpPost(string $url, array $fields): string
     {
         $ch = curl_init($url);

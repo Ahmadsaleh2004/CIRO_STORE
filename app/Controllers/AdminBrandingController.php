@@ -143,6 +143,9 @@ class AdminBrandingController extends AdminController
 
     /**
      * يحذف الصور التي كانت مستعملة ولم تعد ضمن الحفظة الجديدة.
+     *
+     * @param list<string> $oldPaths
+     * @param list<string> $keptPaths
      */
     private function deleteOrphanedImages(array $oldPaths, array $keptPaths, string $uploadDir): void
     {
@@ -168,6 +171,9 @@ class AdminBrandingController extends AdminController
     // Helpers خاصة
     // ══════════════════════════════════════════════════════════
 
+    /**
+     * @param list<string> $paths
+     */
     private function cleanupNewUploads(array $paths, string $uploadDir): void
     {
         foreach ($paths as $p) {

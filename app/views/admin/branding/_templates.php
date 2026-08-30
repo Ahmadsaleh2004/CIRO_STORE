@@ -6,7 +6,7 @@
  */
 ?>
 
-<!-- ══ قالب الشريحة ═══════════════════════════════════════════════════════ -->
+<?php // ══ قالب الشريحة ═══════════════════════════════════════════════════════ ?>
 <template id="slideTemplate">
     <div class="slide-card card p-3 mb-4 u-border-section-2">
         <div class="d-flex justify-content-between align-items-center mb-3">
@@ -24,16 +24,16 @@
     </div>
 </template>
 
-<!-- ══ قالب العنصر/الصورة ═════════════════════════════════════════════════ -->
+<?php // ══ قالب العنصر/الصورة ═════════════════════════════════════════════════ ?>
 <template id="itemTemplate">
     <div class="slide-item-card card p-2 u-w-260 u-border-section-all">
 
         <div class="d-flex justify-content-between align-items-center mb-2">
             <span class="small fw-semibold text-muted">Image <span class="item-number"></span></span>
-            <button type="button" class="btn btn-sm btn-outline-danger remove-item-btn">✕</button>
+            <button type="button" class="btn btn-sm btn-outline-danger remove-item-btn" aria-label="Remove item">✕</button>
         </div>
 
-        <!-- أزرار التبديل بين التبويبين — تتحكم فقط بالعرض/الإخفاء البصري -->
+        <?php // أزرار التبديل بين التبويبين — تتحكم فقط بالعرض/الإخفاء البصري ?>
         <div class="btn-group w-100 mb-2" role="group">
             <button type="button" class="btn btn-outline-primary btn-sm mode-toggle-btn active"
                     data-mode="product">🛍️ Product</button>
@@ -41,26 +41,39 @@
                     data-mode="manual">🖼️ Manual</button>
         </div>
 
-        <!-- ══ تبويب Product ══════════════════════════════════ -->
+        <?php // ══ تبويب Product ══════════════════════════════════ ?>
         <div class="mode-panel product-panel">
             <button type="button" class="btn btn-outline-secondary btn-sm w-100 mb-2 open-product-picker-btn">
                 🔍 Choose Product
             </button>
 
             <div class="product-preview d-none mb-2 text-center">
-                <img class="product-preview-img" src="" alt=""
-                     class="u-thumb-preview">
+                <img class="product-preview-img u-thumb-preview" src="" alt="">
                 <div class="small fw-semibold product-preview-name mt-1"></div>
             </div>
             <input type="hidden" class="field-product-id" value="">
 
+            <?php /*
+الصورة تعرض سطرين: العنوان فوق الوصف. والحقلان يُملآن
+                 تلقائياً عند اختيار منتج (الاسم والوصف من القاعدة)
+                 ويبقيان قابلَين للتعديل — راجع selectProduct في
+                 js/admin/branding.js.
+
+                 وتركُ العنوان فارغاً ليس نقصاً: القراءة تسقط إلى
+                 products.name، فالشريحة تعرض اسم منتجها دائماً.
+                 الحقل موجود ليختصر الاسم الطويل لا ليكرّره.
+*/ ?>
+            <div class="float-group mb-2">
+                <input type="text" class="field-product-title" placeholder=" " maxlength="200">
+                <label class="small">Title on image (defaults to product name)</label>
+            </div>
+            <div class="float-group mb-2">
+                <textarea class="field-product-description" rows="2" placeholder=" " maxlength="500"></textarea>
+                <label class="small">Description — second line, smaller</label>
+            </div>
             <div class="float-group mb-2">
                 <input type="text" class="field-product-link" placeholder=" ">
                 <label class="small">Link (optional)</label>
-            </div>
-            <div class="float-group mb-2">
-                <textarea class="field-product-description" rows="2" placeholder=" "></textarea>
-                <label class="small">Description shown on image</label>
             </div>
 
             <button type="button" class="btn btn-sm w-100 default-btn" data-panel="product">
@@ -68,23 +81,34 @@
             </button>
         </div>
 
-        <!-- ══ تبويب Manual ═══════════════════════════════════ -->
+        <?php // ══ تبويب Manual ═══════════════════════════════════ ?>
         <div class="mode-panel manual-panel d-none">
             <div class="manual-preview d-none mb-2 text-center">
-                <img class="manual-preview-img" src="" alt=""
-                     class="u-thumb-preview">
+                <img class="manual-preview-img u-thumb-preview" src="" alt="">
             </div>
             <input type="file" class="field-manual-image form-control form-control-sm mb-2"
                    accept="image/jpeg,image/png,image/webp,image/gif">
             <input type="hidden" class="field-existing-manual-image" value="">
 
+            <?php /*
+⚠️ لا تعبئة تلقائية هنا — بخلاف لوحة Product.
+
+                 الصورة اليدوية ملفٌّ يرفعه الأدمن، ولا مصدر بيانات
+                 يُشتقّ منه عنوان أو وصف. فالحقلان يبقيان فارغين حتى
+                 يكتبهما، والعنوان الفارغ يعني بلا سطر عنوان — لا
+                 بديل له كما في وضع المنتج.
+*/ ?>
+            <div class="float-group mb-2">
+                <input type="text" class="field-manual-title" placeholder=" " maxlength="200">
+                <label class="small">Title on image</label>
+            </div>
+            <div class="float-group mb-2">
+                <textarea class="field-manual-description" rows="2" placeholder=" " maxlength="500"></textarea>
+                <label class="small">Description — second line, smaller</label>
+            </div>
             <div class="float-group mb-2">
                 <input type="text" class="field-manual-link" placeholder=" ">
                 <label class="small">Link (optional)</label>
-            </div>
-            <div class="float-group mb-2">
-                <textarea class="field-manual-description" rows="2" placeholder=" "></textarea>
-                <label class="small">Description shown on image</label>
             </div>
 
             <button type="button" class="btn btn-sm w-100 default-btn" data-panel="manual">

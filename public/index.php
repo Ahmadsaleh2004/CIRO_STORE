@@ -137,7 +137,20 @@ $r->get('/auth/google/callback',   [AuthController::class, 'googleCallback']);
 $r->get('/auth/csrf',              [AuthController::class, 'getCsrf']);
 
 // ── Cart ─────────────────────────────────────────────────────
+//
+// السلّة صارت على الخادم (هجرة 0011). وكل نقطة تحمل حارس `auth` لأن
+// **لا سلّة زائر أصلاً**: زرّ السلّة وزرّ «أضف للسلّة» محروسان بتسجيل
+// الدخول في القوالب الثلاثة (navbar · product · product_dit)، وغير
+// المسجَّل يُدفع إلى نافذة الدخول. فالحارس هنا يفرض ما تعرضه الواجهة
+// بدل أن يفترضه — والفرق أن الواجهة تُخفي الزرّ، والحارس يردّ الطلب.
+//
+// و`check-stock` تبقى بلا حارس: تُستدعى من صفحات المنتجات لتحديث
+// بطاقاتها، ولا تكشف إلا ما هو معروض أصلاً.
 $r->post('/cart/check-stock', [CartController::class, 'checkStock']);
+$r->get('/cart',          [CartController::class, 'index'])->middleware('auth');
+$r->post('/cart/add',     [CartController::class, 'add'])->middleware('auth');
+$r->post('/cart/update',  [CartController::class, 'update'])->middleware('auth');
+$r->post('/cart/remove',  [CartController::class, 'remove'])->middleware('auth');
 
 // ── Checkout ─────────────────────────────────────────────────
 $r->get('/checkout',               [CheckoutController::class, 'index'])

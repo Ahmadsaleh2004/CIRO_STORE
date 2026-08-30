@@ -53,8 +53,8 @@ class AdminDashboardController extends AdminController
 
         // ── رسم بياني: مبيعات آخر 30 يوم ─────────────────────
         $salesRows        = AdminDashboardModel::getSalesLast30Days();
-        $chartLabels      = json_encode(array_column($salesRows, 'day'));
-        $chartValues      = json_encode(array_map('floatval', array_column($salesRows, 'total')));
+        $chartLabels      = array_values(array_column($salesRows, 'day'));
+        $chartValues      = array_values(array_map('floatval', array_column($salesRows, 'total')));
         $monthToDateSales = AdminDashboardModel::getMonthToDateSales();
 
         // ── توزيع المستخدمين ─────────────────────────────────
@@ -63,27 +63,22 @@ class AdminDashboardController extends AdminController
         // ── أفضل المنتجات مبيعًا ──────────────────────────────
         $bestProducts = AdminDashboardModel::getBestSellingProducts($search);
 
-        // ── سكربت الـ Chart.js ────────────────────────────────
-        $extraScripts = '<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-<script>
-document.addEventListener("DOMContentLoaded",()=>{
-    const dark=document.body.classList.contains("dark-mode");
-    const grid=dark?"rgba(255,255,255,.07)":"rgba(0,0,0,.06)";
-    const tc=dark?"#e6edf3":"#1a1a2e";
-    const axes={x:{ticks:{color:tc},grid:{color:grid}},y:{ticks:{color:tc},grid:{color:grid}}};
-
-    new Chart(document.getElementById("salesChart"),{
-        type:"line",
-        data:{
-            labels:' . $chartLabels . ',
-            datasets:[{label:"Sales ($)",data:' . $chartValues . ',
-                borderColor:"#6366f1",backgroundColor:"rgba(99,102,241,.12)",
-                tension:.4,fill:true,pointRadius:4,pointBackgroundColor:"#6366f1"}]
-        },
-        options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:tc}}},scales:axes}
-    });
-});
-</script>';
+        // ── أصول الـ Chart.js ─────────────────────────────────
+        //
+        // ⚠️ كان هنا وسمان مبنيّان بالنصّ: <script src> إلى الـCDN بلا
+        // `integrity` ولا `crossorigin`، وكتلة <script> مضمّنة تُبنى
+        // بضمّ JSON داخل كود JS.
+        //
+        // والكتلة المضمّنة كانت **محجوبة أصلاً**: سياسة CSP في
+        // public/.htaccess تمنع script-src 'unsafe-inline'، وبصمتها
+        // مستحيلة لأن محتواها يتغيّر كل يوم بتغيّر أرقام المبيعات.
+        // فالرسم البياني لم يكن يُرسم إطلاقاً — canvas فارغ وسطر رفض
+        // في الـconsole لا غير.
+        //
+        // الآن: المكتبة من VENDOR_ASSETS ببصمتها، والمنطق في ملف
+        // خارجي، والأرقام تعبر كبيانات في جزيرة JSON يطبعها الـview.
+        $extraScripts = vendorJs('chartjs', false)
+            . jsTag('js/admin/dashboard-chart.js', false);
 
         $this->adminView('dashboard', [
             'pageTitle'           => 'Dashboard',
@@ -98,6 +93,8 @@ document.addEventListener("DOMContentLoaded",()=>{
             'blockedUsersCount'   => $usersBreakdown['blocked'],
             'bestProducts'        => $bestProducts,
             'bsQ'                 => $search,
+            'chartLabels'         => $chartLabels,
+            'chartValues'         => $chartValues,
             'extraScripts'        => $extraScripts,
         ]);
     }

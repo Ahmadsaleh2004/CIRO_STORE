@@ -556,12 +556,31 @@ class AdminProductsController extends AdminController
             $this->respond(false, 'Product not found.');
         }
 
+        $adminId = getCurrentAdminId();
+
         AdminModel::logAction(
-            getCurrentAdminId(),
+            $adminId,
             'toggle_product_visibility',
             'product',
             $productId,
             "is_visible set to {$newVal}"
+        );
+
+        // ⚠️ الإشعار كان غائباً عن هذا المسار وحده.
+        //
+        // إضافة منتج وتعديله وحذفه تستدعي notifyProductChange جميعاً،
+        // أما الإخفاء والإظهار فكانا يكتفيان بسطر في سجلّ التدقيق.
+        // والفرق ليس شكلياً: إخفاء منتج يُسقطه من المتجر كلّه — أثرٌ
+        // على الزبائن أقرب إلى الحذف منه إلى التعديل — وكان يمرّ بلا
+        // أن يعلم به أدمن أعلى رتبة، ولا يظهر في جرس المنفّذ نفسه.
+        //
+        // الدالة موجودة وتعمل منذ البداية؛ لم يكن ينقصها إلا استدعاء.
+        $productName = AdminProductModel::getNameById($productId) ?? "#{$productId}";
+        $this->notifyProductChange(
+            $adminId,
+            $newVal ? 'visible' : 'hidden',
+            $productId,
+            $productName
         );
 
         $this->respond(true, $newVal ? 'Product is now visible.' : 'Product hidden from store.', [
@@ -806,17 +825,25 @@ class AdminProductsController extends AdminController
         $actorName = $_SESSION['admin_name'] ?? 'An admin';
         $actorRole = getAdminRole();
 
-        $verb = match ($action) {
-            'added'   => 'added',
-            'edited'  => 'edited',
-            'deleted' => 'deleted',
-            default   => $action,
+        // العنوان والفعل معاً، لا الفعل وحده.
+        //
+        // كان العنوان يُبنى بـ`'Product ' . ucfirst($verb)`، وهو يصحّ
+        // على added/edited/deleted وحدها. وحالتا الإخفاء والإظهار
+        // تكسرانه: «Product Hid» ليست عبارة. فصار لكل حالة عنوانها
+        // وفعلها، والافتراضي يبقى للحالات القادمة.
+        [$title, $verb] = match ($action) {
+            'added'   => ['Product Added',   'added'],
+            'edited'  => ['Product Edited',  'edited'],
+            'deleted' => ['Product Deleted', 'deleted'],
+            'hidden'  => ['Product Hidden',  'hid'],
+            'visible' => ['Product Visible', 'made visible'],
+            default   => ['Product ' . ucfirst($action), $action],
         };
 
         // (1) تأكيد للمنفّذ نفسه
         AdminModel::sendNotification(
             $actorAdminId,
-            'Product ' . ucfirst($verb),
+            $title,
             "You {$verb} the product \"{$productName}\" (#{$productId}).",
             'product_' . $action,
             'product',
@@ -833,7 +860,7 @@ class AdminProductsController extends AdminController
             }
             AdminModel::sendNotification(
                 $targetId,
-                'Product ' . ucfirst($verb),
+                $title,
                 "{$actorName} {$verb} the product \"{$productName}\" (#{$productId}).",
                 'product_' . $action,
                 'product',

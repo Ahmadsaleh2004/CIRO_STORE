@@ -15,6 +15,7 @@
  *   $bareDir        string  قيمة dir على <html>             (افتراضي 'ltr')
  *   $bareBodyClass  string  كلاسات <body>                   (افتراضي '')
  *   $bareThemeBoot  bool    اطبع themeBootScript()          (افتراضي false)
+ *   $bareSwal       bool    أدرج أنماط SweetAlert2          (افتراضي false)
  *   $bareCss        array   مسارات CSS نسبية لـURLROOT، بالترتيب
  *   $bareHead       string  HTML خام يُطبع آخر الترويسة (وسم meta إضافي،
  *                           أو كتلة أنماط خاصة بالصفحة)
@@ -28,6 +29,13 @@ $bareDir       = $bareDir       ?? 'ltr';
 $bareBodyClass = $bareBodyClass ?? '';
 $bareThemeBoot = $bareThemeBoot ?? false;
 $bareCss       = $bareCss       ?? [];
+
+// صفحة bare واحدة اليوم تستدعي vendorJs('sweetalert2') — admin/login.
+// وأنماط SweetAlert صارت ورقة خارجية لا حقناً من الجافاسكربت، فمن
+// يُدرج السكربت يجب أن يُدرج الورقة، وإلّا ظهر الحوار نصّاً عارياً.
+// والعَلَم هنا بدل الإدراج الدائم كي لا تحمل صفحات الأخطاء وإعادة
+// تعيين كلمة المرور ورقةً لا تستعملها.
+$bareSwal      = $bareSwal      ?? false;
 ?>
 <!DOCTYPE html>
 <html lang="<?= htmlspecialchars($bareLang) ?>" dir="<?= htmlspecialchars($bareDir) ?>">
@@ -35,7 +43,7 @@ $bareCss       = $bareCss       ?? [];
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <!-- منع الفهرسة — كل صفحات الـbare خاصة (مصادقة أو أخطاء) -->
+    <?php // منع الفهرسة — كل صفحات الـbare خاصة (مصادقة أو أخطاء) ?>
     <meta name="robots" content="noindex, nofollow">
 
     <title><?= htmlspecialchars($bareTitle ?? SITENAME) ?></title>
@@ -43,12 +51,10 @@ $bareCss       = $bareCss       ?? [];
 <?= themeBootScript() ?>
 <?php endif; ?>
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
-    <link
-        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
-        rel="stylesheet"
-        integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH"
-        crossorigin="anonymous"
-    >
+<?= vendorCss('bootstrap-css') ?>
+<?php if ($bareSwal): ?>
+<?= vendorCss('sweetalert2-css') ?>
+<?php endif; ?>
 <?php foreach ($bareCss as $bareCssFile): ?>
     <link rel="stylesheet" href="<?= URLROOT ?>/<?= ltrim($bareCssFile, '/') ?>">
 <?php endforeach; ?>

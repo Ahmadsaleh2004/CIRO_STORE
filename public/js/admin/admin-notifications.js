@@ -48,8 +48,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function setBadge(unread) {
         const n = Math.max(0, unread || 0);
-        badge.textContent = n > 99 ? '99+' : n;
-        badge.style.display = n > 0 ? '' : 'none';
+        badge.textContent = n > 99 ? '99+' : String(n);
+
+        // ⚠️ `classList` لا `style.display`.
+        //
+        // #adminNotifBadge يحمل `d-none` في admin/inc/navbar.php، وهي
+        // في Bootstrap ‏`display:none !important` — فإسناد
+        // `style.display = ''` لا يهزمها. أي أن عدّاد جرس الأدمن كان
+        // يُكتب فيه الرقم الصحيح ولا يُرى إطلاقاً.
+        badge.classList.toggle('d-none', n === 0);
     }
 
     function renderList() {
@@ -58,13 +65,18 @@ document.addEventListener('DOMContentLoaded', () => {
             listEl.innerHTML = '<li class="notif-empty">لا يوجد إشعارات بعد</li>';
             return;
         }
+        // ⚠️ لا `onclick=` هنا — راجع نظيره في js/features/notifications.js.
+        //
+        // CSP في public/.htaccess بلا script-src 'unsafe-inline'، وهو
+        // يمنع المعالج المضمّن حتى لو حقنه جافاسكربت مسموح به. فكانت
+        // عناصر جرس الأدمن لا تُفتح وأزرار ✕ لا تحذف، صامتةً.
         listEl.innerHTML = allNotifs.map(n => {
             const msg = n.message.length > 80 ? n.message.slice(0, 80) + '…' : n.message;
             return `
                 <li class="notif-item ${n.is_read == 1 ? 'read' : 'unread'}"
-                    data-id="${n.id}" onclick="window.adminNotifOpen(${n.id})">
+                    data-id="${n.id}" data-notif-open="${n.id}">
                     <button type="button" class="notif-dismiss-btn"
-                            onclick="window.adminNotifDeleteOne(event, ${n.id})"
+                            data-notif-dismiss="${n.id}"
                             title="Dismiss">✕</button>
                     <div class="notif-title">${escHtml(n.title)}</div>
                     <div class="notif-msg">${escHtml(msg)}</div>
@@ -75,9 +87,67 @@ document.addEventListener('DOMContentLoaded', () => {
         }).join('');
     }
 
+    // مستمع واحد على القائمة بدل معالج على كل عنصر: القائمة تُعاد
+    // بناؤها كاملةً عند كل جلب، والتفويض من الأب يبقى صالحاً بعدها.
+    // وزرّ الحذف يُفحص أوّلاً كي لا تفتح نقرتُه التفاصيل معه.
+    // listEl قد يكون null: الحارس أعلى الملف يفحص bell وbadge وsidebar
+    // وحدها، وrenderList تفحصه بنفسها. فنفحصه هنا كذلك.
+    if (listEl) {
+        listEl.addEventListener('click', function (event) {
+            const dismissBtn = event.target.closest('[data-notif-dismiss]');
+            if (dismissBtn) {
+                event.stopPropagation();
+                window.adminNotifDeleteOne(event, dismissBtn.getAttribute('data-notif-dismiss'));
+                return;
+            }
+
+            const item = event.target.closest('[data-notif-open]');
+            if (item) {
+                window.adminNotifOpen(item.getAttribute('data-notif-open'));
+            }
+        });
+    }
+
+    // يوقفان الاستطلاع عند انتهاء الجلسة: جلسة منتهية لا تتعافى
+    // بإعادة المحاولة، والاستمرار طلبٌ مرفوض كل ثلاثين ثانية بلا نهاية.
+    let pollTimer = null;
+    let sessionExpired = false;
+
+    function handleExpiredSession() {
+        sessionExpired = true;
+        if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+        setBadge(0);
+        if (typeof showToast === 'function') {
+            showToast('Session expired. Please log in again.', 'warning');
+        }
+    }
+
     async function fetchList() {
+        if (sessionExpired) return;
+
         try {
-            const res  = await fetch(baseUrl + '/list');
+            const res = await fetch(baseUrl + '/list');
+
+            // ⚠️ فحصان لا واحد، لأن الخادم يردّ بشكلين مختلفين.
+            //
+            // Middleware::requireAdmin تعتبر الطلب AJAX إن حمل
+            // X-Requested-With أو كان POST. وهذا الطلب GET عارٍ — فلا
+            // يتحقّق الشرطان، ويأخذ الفرع الآخر:
+            // `header('Location: ' . URLROOT)`. أي أن fetch **تتبع
+            // التحويل** وتعود بصفحة المتجر الرئيسية HTML.
+            //
+            // فكان res.json() يرمي على أول محرف من `<!DOCTYPE`، ويبتلع
+            // الخطأَ catch فيكتب سطراً في console وينتهي — ثم يتكرّر كل
+            // ثلاثين ثانية إلى الأبد. جرس الأدمن يتجمّد بلا سبب ظاهر.
+            //
+            // 401 مفحوصة كذلك كي يبقى الكود صحيحاً إن ردّ الخادم بها
+            // يوماً — وهو ما يفعله نظيره في المتجر أصلاً.
+            const isJson = (res.headers.get('content-type') || '').includes('application/json');
+            if (res.status === 401 || res.redirected || !isJson) {
+                handleExpiredSession();
+                return;
+            }
+
             const data = await res.json();
             if (!data.success) return;
             allNotifs = data.notifications || [];
@@ -120,16 +190,32 @@ document.addEventListener('DOMContentLoaded', () => {
         setBadge(unread);
         renderList();
         try {
-            // النتيجة غير مستعملة عمداً (تعليم كمقروء عند الفتح)، لكن الغلاف
-            // يظل مفيداً: يعيد المحاولة بتوكن طازج عند فشل CSRF بدل أن
-            // تضيع العلامة صامتة.
-            await fetchWithCsrfRetry(baseUrl + '/mark-read', {
+            // ⚠️ `/dismiss` لا `/mark-read`.
+            //
+            // زرّ ✕ يحذف الإشعار، وكان يستدعي نقطة «تعليم كمقروء».
+            // فيختفي السطر من الشاشة لأن الكود يزيله من allNotifs محلياً،
+            // ثم يعود كاملاً عند أول تحديث أو استطلاع — لأن الخادم لم
+            // يُطلَب منه حذف شيء قط. وبدا العطل «الحذف لا يثبت».
+            //
+            // AdminNotificationController::dismiss موجودة ومسجَّلة في
+            // public/index.php:332 وتحذف فعلاً — لم يكن ينقصها إلا
+            // من يناديها.
+            //
+            // وتُرجع unread_count محسوباً من القاعدة، فنأخذه بدل تقديرنا
+            // المحلي: هو المصدر الصحيح إن حُذف إشعار غير مقروء.
+            const data = await fetchWithCsrfRetry(baseUrl + '/dismiss', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                 body: 'notification_id=' + encodeURIComponent(id)
                     + '&csrf_token=' + encodeURIComponent(window._csrfToken || ''),
             });
-        } catch {}
+
+            if (data && data.success && data.unread_count !== undefined) {
+                setBadge(data.unread_count);
+            }
+        } catch (e) {
+            console.warn('Admin notification dismiss failed:', e);
+        }
     };
 
     async function markRead(id) {
@@ -196,6 +282,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // ── التحميل الأولي + Polling (نفس فاصل الـ user notifications: 30 ثانية)
     fetchList();
-    setInterval(fetchList, 30_000);
+    pollTimer = setInterval(fetchList, 30_000);
 
 });

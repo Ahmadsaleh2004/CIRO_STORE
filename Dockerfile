@@ -22,6 +22,21 @@ RUN docker-php-ext-install pdo_mysql \
 # ── إعدادات PHP للإنتاج ──────────────────────────────────────
 # expose_php هنا لا في التطبيق: header_remove في config.php يغطّي
 # المسار العادي، لكن استجابة يولّدها Apache قبل PHP لا تمرّ به.
+#
+# zend.exception_ignore_args = 0 يخصّ Sentry تحديداً. القيمة
+# الافتراضية في PHP 7.4+ هي 1، أي أن آثار الاستدعاء (stack traces)
+# تخرج بلا وسائط: كل إطار يقول `*args omitted*`. فيصل التقرير عارفاً
+# **أين** وقع الخطأ وجاهلاً **بأي مدخلات** — وهو نصف تقرير في أعطال
+# لا تتكرّر إلا بقيمة بعينها.
+#
+# ⚠️ وله ثمن خصوصية: الوسائط قد تحمل بيانات المستخدم. وما يوازنه أن
+# `before_send` في app/config/monitoring.php يُعقّم الحقول الحسّاسة
+# قبل الإرسال، و`send_default_pii` مضبوطة على false. فلا تُفعّل هذه
+# القيمة في تركيبٍ عطّل ذلك التعقيم.
+#
+# ⚠️ وهذا الملف يخصّ صورة Docker وحدها. من يشغّل المشروع على XAMPP
+# محلياً يضيف السطر نفسه في php.ini يدوياً — وإلا رأى `*args omitted*`
+# في تقاريره وحده.
 RUN { \
       echo 'expose_php = Off'; \
       echo 'display_errors = Off'; \
@@ -29,6 +44,7 @@ RUN { \
       echo 'error_log = /dev/stderr'; \
       echo 'upload_max_filesize = 8M'; \
       echo 'post_max_size = 10M'; \
+      echo 'zend.exception_ignore_args = 0'; \
     } > /usr/local/etc/php/conf.d/cairo-store.ini
 
 # ── جذر الويب هو public/ وحده ────────────────────────────────

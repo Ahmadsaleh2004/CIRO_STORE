@@ -8,7 +8,7 @@ use App\Models\AdminModel;
  *   $admins, $flashMsg, $flashErr, $csrf, $adminRole, $adminId
  */
 ?>
-<!-- ── Page Header ────────────────────────────────────────── -->
+<?php // ── Page Header ────────────────────────────────────────── ?>
 <div class="admin-page-header">
     <h1>👑 Manage Admins <span class="badge bg-secondary fw-normal u-fs-90 align-middle"><?= (int)$totalAdmins ?></span></h1>
     <div class="d-flex gap-2 flex-wrap">
@@ -23,10 +23,10 @@ use App\Models\AdminModel;
     </div>
 </div>
 
-<!-- ── Flash Messages ─────────────────────────────────────── -->
+<?php // ── Flash Messages ─────────────────────────────────────── ?>
 <?php require APPROOT . '/views/shared/flash-messages.php'; ?>
 
-<!-- ── Admins Table ───────────────────────────────────────── -->
+<?php // ── Admins Table ───────────────────────────────────────── ?>
 <div class="card p-0">
     <div class="table-responsive">
         <table class="table admin-table mb-0">
@@ -108,7 +108,18 @@ use App\Models\AdminModel;
                             <span class="u-muted">—</span>
                         <?php endif; ?>
                     </td>
-                    <!-- data-action="stop-propagation" إلزامي — يمنع تفعيل clickable-row -->
+                    <?php /*
+⚠️ `data-action="stop-propagation"` هنا **لا يمنع** تفعيل
+                     clickable-row، خلافاً لما كان مكتوباً في هذا الموضع.
+
+                     معالجه مسجَّل على document في js/core/inline-actions.js،
+                     بينما مستمع الصفّ مسجَّل على الـ<tr> نفسه — فيسبقه
+                     ويُنقل المتصفّح قبل أن تصل النقرة إلى document أصلاً.
+
+                     ما يمنع التفعيل فعلاً هو الحارس في manage-admins.js:
+                     `if (e.target.closest('button, a, form, input, [data-action]')) return;`
+                     والسمة باقية هنا لأن ذلك الحارس يقرؤها ضمن ما يقرأ.
+*/ ?>
                     <td data-action="stop-propagation">
                         <?php if (AdminModel::canManageTarget($adminRole, $adm['role'])): ?>
                         <button class="btn btn-sm btn-outline-primary me-1"
@@ -158,7 +169,7 @@ use App\Models\AdminModel;
     </div>
 </div>
 
-<!-- ── Modals ─────────────────────────────────────────────── -->
+<?php // ── Modals ─────────────────────────────────────────────── ?>
 <?php include __DIR__ . '/../notify-modal.php'; ?>
 <?php include __DIR__ . '/../broadcast-form.php'; ?>
 <?php include __DIR__ . '/_perm-modal.php'; ?>

@@ -6,9 +6,12 @@
     <title><?= htmlspecialchars($pageTitle ?? 'Admin') ?> | Cairo Store Admin</title>
     <meta name="robots" content="noindex,nofollow">
 <?= themeBootScript() ?>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- store.css أولاً (لوحة التحكم تعيد استخدام كل طبقة المتجر)
-         ثم admin.css فوقها. راجع public/css/admin.css للترتيب. -->
+<?= vendorCss('bootstrap-css') ?>
+<?= vendorCss('sweetalert2-css') ?>
+    <?php /*
+store.css أولاً (لوحة التحكم تعيد استخدام كل طبقة المتجر)
+         ثم admin.css فوقها. راجع public/css/admin.css للترتيب.
+*/ ?>
 <?= cssBundle('admin') ?>
     <?= $extraHead ?? '' ?>
 </head>

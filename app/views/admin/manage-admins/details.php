@@ -59,7 +59,7 @@ function renderAuditRowsTable(array $rows): void
 }
 ?>
 
-<!-- ── Page Header ────────────────────────────────────────── -->
+<?php // ── Page Header ────────────────────────────────────────── ?>
 <div class="admin-page-header">
     <h1>🔍 Admin Details</h1>
     <div class="d-flex gap-2">
@@ -70,9 +70,11 @@ function renderAuditRowsTable(array $rows): void
     </div>
 </div>
 
-<!-- ════════════════════════════════════════════════════════
+<?php /*
+════════════════════════════════════════════════════════
      Section 1 — Basic Info
-     ════════════════════════════════════════════════════════ -->
+     ════════════════════════════════════════════════════════
+*/ ?>
 <div class="row g-4 mb-4">
     <div class="col-12 col-lg-6">
         <div class="card p-4 h-100">
@@ -125,7 +127,7 @@ function renderAuditRowsTable(array $rows): void
         </div>
     </div>
 
-    <!-- Permissions Summary -->
+    <?php // Permissions Summary ?>
     <div class="col-12 col-lg-6">
         <div class="card p-4 h-100">
             <h5 class="mb-3">🔐 Permissions</h5>
@@ -146,6 +148,7 @@ function renderAuditRowsTable(array $rows): void
                 <?php foreach ($permMap as $key => [$icon, $label]): ?>
                 <div class="perm-item <?= empty($target[$key]) ? 'u-dimmed' : '' ?>">
                     <input type="checkbox" <?= !empty($target[$key]) ? 'checked' : '' ?> disabled>
+                    <?php // @escaping-safe: $icon و$label من خريطة حرفية في هذا الملف ?>
                     <span><?= $icon ?> <?= $label ?></span>
                 </div>
                 <?php endforeach; ?>
@@ -218,13 +221,6 @@ function renderAuditRowsTable(array $rows): void
 </div>
 <?php endif; ?>
 
-<?php if (!empty($target['can_manage_products'])): ?>
-<div class="card p-4 mb-4">
-    <h5 class="mb-3">🛍️ Product-Related Actions</h5>
-    <?php renderAuditRowsTable($productActionRows); ?>
-</div>
-<?php endif; ?>
-
 <?php if (!empty($target['can_manage_branding'])): ?>
 <div class="card p-4 mb-4">
     <h5 class="mb-3">🎬 Branding Actions</h5>
@@ -246,10 +242,12 @@ function renderAuditRowsTable(array $rows): void
 </div>
 <?php endif; ?>
 
-<!-- ════════════════════════════════════════════════════════
+<?php /*
+════════════════════════════════════════════════════════
      Section 5 — Admin Actions Log (admin_audit_log)
      هذا متاح الآن — الجدول موجود ومسجّل بالعمليات الحالية
-     ═══════════════════════════════════════════════════════ -->
+     ═══════════════════════════════════════════════════════
+*/ ?>
 <div class="card p-4 mb-4">
     <h5 class="mb-3">🗂 Admin Actions Log</h5>
     <?php renderAuditRowsTable($auditLog); ?>

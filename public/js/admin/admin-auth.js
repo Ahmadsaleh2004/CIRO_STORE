@@ -119,7 +119,13 @@
                 requiresTwofa = true;
                 const group = document.querySelector(TWOFAGROUP_SELECTOR);
                 if (group) {
-                    group.style.display = 'block';
+                    // ⚠️ classList لا style.display: الحقل يحمل `d-none`
+                    // في الترميز، وهي `display:none !important` — فلا
+                    // يهزمها نمط مضمّن مهما كانت قيمته. وقد كان يعمل
+                    // سابقاً لسببٍ خاطئ: سمة class مكرّرة في
+                    // admin/login.php أسقطت `d-none` كلّياً، فكان الحقل
+                    // ظاهراً منذ فتح الصفحة لا بعد طلب الخادم.
+                    group.classList.remove('d-none');
                     const codeInput = document.getElementById('adminTOTP');
                     codeInput.required = true;
                     codeInput.focus();

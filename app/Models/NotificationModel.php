@@ -12,6 +12,8 @@ class NotificationModel extends Model
 {
     /**
      * جلب قائمة الإشعارات للمستخدم
+     *
+     * @return list<array<string, mixed>>
      */
     public static function getList(int $userId, int $limit = 30): array
     {

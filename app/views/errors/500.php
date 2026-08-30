@@ -16,9 +16,11 @@
  * القاعدة واسم المستخدم. التفصيل في سجلّ الأخطاء وحده.
  */
 
-$bareTitle     = 'خطأ مؤقت — ' . SITENAME;
-$bareLang      = 'ar';
-$bareDir       = 'rtl';
+$bareTitle     = 'Temporarily unavailable — ' . SITENAME;
+// كانت هنا `$bareLang = 'ar'` و`$bareDir = 'rtl'` لأن نصّ الصفحة كان
+// عربياً وحده — وهي الصفحة الوحيدة في المشروع التي كانت تقلب اتجاه
+// المستند. النصّ صار إنجليزياً كبقيّة الواجهة، والافتراضي في
+// head-bare.php (en/ltr) هو الصحيح لها الآن.
 $bareThemeBoot = true;
 $bareCss       = ['css/store.css'];
 
@@ -27,11 +29,11 @@ require APPROOT . '/views/inc/head-bare.php';
 
 <main class="container py-5 text-center u-minh-70vh">
     <p class="display-1 mb-2" aria-hidden="true">🛠️</p>
-    <h1 class="h3 mb-3">الخدمة غير متاحة مؤقتاً</h1>
+    <h1 class="h3 mb-3">Service temporarily unavailable</h1>
     <p class="text-muted mb-4">
-        نواجه عطلاً تقنياً قصيراً. حاول مرّة أخرى بعد قليل.
+        We are having a brief technical problem. Please try again in a moment.
     </p>
-    <a class="btn btn-primary" href="<?= URLROOT ?>/">إعادة المحاولة</a>
+    <a class="btn btn-primary" href="<?= URLROOT ?>/">Try again</a>
 </main>
 
 <?php require APPROOT . '/views/inc/footer-bare.php'; ?>

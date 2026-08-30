@@ -22,7 +22,7 @@ $pageDescription = 'Browse all products at Cairo Store.';
     <div class="alert alert-success"><?= htmlspecialchars($msg) ?></div>
     <?php endif; ?>
 
-    <!-- ── Filters ───────────────────────────────────────── -->
+    <?php // ── Filters ───────────────────────────────────────── ?>
     <div class="row mb-4 g-3">
         <div class="col-md-6 col-lg-4">
             <div id="search-wrapper">
@@ -47,6 +47,7 @@ $pageDescription = 'Browse all products at Cairo Store.';
                         $emoji = categoryEmoji($cat['name']);
                     ?>
                     <option value="cat-<?= htmlspecialchars($cat['name']) ?>">
+                        <?php // @escaping-safe: categoryEmoji ترجع رمزاً من خريطة داخلية ?>
                         <?= $emoji ?> <?= htmlspecialchars(ucfirst($cat['name'])) ?>
                     </option>
                     <?php endforeach; ?>
@@ -70,7 +71,7 @@ $pageDescription = 'Browse all products at Cairo Store.';
 
     <div id="results-count" class="mb-3 results-count-text"></div>
 
-    <!-- ── Products Grid ──────────────────────────────── -->
+    <?php // ── Products Grid ──────────────────────────────── ?>
     <div class="row" id="products-container">
 
         <?php foreach ($products as $p):
@@ -94,7 +95,7 @@ $pageDescription = 'Browse all products at Cairo Store.';
             <div class="card product-card h-100 shadow border-0 position-relative" role="article">
 
                 <?php if ($discount > 0): ?>
-                <span class="discount-badge">-<?= $discount ?>%</span>
+                <span class="discount-badge">-<?= (float)$discount ?>%</span>
                 <?php endif; ?>
 
                 <?php if (!empty($isAdminProd)): ?>
@@ -154,12 +155,12 @@ $pageDescription = 'Browse all products at Cairo Store.';
                     <div>
                         <div class="quantity-box mb-2 d-flex justify-content-center gap-2">
                             <button class="btn btn-outline-secondary btn-sm"
-                                    data-action="change-qty" data-product-id="<?= (int)$p['id'] ?>" data-delta="-1">−</button>
+                                    data-action="change-qty" data-product-id="<?= (int)$p['id'] ?>" data-delta="-1" aria-label="Decrease quantity">−</button>
                             <input type="number" value="1" id="qty-<?= (int)$p['id'] ?>"
                                    class="form-control quantity-input qty-input-sm"
                                    min="1" max="<?= $stock ?>">
                             <button class="btn btn-outline-secondary btn-sm"
-                                    data-action="change-qty" data-product-id="<?= (int)$p['id'] ?>" data-delta="1">+</button>
+                                    data-action="change-qty" data-product-id="<?= (int)$p['id'] ?>" data-delta="1" aria-label="Increase quantity">+</button>
                         </div>
                         <?php if ($stock > 0): ?>
                         <?php if (isUser() && empty($_SESSION['admin_in_store_mode'])): ?>
@@ -207,7 +208,7 @@ $pageDescription = 'Browse all products at Cairo Store.';
     </div>
 
     <?php if ($totalPages > 1): ?>
-    <!-- ── Pagination ──────────────────────────────────── -->
+    <?php // ── Pagination ──────────────────────────────────── ?>
     <nav aria-label="Products pagination" class="mt-4 d-flex justify-content-center">
         <ul class="pagination">
             <?php

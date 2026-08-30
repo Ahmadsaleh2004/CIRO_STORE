@@ -47,19 +47,118 @@ async function fetchLiveStock(ids) {
     }
 }
 
-window.changeWishlistQty = (id, val, stock) => {
+// ══════════════════════════════════════════════════════════════
+// سقف عدّاد بطاقة المفضّلة = المخزون **ناقص ما في السلّة**
+// ══════════════════════════════════════════════════════════════
+//
+// نفس مبدأ صفحة التفاصيل وبطاقات القائمة: المنع قبل الاختيار لا
+// بعده. كان العدّاد هنا يسقّف بالمخزون المطلق، ثم يكتشف المستخدم عند
+// الضغط على «Add to Cart» أن ما في سلّته محسوبٌ عليه — بتوست
+// «You already have the maximum available quantity».
+//
+// ── حالة تخصّ المفضّلة وحدها ───────────────────────────────
+//
+// عناصر المفضّلة تُخزَّن في localStorage، وبعضها قديم بلا
+// `variant_id` — أُضيف الحقل لاحقاً. فمطابقة سطر السلّة بـvariant_id
+// وحده كانت ستفشل على تلك العناصر وتُرجع «صفر في السلّة»، أي سقفاً
+// أوسع من الحقيقة.
+//
+// ولذلك: إن عُرفت النسخة طابقناها، وإلّا جمعنا كل سطور السلّة لهذا
+// المنتج. والمخزون المعروض هنا مخزون المنتج لا النسخة (يأتي من
+// WishlistController::stock)، فالجمع هو المقابل الصحيح له.
+function cartQtyForWishlist(productId, variantId) {
+    const cart = window.getCartData ? window.getCartData() : [];
+    const pid  = Number(productId);
+
+    if (variantId === '' || variantId === null || variantId === undefined) {
+        return cart
+            .filter(i => Number(i.id) === pid)
+            .reduce((sum, i) => sum + (Number(i.quantity) || 0), 0);
+    }
+
+    const vId  = Number(variantId);
+    const line = cart.find(i => Number(i.id) === pid && Number(i.variant_id) === vId);
+
+    return line ? Number(line.quantity) || 0 : 0;
+}
+
+/** المتاح فعلاً لبطاقة، من سمات حقلها. */
+function wishlistRemaining(input) {
+    const stock = Number(input.getAttribute('data-wl-stock')) || 0;
+    const inCart = cartQtyForWishlist(
+        input.getAttribute('data-wl-qty-input'),
+        input.getAttribute('data-wl-variant')
+    );
+
+    return Math.max(0, stock - inCart);
+}
+
+/** يضبط سقف كل بطاقة وحالة أزرارها على المتاح. */
+function applyWishlistQtyLimits() {
+    document.querySelectorAll('[data-wl-qty-input]').forEach(input => {
+        const id        = input.getAttribute('data-wl-qty-input');
+        const remaining = wishlistRemaining(input);
+        const stock     = Number(input.getAttribute('data-wl-stock')) || 0;
+        const inCart    = stock - remaining;
+
+        input.max = String(remaining);
+        const value = Math.min(Math.max(1, Number(input.value) || 1), Math.max(remaining, 1));
+        input.value = remaining === 0 ? 0 : value;
+
+        const plusBtn = document.querySelector(`[data-wl-qty="${id}"][data-wl-delta="1"]`);
+        if (plusBtn) plusBtn.disabled = remaining === 0 || Number(input.value) >= remaining;
+
+        // كزرّ صفحة التفاصيل: لا نلمس زرّاً معطّلاً لسبب آخر — الزائر
+        // غير المسجَّل يراه معطّلاً بـdata-action="self-enable" ليفتح
+        // مودال الدخول.
+        const addBtn = document.querySelector(`.add-to-cart-wl[data-id="${id}"]`);
+        if (addBtn && !addBtn.hasAttribute('data-action')) {
+            addBtn.disabled = remaining === 0;
+        }
+
+        const hint = document.querySelector(`[data-wl-hint="${id}"]`);
+        if (hint) {
+            if (remaining === 0 && inCart > 0) {
+                hint.textContent = `All ${inCart} available in your cart.`;
+                hint.classList.remove('d-none');
+            } else if (inCart > 0) {
+                hint.textContent = `${inCart} in your cart — ${remaining} more available.`;
+                hint.classList.remove('d-none');
+            } else {
+                hint.classList.add('d-none');
+            }
+        }
+    });
+}
+window.applyWishlistQtyLimits = applyWishlistQtyLimits;
+
+// السلّة تتغيّر بعد رسم البطاقات — حذف سطر من السلّة الجانبية يجب أن
+// يُعيد المتاح هنا فوراً. الحدث يبثّه refreshCartUI في cart.js.
+document.addEventListener('cart:updated', applyWishlistQtyLimits);
+
+window.changeWishlistQty = (id, val) => {
     const input = document.getElementById('qty-' + id);
     if (!input) return;
-    const max = parseInt(stock, 10) || 0;
+
+    // ⚠️ السقف يُقرأ من المتاح لا من المخزون.
+    //
+    // كانت الدالة تستقبل `stock` وسيطاً ثالثاً من سمة على الزرّ،
+    // فتسقّف بالمخزون المطلق وتقول «Only N left in stock» — وهي رسالة
+    // صحيحة عن المخزون وخاطئة عمّا يستطيع المستخدم إضافته.
+    const remaining = wishlistRemaining(input);
+
     let v = (parseInt(input.value, 10) || 1) + val;
     if (v < 1) v = 1;
-    if (max > 0 && v > max) {
-        v = max;
+
+    if (remaining > 0 && v > remaining) {
+        v = remaining;
         if (typeof showToast === 'function') {
-            showToast(`Only ${max} left in stock.`, 'warning');
+            showToast(`Only ${remaining} more available.`, 'warning');
         }
     }
-    input.value = v;
+
+    input.value = remaining === 0 ? 0 : v;
+    applyWishlistQtyLimits();
 };
 
 async function renderWishlist() {
@@ -135,19 +234,24 @@ async function renderWishlist() {
                     <div>
                         ${inStock ? `
                         <div class="quantity-box mb-3 d-flex justify-content-center gap-2">
-                            <button class="btn btn-outline-secondary btn-sm" onclick="changeWishlistQty('${p.id}',-1,${stock})">−</button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm"
+                                    data-wl-qty="${p.id}" data-wl-delta="-1">−</button>
                             <input type="number" value="1" id="qty-${p.id}"
-                                   class="form-control quantity-input u-w-60" min="1" max=""
-                                   oninput="this.value = this.value.replace(/[^0-9]/g,'')"
-                                   onchange="changeWishlistQty('${p.id}',0,${stock})">
-                            <button class="btn btn-outline-secondary btn-sm" onclick="changeWishlistQty('${p.id}',1,${stock})">+</button>
+                                   class="form-control quantity-input u-w-60" min="1" max="${stock}"
+                                   data-wl-qty-input="${p.id}"
+                                   data-wl-stock="${stock}"
+                                   data-wl-variant="${p.variant_id ?? ''}">
+                            <button type="button" class="btn btn-outline-secondary btn-sm"
+                                    data-wl-qty="${p.id}" data-wl-delta="1">+</button>
                         </div>
+                        <p class="small u-muted text-center mb-2 d-none"
+                           data-wl-hint="${p.id}" aria-live="polite"></p>
                         ${isUser ? `
                         <button class="btn btn-success w-100 add-to-cart-wl" data-id="${p.id}">🛒 Add to Cart</button>
                         ` : `
                         <button class="btn btn-success w-100 btn-disabled-faded" disabled
                                 data-bs-toggle="modal" data-bs-target="#loginModal"
-                                onclick="this.removeAttribute('disabled')">🛒 Add To Cart</button>
+                                data-action="self-enable">🛒 Add To Cart</button>
                         `}
                         ` : `
                         ${isUser ? `
@@ -167,6 +271,47 @@ async function renderWishlist() {
             </div>
         </div>`;
     }).join('');
+
+    // ── أزرار الكمية وحقلها ────────────────────────────────────
+    //
+    // ⚠️ كانت هذه ثلاثة معالجات مضمّنة داخل innerHTML:
+    // onclick على زرَّي (−) و(+)، وoninput وonchange على الحقل.
+    // وسياسة CSP في public/.htaccess بلا script-src 'unsafe-inline'
+    // تحجب المعالج المضمّن مهما كان مصدره — فكانت أزرار الكمية في
+    // صفحة المفضّلة **ميتة تماماً**: تُنقر ولا يتغيّر شيء.
+    //
+    // وكان `max=""` فارغاً في الحقل نفسه، فلم يكن للمتصفّح سقف يعرفه
+    // أصلاً؛ صار `max="${stock}"` كي يحدّه قبل أن يحدّه الكود.
+    //
+    // الربط هنا يقع بعد كل إعادة رسم لأن renderWishlist تُستدعى مجدداً
+    // بعد كل تغيير — وهو نفس ما تفعله الكتلتان أدناه.
+    // ولم يعد المخزون يُمرَّر وسيطاً: السقف صار المتاح (المخزون ناقص
+    // ما في السلّة)، وتقرؤه changeWishlistQty من سمات الحقل نفسه —
+    // فلا تحمل الأزرار نسخةً ثانية منه قد تشيخ عن حقلها.
+    document.querySelectorAll('[data-wl-qty]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            window.changeWishlistQty(
+                btn.getAttribute('data-wl-qty'),
+                parseInt(btn.getAttribute('data-wl-delta'), 10) || 0
+            );
+        });
+    });
+
+    document.querySelectorAll('[data-wl-qty-input]').forEach(input => {
+        // تنقية الأرقام كانت في oninput؛ نُبقيها على input كي يبقى
+        // المنع فورياً أثناء الكتابة لا بعد مغادرة الحقل.
+        input.addEventListener('input', () => {
+            input.value = input.value.replace(/[^0-9]/g, '');
+        });
+
+        input.addEventListener('change', () => {
+            window.changeWishlistQty(input.getAttribute('data-wl-qty-input'), 0);
+        });
+    });
+
+    // البطاقات تُرسم من جديد عند كل تغيير في المفضّلة، فالسقف يُحسب
+    // بعد الرسم مباشرةً لا عند التحميل وحده.
+    applyWishlistQtyLimits();
 
     document.querySelectorAll('.remove-fav').forEach(btn => {
         btn.addEventListener('click', () => {
@@ -212,12 +357,9 @@ async function renderWishlist() {
                 if (input) input.value = qty;
             }
 
-            // السعر الحيّ المجلوب للتو (بدل product.price القديم)
-            const currentPriceForCart = live.discount_percentage > 0 ? live.price_after_discount : live.price;
-
-            let cart = JSON.parse(localStorage.getItem('cart') || '[]');
             const variantId = product.variant_id ?? null;
-            const ex = cart.find(i => i.id == id && i.variant_id == variantId);
+            const ex = (window.getCartData ? window.getCartData() : [])
+                .find(i => i.id == id && i.variant_id == variantId);
             const existingQty = ex ? ex.quantity : 0;
 
             if (existingQty + qty > stock) {
@@ -234,24 +376,16 @@ async function renderWishlist() {
                 }
             }
 
-            if (ex) {
-                ex.quantity += qty;
-                ex.stock = stock;
-            } else {
-                cart.push({
-                    id,
-                    variant_id: variantId,
-                    color_name: product.color_name ?? null,
-                    name: product.name,
-                    price: currentPriceForCart,
-                    image_path: product.image_path,
-                    quantity: qty,
-                    stock: stock,
-                });
+            // ⚠️ لا سطر منتج يُبنى هنا: الخادم يخزّن «ماذا وكم»، والسعر
+            // والاسم والصورة تُقرأ من القاعدة عند العرض. ولذلك سقط حساب
+            // السعر الحيّ الذي كان هنا — لم يبقَ له مستعمل.
+            if (!variantId) {
+                if (typeof showToast === 'function') showToast('Please choose a colour first.', 'warning');
+                return;
             }
-            localStorage.setItem('cart', JSON.stringify(cart));
 
-            if (typeof refreshCartUI === 'function') refreshCartUI();
+            if (!(await window.cartAdd(id, variantId, qty))) return;
+
             if (typeof showToast    === 'function') showToast('Added to cart!', 'success');
             if (input) input.value = 1;
             const cb = document.querySelector('[data-bs-target="#cartSidebar"]');

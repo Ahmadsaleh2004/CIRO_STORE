@@ -36,24 +36,24 @@ require APPROOT . '/views/shared/flash-toast.php';
     </div>
 
     <div id="slidesContainer">
-        <!-- تُبنى بـ JS من $sliders عند DOMContentLoaded، وتُضاف عليها شرائح جديدة بـ addSlideBtn -->
+        <?php // تُبنى بـ JS من $sliders عند DOMContentLoaded، وتُضاف عليها شرائح جديدة بـ addSlideBtn ?>
     </div>
 
     <div class="mt-4 d-flex gap-2">
         <button type="submit" id="saveBrandingBtn" class="btn btn-success" disabled>
             💾 Save Changes
         </button>
-        <span class="text-muted small align-self-center" id="brandingDirtyHint" class="d-none">
+        <span class="text-muted small align-self-center d-none" id="brandingDirtyHint">
             You have unsaved changes.
         </span>
     </div>
 
 </form>
 
-<!-- Templates: تُستنسخ بـ JS، لا تُعرض مباشرة -->
+<?php // Templates: تُستنسخ بـ JS، لا تُعرض مباشرة ?>
 <?php include __DIR__ . '/_templates.php'; ?>
 
-<!-- بيانات السلايدرات الحالية محقونة لـ JS -->
+<?php // بيانات السلايدرات الحالية محقونة لـ JS ?>
 <?= pageData(['_existingSlidersData' => $sliders]) ?>
 
 <?php include __DIR__ . '/_product-picker-modal.php'; ?>

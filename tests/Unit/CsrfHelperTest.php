@@ -88,4 +88,55 @@ final class CsrfHelperTest extends SessionTestCase
         $this->assertFalse(verifyCsrfToken($first));
         $this->assertTrue(verifyCsrfToken($second));
     }
+
+    // ════════════════════════════════════════════════════════
+    // التدوير عند تغيّر الصلاحية
+    // ════════════════════════════════════════════════════════
+
+    /**
+     * الثغرة التي يغلقها التدوير:
+     *
+     * `session_regenerate_id(true)` تُبدّل معرّف الجلسة وتُبقي محتواها —
+     * ومنه `csrf_token`. فتوكنُ زائرٍ مجهول قبل الدخول كان يبقى صالحاً
+     * بحرفه داخل الجلسة المصادَقة بعده.
+     *
+     * والتناقض بيّن: نبدّل المعرّف تحديداً لأننا نفترض أن ما قبل
+     * المصادقة قد يكون معروفاً لمهاجم — ثم نورّث التوكن.
+     */
+    public function testRotateInvalidatesThePreviousToken(): void
+    {
+        $before = generateCsrfToken();
+
+        $after = rotateCsrfToken();
+
+        $this->assertNotSame($before, $after);
+        $this->assertFalse(verifyCsrfToken($before), 'التوكن القديم ما زال مقبولاً بعد التدوير.');
+        $this->assertTrue(verifyCsrfToken($after));
+    }
+
+    public function testRotateReturnsAWellFormedTokenReadyToSend(): void
+    {
+        generateCsrfToken();
+
+        $rotated = rotateCsrfToken();
+
+        // القيمة تُعاد لا تُقرأ من الجلسة عند المستدعي: النقاط التي
+        // تدوّر تُرسل التوكن الجديد في جسم الاستجابة كي يلتقطه
+        // js/core/csrf.js فوراً — بدونه يكتشف العميل البطلان بطلبٍ
+        // فاشل ثم يعيد المحاولة، أي طلبان بدل واحد.
+        $this->assertSame(64, strlen($rotated));
+        $this->assertSame($_SESSION['csrf_token'], $rotated);
+    }
+
+    public function testRotateWorksWhenNoTokenExistsYet(): void
+    {
+        // تُستدعى مباشرةً بعد session_regenerate_id في مسار قد لا يكون
+        // فيه توكن أصلاً (دخول Google مثلاً). يجب أن تُصدر لا أن تنهار.
+        $_SESSION = [];
+
+        $token = rotateCsrfToken();
+
+        $this->assertMatchesRegularExpression('/^[0-9a-f]{64}$/', $token);
+        $this->assertTrue(verifyCsrfToken($token));
+    }
 }

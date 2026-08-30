@@ -25,6 +25,9 @@ $ROOT   = dirname(__DIR__);
 $asJson = in_array('--json', $argv, true);
 
 // ── أدوات مساعدة ───────────────────────────────────────────────────
+/**
+ * @return list<string>
+ */
 function filesIn(string $dir, string $ext = 'php'): array
 {
     if (!is_dir($dir)) {
@@ -117,6 +120,8 @@ function blankPhpComments(string $src): string
  * يعمل على البايتات ويطابق `\x85` — وهو **بايت استمرار شرعي داخل الحروف
  * العربية** بترميز UTF-8. النتيجة: النص العربي يُقطع في منتصف الحرف
  * وتُختلق أسطر غير موجودة. أعطى ذلك فرقاً قدره 5 أسطر في home.php وحده.
+ *
+ * @return list<string>
  */
 function splitLines(string $src): array
 {
@@ -141,6 +146,9 @@ function blankHtmlComments(string $src): string
 }
 
 /** أسطر داخل <script>...</script> أو <style>...</style> في ملف view. */
+/**
+ * @return array{js: int, css: int}
+ */
 function inlineAssetLines(string $file): array
 {
     $src   = blankHtmlComments(blankPhpComments((string)file_get_contents($file)));
@@ -179,6 +187,9 @@ function inlineAssetLines(string $file): array
  *
  * القياس بالمسافة يعطي أرقاماً كاذبة: حذف دالة قصيرة تلي دالة طويلة
  * يجعل الطويلة تبدو أطول، لأن القياس يبتلع كل ما بينهما.
+ *
+ * @param list<string> $files
+ * @return list<array<string, mixed>>
  */
 function longestFunctions(array $files, int $limit = 10): array
 {
@@ -224,6 +235,9 @@ function longestFunctions(array $files, int $limit = 10): array
     return array_slice($found, 0, $limit);
 }
 
+/**
+ * @param list<string> $files
+ */
 function grepCount(array $files, string $pattern): int
 {
     $n = 0;
@@ -234,6 +248,10 @@ function grepCount(array $files, string $pattern): int
     return $n;
 }
 
+/**
+ * @param list<string> $files
+ * @return array<string, int> مفهرسة بالمسار ← عدد المطابقات
+ */
 function grepFiles(array $files, string $pattern): array
 {
     $hits = [];

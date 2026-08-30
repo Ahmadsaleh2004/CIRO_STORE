@@ -93,12 +93,34 @@
         const addrEl  = document.getElementById('reviewAddress');
         const payEl   = document.getElementById('reviewPayment');
 
+        // ⚠️ `quantity` لا `qty`. المفتاح في السلّة اسمه quantity في
+        // المواضع الثلاثة التي تكتبها (products-catalog · product-details
+        // · wishlist)، وكان هذا السطر يقرأ `item.qty` — أي undefined.
+        // فكان `price * undefined` يساوي NaN، وشاشة المراجعة الأخيرة
+        // قبل الدفع تعرض «$NaN» في كل سطر وفي الإجمالي.
         let total = 0;
         list.innerHTML = cart.map(item => {
-            total += item.price * item.qty;
+            const qty  = Number(item.quantity) || 0;
+            const line = Number(item.price) * qty;
+            total += line;
+            // ⚠️ `escHtml` على الاسم واللون.
+            //
+            // كانا يُحقنان خامّين في innerHTML. والقيمتان تأتيان من
+            // القاعدة — يكتبهما أدمن في Manage Products — فاسم منتج
+            // فيه <img src=x onerror=...> كان ينفّذ على **شاشة
+            // المراجعة الأخيرة قبل الدفع**، وهي أسوأ صفحة يقع فيها
+            // ذلك.
+            //
+            // ولا يكفي أن CSP تحجب المعالجات المضمّنة: الحجب طبقةٌ
+            // ثانية، والهروب هو الطبقة الأولى. وبقيّة الملفات تهرّب
+            // بالفعل (cart.js وwishlist.js وnotifications.js)، فكان
+            // هذا الموضع الاستثناء لا القاعدة.
+            const label = escHtml(item.name)
+                + (item.color_name ? ' — ' + escHtml(item.color_name) : '');
+
             return `<li class="d-flex justify-content-between mb-2 small">
-            <span>${item.name}${item.color_name ? ' — ' + item.color_name : ''} × ${item.qty}</span>
-            <span>$${(item.price * item.qty).toFixed(2)}</span>
+            <span>${label} × ${qty}</span>
+            <span>$${line.toFixed(2)}</span>
         </li>`;
         }).join('') || '<li class="text-muted">Cart is empty.</li>';
 
@@ -106,7 +128,13 @@
 
         // عرض العنوان المختار
         const addrId = getSelectedAddressId();
-        const addr   = SAVED_ADDRESSES.find(a => a.id == addrId);
+
+        // المقارنة صارمة بعد توحيد النوع. المعرّفات تصل من مصدرين
+        // مختلفين — `parseInt` من قيمة الراديو، وJSON من data-* — فكان
+        // `==` هو ما يجسر بينهما. و`getSelectedAddressId` قد تُرجع
+        // السلسلة 'new' أو null، وكلتاهما تصير NaN فلا تطابق أي معرّف،
+        // وهو السلوك المطلوب: لا عنوان محفوظاً مختاراً.
+        const addr = SAVED_ADDRESSES.find(a => Number(a.id) === Number(addrId));
         addrEl.textContent = addr
             ? [addr.label, addr.full_address, addr.city, addr.country].filter(Boolean).join(', ')
             : (document.getElementById('newAddrFull')?.value.trim() || '—');
@@ -154,8 +182,82 @@
         }
     });
 
+    // ── ترجمة السلّة إلى شكل الـAPI ──────────────────────────────
+    //
+    // السلّة تُخزَّن في localStorage بشكلها الخاص {id, quantity, …}،
+    // والـAPI موثَّق بشكل آخر {product_id, qty, …}. وكان الطرفان
+    // يتكلّمان بلا ترجمة: الخادم يقرأ product_id فيجده غائباً، فيسقط كل
+    // عنصر، فيتلقّى الزبون «Invalid items in cart» بعد ثلاث خطوات.
+    // **لم يكن أحد يستطيع إتمام طلب.**
+    //
+    // الترجمة هنا لا في الخادم عن قصد: شكل التخزين المحلي شأن العميل
+    // وحده وقد يتغيّر، وشكل الـAPI عقد منشور في OpenAPI. وتعليم الخادم
+    // قبول الاسمين كان سيثبّت التسميتين معاً إلى الأبد.
+    //
+    // ⚠️ `shown_price` هو السعر المعروض لا السعر المعتمَد. الخادم
+    // يقارنه بسعر القاعدة ويرفض الطلب عند الاختلاف — ولا يخزّنه.
+    function toOrderItems(cart) {
+        return cart.map(item => ({
+            product_id:  Number(item.id),
+            variant_id:  item.variant_id ?? null,
+            qty:         Number(item.quantity) || 0,
+            shown_price: Number(item.price),
+        }));
+    }
+
+    // ملاحظة: كانت هنا variantKey و sameLine — تطابقان سطر السلّة
+    // المحلية بسطر جاء من الخادم لتصحيح سعره في مكانه. سقطتا حين
+    // انتقلت السلّة إلى القاعدة: لم يعد هناك ما يُطابَق، فالخادم يُرجع
+    // السلّة كاملةً بأسعارها الحيّة وتُستبدل المرآة بها.
+
+    /**
+     * يُحدّث السلّة بعد رفض الطلب لتغيّر سعر.
+     *
+     * ⚠️ صارت تُعيد الجلب من الخادم بدل الكتابة محلياً. كانت تكتب
+     * السعر في نسخة المتصفّح — وذلك كان صحيحاً يوم كانت السلّة في
+     * localStorage، وصار خطأً حين انتقلت إلى القاعدة: كتابةٌ في المرآة
+     * لا تصل الأصل، فتُظهر للزبون سعراً لا يعرفه الخادم.
+     *
+     * وإعادة الجلب أصدق من الترقيع: `/cart` تُرجع السعر الحيّ لكل سطر
+     * أصلاً، فما بعدها هو ما سيُحاسَب عليه فعلاً.
+     */
+    async function applyServerPrices(serverItems) {
+        if (!serverItems.length || !window.loadCart) return;
+
+        await window.loadCart();
+    }
+
+    /** جدول «قبل ← بعد» داخل الحوار. الأسماء من القاعدة، فتُهرَّب. */
+    function buildPriceChangeHtml(serverItems) {
+        const esc = window.escHtml || (s => String(s));
+        const rows = serverItems.map(i => `
+            <li class="d-flex justify-content-between gap-3 small">
+                <span>${esc(i.name)}</span>
+                <span><s class="text-muted">$${Number(i.shown_price).toFixed(2)}</s>
+                      &nbsp;<strong>$${Number(i.price).toFixed(2)}</strong></span>
+            </li>`).join('');
+
+        return `<p class="mb-2">These prices changed while your cart was open:</p>
+                <ul class="list-unstyled text-start mb-0">${rows}</ul>`;
+    }
+
+    /** يعيد زرّ الطلب إلى حالته — كان مكرّراً حرفياً في ثلاثة مواضع. */
+    function resetPlaceButton() {
+        const btn = document.getElementById('placeOrderBtn');
+        if (!btn) return;
+        btn.disabled    = false;
+        btn.textContent = '✅ Place Order';
+    }
+
     // ── تنفيذ الطلب ──────────────────────────────────────────────
     document.getElementById('placeOrderBtn')?.addEventListener('click', async () => {
+        // السلّة تصل من الخادم عند تحميل الصفحة. وإن لم تكن قد وصلت
+        // بعد — اتصال بطيء، أو نقرة سريعة — نجلبها الآن بدل أن نقول
+        // للزبون «سلّتك فارغة» وهي ليست كذلك.
+        if (window.getCartData && !window.getCartData().length && window.loadCart) {
+            await window.loadCart();
+        }
+
         const cart = window.getCartData ? window.getCartData() : [];
         if (!cart.length) {
             Swal.fire({ icon: 'warning', text: 'Your cart is empty.' });
@@ -179,8 +281,26 @@
                 address_id:       addrId,
                 payment_method:   paymentMethod,
                 idempotency_key:  IDEMPOTENCY_KEY,
-                items:            cart,
+                items:            toOrderItems(cart),
             });
+
+            // ── تغيّر السعر: نحدّث السلّة ونُعيد الزبون ليقرّر ────────
+            //
+            // الخادم رفض الطلب كاملاً وأعاد الأسعار الصحيحة. الاكتشاف
+            // بـerror_code لا بنصّ الرسالة — نفس عقد csrf_invalid.
+            if (!res.success && res.error_code === 'price_changed') {
+                await applyServerPrices(res.items || []);
+                resetPlaceButton();
+                goTo(3);
+                buildReview();
+                Swal.fire({
+                    icon:  'warning',
+                    title: 'Prices Updated',
+                    html:  buildPriceChangeHtml(res.items || []),
+                    confirmButtonText: 'Review Cart',
+                });
+                return;
+            }
 
             if (res.success) {
                 // ⚠️ window.clearCart غير معرَّفة في أي ملف — الحارس هنا
@@ -193,13 +313,11 @@
                     window.location.href = res.redirect || URLROOT;
                 });
             } else {
-                document.getElementById('placeOrderBtn').disabled = false;
-                document.getElementById('placeOrderBtn').textContent = '✅ Place Order';
+                resetPlaceButton();
                 Swal.fire({ icon: 'error', title: 'Error', text: res.message });
             }
         } catch {
-            document.getElementById('placeOrderBtn').disabled = false;
-            document.getElementById('placeOrderBtn').textContent = '✅ Place Order';
+            resetPlaceButton();
             Swal.fire({ icon: 'error', text: 'Network error. Please try again.' });
         }
     });

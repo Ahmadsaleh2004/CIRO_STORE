@@ -22,7 +22,7 @@
         </div>
     </div>
 
-    <!-- Tabs -->
+    <?php // Tabs ?>
     <ul class="nav nav-tabs mb-4" id="myInfoTabs" role="tablist">
         <li class="nav-item">
             <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-profile" type="button">
@@ -43,7 +43,7 @@
 
     <div class="tab-content">
 
-        <!-- ── تبويب بياناتي ──────────────────────────── -->
+        <?php // ── تبويب بياناتي ──────────────────────────── ?>
         <div class="tab-pane fade show active" id="tab-profile">
             <div class="card p-4 u-mw-550">
                 <h4 class="mb-4">✏️ Edit Profile</h4>
@@ -62,7 +62,7 @@
                         <label>Email Address <small class="text-muted">(cannot change)</small></label>
                     </div>
                     
-                    <!-- Phone Number — نفس الـpartial المستعمل في صفحة الأدمن -->
+                    <?php // Phone Number — نفس الـpartial المستعمل في صفحة الأدمن ?>
                     <div class="float-group mb-3">
                         <?php
                         $phoneValue   = $user['phone_number'] ?? '';
@@ -91,22 +91,22 @@
                         </div>
                     </div>
                     
-                    <!-- New Password (optional) -->
+                    <?php // New Password (optional) ?>
                     <div class="float-group mb-3">
                         <input type="password" name="new_password" id="newPassword"
                                placeholder=" " autocomplete="new-password" minlength="8" maxlength="128">
                         <label>New Password <small class="text-muted">(leave blank to keep current)</small></label>
-                        <button type="button" class="btn btn-sm btn-link toggle-password-btn" data-target="newPassword"
-                                class="u-pin-top-left" tabindex="-1">👁</button>
+                        <button type="button" class="btn btn-sm btn-link toggle-password-btn u-pin-top-left" data-target="newPassword"
+                                tabindex="-1" aria-label="Show password">👁</button>
                     </div>
                     
-                    <!-- Current Password — always required to save -->
+                    <?php // Current Password — always required to save ?>
                     <div class="float-group mb-3">
                         <input type="password" name="current_password" id="currentPassword"
                                placeholder=" " required autocomplete="current-password" maxlength="128">
                         <label>Current Password <span class="text-danger">*</span> <small class="text-muted">(required to save any change)</small></label>
-                        <button type="button" class="btn btn-sm btn-link toggle-password-btn" data-target="currentPassword"
-                                class="u-pin-top-left" tabindex="-1">👁</button>
+                        <button type="button" class="btn btn-sm btn-link toggle-password-btn u-pin-top-left" data-target="currentPassword"
+                                tabindex="-1" aria-label="Show password">👁</button>
                     </div>
                     
                     <div id="profileMsg" class="alert py-2 small d-none"></div>
@@ -115,7 +115,7 @@
             </div>
         </div>
 
-        <!-- ── تبويب طلباتي ───────────────────────────── -->
+        <?php // ── تبويب طلباتي ───────────────────────────── ?>
         <div class="tab-pane fade" id="tab-orders">
             <?php if (empty($orders)): ?>
                 <div class="text-center py-5">
@@ -169,7 +169,7 @@
             <?php endif; ?>
         </div>
 
-        <!-- ── تبويب عناويني ──────────────────────────── -->
+        <?php // ── تبويب عناويني ──────────────────────────── ?>
         <div class="tab-pane fade" id="tab-addresses">
             <div class="row g-3 mb-4">
                 <?php if (empty($addresses)): ?>
@@ -204,7 +204,7 @@
                 <?php endif; ?>
             </div>
 
-            <!-- إضافة عنوان جديد -->
+            <?php // إضافة عنوان جديد ?>
             <div class="card p-4 u-mw-600">
                 <h5 class="mb-3">➕ Add New Address</h5>
                 <form id="addAddrForm" novalidate>
@@ -252,7 +252,7 @@
             </div>
         </div>
 
-    </div><!-- /tab-content -->
+    </div><?php // /tab-content ?>
 </main>
 
 <?php

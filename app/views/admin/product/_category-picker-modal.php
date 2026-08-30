@@ -10,7 +10,7 @@
  */
 ?>
 
-<!-- بيانات الكاتوجريز محقونة لـ category-picker.js -->
+<?php // بيانات الكاتوجريز محقونة لـ category-picker.js ?>
 <?= pageData([
     '_categoriesData' => array_map(fn($c) => [
         'id'            => (int) $c['id'],
@@ -20,9 +20,11 @@
     ], $categories ?? []),
 ]) ?>
 
-<!-- ═══════════════════════════════════════════════════════
+<?php /*
+═══════════════════════════════════════════════════════
      Modal الرئيسي: اختيار + إضافة + حذف الكاتوجريز
-     ═══════════════════════════════════════════════════════ -->
+     ═══════════════════════════════════════════════════════
+*/ ?>
 <div class="modal fade"
      id="categoryPickerModal"
      tabindex="-1"
@@ -39,9 +41,9 @@
 
             <div class="modal-body">
 
-                <!-- قائمة الكاتوجريز بنمط .perm-grid/.perm-item — نفس نمط manage-admins -->
+                <?php // قائمة الكاتوجريز بنمط .perm-grid/.perm-item — نفس نمط manage-admins ?>
                 <div class="perm-grid mb-4" id="categoryPickerList">
-                    <!-- تُبنى ديناميكياً من category-picker.js -->
+                    <?php // تُبنى ديناميكياً من category-picker.js ?>
                     <div class="text-center py-2 u-muted">
                         <span class="spinner-border spinner-border-sm"></span> Loading...
                     </div>
@@ -49,7 +51,7 @@
 
                 <hr class="u-border-section">
 
-                <!-- إضافة كاتوجري جديدة -->
+                <?php // إضافة كاتوجري جديدة ?>
                 <div class="mb-1">
                     <label class="fw-bold small d-block mb-2">Add New Category</label>
                     <div class="input-group">
@@ -64,8 +66,7 @@
                                 id="addCategoryBtn">+ Add</button>
                     </div>
                     <div id="categorySuggestions"
-                         class="small mt-1"
-                         class="u-picker-hint"></div>
+                         class="small mt-1 u-picker-hint"></div>
                 </div>
 
             </div>
@@ -85,9 +86,11 @@
     </div>
 </div>
 
-<!-- ═══════════════════════════════════════════════════════
+<?php /*
+═══════════════════════════════════════════════════════
      Modal فرعي: تأكيد حذف كاتوجري + اختيار الوجهة
-     ═══════════════════════════════════════════════════════ -->
+     ═══════════════════════════════════════════════════════
+*/ ?>
 <div class="modal fade"
      id="categoryDeleteModal"
      tabindex="-1"
@@ -110,7 +113,7 @@
                 </p>
                 <div class="float-group">
                     <select id="delCatDestination" class="form-select">
-                        <!-- تُملأ ديناميكياً -->
+                        <?php // تُملأ ديناميكياً ?>
                     </select>
                     <label>Destination Category <span class="text-danger">*</span></label>
                 </div>

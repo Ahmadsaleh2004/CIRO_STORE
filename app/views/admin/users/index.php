@@ -8,7 +8,7 @@
  */
 $totalPages = max(1, (int)ceil($total / $perPage));
 ?>
-<!-- ── Page Header ────────────────────────────────────────── -->
+<?php // ── Page Header ────────────────────────────────────────── ?>
 <div class="admin-page-header">
     <h1>👥 Manage Users <span class="badge bg-secondary fw-normal u-fs-90 align-middle"><?= (int)$totalUsers ?></span></h1>
     <div class="d-flex gap-2 flex-wrap">
@@ -23,10 +23,10 @@ $totalPages = max(1, (int)ceil($total / $perPage));
     </div>
 </div>
 
-<!-- ── Flash Messages ─────────────────────────────────────── -->
+<?php // ── Flash Messages ─────────────────────────────────────── ?>
 <?php require APPROOT . '/views/shared/flash-messages.php'; ?>
 
-<!-- ── Search + Status Filter ─────────────────────────────── -->
+<?php // ── Search + Status Filter ─────────────────────────────── ?>
 <form method="GET" class="d-flex gap-2 flex-wrap mb-3" action="<?= URLROOT ?>/admin/users">
     <input type="text" name="q" value="<?= htmlspecialchars($search) ?>"
            class="form-control u-mw-280" placeholder="Search name or email...">
@@ -42,7 +42,7 @@ $totalPages = max(1, (int)ceil($total / $perPage));
     <?php endif; ?>
 </form>
 
-<!-- ── Users Table ────────────────────────────────────────── -->
+<?php // ── Users Table ────────────────────────────────────────── ?>
 <div class="card p-0">
     <div class="table-responsive">
         <table class="table admin-table mb-0">
@@ -101,7 +101,7 @@ $totalPages = max(1, (int)ceil($total / $perPage));
                     <td class="u-muted u-fs-80">
                         <?= htmlspecialchars(date('d M Y', strtotime($u['created_at']))) ?>
                     </td>
-                    <!-- data-action="stop-propagation" إلزامي — يمنع تفعيل user-row -->
+                    <?php // data-action="stop-propagation" إلزامي — يمنع تفعيل user-row ?>
                     <td class="text-center">
                         <div class="d-flex gap-1 justify-content-center" data-action="stop-propagation">
                             <button type="button" class="btn btn-sm btn-outline-info"
@@ -123,7 +123,7 @@ $totalPages = max(1, (int)ceil($total / $perPage));
     </div>
 </div>
 
-<!-- ── Pagination ─────────────────────────────────────────── -->
+<?php // ── Pagination ─────────────────────────────────────────── ?>
 <?php if ($totalPages > 1):
     // بناء query string الفلاتر للـ pagination — يحافظ على q/status عند التنقل
     $paginationBase = http_build_query(array_filter([
@@ -177,7 +177,7 @@ $totalPages = max(1, (int)ceil($total / $perPage));
 </nav>
 <?php endif; ?>
 
-<!-- ── Modals ─────────────────────────────────────────────── -->
+<?php // ── Modals ─────────────────────────────────────────────── ?>
 <?php include __DIR__ . '/../notify-modal.php'; ?>
 <?php $broadcastTargetType = 'user'; ?>
 <?php include __DIR__ . '/../broadcast-form.php'; ?>

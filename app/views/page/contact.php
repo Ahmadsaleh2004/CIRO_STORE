@@ -21,7 +21,7 @@ $showLoginAlert = !$userLoggedIn;
     </div>
 
     <div class="row g-4">
-        <!-- Contact Info -->
+        <?php // Contact Info ?>
         <div class="col-lg-5">
             <div class="card p-4 h-100">
                 <h2 class="h3 mb-4">📬 Contact Information</h2>
@@ -32,7 +32,7 @@ $showLoginAlert = !$userLoggedIn;
             </div>
         </div>
 
-        <!-- Contact Form -->
+        <?php // Contact Form ?>
         <div class="col-lg-7">
             <div class="card p-4">
                 <h2 class="h3 mb-4">💌 Send Message</h2>

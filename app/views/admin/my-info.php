@@ -7,7 +7,7 @@
  */
 ?>
 
-<!-- Header -->
+<?php // Header ?>
 <div class="d-flex align-items-center gap-3 mb-4">
     <div class="u-fs-xxl">👤</div>
     <div>
@@ -16,27 +16,26 @@
     </div>
 </div>
 
-<!-- Tab Header — تبويب واحد فقط، نشط دائمًا -->
+<?php // Tab Header — تبويب واحد فقط، نشط دائمًا ?>
 <ul class="nav nav-tabs mb-4">
     <li class="nav-item">
-        <button class="nav-link info-tab-btn active" type="button" disabled
-                class="u-cursor-default">
+        <button class="nav-link info-tab-btn active u-cursor-default" type="button" disabled>
             📋 Personal Info
         </button>
     </li>
 </ul>
 
-<!-- كارد الفورم -->
+<?php // كارد الفورم ?>
 <div class="card p-4 u-mw-550">
     <h4 class="mb-4">✏️ Personal Information</h4>
 
     <form id="adminProfileForm" novalidate autocomplete="off">
         <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf) ?>">
 
-        <!-- رسالة النجاح / الخطأ -->
+        <?php // رسالة النجاح / الخطأ ?>
         <div id="profileMsg" class="alert py-2 small d-none"></div>
 
-        <!-- Full Name -->
+        <?php // Full Name ?>
         <div class="float-group mb-3">
             <input type="text"
                    id="adminFullName"
@@ -48,7 +47,7 @@
             <label for="adminFullName">Full Name</label>
         </div>
 
-        <!-- Email — readonly -->
+        <?php // Email — readonly ?>
         <div class="float-group mb-3">
             <input type="email"
                    value="<?= htmlspecialchars($profile['email'] ?? '') ?>"
@@ -58,7 +57,7 @@
             <label>Email Address <small class="text-muted">(cannot change)</small></label>
         </div>
 
-        <!-- Phone Number — نفس الـpartial المستعمل في صفحة المستخدم -->
+        <?php // Phone Number — نفس الـpartial المستعمل في صفحة المستخدم ?>
         <div class="float-group mb-3">
             <?php
             $phoneValue   = $profile['phone_number'] ?? '';
@@ -68,7 +67,7 @@
             <label class="phone-group-label">Phone Number</label>
         </div>
 
-        <!-- New Password -->
+        <?php // New Password ?>
         <div class="float-group mb-3">
             <input type="password"
                    id="adminNewPassword"
@@ -79,7 +78,7 @@
             <label for="adminNewPassword">New Password <small class="text-muted">(leave blank to keep)</small></label>
         </div>
 
-        <!-- Current Password — إلزامي دائمًا -->
+        <?php // Current Password — إلزامي دائمًا ?>
         <div class="float-group mb-4">
             <input type="password"
                    id="adminCurrentPassword"
@@ -95,7 +94,7 @@
     </form>
 </div>
 
-<!-- ════════════════════ التحقق الثنائي (2FA / TOTP) ════════════════════ -->
+<?php // ════════════════════ التحقق الثنائي (2FA / TOTP) ════════════════════ ?>
 <div class="card p-4 mt-4 u-mw-550">
     <div class="d-flex align-items-center justify-content-between mb-2">
         <h4 class="mb-0">🔑 Two-Factor Authentication</h4>
@@ -112,7 +111,7 @@
     <div id="twofaMsg" class="alert py-2 small d-none"></div>
 
     <?php if (!empty($profile['totp_enabled'])): ?>
-        <!-- حالة: مفعّل → زر تعطيل مع طلب كلمة المرور الحالية -->
+        <?php // حالة: مفعّل → زر تعطيل مع طلب كلمة المرور الحالية ?>
         <form id="twofaDisableForm" novalidate autocomplete="off">
             <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf) ?>">
             <div class="float-group mb-3">
@@ -128,24 +127,26 @@
             <button type="submit" class="btn btn-warning w-100">🔓 Disable 2FA</button>
         </form>
     <?php else: ?>
-        <!-- حالة: غير مفعّل → زر تفعيل + عرض QR/secret + حقل تأكيد الكود -->
+        <?php // حالة: غير مفعّل → زر تفعيل + عرض QR/secret + حقل تأكيد الكود ?>
         <div id="twofaSetup">
             <button type="button" id="twofaEnableBtn" class="btn btn-success w-100">🔐 Enable 2FA</button>
         </div>
 
         <div id="twofaSetupStep" class="d-none">
             <div class="text-center my-3">
-                <!-- بلا سمة src: src="" يجعل المتصفح يطلب عنوان الصفحة
+                <?php /*
+بلا سمة src: src="" يجعل المتصفح يطلب عنوان الصفحة
                      نفسها في كل تحميل ثم يفشل. المصدر يضبطه
                      js/admin/my-info.js عند بدء الإعداد. العنصر داخل
                      حاوية مخفية حتى تلك اللحظة، وwidth/height يحجزان
-                     مساحته فلا يقفز التخطيط. -->
+                     مساحته فلا يقفز التخطيط.
+*/ ?>
                 <img id="twofaQr" alt="QR Code" width="220" height="220"
                      class="twofa-qr">
             </div>
             <div class="text-center small mb-3">
                 <span class="text-muted">Manual entry key:</span>
-                <code id="twofaSecret" class="d-block mt-1" class="u-secret-text"></code>
+                <code id="twofaSecret" class="d-block mt-1 u-secret-text"></code>
             </div>
             <div class="float-group mb-3">
                 <input type="text"
@@ -165,5 +166,5 @@
     <?php endif; ?>
 </div>
 
-<!-- منطق الصفحة في js/admin/my-info.js — يُحمَّل عبر extraScripts -->
+<?php // منطق الصفحة في js/admin/my-info.js — يُحمَّل عبر extraScripts ?>
 

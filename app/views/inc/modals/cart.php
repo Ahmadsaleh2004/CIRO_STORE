@@ -5,7 +5,7 @@
  * منقول من components/footer.php القديم (سطر 67–89)
  */
 ?>
-<!-- ══ Cart Sidebar ════════════════════════════════════════ -->
+<?php // ══ Cart Sidebar ════════════════════════════════════════ ?>
 <div class="offcanvas offcanvas-end" id="cartSidebar" tabindex="-1" aria-labelledby="cartSidebarLabel">
     <div class="offcanvas-header border-bottom">
         <h5 class="offcanvas-title fw-bold" id="cartSidebarLabel">🛒 Your Shopping Cart</h5>

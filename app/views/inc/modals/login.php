@@ -6,7 +6,7 @@
  * CSRF Token يأتي جاهزاً من $csrfToken الممررة عبر footer.php
  */
 ?>
-<!-- ══ Login Modal ═════════════════════════════════════════ -->
+<?php // ══ Login Modal ═════════════════════════════════════════ ?>
 <div class="modal fade" id="loginModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
@@ -25,20 +25,18 @@
 
                     <div class="float-group">
                         <input type="email" id="loginEmail" name="email"
-                               class="form-control"
-                               placeholder=" " required autocomplete="email"
-                               class="u-surface-input">
+                               class="form-control u-surface-input"
+                               placeholder=" " required autocomplete="email">
                         <label>Email Address</label>
                     </div>
                     <div class="float-group mb-1">
                         <div class="input-group">
                             <input type="password" id="loginPass" name="password"
-                                   class="form-control"
-                                   placeholder=" " required autocomplete="current-password"
-                                   class="u-surface-input">
-                            <span class="input-group-text"
+                                   class="form-control u-surface-input"
+                                   placeholder=" " required autocomplete="current-password">
+                            <span class="input-group-text u-clickable"
                                   data-action="toggle-password" data-input="loginPass" data-eye="eyeLogin"
-                                  id="eyeLogin" class="u-clickable">👁️</span>
+                                  id="eyeLogin">👁️</span>
                         </div>
                         <label>Password</label>
                     </div>
@@ -49,7 +47,7 @@
                     <div id="loginError" class="alert alert-danger py-2 small mb-3 d-none"></div>
                     <button type="submit" class="btn btn-dark w-100 mb-3 py-2" id="loginBtn">Sign In</button>
 
-                    <!-- زر تسجيل الدخول عبر جوجل -->
+                    <?php // زر تسجيل الدخول عبر جوجل ?>
                     <div class="modal-divider">or</div>
                     <a href="<?= URLROOT ?>/auth/google"
                        class="btn btn-outline-danger w-100 mb-3">

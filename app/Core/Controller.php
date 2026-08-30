@@ -22,7 +22,7 @@ abstract class Controller
      *
      * @param string $view   مسار الـview تحت app/views بلا امتداد،
      *                       مثل 'home' أو 'admin/orders/index'
-     * @param array  $data   متغيرات تُستخرج للـview ولملفات الـlayout
+     * @param array<string, mixed> $data متغيرات تُستخرج للـview ولملفات الـlayout
      * @param string $layout 'store' | 'admin' | 'bare'
      */
     protected function view(string $view, array $data = [], string $layout = 'store'): void
@@ -101,6 +101,8 @@ abstract class Controller
      *
      * ملاحظة: لا يضبط رأس Content-Type — بعض النقاط تضبطه بنفسها قبل
      * الاستدعاء، وبعضها يستدعي respond() بعد إخراج بدأ فعلاً.
+     *
+     * @param array<string, mixed> $extra
      */
     protected function respond(bool $success, string $message, array $extra = []): never
     {
@@ -173,7 +175,7 @@ abstract class Controller
      * استجابة فشل CSRF الموحّدة. تُستدعى من beginJsonPost ومن النقاط
      * القليلة التي لا تمرّ بها لكنها تُرجع JSON.
      *
-     * @param array $extra بيانات إضافية — reauth مثلاً تُعيد توكناً جديداً
+     * @param array<string, mixed> $extra بيانات إضافية — reauth مثلاً تُعيد توكناً جديداً
      */
     protected function respondCsrfFailure(array $extra = []): never
     {

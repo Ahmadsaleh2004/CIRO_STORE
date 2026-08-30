@@ -10,9 +10,9 @@
      // وكل ما تحته يقرأ منها. نقله لاحقاً يكسر كل صفحة تمرّر بيانات. ?>
 <?= jsTag('js/core/page-data.js', false) ?>
 
-<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<?php // jQuery حُذف — غير مستعمَل. الروابط والبصمات في assets_helper.php ?>
+<?= vendorJs('bootstrap-js', false) ?>
+<?= vendorJs('sweetalert2', false) ?>
 <?php
 // حزمة واحدة بدل واحد وعشرين وسماً. القائمة هي الارتداد عند غياب
 // البناء، وترتيبها هو العقد — راجع jsBundle في assets_helper.php.
@@ -43,7 +43,7 @@
 
 <?php if (isset($extraScripts)) echo $extraScripts; ?>
 
-<!-- سايدبار إشعارات الأدمن — HTML ثابت، يربطه بالباك اند admin-notifications.js -->
+<?php // سايدبار إشعارات الأدمن — HTML ثابت، يربطه بالباك اند admin-notifications.js ?>
 <div id="adminNotifSidebar" role="region" aria-label="Admin notifications panel">
     <div class="notif-header">
         <span>🔔 Admin Notifications</span>
@@ -52,7 +52,7 @@
             <button id="adminNotifClose" class="btn btn-sm btn-outline-theme" aria-label="Close">✕</button>
         </div>
     </div>
-    <ul id="adminNotifList" class="notif-list"><li class="notif-empty">لا يوجد إشعارات بعد</li></ul>
+    <ul id="adminNotifList" class="notif-list"><li class="notif-empty">No notifications yet</li></ul>
     <div class="p-2">
         <button id="adminNotifDeleteAll" class="btn btn-sm btn-outline-danger w-100">🗑️ Delete All</button>
     </div>

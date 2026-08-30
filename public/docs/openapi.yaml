@@ -2321,7 +2321,7 @@ paths:
       tags:
         - 'Store - Cart'
       summary: 'التحقق من توفّر وأسعار الـvariants الموجودة في السلة'
-      description: 'السلة تُدار كاملة في المتصفح (localStorage)؛ هذه النقطة تتحقق من المخزون والسعر الحاليين قبل إتمام الطلب. المنتجات المخفية لا تُرجَع.'
+      description: 'تُستدعى من صفحات المنتجات وقائمة الأمنيات لتحديث بطاقاتها بالمخزون والسعر الحيَّين. المنتجات المخفية لا تُرجَع.'
       operationId: 11742ec09980c02399157d72f056b111
       requestBody:
         required: true
@@ -2338,13 +2338,120 @@ paths:
               type: object
       responses:
         '200':
-          description: "المخزون الحيّ للنسخ المطلوبة.\r\n\r\nالسلّة محفوظة في متصفّح الزائر، فقد تحمل أسعاراً ومخزوناً\r\nقديمين. هذه النقطة تُرجع الحقيقة من القاعدة قبل الدفع."
+          description: "المخزون الحيّ للنسخ المطلوبة.\r\n\r\nبطاقةٌ معروضة على صفحة بقيت مفتوحة قد تحمل سعراً ومخزوناً\r\nقديمين. هذه النقطة تُرجع الحقيقة من القاعدة."
           content:
             application/json:
               schema:
                 allOf:
                   - { $ref: '#/components/schemas/ApiResponse' }
                   - { properties: { items: { description: 'نسخة لكل variant_id مطلوب. النسخ المحذوفة تسقط من الناتج.', type: array, items: { $ref: '#/components/schemas/ProductVariant' } } }, type: object }
+  /cart:
+    get:
+      tags:
+        - 'Store - Cart'
+      summary: 'سلّة المستخدم الحالي'
+      description: 'الأسعار والمخزون تُقرأ من القاعدة عند كل طلب لا من وقت الإضافة، فتظهر أي تغيّرات في السلّة قبل صفحة الدفع لا عندها.'
+      operationId: dd1ea1e457a423ff9cd872a74b1ffa7f
+      responses:
+        '200':
+          description: 'JSON — {success, items, count}'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+      security:
+        -
+          userSessionAuth: []
+  /cart/add:
+    post:
+      tags:
+        - 'Store - Cart'
+      summary: 'إضافة كمية إلى السلّة (تُجمَع مع الموجود)'
+      description: 'إضافة نفس الـvariant مرّتين تُحدّث كمية سطر واحد لا تُنشئ ثانياً. ولا يُتحقَّق من المخزون هنا: السلّة نيّة لا حجز، والحجز يقع في /checkout.'
+      operationId: 749f5b130bcf852c4a121d2b4618ec31
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              required:
+                - product_id
+                - variant_id
+                - csrf_token
+              properties:
+                product_id:
+                  type: integer
+                variant_id:
+                  type: integer
+                qty:
+                  type: integer
+                  default: 1
+                  maximum: 100
+                  minimum: 1
+                csrf_token:
+                  type: string
+              type: object
+      responses:
+        '200':
+          description: 'JSON — {success, items, count}'
+      security:
+        -
+          userSessionAuth: []
+  /cart/update:
+    post:
+      tags:
+        - 'Store - Cart'
+      summary: 'ضبط كمية سطر في السلّة (الصفر يحذفه)'
+      operationId: f151d100ec15be29671e4cafd1eafc6d
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              required:
+                - variant_id
+                - qty
+                - csrf_token
+              properties:
+                variant_id:
+                  type: integer
+                qty:
+                  type: integer
+                  maximum: 100
+                  minimum: 0
+                csrf_token:
+                  type: string
+              type: object
+      responses:
+        '200':
+          description: 'JSON — {success, items, count}'
+      security:
+        -
+          userSessionAuth: []
+  /cart/remove:
+    post:
+      tags:
+        - 'Store - Cart'
+      summary: 'حذف سطر من السلّة'
+      operationId: eb8d04ff154041f144314563d95d8b00
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              required:
+                - variant_id
+                - csrf_token
+              properties:
+                variant_id:
+                  type: integer
+                csrf_token:
+                  type: string
+              type: object
+      responses:
+        '200':
+          description: 'JSON — {success, items, count}'
+      security:
+        -
+          userSessionAuth: []
   /checkout:
     get:
       tags:
@@ -2363,28 +2470,41 @@ paths:
       tags:
         - 'Store - Checkout'
       summary: 'إنشاء الطلب من محتويات السلة'
-      description: 'السلة تُرسَل من المتصفح، ويُعاد التحقق من المخزون والسعر على الخادم قبل الحفظ — لا يُوثق بالسعر القادم من العميل.'
+      description: 'العميل يرسل **ماذا وكم** فقط. كل قيمة مالية تُقرأ من قاعدة البيانات داخل المعاملة نفسها التي تحجز المخزون. وحقل shown_price يُقارَن ولا يُخزَّن: إن اختلف عن سعر القاعدة يُرفض الطلب كاملاً ويردّ الخادم error_code=price_changed مع الأسعار الصحيحة.'
       operationId: b9a528bfe771ba04bed8dc5cf05bef51
       requestBody:
         required: true
         content:
-          application/x-www-form-urlencoded:
+          application/json:
             schema:
               required:
-                - cart
+                - items
+                - address_id
+                - idempotency_key
                 - csrf_token
               properties:
-                cart:
-                  description: 'JSON لمحتويات السلة'
-                  type: string
+                items:
+                  type: array
+                  items: { required: [product_id, qty], properties: { product_id: { type: integer }, variant_id: { type: integer, nullable: true }, qty: { type: integer, maximum: 100, minimum: 1 }, shown_price: { description: 'السعر الذي عُرض على الزبون — للمقارنة وحدها، لا يُخزَّن ولا يُحسب منه شيء', type: number, format: float } }, type: object }
                 address_id:
                   type: integer
+                payment_method:
+                  type: string
+                  default: cash_on_delivery
+                idempotency_key:
+                  type: string
                 csrf_token:
                   type: string
               type: object
       responses:
         '200':
-          description: 'JSON — {success, message, order_id?, redirect?}'
+          description: 'نتيجة العملية. النجاح يحمل order_id وredirect. والفشل يحمل error_code من: price_changed · unavailable · out_of_stock · error · csrf_invalid. وprice_changed وحده يحمل معه items بالأسعار الصحيحة.'
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - { $ref: '#/components/schemas/ApiResponse' }
+                  - { $ref: '#/components/schemas/ApiError' }
       security:
         -
           userSessionAuth: []
@@ -2529,7 +2649,7 @@ paths:
       tags:
         - 'Store - Pages'
       summary: 'فحص صحّة التطبيق'
-      description: "تُرجع 200 حين يكون التطبيق قادراً على خدمة الطلبات فعلاً، و503\nحين لا يكون. الفحص ينفّذ استعلاماً حقيقياً على قاعدة البيانات\nلا مجرّد ردّ ثابت — فحاوية تردّ 200 وقاعدتها ساقطة ليست سليمة.\n\nعامة بلا مصادقة بالضرورة: فاحص الصحّة لا يملك جلسة. ولذلك لا\nتكشف نسخاً ولا أسماء ولا مسارات — التفاصيل في السجلّ وحده."
+      description: "تُرجع 200 حين يكون التطبيق قادراً على خدمة الطلبات فعلاً، و503\r\nحين لا يكون. الفحص ينفّذ استعلاماً حقيقياً على قاعدة البيانات\r\nلا مجرّد ردّ ثابت — فحاوية تردّ 200 وقاعدتها ساقطة ليست سليمة.\r\n\r\nعامة بلا مصادقة بالضرورة: فاحص الصحّة لا يملك جلسة. ولذلك لا\r\nتكشف نسخاً ولا أسماء ولا مسارات — التفاصيل في السجلّ وحده."
       operationId: 0f6f4acf921ee6317a01dfda0e60a1ec
       responses:
         '200':

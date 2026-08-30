@@ -15,6 +15,10 @@ use PHPUnit\Framework\TestCase;
  */
 final class ValidatorTest extends TestCase
 {
+    /**
+     * @param array<string, mixed> $data
+     * @param array<string, string> $rules
+     */
     private function validate(array $data, array $rules): Validator
     {
         return (new Validator($data))->check($rules);

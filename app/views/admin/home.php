@@ -100,27 +100,28 @@ if ($adminId === 1) {
 }
 ?>
 
-<!-- رسالة الترحيب -->
+<?php // رسالة الترحيب ?>
 <div class="home-welcome">
     <h1>Welcome back, <?= htmlspecialchars($adminName) ?> 👋</h1>
     <p>Choose a section below to get started.</p>
 </div>
 
 <?php if (empty($tiles)): ?>
-    <!-- لا صلاحيات مخصصة لهذا الأدمن -->
+    <?php // لا صلاحيات مخصصة لهذا الأدمن ?>
     <div class="text-center py-5 text-muted">
         <div class="u-fs-xxl">🔒</div>
         <p class="mt-3">No sections are available for your current role.<br>Contact a Super Admin to assign permissions.</p>
     </div>
 
 <?php elseif (count($tiles) === 1): ?>
-    <!-- tile واحدة فقط -->
+    <?php // tile واحدة فقط ?>
     <div class="single-tile-wrap">
         <?php if (($tiles[0]['method'] ?? 'GET') === 'POST'): ?>
         <form method="POST" action="<?= htmlspecialchars($tiles[0]['href']) ?>" class="d-inline m-0 p-0">
             <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf) ?>">
             <button type="submit" class="home-tile w-100 u-bare-button">
                 <div class="tile-icon u-tone-<?= htmlspecialchars($tiles[0]['tone']) ?>">
+                    <?php // @escaping-safe: $tiles مصفوفة نصوص حرفية معرَّفة في هذا الملف ?>
                     <?= $tiles[0]['icon'] ?>
                 </div>
                 <span class="tile-label"><?= htmlspecialchars($tiles[0]['label']) ?></span>
@@ -129,6 +130,7 @@ if ($adminId === 1) {
         <?php else: ?>
         <a class="home-tile" href="<?= htmlspecialchars($tiles[0]['href']) ?>">
             <div class="tile-icon u-tone-<?= htmlspecialchars($tiles[0]['tone']) ?>">
+                <?php // @escaping-safe: $tiles مصفوفة نصوص حرفية معرَّفة في هذا الملف ?>
                 <?= $tiles[0]['icon'] ?>
             </div>
             <span class="tile-label"><?= htmlspecialchars($tiles[0]['label']) ?></span>
@@ -137,7 +139,7 @@ if ($adminId === 1) {
     </div>
 
 <?php else: ?>
-    <!-- grid متعدد -->
+    <?php // grid متعدد ?>
     <div class="row g-3">
         <?php foreach ($tiles as $tile): ?>
         <div class="col-6 col-sm-4 col-md-3 col-xl-2">
@@ -146,6 +148,7 @@ if ($adminId === 1) {
                 <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf) ?>">
                 <button type="submit" class="home-tile h-100 w-100 u-bare-button">
                     <div class="tile-icon u-tone-<?= htmlspecialchars($tile['tone']) ?>">
+                        <?php // @escaping-safe: $tiles مصفوفة نصوص حرفية معرَّفة في هذا الملف ?>
                         <?= $tile['icon'] ?>
                     </div>
                     <span class="tile-label"><?= htmlspecialchars($tile['label']) ?></span>
@@ -154,6 +157,7 @@ if ($adminId === 1) {
             <?php else: ?>
             <a class="home-tile h-100" href="<?= htmlspecialchars($tile['href']) ?>">
                 <div class="tile-icon u-tone-<?= htmlspecialchars($tile['tone']) ?>">
+                    <?php // @escaping-safe: $tiles مصفوفة نصوص حرفية معرَّفة في هذا الملف ?>
                     <?= $tile['icon'] ?>
                 </div>
                 <span class="tile-label"><?= htmlspecialchars($tile['label']) ?></span>

@@ -63,6 +63,18 @@ document.addEventListener('DOMContentLoaded', () => {
         const loginEmail = document.getElementById('loginEmail');
         const loginPass  = document.getElementById('loginPass');
         const loginBtn   = document.getElementById('loginBtn');
+
+        // ⚠️ إظهار هذا العنصر وإخفاؤه بـclassList لا بـstyle.display.
+        //
+        // #loginError و#regError يحملان `d-none` في ترميز المودالين،
+        // وBootstrap يعرّفها `display:none !important` — فلا يهزمها نمط
+        // مضمّن. وكان الملف يضبط style.display='block' وحده، فلم تظهر
+        // رسالة خطأ تسجيل دخول ولا تسجيل حساب **ولا مرّة**: كلمة مرور
+        // خاطئة تُعيد الزرّ إلى حاله بلا أي سبب معروض.
+        //
+        // ولم يظهر العطل في بقيّة رسائل المشروع لأنها تكتب className
+        // كاملاً (`msgEl.className = 'alert …'`) فتمحو d-none عرَضاً —
+        // راجع forgotMsg وresetMsg وaddrMsg. هذان وحدهما لم يفعلا.
         const errEl      = document.getElementById('loginError');
 
         function checkLoginFormValidity() {
@@ -90,11 +102,11 @@ document.addEventListener('DOMContentLoaded', () => {
             const tick = () => {
                 if (errEl) {
                     errEl.textContent = `Too many attempts. Try again in ${remaining} second${remaining === 1 ? '' : 's'}.`;
-                    errEl.style.display = 'block';
+                    errEl.classList.remove('d-none');
                 }
                 if (remaining <= 0) {
                     clearInterval(loginCountdownTimer);
-                    if (errEl) errEl.style.display = 'none';
+                    if (errEl) errEl.classList.add('d-none');
                     if (loginBtn) loginBtn.innerHTML = 'Sign In';
                     checkLoginFormValidity();
                     return;
@@ -111,7 +123,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!loginBtn || !errEl) return;
             loginBtn.disabled = true;
             loginBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Signing in...';
-            errEl.style.display = 'none';
+            errEl.classList.add('d-none');
 
             try {
                 const data = await fetchWithCsrfRetry(
@@ -127,14 +139,14 @@ document.addEventListener('DOMContentLoaded', () => {
                     startLoginCountdown(data.retry_after);
                 } else {
                     errEl.textContent  = data.message;
-                    errEl.style.display = 'block';
+                    errEl.classList.remove('d-none');
                     loginBtn.disabled = false;
                     loginBtn.innerHTML = 'Sign In';
                     checkLoginFormValidity();
                 }
             } catch {
                 errEl.textContent  = 'Connection error. Please try again.';
-                errEl.style.display = 'block';
+                errEl.classList.remove('d-none');
                 loginBtn.disabled = false;
                 loginBtn.innerHTML = 'Sign In';
                 checkLoginFormValidity();
@@ -196,7 +208,7 @@ document.addEventListener('DOMContentLoaded', () => {
             e.preventDefault();
             const btn   = document.getElementById('regBtn');
             const errEl = document.getElementById('regError');
-            if (errEl) errEl.style.display = 'none';
+            if (errEl) errEl.classList.add('d-none');
 
             const code  = phoneCountryCode?.value || '';
             const local = regPhoneLocal?.value    || '';
@@ -222,7 +234,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 } else {
                     if (errEl) {
                         errEl.textContent  = data.message;
-                        errEl.style.display = 'block';
+                        errEl.classList.remove('d-none');
                     }
                     if (btn) {
                         btn.disabled  = false;
@@ -233,7 +245,7 @@ document.addEventListener('DOMContentLoaded', () => {
             } catch {
                 if (errEl) {
                     errEl.textContent  = 'Connection error.';
-                    errEl.style.display = 'block';
+                    errEl.classList.remove('d-none');
                 }
                 if (btn) {
                     btn.disabled  = false;
