@@ -1,21 +1,21 @@
 // ══════════════════════════════════════════════════════════════
-// public/js/admin/admins.js — notify + broadcast مشتركَين
-// مسؤول فقط عن: openNotifyModal (generic)، notifyModal، broadcastModal.
+// public/js/admin/admins.js — the shared notify and broadcast modals.
+// Responsible only for: openNotifyModal (generic), notifyModal and broadcastModal.
 // Add/Edit/Delete → manage-admins.js
-// يستعمل fetchWithCsrfRetry لنقطتَي الإرسال (notify · broadcast).
+// It uses fetchWithCsrfRetry for both sending endpoints (notify · broadcast).
 // ══════════════════════════════════════════════════════════════
 
-// State المشترك للـ Modal — يُعبّأ عبر openNotifyModal()
+// The modal's shared state — populated through openNotifyModal()
 let currentNotifyTarget = { type: null, id: null };
 
-// openNotifyModal — مستدعاة من onclick بأي view فيه notify button
+// openNotifyModal — called from onclick in any view carrying a notify button
 window.openNotifyModal = function (targetType, id, name) {
     currentNotifyTarget = { type: targetType, id: id };
 
     const nameEl = document.getElementById('notifyTargetName');
     if (nameEl) nameEl.textContent = name;
 
-    // reset الحقول
+    // Reset the fields
     const titleEl = document.getElementById('notifyTitleInput');
     const bodyEl  = document.getElementById('notifyBodyInput');
     if (titleEl) titleEl.value = '';
@@ -39,7 +39,7 @@ window.openNotifyModal = function (targetType, id, name) {
 
 document.addEventListener('DOMContentLoaded', () => {
 
-    // ── Notify Modal: تفعيل الزر عند إدخال العنوان + النص ──────
+    // ── Notify modal: enable the button once the title and body are filled ──
     ['notifyTitleInput', 'notifyBodyInput'].forEach(elId => {
         document.getElementById(elId)?.addEventListener('input', () => {
             const t = document.getElementById('notifyTitleInput')?.value.trim() || '';
@@ -53,7 +53,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // ── Notify Modal: إرسال AJAX ────────────────────────────────
+    // ── Notify modal: the AJAX submission ───────────────────────
     document.getElementById('notifySendBtn')?.addEventListener('click', async function () {
         const title = document.getElementById('notifyTitleInput')?.value.trim();
         const body  = document.getElementById('notifyBodyInput')?.value.trim();
@@ -83,7 +83,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // ── Broadcast Modal: تفعيل الزر عند اكتمال الفلاتر ─────────
+    // ── Broadcast modal: enable the button once the filters are complete ──
     const bTitle   = document.getElementById('adminBroadTitle');
     const bBody    = document.getElementById('adminBroadBody');
     const bBtn     = document.getElementById('adminBroadSendBtn');
@@ -117,7 +117,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (bBody)  bBody.addEventListener('input', checkBroad);
     bFilters.forEach(el => el.addEventListener('change', checkBroad));
 
-    // ── Broadcast Modal: إرسال AJAX ─────────────────────────────
+    // ── Broadcast modal: the AJAX submission ────────────────────
     document.getElementById('broadcastForm')?.addEventListener('submit', async function (e) {
         e.preventDefault();
         const fd = new FormData(this);

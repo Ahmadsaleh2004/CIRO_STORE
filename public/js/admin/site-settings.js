@@ -1,11 +1,11 @@
 // ══════════════════════════════════════════════════════════════
-// js/admin/site-settings.js — حفظ إعدادات الموقع عبر AJAX
+// js/admin/site-settings.js — saving the site settings over AJAX
 // ══════════════════════════════════════════════════════════════
 
 document.addEventListener('DOMContentLoaded', function () {
 
     const form = document.getElementById('siteSettingsForm');
-    if (!form) return; // نتأكد إننا فعلاً بصفحة settings
+    if (!form) return; // Confirm we really are on the settings page
 
     form.addEventListener('submit', async function (e) {
         e.preventDefault();
@@ -18,13 +18,13 @@ document.addEventListener('DOMContentLoaded', function () {
         const fd = new FormData(form);
 
         try {
-            // fetchWithCsrfRetry من js/core/csrf.js — يعالج تجديد الـ CSRF تلقائياً
+            // fetchWithCsrfRetry from js/core/csrf.js — it renews the CSRF token automatically
             const data = await fetchWithCsrfRetry(window.URLROOT + '/admin/settings', {
                 method: 'POST',
                 body: fd,
             });
 
-            // showToast(message, icon) من js/core/ui.js
+            // showToast(message, icon) from js/core/ui.js
             if (data.success) {
                 showToast(data.message || 'Settings saved successfully!', 'success');
             } else {

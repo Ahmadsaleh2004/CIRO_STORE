@@ -1,5 +1,5 @@
 // ══════════════════════════════════════════════════════════════
-// js/features/account.js — السكريبتات المخصصة لصفحة "حسابي" (My Info)
+// js/features/account.js — the scripts for the account page (My Info)
 // ══════════════════════════════════════════════════════════════
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -47,13 +47,13 @@ document.addEventListener('DOMContentLoaded', () => {
             msgEl.style.display = 'none';
 
             try {
-                // ⚠️ كان اسم نتيجة الطلب `data` أيضاً — أي أنه يُظلّل `data`
-                // المُعلَنة فوق try. وبما أن const مرتبطة بالكتلة، كان
-                // JSON.stringify(data) في السطر أدناه يقرأ المتغيّر **داخل
-                // منطقته الميتة** فيرمي
+                // ⚠️ The request's result was also named `data` — which shadowed the `data`
+                // declared above the try. And because const is block-scoped,
+                // JSON.stringify(data) on the line below read the variable **inside its
+                // temporal dead zone**, throwing
                 // «ReferenceError: Cannot access 'data' before initialization»
-                // في كل مرة — أي أن «إضافة عنوان» لم تعمل ولا مرة.
-                // أعيدت تسمية النتيجة إلى `result` كي ينفكّ التظليل.
+                // every single time — meaning "add address" never once worked.
+                // The result was renamed to `result` to undo the shadowing.
                 const result = await fetchWithCsrfRetry(window.BASE_URL + '/user/addresses', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },

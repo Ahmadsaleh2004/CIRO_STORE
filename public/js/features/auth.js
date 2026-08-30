@@ -1,5 +1,5 @@
 /**
- * js/features/auth.js — معالجة نماذج Login / Register / Forgot عبر AJAX
+ * js/features/auth.js — handling the login, register and forgot-password forms over AJAX
  */
 
 function switchAuthModal(triggerEl, targetModalId, afterShown) {
@@ -47,14 +47,14 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     const countryPhoneLengths = {
-        '+962': [9],      // الأردن
-        '+20':  [10],     // مصر
-        '+966': [9],      // السعودية
-        '+971': [9],      // الإمارات
-        '+1':   [10],     // أمريكا
-        '+44':  [10],     // بريطانيا
-        '+90':  [10],     // تركيا
-        '+49':  [10, 11]  // ألمانيا
+        '+962': [9],      // Jordan
+        '+20':  [10],     // Egypt
+        '+966': [9],      // Saudi Arabia
+        '+971': [9],      // United Arab Emirates
+        '+1':   [10],     // United States
+        '+44':  [10],     // United Kingdom
+        '+90':  [10],     // Turkey
+        '+49':  [10, 11]  // Germany
     };
 
     // ── Login Validation ───────────────────────────────────────
@@ -64,17 +64,17 @@ document.addEventListener('DOMContentLoaded', () => {
         const loginPass  = document.getElementById('loginPass');
         const loginBtn   = document.getElementById('loginBtn');
 
-        // ⚠️ إظهار هذا العنصر وإخفاؤه بـclassList لا بـstyle.display.
+        // ⚠️ Show and hide this element with classList, not with style.display.
         //
-        // #loginError و#regError يحملان `d-none` في ترميز المودالين،
-        // وBootstrap يعرّفها `display:none !important` — فلا يهزمها نمط
-        // مضمّن. وكان الملف يضبط style.display='block' وحده، فلم تظهر
-        // رسالة خطأ تسجيل دخول ولا تسجيل حساب **ولا مرّة**: كلمة مرور
-        // خاطئة تُعيد الزرّ إلى حاله بلا أي سبب معروض.
+        // #loginError and #regError carry `d-none` in both modals' markup, and Bootstrap
+        // defines it as `display:none !important` — which no inline style defeats. The file
+        // used to set style.display='block' alone, so neither a login nor a registration
+        // error message ever appeared **once**: a wrong password reset the button to its
+        // normal state with no reason displayed at all.
         //
-        // ولم يظهر العطل في بقيّة رسائل المشروع لأنها تكتب className
-        // كاملاً (`msgEl.className = 'alert …'`) فتمحو d-none عرَضاً —
-        // راجع forgotMsg وresetMsg وaddrMsg. هذان وحدهما لم يفعلا.
+        // The fault did not surface in the project's other messages because they write the
+        // whole className (`msgEl.className = 'alert …'`), which clears d-none incidentally —
+        // see forgotMsg, resetMsg and addrMsg. These two alone did not.
         const errEl      = document.getElementById('loginError');
 
         function checkLoginFormValidity() {
@@ -316,14 +316,14 @@ document.addEventListener('DOMContentLoaded', () => {
 window.logoutUser = async function () {
     const fd = new FormData();
     fd.append('action', 'logout');
-    // AuthController::logout صارت تتحقق من CSRF (كانت لا تتحقق، فكان أي
-    // موقع خارجي يستطيع تسجيل خروج الزائر). التوكن من حقل مخفي تطبعه
-    // مودالات المصادقة على كل صفحة متجر، ويحدّثه csrf.js عند كل تجديد.
+    // AuthController::logout now verifies CSRF (it did not, so any external site could
+    // sign a visitor out). The token comes from a hidden field the authentication modals
+    // print on every store page, and csrf.js refreshes it on every renewal.
     fd.append('csrf_token', document.querySelector('input[name="csrf_token"]')?.value || '');
 
     try {
-        // شبكة الأمان مطلوبة الآن فعلاً: توكن منتهٍ يعني فشل خروج، وهذه
-        // تجلب توكناً جديداً وتُعيد المحاولة مرة واحدة.
+        // The safety net genuinely matters now: an expired token means a failed sign-out,
+        // and this fetches a fresh token and retries exactly once.
         const data = await fetchWithCsrfRetry(window.BASE_URL + '/auth/logout', {
             method: 'POST',
             body: fd,

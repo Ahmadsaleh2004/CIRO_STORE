@@ -1,19 +1,19 @@
 // ══════════════════════════════════════════════════════════════
-// js/core/theme.js — إدارة الوضع المظلم والفاتح (Dark/Light Mode)
+// js/core/theme.js — managing dark and light mode
 // ══════════════════════════════════════════════════════════════
 //
-// الثيم يُكتب في مكانين، وكلاهما مطلوب:
+// The theme is written in two places, and both are required:
 //
-//   1) body.dark-mode      — يقرأه كل CSS المشروع.
-//   2) data-bs-theme على <html> — يقرأه Bootstrap 5.3 نفسه.
+//   1) body.dark-mode          — all of the project's CSS reads this.
+//   2) data-bs-theme on <html> — Bootstrap 5.3 itself reads this.
 //
-// قبل هذا التعديل كانت (1) وحدها موجودة، فبقيت كل مكوّنات Bootstrap
-// (الـ pagination، القوائم المنسدلة، .text-muted، سهم الـ select،
-// الجداول، أزرار outline) على ألوان الوضع الفاتح فوق خلفية داكنة —
-// وهو مصدر معظم "الكلام اللي ما بيبان" في الوضع الليلي.
+// Before this change only (1) existed, so every Bootstrap component (the pagination,
+// the dropdowns, .text-muted, the select arrow, the tables, the outline buttons) stayed
+// on light-mode colours over a dark background — the source of most of the "text you
+// cannot read" in dark mode.
 //
-// السمة تُضبط أيضاً في <head> قبل أول رسم عبر themeBootScript()
-// في app/helpers/assets_helper.php، لمنع الومضة البيضاء عند التنقل.
+// The attribute is also set in <head> before the first paint, through themeBootScript()
+// in app/helpers/assets_helper.php, to prevent the white flash while navigating.
 
 function setTheme(isDark) {
     document.body.classList.toggle("dark-mode", isDark);

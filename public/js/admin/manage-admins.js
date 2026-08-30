@@ -1,33 +1,32 @@
 // ══════════════════════════════════════════════════════════════
 // public/js/admin/manage-admins.js
-// مسؤول عن: صفوف الجدول القابلة للنقر، فورم Add، Modal Edit
-//            (openPermModal + تفعيل Save)، حذف الأدمن (SweetAlert2).
-// notify + broadcast → admins.js (مشترك)
-// يستعمل fetchWithCsrfRetry لكل POST.
+// Responsible for: the clickable table rows, the Add form, the Edit modal
+//            (openPermModal and enabling Save), and deleting an admin (SweetAlert2).
+// notify and broadcast → admins.js (shared).
+// It uses fetchWithCsrfRetry for every POST.
 // ══════════════════════════════════════════════════════════════
 
 document.addEventListener('DOMContentLoaded', () => {
 
-    // ── صفوف الجدول القابلة للنقر → صفحة التفاصيل ──────────────
+    // ── Clickable table rows → the details page ─────────────────
     //
-    // ⚠️ الحارس `closest(...)` ليس زينة: بدونه كان النقر على زرّ
-    // «تعديل الصلاحيات» أو «الإشعارات» أو «Delete» **يفتح صفحة
-    // التفاصيل** بدل تنفيذ الزرّ.
+    // ⚠️ The `closest(...)` guard is not decoration: without it, clicking the "edit
+    // permissions", "notifications" or "Delete" button **opened the details page** instead
+    // of performing the button's action.
     //
-    // والسبب دقيق: الـview يضع `data-action="stop-propagation"` على
-    // الـ<td> الحاوي، لكن معالج ذلك الفعل مسجَّل على `document` في
-    // js/core/inline-actions.js — أي في نهاية مسار الفقاعة. بينما
-    // مستمع الصف هذا مسجَّل على الـ<tr> نفسه، فيسبقه. حين تصل النقرة
-    // إلى document ليوقف `stopPropagation` الفقاعة، يكون التنقّل قد
-    // وقع أصلاً — و`stopPropagation` عند آخر عقدة لا توقف شيئاً.
+    // And the reason is precise: the view puts `data-action="stop-propagation"` on the
+    // containing <td>, but that action's handler is registered on `document` in
+    // js/core/inline-actions.js — that is, at the end of the bubbling path. Whereas this
+    // row listener is registered on the <tr> itself, so it goes first. By the time the
+    // click reaches document for `stopPropagation` to halt the bubbling, the navigation
+    // has already happened — and `stopPropagation` at the last node stops nothing.
     //
-    // فالسمة على الـ<td> كانت **بلا أثر** هنا. (وهي تعمل في
-    // orders/index.php لأن الصفّ هناك يستعمل data-action كذلك، فيتنافس
-    // الاثنان داخل نفس المستمع المفوَّض، و`closest` يختار الأقرب —
-    // وهو الـ<td>.)
+    // So the attribute on the <td> had **no effect** here. (It works in orders/index.php
+    // because the row there uses data-action too, so the two compete inside the same
+    // delegated listener, and `closest` picks the nearer one — the <td>.)
     //
-    // والحلّ نفسه المستعمل في users.js منذ البداية: يفحص الصفّ هدف
-    // النقرة قبل أن يتحرّك.
+    // The fix is the same one users.js has used from the start: the row inspects the
+    // click's target before it navigates.
     document.querySelectorAll('.clickable-row').forEach(row => {
         row.addEventListener('click', (e) => {
             if (e.target.closest('button, a, form, input, [data-action]')) return;
@@ -35,7 +34,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // ── فورم Add Admin: تفعيل الزر عند اكتمال الحقول ────────────
+    // ── The Add Admin form: enable the button once the fields are complete ──
     const name    = document.getElementById('newAdmName');
     const email   = document.getElementById('newAdmEmail');
     const pass    = document.getElementById('newAdmPassword');
@@ -99,7 +98,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // ── Edit Permissions Modal: تفعيل زر Save ───────────────────
+    // ── The Edit Permissions modal: enabling the Save button ────
     const editReason  = document.getElementById('editAdminReason');
     const editPass    = document.getElementById('confirm_edit_pass');
     const editSaveBtn = document.getElementById('savePermsBtn');
@@ -136,7 +135,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // ── Delete Admin (SweetAlert2 — نفس نمط Delete Product بالضبط) ─
+    // ── Delete Admin (SweetAlert2 — exactly the Delete Product pattern) ─
     document.querySelectorAll('.del-admin-btn').forEach(function (btn) {
         btn.addEventListener('click', function () {
             const id   = btn.dataset.id;
@@ -204,12 +203,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
 });
 
-// ── openPermModal — مستدعاة من onclick بكل صف بالجدول ────────
+// ── openPermModal — called from an onclick on every table row ──
 window.openPermModal = function (id, name, role, adm, prod, users, dash, supp, cont, check, ord, branding) {
     try {
         const targetIdEl = document.getElementById('permTargetId');
         if (!targetIdEl) {
-            console.error('[openPermModal] عنصر permTargetId غير موجود بالصفحة!');
+            console.error('[openPermModal] the permTargetId element is not on the page!');
             return;
         }
 
@@ -231,13 +230,13 @@ window.openPermModal = function (id, name, role, adm, prod, users, dash, supp, c
 
         const modalEl = document.getElementById('permModal');
         if (!modalEl) {
-            console.error('[openPermModal] عنصر permModal (المودال نفسه) غير موجود بالصفحة!');
+            console.error('[openPermModal] the permModal element (the modal itself) is not on the page!');
             return;
         }
 
         bootstrap.Modal.getOrCreateInstance(modalEl).show();
     } catch (err) {
-        console.error('[openPermModal] حدث خطأ غير متوقع:', err);
-        alert('حدث خطأ أثناء فتح نافذة التعديل — افتح Console (F12) وشارك تفاصيل الخطأ.');
+        console.error('[openPermModal] an unexpected error occurred:', err);
+        alert('Something went wrong opening the edit dialog — open the console (F12) and share the error details.');
     }
 };

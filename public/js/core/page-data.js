@@ -1,42 +1,42 @@
 // ══════════════════════════════════════════════════════════════
-// public/js/core/page-data.js — نقل بيانات الصفحة إلى النطاق العام
+// public/js/core/page-data.js — moving the page's data into the global scope
 // ══════════════════════════════════════════════════════════════
 //
-// كانت أربع عشرة صفحة تمرّر بياناتها بكتلة <script> مضمّنة:
+// Fourteen pages used to pass their data through an inline <script> block:
 //
 //     <script>window.dbProducts = { … };</script>
 //
-// وهي كتلة قابلة للتنفيذ، فأي سياسة CSP جادّة تحجبها — ولهذا بقيت
-// سياسة المشروع بوضع الإبلاغ فقط طوال الوقت.
+// That is an executable block, so any serious CSP blocks it — which is why the project's
+// policy stayed in report-only mode the whole time.
 //
-// الآن تطبع الـviews جزيرة <script type="application/json"> — وهي
-// ليست كتلة تنفيذ، فلا يعنيها script-src أصلاً — وهذا الملف ينسخها
-// إلى window.
+// Now the views print a <script type="application/json"> island — which is not an
+// executable block, so script-src does not concern it at all — and this file copies it
+// onto window.
 //
-// ⚠️ **يجب أن يُحمَّل أوّلاً، قبل أي ملف يقرأ window.**
-// موضعه في footer.php و admin/inc/footer.php أعلى قائمة السكربتات،
-// وقبل حزم الطرف الثالث. نقله لاحقاً يكسر كل صفحة تعتمد على بياناتها.
+// ⚠️ **It must load first, before any file that reads window.**
+// Its place in footer.php and admin/inc/footer.php is at the top of the script list,
+// before the third-party bundles. Moving it later breaks every page depending on its data.
 //
-// ولماذا ليس defer مثل البقية؟ لأن defer يؤجّل التنفيذ إلى ما بعد
-// تحليل المستند — وهو ما نريده تماماً للبقية، لكنه هنا يعني أن ملفاً
-// آخر بـdefer قد يسبقه في الترتيب لو أُعيد ترتيب الوسوم يوماً. الحمل
-// المتزامن يجعل الأسبقية صفةً لا يمكن نقضها بترتيب.
+// And why not defer, like the rest? Because defer postpones execution until after the
+// document is parsed — exactly what we want for the others, but here it means another
+// deferred file could precede it in order should the tags ever be rearranged. Loading
+// synchronously makes the precedence a property that no reordering can overturn.
 
-// ── تمريرة ثانية بعد اكتمال التحليل ───────────────────────────
+// ── A second pass once parsing completes ─────────────────────
 //
-// الحمل المتزامن يضمن الأسبقية، لكنه يضمن معها أن ما لم يُحلَّل بعد
-// **لا يُرى**. وجزيرة تُطبع أسفل الفوتر — بعد وسم هذا الملف — كانت
-// تسقط بلا أثر: لا خطأ، لا تحذير، فقط `window.X` غير معرَّف وميزة
-// كاملة لا تعمل.
+// Synchronous loading guarantees precedence, but along with it guarantees that what has
+// not been parsed yet **is not seen**. And an island printed below the footer — after this
+// file's tag — vanished without a trace: no error, no warning, just an undefined
+// `window.X` and an entire feature that does not work.
 //
-// وقد وقع ذلك فعلاً: صفحة admin/orders/details.php كانت تُسنِد
-// جزيرتها إلى $extraScripts، والفوتر يطبع $extraScripts بعد هذا
-// الملف. فلم تصل ADMIN_ORDER_DETAILS إلى window قط، ولم تُعرَّف
-// window.handleTakeIt المتفرّعة عنها، فبدا زرّ «Take It» معطّلاً.
+// And that actually happened: admin/orders/details.php assigned its island to
+// $extraScripts, and the footer prints $extraScripts after this file. So
+// ADMIN_ORDER_DETAILS never reached window, window.handleTakeIt (defined from it) was
+// never defined, and the "Take It" button looked broken.
 //
-// فالتمريرة الأولى تبقى متزامنة لأسبقيتها، وتلحقها تمريرة عند
-// DOMContentLoaded تلتقط ما وُلد متأخّراً. والعنصر يُوسَم عند
-// معالجته فلا يُقرأ مرّتين ولا يُحذّر من نفسه.
+// So the first pass stays synchronous for its precedence, and a second pass at
+// DOMContentLoaded picks up whatever was created late. Each element is marked as it is
+// processed, so it is not read twice and does not warn about itself.
 (function () {
     'use strict';
 
@@ -58,9 +58,10 @@
             try {
                 payload = JSON.parse(raw);
             } catch (e) {
-                // بيانات معطوبة تعني صفحة بلا وظيفة، والصمت هنا يجعل السبب
-                // مستحيل التتبّع. نُبقي الصفحة تعمل بما بقي ونُبلغ صراحةً.
-                console.error('[page-data] تعذّر تحليل جزيرة البيانات:', e);
+                // Malformed data means a page with no function, and silence here makes the
+                // cause untraceable. The page keeps working on what is left, and we report it
+                // outright.
+                console.error('[page-data] could not parse the data island:', e);
                 continue;
             }
 
@@ -69,11 +70,11 @@
             for (var key in payload) {
                 if (!Object.prototype.hasOwnProperty.call(payload, key)) continue;
 
-                // ⚠️ لا نكتب فوق شيء موجود سلفاً. جزيرتان تحملان المفتاح
-                // نفسه خطأ برمجي، والكتابة الصامتة تجعل الفائز يتبع ترتيب
-                // العناصر في المستند — وهو ترتيب لا يقصده أحد.
+                // ⚠️ Nothing already present is overwritten. Two islands carrying the same
+                // key is a programming error, and writing silently would make the winner
+                // follow the elements' order in the document — an order nobody intended.
                 if (key in window && window[key] !== undefined && window[key] !== null) {
-                    console.warn('[page-data] المفتاح [' + key + '] معرَّف سلفاً — تُرك كما هو.');
+                    console.warn('[page-data] the key [' + key + '] is already defined — left as it is.');
                     continue;
                 }
 
@@ -84,10 +85,10 @@
 
     absorb();
 
-    // ⚠️ التمريرة الثانية شبكة أمان لا رخصة: أي ملف يقرأ window في
-    // جسمه مباشرة (لا داخل DOMContentLoaded) سيسبقها. فموضع الجزيرة
-    // الصحيح يبقى **قبل الفوتر**، واختبار
-    // tests/Unit/PageDataIslandTest.php يفرض ذلك.
+    // ⚠️ The second pass is a safety net, not a licence: any file reading window directly
+    // in its body (rather than inside DOMContentLoaded) will run before it. So the island's
+    // correct place remains **before the footer**, and
+    // tests/Unit/PageDataIslandTest.php enforces that.
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', absorb);
     }

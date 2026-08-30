@@ -1,25 +1,25 @@
 /**
- * variant-swatches.js — يلوّن أزرار ألوان الـvariants.
+ * variant-swatches.js — colouring the variant colour buttons.
  *
- * لماذا يوجد هذا الملف أصلاً؟
+ * Why does this file exist at all?
  *
- * لون كل variant يأتي من قاعدة البيانات، فهو مجموعة مفتوحة لا يمكن أن
- * تصير classes. وكان يُكتب في الترميز مباشرةً:
+ * Each variant's colour comes from the database, so it is an open set that cannot become
+ * a set of classes. And it used to be written straight into the markup:
  *
  *     style="border-left:14px solid #hex;"
  *
- * وهذا آخر ما منع حذف 'unsafe-inline' من style-src في الـCSP. سياسة
- * تسمح بالأنماط المضمّنة لا تستطيع أن تمنع نمطاً محقوناً — فالسمة كان
- * لا بدّ أن تختفي قبل أن يُشدَّد التوجيه.
+ * And that was the last thing preventing 'unsafe-inline' from being removed from the
+ * CSP's style-src. A policy permitting inline styles cannot stop an injected one — so the
+ * attribute had to disappear before the directive could be tightened.
  *
- * الحلّ: القيمة تخرج من PHP كبيان في data-swatch، وتُكتب هنا في خاصية
- * CSS مخصّصة عبر الـCSSOM. وCSP لا يمنع ذلك: هو يحكم ما في **الترميز**
- * لا ما يكتبه سكربت مسموح به. القاعدة نفسها (border-left) تبقى في
- * base/utilities.css تحت .u-swatch.
+ * The fix: the value leaves PHP as data in data-swatch, and is written here into a
+ * custom CSS property through the CSSOM. The CSP does not block that: it governs what is
+ * in **the markup**, not what a permitted script writes. The rule itself (border-left)
+ * stays in base/utilities.css under .u-swatch.
  *
- * الاحتياط: القيمة تُفحص قبل الكتابة. مصدرها القاعدة، ويكتبها الأدمن،
- * لكن setProperty بقيمة غير متوقَّعة تُدخل نصّاً غريباً في CSSOM بلا
- * فائدة. النمط السداسي وحده يمرّ.
+ * The precaution: the value is validated before it is written. Its source is the
+ * database and an admin types it, but setProperty with an unexpected value puts strange
+ * text into the CSSOM for no benefit. Only the hexadecimal form passes.
  */
 
 (function () {
@@ -50,6 +50,6 @@
         paint(document);
     }
 
-    // متاحة عالمياً كي يستدعيها أي كود يحقن أزرار variants بعد التحميل.
+    // Exposed globally so any code injecting variant buttons after load can call it.
     window.paintVariantSwatches = paint;
 })();

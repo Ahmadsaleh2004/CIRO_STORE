@@ -1,9 +1,9 @@
 // ══════════════════════════════════════════════════════════════
-// js/core/utils.js — الدوال البحتة المشتركة
+// js/core/utils.js — the shared pure functions
 // ══════════════════════════════════════════════════════════════
 
 /**
- * escHtml — تهريب النصوص للحماية من XSS
+ * escHtml — escaping text as protection against XSS
  */
 function escHtml(str) {
     if (!str) return '';
@@ -15,35 +15,36 @@ function escHtml(str) {
         .replace(/'/g, '&#39;');
 }
 window.escHtml = escHtml;
-window.escapeHtml = escHtml; // للتوافق العكسي التام
+window.escapeHtml = escHtml; // For complete backward compatibility
 
 /**
- * imagePathOrEmpty — حارس ضد null/undefined لمسار صورة، لا أكثر.
+ * imagePathOrEmpty — a guard against null and undefined for an image path, nothing more.
  *
- * ⚠️ **لا تُصلح هذه الدالة أي مسار.** كان اسمها fixImagePath، وهو اسم
- * يَعِد بما يفعله مقابلها في PHP (app/helpers/functions.php): إضافة
- * بادئة images/ لأي مسار بلا شرطة مائلة، وتمرير الروابط المطلقة كما
- * هي، وإرجاع صورة بديلة عند الفراغ. هذه لا تفعل شيئاً من ذلك.
+ * ⚠️ **This function fixes no path at all.** It used to be called fixImagePath, a name
+ * promising what its PHP counterpart does (app/helpers/functions.php): prefixing images/
+ * onto any path without a slash, passing absolute URLs through unchanged, and returning a
+ * placeholder when empty. This does none of that.
  *
- * الاسم القديم كان فخّاً: في محرّر السلايدر بنى أحدهم المسار بيده
- * ظنّاً أن الإصلاح متوفّر في المتصفح، فخرج /airpods.jpg بدل
- * /images/airpods.jpg — وكُسرت كل صور المنتجات هناك.
+ * The old name was a trap: in the slider editor somebody built the path by hand,
+ * believing the fixing was available in the browser, and out came /airpods.jpg instead of
+ * /images/airpods.jpg — breaking every product image there.
  *
- * **القاعدة:** إصلاح مسار الصورة مسؤولية الخادم دائماً. مرّر المسار
- * عبر fixImagePath() في PHP قبل إرساله للمتصفح، ولا تبنِه في JS.
+ * **The rule:** fixing an image path is always the server's responsibility. Pass the
+ * path through fixImagePath() in PHP before sending it to the browser, and never build it
+ * in JavaScript.
  */
 function imagePathOrEmpty(imgPath) {
     return imgPath || '';
 }
 window.imagePathOrEmpty = imagePathOrEmpty;
 
-// الاسم القديم يبقى موجّهاً للاسم الجديد كي لا ينكسر أي مستدعٍ خارجي،
-// ولأن حذفه دفعةً واحدة تغيير أوسع من التنظيف. المستدعون الثلاثة داخل
-// المشروع حُوّلوا كلهم.
+// The old name stays aliased to the new one so no external caller breaks, and because
+// removing it in one go is a wider change than this cleanup. All three callers inside the
+// project were converted.
 window.fixImagePath = imagePathOrEmpty;
 
 /**
- * formatRelativeTime — تحويل التاريخ لزمن نسبي (Just now, 5m ago, etc)
+ * formatRelativeTime — turning a date into a relative time (Just now, 5m ago, and so on)
  */
 function formatRelativeTime(dateStr) {
     if (!dateStr) return '';
@@ -56,7 +57,7 @@ function formatRelativeTime(dateStr) {
 window.formatRelativeTime = formatRelativeTime;
 
 /**
- * buildProductPicture — بناء <picture> مع WebP fallback
+ * buildProductPicture — building a <picture> with a WebP fallback
  */
 window.buildProductPicture = function (imagePath, altText, cssClass = '') {
     const webp = encodeImagePath(imagePath.replace(/\.(jpe?g|png)$/i, '.webp'));
@@ -69,30 +70,30 @@ window.buildProductPicture = function (imagePath, altText, cssClass = '') {
 };
 
 /**
- * encodeImagePath — يُرمّز مقاطع المسار مع إبقاء الشرطات المائلة.
+ * encodeImagePath — encodes the path's segments while keeping the slashes.
  *
- * ⚠️ **المسافة في srcset فاصل بين مرشّحين لا محرفاً عادياً.**
+ * ⚠️ **A space in a srcset is a separator between candidates, not an ordinary character.**
  *
- * أسماء صور هذا المشروع تحوي مسافات: «apple watch.webp» و
- * «ps4 controller.jpg» و«nintendo switch lite.jpg». فكان المتصفح يقرأ
+ * This project's image names contain spaces: "apple watch.webp",
+ * "ps4 controller.jpg" and "nintendo switch lite.jpg". So the browser read
  *
  *     <source srcset="…/images/apple watch.webp">
  *
- * مرشّحَين — «…/images/apple» و«watch.webp» — ويرفض الاثنين. أكّده
- * حرفياً في وحدة التحكّم:
+ * two candidates — "…/images/apple" and "watch.webp" — and rejected both. It said so
+ * verbatim in the console:
  *     Dropped srcset candidate "…/images/apple"
- * عشر مرّات في تحميل واحد لصفحة المنتجات.
+ * ten times in a single load of the products page.
  *
- * النتيجة أن نسخة WebP — وهي كل الغرض من <picture> — لم تكن تعمل
- * لأي صورة اسمها يحوي مسافة. والصفحة تبدو سليمة تماماً لأن <img>
- * الاحتياطية تعمل، فيمرّ العطل صامتاً وتُخدَّم jpg الأثقل دائماً.
+ * The result was that the WebP version — the entire point of <picture> — worked for no
+ * image whose name contained a space. And the page looks perfectly fine because the
+ * fallback <img> works, so the fault passes silently and the heavier jpg is always served.
  *
- * هذه مرآة للترميز نفسه في fixImagePath() بـPHP — الطرف المخدوم على
- * الخادم أُصلح هناك، وهذا يخدم البطاقات التي يبنيها المتصفح.
+ * This mirrors the same encoding in fixImagePath() in PHP — the server-rendered side was
+ * fixed there, and this serves the cards the browser builds.
  *
- * encodeURIComponent لكل مقطع لا للمسار كلّه: الأخير يحوّل الشرطات
- * المائلة نفسها إلى %2F فيتحطّم المسار. والمقاطع المرمَّزة سلفاً
- * تُترك كما هي كي لا يُرمَّز % مرّتين.
+ * encodeURIComponent per segment rather than over the whole path: the latter turns the
+ * slashes themselves into %2F and breaks it. Already-encoded segments are left alone so a
+ * % is not encoded twice.
  */
 function encodeImagePath(path) {
     if (!path) return path;
@@ -100,15 +101,15 @@ function encodeImagePath(path) {
     const [head, ...rest] = String(path).split('?');
     const query = rest.length ? '?' + rest.join('?') : '';
 
-    // ⚠️ المخطّط والمضيف يُفصلان قبل الترميز.
+    // ⚠️ The scheme and host are separated out before encoding.
     //
-    // المسارات هنا تصل بشكلين: نسبي («images/x.jpg») ومطلق
-    // («http://localhost/STORE/public/images/x.jpg») — والأخير هو ما
-    // تُخرجه fixImagePath في PHP.
+    // Paths arrive here in two shapes: relative ("images/x.jpg") and absolute
+    // ("http://localhost/STORE/public/images/x.jpg") — the latter being what fixImagePath
+    // in PHP produces.
     //
-    // وترميز المقاطع بلا هذا الفصل يحوّل «http:» إلى «http%3A» فيتحطّم
-    // الرابط تماماً. وقع ذلك في أول نسخة من هذه الدالة، وأمسكه فحص
-    // مباشر بمسار مطلق قبل أن يصل المتصفح.
+    // And encoding the segments without that separation turns "http:" into "http%3A" and
+    // breaks the URL entirely. That happened in this function's first version, and a direct
+    // check with an absolute path caught it before it reached the browser.
     const schemeMatch = head.match(/^([a-z][a-z0-9+.-]*:\/\/[^/]+)(\/.*)?$/i);
     const origin = schemeMatch ? schemeMatch[1] : '';
     const pathPart = schemeMatch ? schemeMatch[2] || '' : head;
@@ -123,26 +124,28 @@ function encodeImagePath(path) {
 window.encodeImagePath = encodeImagePath;
 
 /**
- * stockBadge — بادج حالة المخزون. **مرآة لـgetStockBadge() في
- * app/helpers/stock_badge_helper.php ويجب أن تبقى مطابقة لها.**
+ * stockBadge — the stock status badge. **A mirror of getStockBadge() in
+ * app/helpers/stock_badge_helper.php, and it must stay identical to it.**
  *
- * كانت هذه القاعدة مكتوبة **ثلاث مرات** في لغتين:
- *   1. الهيلبر في PHP (يخدم الـviews المبنية على الخادم)
- *   2. getStockBadgeJs في js/features/wishlist.js
- *   3. كتلة if/else مضمّنة في js/features/product-details.js
+ * This rule used to be written **three times**, across two languages:
+ *   1. the PHP helper (serving the server-rendered views)
+ *   2. getStockBadgeJs in js/features/wishlist.js
+ *   3. an inline if/else block in js/features/product-details.js
  *
- * وكانت النسختان في JS تختلفان عن بعضهما أصلاً: الأولى بلا فرع
- * «متوفّر»، والثانية به — نفس الفرق الذي اكتُشف بين PHP والـview في
- * المرحلة 5. اتفاقها اليوم كان مصادفة صيانة لا ضماناً.
+ * And the two JavaScript copies already differed from each other: the first without an
+ * "in stock" branch and the second with one — the same difference found between PHP and
+ * the view in phase 5. Their agreeing today was an accident of maintenance, not a
+ * guarantee.
  *
- * ⚠️ العتبة 50 والنصوص والأصناف مكرّرة عمداً بين لغتين — لا سبيل لتفادي
- * ذلك في مشروع بلا خطوة بناء تشارك الثوابت. **إن غيّرت شيئاً هنا فغيّره
- * في stock_badge_helper.php أيضاً**، والعكس. الملفان يشيران لبعضهما.
+ * ⚠️ The threshold of 50, the labels and the classes are duplicated across two languages
+ * deliberately — there is no way around it in a project with no build step to share the
+ * constants. **If you change something here, change it in stock_badge_helper.php too**,
+ * and the other way round. The two files point at each other.
  *
- * @param {number}  stock        كمية المخزون (العمود unsigned فلا قيم سالبة)
- * @param {boolean} showInStock  هل نُرجع بادجاً أخضر عند التوفّر الوفير؟
- *                               صفحة تفاصيل المنتج نعم، وقائمة المنتجات
- *                               والمفضّلة لا (بادج على كل بطاقة ضجيج بصري).
+ * @param {number}  stock        The stock quantity (the column is unsigned, so no negatives)
+ * @param {boolean} showInStock  Return a green badge when stock is plentiful?
+ *                               Yes on the product details page; no on the products list
+ *                               and the wishlist (a badge on every card is visual noise).
  * @returns {{label: string, class: string}|null}
  */
 function stockBadge(stock, showInStock = false) {

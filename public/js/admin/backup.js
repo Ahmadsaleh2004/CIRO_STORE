@@ -1,7 +1,7 @@
 // ══════════════════════════════════════════════════════════════
-// public/js/admin/backup.js — صفحة Backup DB
-// مسؤول عن: زر إنشاء نسخة (مع spinner) + أزرار حذف النسخ.
-// يستعمل fetchWithCsrfRetry لكل POST، والتوكن من backupCsrfToken أو
+// public/js/admin/backup.js — the database backup page.
+// Responsible for: the create button (with its spinner) and the delete buttons.
+// It uses fetchWithCsrfRetry for every POST, taking the token from backupCsrfToken or
 // window._csrfToken.
 // ══════════════════════════════════════════════════════════════
 
@@ -9,7 +9,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const csrfValue = () => document.getElementById('backupCsrfToken')?.value || window._csrfToken || '';
 
-    // ── إنشاء نسخة جديدة ───────────────────────────────────────
+    // ── Creating a new backup ──────────────────────────────────
     const createBtn = document.getElementById('createBackupBtn');
     if (createBtn) {
         createBtn.addEventListener('click', async () => {
@@ -48,7 +48,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // ── حذف نسخة ───────────────────────────────────────────────
+    // ── Deleting a backup ──────────────────────────────────────
     document.querySelectorAll('.backup-delete-btn').forEach(btn => {
         btn.addEventListener('click', async () => {
             const filename = btn.dataset.file;

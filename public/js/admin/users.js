@@ -1,19 +1,19 @@
 // ══════════════════════════════════════════════════════════════
-// public/js/admin/users.js — قائمة اليوزرز + تفاصيل يوزر
-// notify → admins.js (openNotifyModal مشتركة)
-// يستعمل fetchWithCsrfRetry لكل POST — شبكة أمان CSRF المشتركة.
+// public/js/admin/users.js — the user list and a user's details.
+// notify → admins.js (openNotifyModal is shared).
+// It uses fetchWithCsrfRetry for every POST — the shared CSRF safety net.
 // ══════════════════════════════════════════════════════════════
 
 document.addEventListener('DOMContentLoaded', () => {
 
-    // ── صفوف الجدول القابلة للنقر → صفحة التفاصيل ──────────────
+    // ── Clickable table rows → the details page ─────────────────
     document.querySelectorAll('.user-row').forEach(function (row) {
         row.addEventListener('mouseenter', () => { row.style.backgroundColor = 'rgba(99,102,241,.06)'; });
         row.addEventListener('mouseleave', () => { row.style.backgroundColor = ''; });
         row.addEventListener('click', function (e) {
             if (e.target.closest('button, a, form, input')) return;
-            // href كامل (مو pathname فقط) — فحص الـ Open Redirect بالكنترولر
-            // بيقارن بـ URLROOT الكامل (scheme+host) فعشان يمر لازم نرسل href
+            // The full href (not just the pathname) — the controller's open-redirect check
+            // compares against the complete URLROOT (scheme + host), so the href must be sent
             window.location.href = window.URLROOT + '/admin/users/details?id=' + row.dataset.uid;
         });
     });
@@ -22,7 +22,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('.delete-user-btn').forEach(function (btn) {
         btn.addEventListener('click', function () {
             const uid  = btn.dataset.uid;
-            const name = btn.dataset.name;   // ⚠️ لا تمرره أبدًا جوا title:/html:
+            const name = btn.dataset.name;   // ⚠️ Never pass this inside title: or html:
 
             Swal.fire({
                 title: 'Delete User?',
@@ -59,7 +59,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // ── Strikes (3 دوائر ثابتة — نفس منطق المشروع القديم) ───────
+    // ── Strikes (three fixed circles — the same logic as the old project) ──
     document.querySelectorAll('.strike-btn').forEach(function (btn) {
         btn.addEventListener('click', async function () {
             const index    = btn.dataset.index;
@@ -68,7 +68,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const userId   = btn.dataset.userId;
 
             if (isActive) {
-                // إزالة إنذار
+                // Removing a strike
                 const result = await Swal.fire({
                     title: 'Remove Strike #' + index + '?',
                     text: "This will remove the strike from the user's record.",
@@ -92,7 +92,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (typeof showToast === 'function') showToast('Network error.', 'error');
                 }
             } else {
-                // إضافة إنذار
+                // Adding a strike
                 const result = await Swal.fire({
                     title: 'Issue Strike #' + index,
                     input: 'textarea',

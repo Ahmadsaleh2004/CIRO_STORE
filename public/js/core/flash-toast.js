@@ -1,21 +1,21 @@
 // ══════════════════════════════════════════════════════════════
-// js/core/flash-toast.js — عرض الرسائل العابرة كـtoast
+// js/core/flash-toast.js — showing transient messages as toasts
 // ══════════════════════════════════════════════════════════════
 //
-// يلتقط العناصر التي يطبعها app/views/shared/flash-toast.php ويعرض
-// كلاً منها عبر showToast من js/core/ui.js.
+// It picks up the elements app/views/shared/flash-toast.php prints and shows each of
+// them through showToast, from js/core/ui.js.
 //
-// كان هذا المنطق مكتوباً داخل الـviews: كل صفحة تحتاج رسالة عابرة
-// تكتب <script> يستمع لـDOMContentLoaded ويستدعي showToast بنفسها.
+// This logic used to be written inside the views: every page needing a transient message
+// wrote a <script> listening for DOMContentLoaded and calling showToast itself.
 
 document.addEventListener('DOMContentLoaded', function () {
     const nodes = document.querySelectorAll('.js-flash-toast[data-toast-message]');
     if (!nodes.length) return;
 
     if (typeof window.showToast !== 'function') {
-        // الحارس كان موجوداً في النسخ المضمّنة (typeof showToast === 'function')
-        // وأُبقي: ui.js قد لا يكون محمَّلاً على صفحة مستقلة.
-        console.warn('flash-toast: showToast غير معرَّفة — لن تُعرض الرسائل');
+        // The guard existed in the inline copies (typeof showToast === 'function') and was
+        // kept: ui.js may not be loaded on a standalone page.
+        console.warn('flash-toast: showToast is not defined — no messages will be shown');
         return;
     }
 

@@ -1,10 +1,10 @@
 // ══════════════════════════════════════════════════════════════
-// js/core/csrf.js — إدارة CSRF Token والـ Retry التلقائي
+// js/core/csrf.js — CSRF token management and the automatic retry
 // ══════════════════════════════════════════════════════════════
 
 /**
  * updateCsrfToken(newToken)
- * تُحدّث كل input[name="csrf_token"] بالصفحة بالتوكن الجديد.
+ * Updates every input[name="csrf_token"] on the page with the new token.
  */
 function updateCsrfToken(newToken) {
     if (!newToken) return;
@@ -16,10 +16,10 @@ function updateCsrfToken(newToken) {
 window.updateCsrfToken = updateCsrfToken;
 
 /**
- * headerValue(headers, name) — يقرأ ترويسة من options.headers أياً كان شكلها.
+ * headerValue(headers, name) — reads a header out of options.headers, whatever its shape.
  *
- * fetch يقبل ثلاثة أشكال: كائن عادي، أو Headers، أو مصفوفة أزواج.
- * أسماء الترويسات غير حسّاسة لحالة الأحرف، فالمقارنة بحروف صغيرة.
+ * fetch accepts three shapes: a plain object, a Headers instance, or an array of pairs.
+ * Header names are case-insensitive, so the comparison is done in lower case.
  */
 function headerValue(headers, name) {
     if (!headers) return '';
@@ -37,23 +37,23 @@ function headerValue(headers, name) {
 }
 
 /**
- * rebuildBodyWithToken(options, newToken) — يُنتج جسماً جديداً يحمل التوكن
- * الجديد، محافظاً على شكل الجسم الأصلي.
+ * rebuildBodyWithToken(options, newToken) — produces a new body carrying the new token,
+ * preserving the original body's shape.
  *
- * يُرجع { body, ok } — و ok=false تعني أننا لم نعرف كيف نعيد البناء،
- * فإعادة المحاولة بلا معنى ويجب ألّا تُجرَّب.
+ * It returns { body, ok } — and ok=false means we did not know how to rebuild it, so a
+ * retry is meaningless and must not be attempted.
  *
- * ⚠️ الشكل الثالث (JSON) أُضيف لاحقاً، والنسخة السابقة لم تكن **تتجاهله**
- * بل **تفسده**: كل جسم نصّي كان يمرّ على URLSearchParams، فيتحوّل
- * {"csrf_token":"…","items":[…]} إلى مفتاح واحد مُرمَّز
- * %7B%22csrf_token%22… لا يستطيع json_decode قراءته. أي أن إعادة
- * المحاولة كانت تفشل حتماً لكل نقطة ترسل JSON — وهي صفحة الدفع و
- * admin/my-info و admin-notifications وغيرها.
+ * ⚠️ The third shape (JSON) was added later, and the previous version did not **ignore**
+ * it but **corrupted** it: every string body went through URLSearchParams, turning
+ * {"csrf_token":"…","items":[…]} into a single encoded key,
+ * %7B%22csrf_token%22…, that json_decode cannot read. Which means the retry failed with
+ * certainty for every endpoint sending JSON — the checkout page, admin/my-info,
+ * admin-notifications, and others.
  */
 function rebuildBodyWithToken(options, newToken) {
     const body = options.body;
 
-    // 1. FormData — الشكل الأكثر شيوعاً في فورمات المشروع
+    // 1. FormData — the commonest shape among the project's forms
     if (typeof FormData !== 'undefined' && body instanceof FormData) {
         const out = new FormData();
         let sawToken = false;
@@ -61,38 +61,38 @@ function rebuildBodyWithToken(options, newToken) {
             if (key === 'csrf_token') { sawToken = true; out.append(key, newToken); }
             else                      { out.append(key, val); }
         }
-        // مهم: النسخة الأقدم كانت تستبدل مفتاحاً موجوداً فقط. الفورم الذي
-        // لا يحوي csrf_token إطلاقاً (كفورم forgot-password سابقاً) كانت
-        // تُعاد محاولته بنفس الطلب الناقص فيفشل مجدداً — شبكة أمان معطّلة
-        // صامتة. الإضافة عند الغياب تصحّح ذلك.
+        // Important: the older version replaced an existing key only. A form containing no
+        // csrf_token at all (the forgot-password form used to be one) was retried with the
+        // same incomplete request and failed again — a silently disabled safety net. Adding
+        // it when absent fixes that.
         if (!sawToken) out.append('csrf_token', newToken);
         return { body: out, ok: true };
     }
 
-    // 1ب. URLSearchParams ككائن — لا كنصّ.
+    // 1b. URLSearchParams as an object — not as a string.
     //
-    // المشروع اليوم لا يرسله (مفحوص: 38 موضعاً بـFormData و3 بـJSON،
-    // وURLSearchParams مستعملة لسلاسل الاستعلام وحدها). لكن `fetch`
-    // يقبله جسماً ويسلسله urlencoded من تلقائه، فكتابة
+    // The project does not send it today (verified: 38 sites using FormData and 3 using
+    // JSON, with URLSearchParams used for query strings alone). But `fetch` accepts it as a
+    // body and serialises it as urlencoded on its own, so writing
     //     body: params
-    // خطوة طبيعية تماماً لمن يضيف نقطة جديدة.
+    // is an entirely natural step for anyone adding a new endpoint.
     //
-    // وبلا هذا الفرع كانت تسقط إلى «شكل لا نعرفه» فتُرجع ok=false —
-    // أي **تُفقد إعادة المحاولة بصمت**. وهو الصنف نفسه الذي أوقع هذا
-    // الملف ثلاث مرّات: الشبكة تبدو عاملة لأن الطلب الأول ينجح، ولا
-    // يظهر العطل إلا حين ينتهي التوكن فعلاً.
+    // And without this branch it fell through to "a shape we do not know" and returned
+    // ok=false — that is, **the retry was lost silently**. The same class of fault that
+    // caught this file three times: the net looks functional because the first request
+    // succeeds, and the fault only surfaces once a token genuinely expires.
     //
-    // أربعة أسطر تقفل باباً مفتوحاً، فُتح ثلاث مرّات من قبل.
+    // Four lines closing an open door that has been opened three times before.
     if (typeof URLSearchParams !== 'undefined' && body instanceof URLSearchParams) {
         const out = new URLSearchParams(body.toString());
-        out.set('csrf_token', newToken); // set يضيف إذا كان غائباً
+        out.set('csrf_token', newToken); // set adds it when absent
         return { body: out, ok: true };
     }
 
     if (typeof body === 'string') {
         const contentType = headerValue(options.headers, 'content-type').toLowerCase();
         const looksJson   = contentType.includes('json')
-                         || /^\s*[{[]/.test(body); // احتياط لو غابت الترويسة
+                         || /^\s*[{[]/.test(body); // A fallback for when the header is missing
 
         // 2. JSON
         if (looksJson) {
@@ -100,12 +100,12 @@ function rebuildBodyWithToken(options, newToken) {
             try {
                 parsed = JSON.parse(body);
             } catch (e) {
-                console.error('CSRF Retry: جسم JSON غير قابل للتحليل — لن تُعاد المحاولة', e);
+                console.error('CSRF Retry: the JSON body cannot be parsed — no retry will be made', e);
                 return { body, ok: false };
             }
-            // التوكن حقل في كائن. مصفوفة أو قيمة مفردة لا مكان فيها له.
+            // The token is a field on an object. An array or a scalar has nowhere to put it.
             if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) {
-                console.error('CSRF Retry: جسم JSON ليس كائناً — لا موضع للتوكن');
+                console.error('CSRF Retry: the JSON body is not an object — there is nowhere for the token');
                 return { body, ok: false };
             }
             parsed.csrf_token = newToken;
@@ -114,19 +114,19 @@ function rebuildBodyWithToken(options, newToken) {
 
         // 3. urlencoded
         const params = new URLSearchParams(body);
-        params.set('csrf_token', newToken); // set يضيف إذا كان غائباً
+        params.set('csrf_token', newToken); // set adds it when absent
         return { body: params.toString(), ok: true };
     }
 
-    // شكل لا نعرفه (Blob أو ArrayBuffer أو بلا جسم): لا نخمّن
+    // A shape we do not know (a Blob, an ArrayBuffer, or no body at all): do not guess
     return { body, ok: false };
 }
 
 /**
  * fetchWithCsrfRetry(url, options, _retried)
- * Wrapper لـ fetch() يُعيد المحاولة تلقائياً مرة واحدة إذا فشل CSRF
+ * A wrapper around fetch() that retries automatically, exactly once, on a CSRF failure.
  *
- * يدعم ثلاثة أشكال أجسام: FormData · JSON · urlencoded.
+ * It supports three body shapes: FormData · JSON · urlencoded.
  */
 async function fetchWithCsrfRetry(url, options = {}, _retried = false) {
     const response = await fetch(url, options);
@@ -136,19 +136,19 @@ async function fetchWithCsrfRetry(url, options = {}, _retried = false) {
         updateCsrfToken(data.csrf_token);
     }
 
-    // الاكتشاف برمز صريح لا بنصّ رسالة.
+    // Detection by an explicit code, not by a message's text.
     //
-    // كان الشرط هنا message.startsWith('Invalid CSRF token')، فكانت أي
-    // نقطة تصوغ رسالتها بشكل آخر تفقد إعادة المحاولة **بصمت**. حدث ذلك
-    // ثلاث مرات فعلاً: زر «نبّهني عند التوفّر» ونموذج «اتصل بنا» كانا
-    // يردّان بـ'Invalid session…' و'Invalid request…'، وست نقاط أخرى نجت
-    // بالصدفة لأن صياغتها بدأت بالبادئة نفسها.
+    // The condition here used to be message.startsWith('Invalid CSRF token'), so any
+    // endpoint wording its message differently lost the retry **silently**. That happened
+    // three times in fact: the "notify me when available" button and the contact form
+    // answered with 'Invalid session…' and 'Invalid request…', and six other endpoints
+    // survived by chance because their wording happened to start with the same prefix.
     //
-    // ERR_CSRF_INVALID معرَّف في App\Core\Controller ويُرسَل من
-    // respondCsrfFailure(). الرسالة صارت للعرض وحدها وتتغيّر بحرية.
+    // ERR_CSRF_INVALID is defined in App\Core\Controller and sent from
+    // respondCsrfFailure(). The message is now for display alone and can change freely.
     if (!data.success && data.error_code === 'csrf_invalid' && !_retried) {
         try {
-            // مسار مختلف حسب السياق — الأدمن يستخدم /admin/csrf، المستخدم العادي /auth/csrf
+            // A different path per context — the admin uses /admin/csrf, a regular user /auth/csrf
             const csrfEndpoint = (typeof window.URLROOT !== 'undefined')
                 ? window.URLROOT + '/admin/csrf'
                 : window.BASE_URL + '/auth/csrf';
@@ -161,8 +161,8 @@ async function fetchWithCsrfRetry(url, options = {}, _retried = false) {
 
             const rebuilt = rebuildBodyWithToken(options, newToken);
             if (!rebuilt.ok) {
-                // لم نعرف كيف نعيد بناء الجسم. إعادة المحاولة بجسم لا يحمل
-                // التوكن الجديد ستفشل حتماً وتستهلك طلباً بلا فائدة.
+                // We did not know how to rebuild the body. Retrying with a body that does not
+                // carry the new token would fail with certainty and spend a request for nothing.
                 return data;
             }
 

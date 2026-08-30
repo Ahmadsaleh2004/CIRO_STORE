@@ -1,13 +1,13 @@
 // ══════════════════════════════════════════════════════════════
-// js/features/reset-password.js — فورم إعادة تعيين كلمة المرور
+// js/features/reset-password.js — the password reset form
 // ══════════════════════════════════════════════════════════════
 //
-// كان هذا الملف كتلة <script> مضمّنة (58 سطراً) في
-// app/views/auth/reset-password.php. القيمتان الوحيدتان القادمتان من
-// PHP (window.BASE_URL و window.URLROOT، وكلتاهما URLROOT) بقيتا في
-// سطر مضمّن واحد في الـview — تمرير بيانات لا منطق.
+// This file used to be an inline <script> block (58 lines) in
+// app/views/auth/reset-password.php. The only two values coming from PHP
+// (window.BASE_URL and window.URLROOT, both of them URLROOT) stayed in a single inline
+// line in the view — passing data, not logic.
 //
-// fetchWithCsrfRetry تأتي من js/core/csrf.js المحمَّل قبل هذا الملف.
+// fetchWithCsrfRetry comes from js/core/csrf.js, loaded before this file.
 
 (function () {
     'use strict';
@@ -21,7 +21,7 @@
 
     document.addEventListener('DOMContentLoaded', function () {
         const form = document.getElementById('resetForm');
-        if (!form) return; // الرابط منتهٍ أو غير صحيح — لا فورم في الصفحة
+        if (!form) return; // An expired or invalid link — there is no form on the page
 
         form.addEventListener('submit', async function (e) {
             e.preventDefault();
@@ -43,11 +43,11 @@
             if (btn) btn.disabled = true;
 
             try {
-                // الاحتياط fetch العاري لا يعمل فعلياً: fetch تُرجع Response
-                // لا بيانات مُحلَّلة، فـdata.message ستكون undefined. لكنه
-                // غير قابل للوصول عملياً — csrf.js يُحمَّل بـdefer، وسكربتات
-                // defer تُنفَّذ قبل DOMContentLoaded، فالدالة معرَّفة دائماً
-                // لحظة وصول المستخدم إلى هنا. تُرك كما كان.
+                // The bare-fetch fallback does not actually work: fetch returns a Response
+                // rather than parsed data, so data.message would be undefined. But it is
+                // unreachable in practice — csrf.js is loaded with defer, and deferred scripts
+                // execute before DOMContentLoaded, so the function is always defined by the
+                // time a user reaches here. It was left as it was.
                 const doFetch = (typeof window.fetchWithCsrfRetry === 'function')
                     ? window.fetchWithCsrfRetry
                     : fetch;

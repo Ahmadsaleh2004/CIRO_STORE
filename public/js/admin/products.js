@@ -1,8 +1,8 @@
 // ══════════════════════════════════════════════════════════════
-// js/admin/products.js — السكريبتات المخصصة لإدارة المنتجات بالكلية
+// js/admin/products.js — all of the product management scripts
 // ══════════════════════════════════════════════════════════════
 
-// ── 1. إدارة الألوان في نموذجي إضافة وتعديل المنتج ──────────────
+// ── 1. Managing the colours in the add and edit product forms ───
 document.addEventListener('DOMContentLoaded', () => {
     const editForm = document.getElementById('editProductForm');
     const addForm  = document.getElementById('addProductForm');
@@ -266,14 +266,15 @@ function initAddProductForm(form) {
     });
 }
 
-// ── 2. إخفاء/إظهار وحذف المنتجات في قائمة المنتجات ──────────────
+// ── 2. Hiding, showing and deleting products in the product list ─
 function initProductsListInteractions() {
-    // ⚠️ الـ handlers القديمة (window.BASE_URL + "/handlers/product_handler.php") أُزيلت.
-    // الـ AJAX الآن يذهب مباشرة لـ /admin/products/delete و /admin/products/toggle-visibility
-    // عبر window.URLROOT (مش BASE_URL — صفحات الأدمن تستخدم URLROOT فقط)
+    // ⚠️ The old handlers (window.BASE_URL + "/handlers/product_handler.php") were removed.
+    // The AJAX now goes straight to /admin/products/delete and
+    // /admin/products/toggle-visibility through window.URLROOT (not BASE_URL — the admin
+    // pages use URLROOT alone).
     function getCsrf() { return window._csrfToken || document.getElementById('productsCsrf')?.value || ''; }
 
-    // ── Toggle Visibility (مصدر واحد للحقيقة — product-hidden-row) ──
+    // ── Toggle visibility (one source of truth — product-hidden-row) ──
     document.querySelectorAll('.toggle-vis-btn').forEach(function (btn) {
         btn.addEventListener('click', async function () {
             if (btn.disabled) return;

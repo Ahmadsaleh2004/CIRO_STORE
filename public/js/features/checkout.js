@@ -1,30 +1,31 @@
 // ══════════════════════════════════════════════════════════════
-// js/features/checkout.js — صفحة إتمام الطلب (ثلاث خطوات)
+// js/features/checkout.js — the checkout page (three steps)
 // ══════════════════════════════════════════════════════════════
 //
-// كان هذا الملف كتلة <script> مضمّنة بطول 157 سطراً داخل
-// app/views/checkout/checkout.php. الكتلة كانت تحقن أربع قيم PHP
-// (URLROOT · توكن CSRF · مفتاح idempotency · العناوين المحفوظة) ثم
-// تكتب منطق الصفحة كاملاً بعدها.
+// This file used to be a 157-line inline <script> block inside
+// app/views/checkout/checkout.php. The block injected four PHP values (URLROOT, the CSRF
+// token, the idempotency key, and the saved addresses) and then wrote the page's entire
+// logic beneath them.
 //
-// القيم الأربع تصل الآن عبر data-* على <main id="main-content">، وكل ما
-// تحت هذا السطر منطق خالص لا يعرف شيئاً عن PHP.
+// The four values now arrive through data-* attributes on <main id="main-content">, and
+// everything below this line is pure logic that knows nothing about PHP.
 //
-// كل شيء داخل IIFE عن قصد: النسخة المضمّنة كانت تعرّف
-// URLROOT و CSRF_TOKEN و postJson و goTo و buildReview
-// **في النطاق العام**. مقبول في كتلة تخصّ صفحة واحدة، لكنه في ملف
-// خارجي يُحمَّل مع بقية ملفات المتجر يعني تصادم أسماء محتملاً — و
-// `const URLROOT` في نطاق عام يرمي SyntaxError لو أعلنه ملف آخر.
+// Everything sits inside an IIFE deliberately: the inline version declared URLROOT,
+// CSRF_TOKEN, postJson, goTo and buildReview **in the global scope**. Acceptable in a
+// block belonging to one page, but in an external file loaded alongside the rest of the
+// store's files it means a possible name collision — and `const URLROOT` in the global
+// scope throws a SyntaxError if another file declares it.
 
 (function () {
     'use strict';
 
-    // الاختيار بالسمة لا بالـid عن قصد: السمة تصف ما نبحث عنه بالضبط،
-    // فلا تتأثر بأي معرّف مكرَّر في الصفحة ولا تفترض وسماً بعينه.
+    // Selecting by the attribute rather than the id is deliberate: the attribute describes
+    // exactly what is being looked for, so it is unaffected by any duplicated id on the page
+    // and assumes no particular tag.
     const root = document.querySelector('[data-checkout-urlroot]');
-    if (!root) return; // لسنا في صفحة الدفع
+    if (!root) return; // We are not on the checkout page
 
-    // ── بيانات الصفحة (من data-* لا من PHP مضمّن) ───────────────
+    // ── The page's data (from data-*, not from inline PHP) ──────
     const URLROOT         = root.dataset.checkoutUrlroot;
     const CSRF_TOKEN      = root.dataset.checkoutCsrf;
     const IDEMPOTENCY_KEY = root.dataset.checkoutIdempotency;
@@ -33,10 +34,10 @@
     try {
         SAVED_ADDRESSES = JSON.parse(root.dataset.checkoutAddresses || '[]');
     } catch (e) {
-        console.error('checkout: تعذّر تحليل العناوين المحفوظة', e);
+        console.error('checkout: could not parse the saved addresses', e);
     }
 
-    // ── عناصر DOM ───────────────────────────────────────────────
+    // ── The DOM elements ────────────────────────────────────────
     const steps     = [1, 2, 3].map(n => document.getElementById(`step-${n}`));
     const stepItems = [1, 2, 3].map(n => document.getElementById(`si-${n}`));
 
@@ -50,24 +51,26 @@
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
-    // ── إرسال JSON عبر شبكة أمان CSRF المركزية ───────────────────
-    // كان هنا غلاف محلي اسمه fetchWithCsrf يرسل الطلب بلا إعادة محاولة،
-    // ويبرّر نفسه بأن fetchWithCsrfRetry «تدعم FormData وurlencoded فقط
-    // وهذه الصفحة ترسل JSON». **كان صحيحاً حين كُتب، وسقط في المرحلة
-    // 6ب-1** التي علّمت تلك الدالة إعادة بناء أجسام JSON بالضبط.
+    // ── Sending JSON through the central CSRF safety net ────────
+    // There used to be a local wrapper here called fetchWithCsrf that sent the request with
+    // no retry, justifying itself on the grounds that fetchWithCsrfRetry "supports FormData
+    // and urlencoded only, and this page sends JSON". **That was true when it was written,
+    // and stopped being true in phase 6b-1**, which taught that function to rebuild JSON
+    // bodies precisely.
     //
-    // ولماذا يهمّ هنا تحديداً: التوكن في هذا المشروع واحد لكل جلسة،
-    // فيكفي أن يفشل فورم في تبويب آخر ليُدوَّر التوكن ويصير توكن هذه
-    // الصفحة باطلاً — فيضيع الطلب. وضياع طلب هنا يعني **ضياع عملية
-    // شراء مكتملة** بعد أن ملأ المستخدم ثلاث خطوات.
+    // And why it matters here in particular: the token in this project is one per session,
+    // so a form failing in another tab is enough to rotate it and leave this page's token
+    // invalid — and the request is lost. Losing a request here means **losing a completed
+    // purchase** after the user has filled in three steps.
     //
-    // وإعادة المحاولة آمنة على /checkout: الكنترولر يتحقق من التوكن
-    // **قبل** فحص idempotency وقبل إنشاء أي طلب، فالرفض يعني أن شيئاً
-    // لم يُنشأ بعد. ومفتاح idempotency يبقى في الجسم المُعاد بناؤه
-    // فيحمي من ازدواج الطلب على أي حال.
+    // And retrying is safe on /checkout: the controller verifies the token **before** the
+    // idempotency check and before creating any order, so a refusal means nothing has been
+    // created yet. And the idempotency key survives in the rebuilt body, guarding against a
+    // duplicated order regardless.
     //
-    // csrf.js محمَّل في فوتر المتجر قبل هذا الملف (كلاهما defer، والتنفيذ
-    // بترتيب المستند)، فالدالة معرَّفة يقيناً حين يعمل ما تحت.
+    // csrf.js is loaded in the store footer before this file (both are deferred, and
+    // execution follows document order), so the function is certainly defined by the time
+    // what follows runs.
     function postJson(url, payload) {
         return fetchWithCsrfRetry(url, {
             method:  'POST',
@@ -76,16 +79,16 @@
         });
     }
 
-    // ── الحصول على العنوان المختار ───────────────────────────────
+    // ── Getting the selected address ────────────────────────────
     function getSelectedAddressId() {
         const checked = document.querySelector('input[name="addr_choice"]:checked');
         if (checked) return parseInt(checked.value);
-        // إذا لم يكن هناك عنوان محفوظ فنبني عنواناً جديداً
+        // With no saved address, a new one is built
         const full = document.getElementById('newAddrFull')?.value.trim();
         return full ? 'new' : null;
     }
 
-    // ── بناء ملخص الطلب ─────────────────────────────────────────
+    // ── Building the order summary ──────────────────────────────
     function buildReview() {
         const cart    = window.getCartData ? window.getCartData() : [];
         const list    = document.getElementById('reviewCartList');
@@ -93,28 +96,26 @@
         const addrEl  = document.getElementById('reviewAddress');
         const payEl   = document.getElementById('reviewPayment');
 
-        // ⚠️ `quantity` لا `qty`. المفتاح في السلّة اسمه quantity في
-        // المواضع الثلاثة التي تكتبها (products-catalog · product-details
-        // · wishlist)، وكان هذا السطر يقرأ `item.qty` — أي undefined.
-        // فكان `price * undefined` يساوي NaN، وشاشة المراجعة الأخيرة
-        // قبل الدفع تعرض «$NaN» في كل سطر وفي الإجمالي.
+        // ⚠️ `quantity`, not `qty`. The cart's key is called quantity in all three places
+        // that write it (products-catalog · product-details · wishlist), and this line read
+        // `item.qty` — that is, undefined. So `price * undefined` was NaN, and the final
+        // review screen before payment showed "$NaN" on every line and in the total.
         let total = 0;
         list.innerHTML = cart.map(item => {
             const qty  = Number(item.quantity) || 0;
             const line = Number(item.price) * qty;
             total += line;
-            // ⚠️ `escHtml` على الاسم واللون.
+            // ⚠️ `escHtml` on the name and the colour.
             //
-            // كانا يُحقنان خامّين في innerHTML. والقيمتان تأتيان من
-            // القاعدة — يكتبهما أدمن في Manage Products — فاسم منتج
-            // فيه <img src=x onerror=...> كان ينفّذ على **شاشة
-            // المراجعة الأخيرة قبل الدفع**، وهي أسوأ صفحة يقع فيها
-            // ذلك.
+            // They used to be injected raw into innerHTML. And both values come from the
+            // database — an admin types them in Manage Products — so a product name containing
+            // <img src=x onerror=…> executed on **the final review screen before payment**,
+            // the worst page for that to happen on.
             //
-            // ولا يكفي أن CSP تحجب المعالجات المضمّنة: الحجب طبقةٌ
-            // ثانية، والهروب هو الطبقة الأولى. وبقيّة الملفات تهرّب
-            // بالفعل (cart.js وwishlist.js وnotifications.js)، فكان
-            // هذا الموضع الاستثناء لا القاعدة.
+            // And the CSP blocking inline handlers is not enough: the blocking is a second
+            // layer, and escaping is the first. The other files escape already (cart.js,
+            // wishlist.js and notifications.js), so this site was the exception rather than
+            // the rule.
             const label = escHtml(item.name)
                 + (item.color_name ? ' — ' + escHtml(item.color_name) : '');
 
@@ -126,25 +127,25 @@
 
         totalEl.textContent = '$' + total.toFixed(2);
 
-        // عرض العنوان المختار
+        // Displaying the selected address
         const addrId = getSelectedAddressId();
 
-        // المقارنة صارمة بعد توحيد النوع. المعرّفات تصل من مصدرين
-        // مختلفين — `parseInt` من قيمة الراديو، وJSON من data-* — فكان
-        // `==` هو ما يجسر بينهما. و`getSelectedAddressId` قد تُرجع
-        // السلسلة 'new' أو null، وكلتاهما تصير NaN فلا تطابق أي معرّف،
-        // وهو السلوك المطلوب: لا عنوان محفوظاً مختاراً.
+        // A strict comparison, after the types are unified. The ids arrive from two
+        // different sources — `parseInt` from the radio's value, and JSON from data-* — and
+        // `==` was what bridged them. And `getSelectedAddressId` may return the string 'new'
+        // or null, both of which become NaN and match no id — which is the wanted behaviour:
+        // no saved address is selected.
         const addr = SAVED_ADDRESSES.find(a => Number(a.id) === Number(addrId));
         addrEl.textContent = addr
             ? [addr.label, addr.full_address, addr.city, addr.country].filter(Boolean).join(', ')
             : (document.getElementById('newAddrFull')?.value.trim() || '—');
 
-        // طريقة الدفع
+        // The payment method
         const pay = document.querySelector('input[name="payment_method"]:checked');
         payEl.textContent = pay?.value === 'cash_on_delivery' ? 'Cash on Delivery' : pay?.value || '—';
     }
 
-    // ── ناقلات الخطوات ──────────────────────────────────────────
+    // ── The step transitions ────────────────────────────────────
     document.getElementById('toStep2Btn')?.addEventListener('click', () => {
         if (!getSelectedAddressId()) {
             Swal.fire({ icon: 'warning', title: 'Address Required', text: 'Please select or add a delivery address.' });
@@ -156,7 +157,7 @@
     document.getElementById('toStep3Btn')?.addEventListener('click', () => { buildReview(); goTo(3); });
     document.getElementById('backToStep2Btn')?.addEventListener('click', () => goTo(2));
 
-    // ── إضافة عنوان جديد ────────────────────────────────────────
+    // ── Adding a new address ────────────────────────────────────
     document.getElementById('saveNewAddrBtn')?.addEventListener('click', async () => {
         const label   = document.getElementById('newAddrLabel').value.trim()   || 'Home';
         const phone   = document.getElementById('newAddrPhone').value.trim()   || '';
@@ -182,20 +183,22 @@
         }
     });
 
-    // ── ترجمة السلّة إلى شكل الـAPI ──────────────────────────────
+    // ── Translating the cart into the API's shape ───────────────
     //
-    // السلّة تُخزَّن في localStorage بشكلها الخاص {id, quantity, …}،
-    // والـAPI موثَّق بشكل آخر {product_id, qty, …}. وكان الطرفان
-    // يتكلّمان بلا ترجمة: الخادم يقرأ product_id فيجده غائباً، فيسقط كل
-    // عنصر، فيتلقّى الزبون «Invalid items in cart» بعد ثلاث خطوات.
-    // **لم يكن أحد يستطيع إتمام طلب.**
+    // The cart is stored in localStorage in its own shape, {id, quantity, …}, and the API
+    // is documented in another, {product_id, qty, …}. And the two sides spoke without a
+    // translation: the server read product_id, found it missing, dropped every item, and the
+    // customer received "Invalid items in cart" after three steps.
+    // **Nobody could complete an order.**
     //
-    // الترجمة هنا لا في الخادم عن قصد: شكل التخزين المحلي شأن العميل
-    // وحده وقد يتغيّر، وشكل الـAPI عقد منشور في OpenAPI. وتعليم الخادم
-    // قبول الاسمين كان سيثبّت التسميتين معاً إلى الأبد.
+    // The translation lives here rather than on the server deliberately: the local storage
+    // shape is the client's business alone and may change, while the API's shape is a
+    // contract published in OpenAPI. Teaching the server to accept both names would have
+    // cemented both spellings forever.
     //
-    // ⚠️ `shown_price` هو السعر المعروض لا السعر المعتمَد. الخادم
-    // يقارنه بسعر القاعدة ويرفض الطلب عند الاختلاف — ولا يخزّنه.
+    // ⚠️ `shown_price` is the price displayed, not the price relied upon. The server
+    // compares it against the database's price and refuses the order if they differ — and
+    // never stores it.
     function toOrderItems(cart) {
         return cart.map(item => ({
             product_id:  Number(item.id),
@@ -205,21 +208,21 @@
         }));
     }
 
-    // ملاحظة: كانت هنا variantKey و sameLine — تطابقان سطر السلّة
-    // المحلية بسطر جاء من الخادم لتصحيح سعره في مكانه. سقطتا حين
-    // انتقلت السلّة إلى القاعدة: لم يعد هناك ما يُطابَق، فالخادم يُرجع
-    // السلّة كاملةً بأسعارها الحيّة وتُستبدل المرآة بها.
+    // Note: variantKey and sameLine used to be here — matching a local cart line against a
+    // line from the server to correct its price in place. They fell away when the cart moved
+    // to the database: there is nothing left to match, since the server returns the whole
+    // cart with live prices and the mirror is replaced by it.
 
     /**
-     * يُحدّث السلّة بعد رفض الطلب لتغيّر سعر.
+     * Refreshes the cart after an order is refused for a price change.
      *
-     * ⚠️ صارت تُعيد الجلب من الخادم بدل الكتابة محلياً. كانت تكتب
-     * السعر في نسخة المتصفّح — وذلك كان صحيحاً يوم كانت السلّة في
-     * localStorage، وصار خطأً حين انتقلت إلى القاعدة: كتابةٌ في المرآة
-     * لا تصل الأصل، فتُظهر للزبون سعراً لا يعرفه الخادم.
+     * ⚠️ It now refetches from the server rather than writing locally. It used to write the
+     * price into the browser's copy — correct back when the cart lived in localStorage, and
+     * wrong once it moved to the database: a write into the mirror never reaches the
+     * original, so it showed the customer a price the server does not know.
      *
-     * وإعادة الجلب أصدق من الترقيع: `/cart` تُرجع السعر الحيّ لكل سطر
-     * أصلاً، فما بعدها هو ما سيُحاسَب عليه فعلاً.
+     * And refetching is more honest than patching: `/cart` returns each line's live price
+     * anyway, so what comes back is what they will actually be charged.
      */
     async function applyServerPrices(serverItems) {
         if (!serverItems.length || !window.loadCart) return;
@@ -227,7 +230,7 @@
         await window.loadCart();
     }
 
-    /** جدول «قبل ← بعد» داخل الحوار. الأسماء من القاعدة، فتُهرَّب. */
+    /** The "before → after" table inside the dialog. The names come from the database, so they are escaped. */
     function buildPriceChangeHtml(serverItems) {
         const esc = window.escHtml || (s => String(s));
         const rows = serverItems.map(i => `
@@ -241,7 +244,7 @@
                 <ul class="list-unstyled text-start mb-0">${rows}</ul>`;
     }
 
-    /** يعيد زرّ الطلب إلى حالته — كان مكرّراً حرفياً في ثلاثة مواضع. */
+    /** Restores the order button to its normal state — this used to be repeated verbatim in three places. */
     function resetPlaceButton() {
         const btn = document.getElementById('placeOrderBtn');
         if (!btn) return;
@@ -249,11 +252,11 @@
         btn.textContent = '✅ Place Order';
     }
 
-    // ── تنفيذ الطلب ──────────────────────────────────────────────
+    // ── Placing the order ───────────────────────────────────────
     document.getElementById('placeOrderBtn')?.addEventListener('click', async () => {
-        // السلّة تصل من الخادم عند تحميل الصفحة. وإن لم تكن قد وصلت
-        // بعد — اتصال بطيء، أو نقرة سريعة — نجلبها الآن بدل أن نقول
-        // للزبون «سلّتك فارغة» وهي ليست كذلك.
+        // The cart arrives from the server when the page loads. And if it has not arrived
+        // yet — a slow connection, or a fast click — it is fetched now, rather than telling
+        // the customer "your cart is empty" when it is not.
         if (window.getCartData && !window.getCartData().length && window.loadCart) {
             await window.loadCart();
         }
@@ -284,10 +287,11 @@
                 items:            toOrderItems(cart),
             });
 
-            // ── تغيّر السعر: نحدّث السلّة ونُعيد الزبون ليقرّر ────────
+            // ── A price change: refresh the cart and let the customer decide ──
             //
-            // الخادم رفض الطلب كاملاً وأعاد الأسعار الصحيحة. الاكتشاف
-            // بـerror_code لا بنصّ الرسالة — نفس عقد csrf_invalid.
+            // The server refused the whole order and returned the correct prices. Detection
+            // by error_code rather than by the message's text — the same contract as
+            // csrf_invalid.
             if (!res.success && res.error_code === 'price_changed') {
                 await applyServerPrices(res.items || []);
                 resetPlaceButton();
@@ -303,8 +307,8 @@
             }
 
             if (res.success) {
-                // ⚠️ window.clearCart غير معرَّفة في أي ملف — الحارس هنا
-                // يجعل الاستدعاء بلا أثر. سلوك قائم نُقل كما هو.
+                // ⚠️ window.clearCart is not defined in any file — the guard here makes the
+                // call inert. Existing behaviour, moved across unchanged.
                 if (window.clearCart) window.clearCart();
                 Swal.fire({
                     icon: 'success', title: '✅ Order Placed!',

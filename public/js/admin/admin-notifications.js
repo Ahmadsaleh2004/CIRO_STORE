@@ -1,9 +1,9 @@
 // ══════════════════════════════════════════════════════════════
-// public/js/admin/admin-notifications.js — جرس إشعارات الأدمن
-// مسؤول فقط عن: #adminNotifBell / #adminNotifBadge / #adminNotifSidebar
-// (الـ sidebar HTML ثابت بـ footer.php — هذا الملف يربطه بالباك اند)
-// يستعمل fetchWithCsrfRetry لكل POST. طلب /list يبقى fetch عارياً
-// لأنه GET — لا توكن فيه ولا شيء لتتعافى منه.
+// public/js/admin/admin-notifications.js — the admin notification bell.
+// Responsible only for: #adminNotifBell / #adminNotifBadge / #adminNotifSidebar
+// (the sidebar's HTML is static in footer.php — this file wires it to the backend).
+// It uses fetchWithCsrfRetry for every POST. The /list request stays a bare fetch because
+// it is a GET — there is no token in it and nothing to recover from.
 // ══════════════════════════════════════════════════════════════
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -18,17 +18,18 @@ document.addEventListener('DOMContentLoaded', () => {
     const markAllBtn = document.getElementById('adminNotifMarkAll');
     const deleteAllBtn = document.getElementById('adminNotifDeleteAll');
 
-    // ⚠️ كانت هذه بلا تعريف إطلاقاً — لا let ولا const ولا var.
+    // ⚠️ This had no declaration at all — no let, no const, no var.
     //
-    // فكان أول إسناد (`allNotifs = data.notifications` في fetchList)
-    // يُنشئها متغيّراً عاماً ضمنياً، والكود يعمل ما دام ذلك الإسناد
-    // يسبق أي قراءة. لكنه لا يسبقها دائماً: إن فشل طلب /list — انقطاع
-    // شبكة أو خطأ خادم — لا يقع الإسناد، ثم تقرأها renderList أو
-    // dismiss فترمي ReferenceError ويتوقّف جرس الإشعارات كلّياً.
+    // So the first assignment (`allNotifs = data.notifications` in fetchList) created it
+    // as an implicit global, and the code worked as long as that assignment preceded any
+    // read. But it does not always precede one: if the /list request fails — a network
+    // outage or a server error — the assignment never happens, and renderList or dismiss
+    // then read it, throw a ReferenceError, and the notification bell stops entirely.
     //
-    // وأسوأ من العطل أن مصدره غير ظاهر: المتغيّر يبدو معرَّفاً في مكان
-    // ما لأن ملفاً آخر (features/notifications.js) يحمل اسماً مطابقاً —
-    // لكنه محبوس في IIFE هناك ولا علاقة له بهذا.
+    // And worse than the fault is that its source is invisible: the variable looks as
+    // though it is declared somewhere, because another file (features/notifications.js)
+    // carries an identical name — but that one is enclosed in an IIFE there and has
+    // nothing to do with this.
     let allNotifs = [];
 
     if (!bell || !badge || !sidebar) return;
@@ -50,26 +51,26 @@ document.addEventListener('DOMContentLoaded', () => {
         const n = Math.max(0, unread || 0);
         badge.textContent = n > 99 ? '99+' : String(n);
 
-        // ⚠️ `classList` لا `style.display`.
+        // ⚠️ `classList`, not `style.display`.
         //
-        // #adminNotifBadge يحمل `d-none` في admin/inc/navbar.php، وهي
-        // في Bootstrap ‏`display:none !important` — فإسناد
-        // `style.display = ''` لا يهزمها. أي أن عدّاد جرس الأدمن كان
-        // يُكتب فيه الرقم الصحيح ولا يُرى إطلاقاً.
+        // #adminNotifBadge carries `d-none` in admin/inc/navbar.php, which in Bootstrap is
+        // `display:none !important` — so assigning `style.display = ''` does not beat it.
+        // Which means the admin bell's counter had the correct number written into it and
+        // was never seen at all.
         badge.classList.toggle('d-none', n === 0);
     }
 
     function renderList() {
         if (!listEl) return;
         if (allNotifs.length === 0) {
-            listEl.innerHTML = '<li class="notif-empty">لا يوجد إشعارات بعد</li>';
+            listEl.innerHTML = '<li class="notif-empty">No notifications yet</li>';
             return;
         }
-        // ⚠️ لا `onclick=` هنا — راجع نظيره في js/features/notifications.js.
+        // ⚠️ No `onclick=` here — see its counterpart in js/features/notifications.js.
         //
-        // CSP في public/.htaccess بلا script-src 'unsafe-inline'، وهو
-        // يمنع المعالج المضمّن حتى لو حقنه جافاسكربت مسموح به. فكانت
-        // عناصر جرس الأدمن لا تُفتح وأزرار ✕ لا تحذف، صامتةً.
+        // The CSP in public/.htaccess has no script-src 'unsafe-inline', and it blocks an
+        // inline handler even when permitted JavaScript injected it. So the admin bell's
+        // items did not open and the ✕ buttons did not delete, silently.
         listEl.innerHTML = allNotifs.map(n => {
             const msg = n.message.length > 80 ? n.message.slice(0, 80) + '…' : n.message;
             return `
@@ -87,11 +88,11 @@ document.addEventListener('DOMContentLoaded', () => {
         }).join('');
     }
 
-    // مستمع واحد على القائمة بدل معالج على كل عنصر: القائمة تُعاد
-    // بناؤها كاملةً عند كل جلب، والتفويض من الأب يبقى صالحاً بعدها.
-    // وزرّ الحذف يُفحص أوّلاً كي لا تفتح نقرتُه التفاصيل معه.
-    // listEl قد يكون null: الحارس أعلى الملف يفحص bell وbadge وsidebar
-    // وحدها، وrenderList تفحصه بنفسها. فنفحصه هنا كذلك.
+    // One listener on the list rather than a handler per item: the list is rebuilt
+    // entirely on every fetch, and delegation from the parent stays valid afterwards.
+    // The delete button is checked first, so its click does not open the details too.
+    // listEl may be null: the guard at the top of the file checks bell, badge and sidebar
+    // alone, and renderList checks it itself. So it is checked here too.
     if (listEl) {
         listEl.addEventListener('click', function (event) {
             const dismissBtn = event.target.closest('[data-notif-dismiss]');
@@ -108,8 +109,9 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // يوقفان الاستطلاع عند انتهاء الجلسة: جلسة منتهية لا تتعافى
-    // بإعادة المحاولة، والاستمرار طلبٌ مرفوض كل ثلاثين ثانية بلا نهاية.
+    // They stop the polling when the session ends: an expired session does not recover
+    // through retrying, and carrying on means a refused request every thirty seconds,
+    // forever.
     let pollTimer = null;
     let sessionExpired = false;
 
@@ -128,20 +130,20 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const res = await fetch(baseUrl + '/list');
 
-            // ⚠️ فحصان لا واحد، لأن الخادم يردّ بشكلين مختلفين.
+            // ⚠️ Two checks rather than one, because the server answers in two shapes.
             //
-            // Middleware::requireAdmin تعتبر الطلب AJAX إن حمل
-            // X-Requested-With أو كان POST. وهذا الطلب GET عارٍ — فلا
-            // يتحقّق الشرطان، ويأخذ الفرع الآخر:
-            // `header('Location: ' . URLROOT)`. أي أن fetch **تتبع
-            // التحويل** وتعود بصفحة المتجر الرئيسية HTML.
+            // Middleware::requireAdmin treats a request as AJAX if it carries
+            // X-Requested-With or is a POST. This request is a bare GET — so neither
+            // condition holds, and it takes the other branch:
+            // `header('Location: ' . URLROOT)`. Which means fetch **follows the redirect**
+            // and comes back with the store's home page as HTML.
             //
-            // فكان res.json() يرمي على أول محرف من `<!DOCTYPE`، ويبتلع
-            // الخطأَ catch فيكتب سطراً في console وينتهي — ثم يتكرّر كل
-            // ثلاثين ثانية إلى الأبد. جرس الأدمن يتجمّد بلا سبب ظاهر.
+            // So res.json() threw on the first character of `<!DOCTYPE`, the catch swallowed
+            // the error, wrote a line to the console and finished — and it then repeated every
+            // thirty seconds forever. The admin bell froze with no visible cause.
             //
-            // 401 مفحوصة كذلك كي يبقى الكود صحيحاً إن ردّ الخادم بها
-            // يوماً — وهو ما يفعله نظيره في المتجر أصلاً.
+            // A 401 is checked too, so the code stays correct should the server ever answer
+            // with one — which its counterpart in the store already does.
             const isJson = (res.headers.get('content-type') || '').includes('application/json');
             if (res.status === 401 || res.redirected || !isJson) {
                 handleExpiredSession();
@@ -158,7 +160,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // ── فتح/تحديد كإشعار مقروء عند الضغط على عنصر ─────────────────
+    // ── Opening and marking read when an item is clicked ─────────
     window.adminNotifOpen = async function (id) {
         const n = allNotifs.find(x => x.id == id);
         if (n && n.is_read == 0) {
@@ -190,19 +192,20 @@ document.addEventListener('DOMContentLoaded', () => {
         setBadge(unread);
         renderList();
         try {
-            // ⚠️ `/dismiss` لا `/mark-read`.
+            // ⚠️ `/dismiss`, not `/mark-read`.
             //
-            // زرّ ✕ يحذف الإشعار، وكان يستدعي نقطة «تعليم كمقروء».
-            // فيختفي السطر من الشاشة لأن الكود يزيله من allNotifs محلياً،
-            // ثم يعود كاملاً عند أول تحديث أو استطلاع — لأن الخادم لم
-            // يُطلَب منه حذف شيء قط. وبدا العطل «الحذف لا يثبت».
+            // The ✕ button deletes the notification, and it used to call the "mark as read"
+            // endpoint. So the row vanished from the screen because the code removed it from
+            // allNotifs locally, and then came back in full on the first refresh or poll —
+            // because the server was never asked to delete anything. The fault presented as
+            // "the deletion does not stick".
             //
-            // AdminNotificationController::dismiss موجودة ومسجَّلة في
-            // public/index.php:332 وتحذف فعلاً — لم يكن ينقصها إلا
-            // من يناديها.
+            // AdminNotificationController::dismiss exists, is registered in
+            // public/index.php:332, and genuinely deletes — all it lacked was a caller.
             //
-            // وتُرجع unread_count محسوباً من القاعدة، فنأخذه بدل تقديرنا
-            // المحلي: هو المصدر الصحيح إن حُذف إشعار غير مقروء.
+            // And it returns an unread_count computed from the database, so that is taken
+            // rather than our local estimate: it is the correct source when an unread
+            // notification is deleted.
             const data = await fetchWithCsrfRetry(baseUrl + '/dismiss', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -235,7 +238,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch {}
     }
 
-    // ── أزرار الـ sidebar ────────────────────────────────────────
+    // ── The sidebar's buttons ────────────────────────────────────
     if (markAllBtn) {
         markAllBtn.addEventListener('click', async () => {
             try {
@@ -270,7 +273,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // ── toggle الـ sidebar + إغلاق خارجي ─────────────────────────
+    // ── Toggling the sidebar, and closing it from outside ───────
     bell.addEventListener('click', () => {
         toggleSidebar(!sidebar.classList.contains('open'));
         if (!sidebar.classList.contains('open')) fetchList();
@@ -280,7 +283,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     backdropEl.addEventListener('click', () => toggleSidebar(false));
 
-    // ── التحميل الأولي + Polling (نفس فاصل الـ user notifications: 30 ثانية)
+    // ── The initial load and the polling (the same interval as the user notifications: 30 seconds)
     fetchList();
     pollTimer = setInterval(fetchList, 30_000);
 

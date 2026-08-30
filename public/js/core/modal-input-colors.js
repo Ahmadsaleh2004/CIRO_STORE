@@ -1,19 +1,19 @@
 // ══════════════════════════════════════════════════════════════
-// js/core/modal-input-colors.js — فرض ألوان حقول النوافذ المنبثقة
+// js/core/modal-input-colors.js — forcing the colours of fields inside modals
 // ══════════════════════════════════════════════════════════════
 //
-// نُقل من كتلة <script> مضمّنة (29 سطراً) في app/views/inc/footer.php.
-// نقل خالص: الكتلة لم تكن تحقن أي قيمة PHP.
+// Moved out of an inline <script> block (29 lines) in app/views/inc/footer.php.
+// A pure move: the block injected no PHP values.
 //
-// ⚠️ هذا الملف حلٌّ التفافي لمشكلة CSS، لا منطق واجهة:
-// حقول تسجيل الدخول والتسجيل و«نسيت كلمة المرور» داخل نوافذ Bootstrap
-// كانت ترث ألوان المتصفح لا ألوان الثيم، فيُفرَض اللون هنا بـ
-// setProperty(..., 'important') على كل حقل عند فتح النافذة وعند تبديل
-// الثيم وعند التركيز.
+// ⚠️ This file is a workaround for a CSS problem, not interface logic:
+// the sign-in, registration and "forgot password" fields inside Bootstrap modals
+// inherited the browser's colours rather than the theme's, so the colour is forced here
+// with setProperty(..., 'important') on every field when the modal opens, when the theme
+// is switched, and on focus.
 //
-// العلاج الجذري قاعدة CSS على `.modal input` تحترم الوضع الليلي — لكن
-// ذلك تغيير في طبقة الأنماط بنتيجة مرئية، خارج نطاق نقل الملفات.
-// نُقل كما هو ووُثّق ليُقرَّر لاحقاً.
+// The proper fix is a CSS rule on `.modal input` that respects dark mode — but that is a
+// change in the styling layer with a visible result, outside the scope of moving files.
+// It was moved as-is and documented, to be decided later.
 
 (function fixInputFocus() {
     'use strict';

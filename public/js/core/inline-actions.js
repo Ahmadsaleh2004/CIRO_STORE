@@ -1,46 +1,46 @@
 // ══════════════════════════════════════════════════════════════
-// public/js/core/inline-actions.js — بديل المعالجات المضمّنة
+// public/js/core/inline-actions.js — the replacement for inline handlers
 // ══════════════════════════════════════════════════════════════
 //
-// كانت ثلاثة وثلاثون معالجاً مكتوبة في الوسوم نفسها:
+// There used to be thirty-three handlers written into the tags themselves:
 //
-//     <button onclick="openNotifyModal('user', 5, 'أحمد')">
+//     <button onclick="openNotifyModal('user', 5, 'Ahmad')">
 //
-// وهي كتل تنفيذ بكل معنى الكلمة، فتحجبها أي سياسة CSP لا تحمل
-// 'unsafe-inline'. وكانت العائق الأخير أمام تفعيل السياسة الكاملة بعد
-// إخراج أربع عشرة كتلة <script> إلى جزر JSON.
+// Those are executable blocks in every sense, so any CSP without 'unsafe-inline' blocks
+// them. And they were the last obstacle to enforcing the full policy, once fourteen
+// <script> blocks had been moved out into JSON islands.
 //
-// ── لماذا التفويض لا مستمعٌ لكل عنصر ────────────────────────
+// ── Why delegation rather than a listener per element ───────
 //
-// كثير من هذه الأزرار يُبنى في المتصفح بعد التحميل (صفوف الجداول،
-// بطاقات المنتجات، محتوى المودالات). مستمع يُربط عند DOMContentLoaded
-// لا يرى ما وُلد بعده، فكان سيحتاج إعادة ربط عند كل تصيير — وهو
-// بالضبط صنف العطل الذي يظهر متأخّراً ويصعب تتبّعه.
+// Many of these buttons are built in the browser after load (table rows, product cards,
+// modal contents). A listener bound at DOMContentLoaded does not see what is created
+// afterwards, so it would need rebinding on every render — precisely the class of fault
+// that surfaces late and is hard to trace.
 //
-// مستمع واحد على document يعمل على كل ما وُلد وما سيولد.
+// One listener on document works for everything created and everything yet to be created.
 //
-// ── العقد ───────────────────────────────────────────────────
+// ── The contract ────────────────────────────────────────────
 //
-// العنصر يعلن نيّته بـdata-action، ومعاملاته بـdata-* أخرى. والقيم
-// تمرّ عبر htmlspecialchars في الـview كأي سمة، فلا حاجة لـaddslashes
-// ولا لتهريب علامات الاقتباس داخل JS — وهو مصدر أخطاء قديم: اسم فيه
-// فاصلة عليا كان يكسر المعالج المضمّن.
+// The element declares its intent with data-action, and its parameters with other data-*
+// attributes. The values pass through htmlspecialchars in the view like any attribute, so
+// there is no need for addslashes and no need to escape quotes inside JavaScript — an old
+// source of bugs: a name containing an apostrophe broke the inline handler.
 
 (function () {
     'use strict';
 
-    /** يستدعي دالة عامة إن وُجدت، ويشتكي بوضوح إن غابت. */
+    /** Calls a global function if it exists, and complains clearly if it does not. */
     function call(name, args) {
         var fn = window[name];
         if (typeof fn !== 'function') {
-            console.error('[inline-actions] الدالة [' + name + '] غير معرَّفة.');
+            console.error('[inline-actions] the function [' + name + '] is not defined.');
             return;
         }
         return fn.apply(null, args || []);
     }
 
     var handlers = {
-        // يمنع تفعيل صفّ الجدول القابل للنقر حين يُنقر ما بداخله.
+        // It stops a clickable table row firing when something inside it is clicked.
         'stop-propagation': function (el, event) {
             event.stopPropagation();
         },
@@ -53,7 +53,7 @@
             call('logoutUser');
         },
 
-        // زرّ يُفعّل نفسه بعد أول نقرة (كان this.removeAttribute).
+        // A button that disables itself after the first click (this used to be this.removeAttribute).
         'self-enable': function (el) {
             el.removeAttribute('disabled');
         },
@@ -69,9 +69,9 @@
             var target = el.getAttribute('data-modal-target');
             var extra = el.getAttribute('data-modal-after');
 
-            // الوسيط الثالث كان دالةً مكتوبة داخل السمة. الحالة الوحيدة
-            // التي تستعمله هي مودال الخصوصية: يؤشّر المربّع ثم يعيد
-            // فحص صحّة النموذج. صارت نيّةً معلَنة لا كوداً في وسم.
+            // The third argument used to be a function written inside the attribute. The
+            // only case using it is the privacy modal: it ticks the box and then re-validates
+            // the form. It is now a declared intent rather than code in a tag.
             if (extra === 'accept-privacy') {
                 call('switchAuthModal', [el, target, function () {
                     var cb = document.getElementById('privacyCheck');
@@ -105,9 +105,9 @@
             ]);
         },
 
-        // الصلاحيات التسع تصل كسمة واحدة مفصولة بفواصل، بترتيب ثابت.
-        // بديلها تسع سمات منفصلة — أطول بلا فائدة، وترتيبها هو العقد
-        // نفسه في الحالتين.
+        // The nine permissions arrive as one comma-separated attribute, in a fixed order.
+        // The alternative is nine separate attributes — longer for no benefit, and their
+        // order is the contract either way.
         'perm-modal': function (el) {
             var perms = (el.getAttribute('data-perms') || '').split(',').map(Number);
             call('openPermModal', [
@@ -158,10 +158,10 @@
         },
     };
 
-    /** يصعد من هدف الحدث بحثاً عن أقرب عنصر يعلن data-action. */
+    /** Walks up from the event's target looking for the nearest element declaring data-action. */
     function dispatch(event) {
-        // data-confirm مستقلّ عن data-action: كان
-        // onclick="return confirm('…')" على رابط حذف، وقد يجتمع مع فعل.
+        // data-confirm is independent of data-action: it used to be
+        // onclick="return confirm('…')" on a delete link, and it may coexist with an action.
         var confirmEl = event.target.closest ? event.target.closest('[data-confirm]') : null;
         if (confirmEl && !window.confirm(confirmEl.getAttribute('data-confirm'))) {
             event.preventDefault();
@@ -176,7 +176,7 @@
         var handler = handlers[action];
 
         if (!handler) {
-            console.error('[inline-actions] فعل غير معروف: [' + action + ']');
+            console.error('[inline-actions] unknown action: [' + action + ']');
             return;
         }
 
@@ -188,8 +188,8 @@
         var el = event.target.closest ? event.target.closest('[data-action]') : null;
         if (!el) return;
 
-        // change يخصّ عناصر النماذج وحدها؛ فصل المستمعين يمنع أن يُطلق
-        // فعلُ نقرٍ مرّتين على عنصر يستقبل الاثنين.
+        // change belongs to form elements alone; keeping the listeners separate stops a
+        // click action firing twice on an element that receives both.
         var handler = handlers[el.getAttribute('data-action')];
         if (handler) handler(el, event);
     });

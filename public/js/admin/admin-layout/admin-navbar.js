@@ -1,28 +1,28 @@
 // ══════════════════════════════════════════════════════════════
-// js/admin/admin-layout/admin-navbar.js — شريط لوحة التحكم العلوي
+// js/admin/admin-layout/admin-navbar.js — the admin panel's top bar
 // ══════════════════════════════════════════════════════════════
 //
-// نُقلت logoutAdmin() من كتلة <script> مضمّنة في
-// app/views/admin/inc/navbar.php. بقي في الـview سطر واحد يمرّر
-// window._csrfToken — بيانات لا منطق.
+// logoutAdmin() was moved out of an inline <script> block in
+// app/views/admin/inc/navbar.php. A single line remains in the view passing
+// window._csrfToken — data, not logic.
 //
-// الدالة تبقى **عامة** عن قصد: الماركب يستدعيها من onclick مباشرة
-// (<a onclick="logoutAdmin()">)، فتغليفها في IIFE كان سيكسر الزر.
+// The function stays **global** deliberately: the markup calls it straight from an
+// onclick (<a onclick="logoutAdmin()">), so wrapping it in an IIFE would break the button.
 //
-// منفصلة عن logoutUser() الخاصة بالمتجر: الجلستان مختلفتان اسماً
-// ومحتوى (admin_session مقابل PHPSESSID) ونقطتا الخروج مختلفتان.
+// Separate from the store's logoutUser(): the two sessions differ in name and contents
+// (admin_session against PHPSESSID), and the two sign-out endpoints differ too.
 
-// fetch عارٍ عن قصد — لا fetchWithCsrfRetry: AdminAuthController::logout
-// تحوّل بـ302 ولا تُرجع JSON أصلاً، والغلاف يستدعي response.json() فكان
-// سيرمي على التحويل.
+// A bare fetch, deliberately — not fetchWithCsrfRetry: AdminAuthController::logout
+// redirects with a 302 and returns no JSON at all, and the wrapper calls response.json(),
+// so it would throw on the redirect.
 //
-// التوكن يُرسَل ويُتحقَّق منه على الخادم منذ إصلاح CSRF الخروج. توكن
-// منتهٍ يعني بقاء الأدمن داخلاً وتحويله إلى /admin/home — وهو فشل مرئي
-// لا صامت، فلا حاجة لإعادة محاولة تلقائية هنا.
-// تُستدعى من HTML لا من JS: app/views/admin/inc/navbar.php:120 فيها
-// onclick="logoutAdmin()". وESLint لا يرى الـviews فيقرأها دالةً بلا
-// مستدعٍ. الاستثناء موضعي لا في الإعداد العام، كي يبقى الفحص عاملاً
-// على كل دالة أخرى في المشروع.
+// The token is sent and verified on the server, since the sign-out CSRF fix. An expired
+// token means the admin stays signed in and is redirected to /admin/home — a visible
+// failure rather than a silent one, so no automatic retry is needed here.
+// Called from HTML rather than from JavaScript: app/views/admin/inc/navbar.php:120
+// carries onclick="logoutAdmin()". And ESLint does not see the views, so it reads this as
+// a function with no caller. The exception is local rather than in the global config, so
+// the check keeps working on every other function in the project.
 // eslint-disable-next-line no-unused-vars
 function logoutAdmin() {
     // nosemgrep: cairo-bare-fetch-post

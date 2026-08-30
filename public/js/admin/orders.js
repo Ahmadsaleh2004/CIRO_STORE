@@ -1,6 +1,7 @@
 // ══════════════════════════════════════════════════════════════
-// js/admin/orders.js — السكريبتات المخصصة لإدارة الطلبات والعداد والبلاغات
-// (المسارات تشير لراوتات الأدمن الجديدة: /admin/orders/* — يشمل Take/Release/Delete/Cancel/Report)
+// js/admin/orders.js — the scripts for order management, the countdown and the reports.
+// (The paths point at the admin routes: /admin/orders/* — covering take, release, delete,
+// cancel and report.)
 // ══════════════════════════════════════════════════════════════
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -10,12 +11,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     window.goToOrderDetails = goToOrderDetails;
 
-    // ── فلترة القائمة حسب الحالة (orders/index.php) ─────────────
+    // ── Filtering the list by status (orders/index.php) ─────────
     window.filterStatus = function(value) {
         const url = new URL(window.location.href);
         if (value) { url.searchParams.set('status', value); }
         else       { url.searchParams.delete('status'); }
-        url.searchParams.delete('page'); // إعادة الترقيم للصفحة الأولى عند تغيير الفلتر
+        url.searchParams.delete('page'); // Back to page one whenever the filter changes
         window.location.href = url.toString();
     };
 
@@ -56,7 +57,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // ── Countdown Timer & Details Logic (في صفحة orders/details.php) ──
+    // ── Countdown timer and details logic (on the orders/details.php page) ──
     if (typeof window.ADMIN_ORDER_DETAILS !== 'undefined') {
         initOrderDetails(window.ADMIN_ORDER_DETAILS);
     }
@@ -158,7 +159,7 @@ function initOrderDetails(ctx) {
         if (!isDelivered) fd.append("reason", cancelReason);
         fd.append("csrf_token", window._csrfToken || "");
 
-        // كل عملية لها راوت منفصل — الـ URL نفسه يحدد العملية
+        // Each operation has its own route — the URL itself identifies the operation
         const endpoint = isDelivered
             ? window.URLROOT + "/admin/orders/mark-delivered"
             : window.URLROOT + "/admin/orders/cancel-delivery";

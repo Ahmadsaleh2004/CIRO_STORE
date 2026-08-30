@@ -1,22 +1,22 @@
 // ══════════════════════════════════════════════════════════════
 // js/main.js — Entry Point
-// يُهيّئ المكونات والأحداث بالترتيب الصحيح عند تحميل المستند
+// It initialises the components and events in the right order once the document loads
 // ══════════════════════════════════════════════════════════════
 
 document.addEventListener("DOMContentLoaded", () => {
-    // 1. تطبيق الثيم وتفعيله
+    // 1. Apply and activate the theme
     if (typeof applySavedTheme === 'function') applySavedTheme();
     if (typeof initializeTheme === 'function') initializeTheme();
 
-    // 2. تحديث العدادات وأيقونات التصفح
+    // 2. Refresh the counters and the navigation icons
     if (typeof updateCounters === 'function') updateCounters();
 
-    // 3. تهيئة عناصر الصفحة التفاعلية العامة
+    // 3. Initialise the general interactive page elements
     if (typeof initBackToTop === 'function') initBackToTop();
     if (typeof initPageTransitions === 'function') initPageTransitions();
     if (typeof initImageFallbacks === 'function') initImageFallbacks();
 
-    // 4. Navbar Backdrop Blur عند السكرول
+    // 4. The navbar's backdrop blur on scroll
     (function initNavbarBlur() {
         const navbar = document.getElementById('mainNavbar');
         if (!navbar) return;
@@ -35,8 +35,8 @@ document.addEventListener("DOMContentLoaded", () => {
         }, { passive: true });
     })();
 
-    // 5. فتح Login Modal تلقائياً عند ?openLogin=1
-    //    أو عرض رسالة خطأ Google OAuth عند &error=google_xxx
+    // 5. Open the login modal automatically on ?openLogin=1,
+    //    or show a Google OAuth error on &error=google_xxx
     (function handleLoginParams() {
         const params     = new URLSearchParams(window.location.search);
         const openLogin  = params.get('openLogin');
@@ -44,7 +44,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         if (!openLogin && !errorCode) return;
 
-        // رسائل أخطاء Google OAuth
+        // The Google OAuth error messages
         const googleErrors = {
             google_unavailable:  'Google Sign-In is not configured yet. Please use email and password.',
             google_cancelled:    'Google Sign-In was cancelled. Please try again.',
@@ -53,7 +53,7 @@ document.addEventListener("DOMContentLoaded", () => {
             google_error:        'Google Sign-In failed. Please try again or use email and password.',
         };
 
-        // نظّف الـ URL من الـ params حتى لا يُعاد فتح المودال عند Refresh
+        // Clear the params out of the URL so the modal does not reopen on a refresh
         const cleanUrl = window.location.pathname;
         history.replaceState(null, '', cleanUrl);
 
@@ -65,7 +65,7 @@ document.addEventListener("DOMContentLoaded", () => {
         };
 
         if (errorCode && googleErrors[errorCode]) {
-            // اعرض رسالة الخطأ أولاً، ثم افتح المودال بعدها
+            // Show the error message first, then open the modal
             Swal.fire({
                 icon:             'error',
                 title:            'Sign-In Failed',
@@ -74,7 +74,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 confirmButtonColor:'#1a1a2e',
             }).then(showLoginModal);
         } else if (openLogin === '1') {
-            // افتح المودال مباشرة
+            // Open the modal straight away
             showLoginModal();
         }
     })();

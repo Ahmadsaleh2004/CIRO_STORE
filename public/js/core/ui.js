@@ -1,9 +1,9 @@
 // ══════════════════════════════════════════════════════════════
-// js/core/ui.js — مكوّنات وعناصر واجهة المستخدم العامة
+// js/core/ui.js — the general user interface components
 // ══════════════════════════════════════════════════════════════
 
 /**
- * showToast — تنبيهات SweetAlert2 Toast
+ * showToast — SweetAlert2 toast notifications
  */
 function showToast(message, icon = 'success') {
     const isDark = document.body.classList.contains("dark-mode");
@@ -25,7 +25,7 @@ function showToast(message, icon = 'success') {
 window.showToast = showToast;
 
 /**
- * showLoading — Spinner التجميعي الشامل
+ * showLoading — the global loading spinner
  */
 function showLoading() {
     let overlay = document.getElementById('loadingOverlay');
@@ -51,7 +51,7 @@ function showLoading() {
 window.showLoading = showLoading;
 
 /**
- * updateButtonState — إضافة/إزالة تمويه وتعطيل الأزرار
+ * updateButtonState — adding and removing a button's dimming and disabled state
  */
 function updateButtonState(buttonEl, isValid) {
     if (!buttonEl) return;
@@ -66,7 +66,7 @@ function updateButtonState(buttonEl, isValid) {
 window.updateButtonState = updateButtonState;
 
 /**
- * updateCounters — تحديث العدادات على أيقونات الـ Navbar
+ * updateCounters — refreshing the counters on the navbar icons
  */
 function updateCounters() {
     const wishlistCount = document.getElementById("wishlist-count");
@@ -74,17 +74,17 @@ function updateCounters() {
 
     const wishlist = JSON.parse(localStorage.getItem("wishlist")) || [];
 
-    // ⚠️ السلّة من المرآة لا من localStorage.
+    // ⚠️ The cart comes from the mirror, not from localStorage.
     //
-    // كانت تُقرأ من `localStorage.getItem("cart")` — وهو صحيح يوم كانت
-    // السلّة محلية، وصار **عطلاً صامتاً** لحظة انتقالها إلى الخادم:
-    // المفتاح لم يعد يُكتب إطلاقاً، فبقيت الشارة تعرض ما تجمّد فيه من
-    // قبل ولا تتحرّك مهما أُضيف أو حُذف.
+    // It used to be read from `localStorage.getItem("cart")` — correct back when the cart
+    // was local, and a **silent fault** the moment it moved to the server: the key stopped
+    // being written at all, so the badge kept showing whatever had frozen in it and did not
+    // move however much was added or removed.
     //
-    // والأثر كما وصفه المستخدم: خمسة منتجات في السلّة والشارة تقول 1.
+    // The effect, as the user described it: five products in the cart and the badge saying 1.
     //
-    // وقائمة الأمنيات تبقى في localStorage — لم تنتقل، والقراءة أعلاه
-    // صحيحة لها.
+    // The wishlist stays in localStorage — it did not move, and the read above is correct
+    // for it.
     const cart = (typeof window.getCartData === 'function') ? window.getCartData() : [];
 
     if (wishlistCount) {
@@ -92,8 +92,8 @@ function updateCounters() {
     }
 
     if (cartCount) {
-        // مجموع الكميات لا عدد السطور: الشارة تقول «كم قطعة» لا «كم
-        // منتجاً». وهذا يطابق CartModel::countItems على الخادم.
+        // The sum of quantities, not the count of lines: the badge says "how many items",
+        // not "how many products". That matches CartModel::countItems on the server.
         const total = cart.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0);
         cartCount.textContent = total;
     }
@@ -103,14 +103,14 @@ function updateCounters() {
 window.updateCounters = updateCounters;
 
 /**
- * highlightNavIcons — نُميّز أيقونة الصفحة النشطة في الـ Navbar
+ * highlightNavIcons — marking the active page's icon in the navbar
  */
 function highlightNavIcons() {
     const path = window.location.pathname;
     const wishlistBtn = document.querySelector('a[href*="wishlist.php"]');
     const cartBtn     = document.querySelector('[data-bs-target="#cartSidebar"]');
 
-    // كسابقتها: السلّة من المرآة، والأمنيات من localStorage.
+    // As above: the cart from the mirror, the wishlist from localStorage.
     const cart     = (typeof window.getCartData === 'function') ? window.getCartData() : [];
     const wishlist = JSON.parse(localStorage.getItem("wishlist")) || [];
 
@@ -124,7 +124,7 @@ function highlightNavIcons() {
 window.highlightNavIcons = highlightNavIcons;
 
 /**
- * initBackToTop — زر العودة إلى الأعلى
+ * initBackToTop — the back-to-top button
  */
 function initBackToTop() {
     if (document.getElementById("back-to-top")) return;
@@ -152,7 +152,7 @@ function initBackToTop() {
 window.initBackToTop = initBackToTop;
 
 /**
- * initScrollReveal — تأثير الظهور التدريجي للعناصر
+ * initScrollReveal — the gradual reveal effect on elements
  */
 function initScrollReveal() {
     let delay = 0;
@@ -188,7 +188,7 @@ function initScrollReveal() {
 window.initScrollReveal = initScrollReveal;
 
 /**
- * initPageTransitions — حركة الانتقال بين الصفحات
+ * initPageTransitions — the page transition animation
  */
 function initPageTransitions() {
     if (document.getElementById("page-overlay")) return;
@@ -245,7 +245,7 @@ function initPageTransitions() {
 window.initPageTransitions = initPageTransitions;
 
 /**
- * initImageFallbacks — صورة بديلة إذا كانت الصورة مكسورة
+ * initImageFallbacks — a placeholder image when an image is broken
  */
 function initImageFallbacks() {
     const fallbackSrc = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200' viewBox='0 0 200 200'%3E%3Crect width='200' height='200' fill='%23e5e7eb'/%3E%3Ctext x='50%25' y='50%25' font-size='14' fill='%239ca3af' text-anchor='middle' dy='.3em'%3EImage not found%3C/text%3E%3C/svg%3E";
@@ -278,7 +278,7 @@ function initImageFallbacks() {
 window.initImageFallbacks = initImageFallbacks;
 
 /**
- * filterStatus — فلترة الحالة في صفحات الأدمن
+ * filterStatus — status filtering on the admin pages
  */
 function filterStatus(value) {
     const p = new URLSearchParams(window.location.search);
@@ -290,7 +290,7 @@ function filterStatus(value) {
 window.filterStatus = filterStatus;
 
 /**
- * startRetryCountdown — عداد تنازلي للزرار المسدود
+ * startRetryCountdown — a countdown on a locked-out button
  */
 function startRetryCountdown(messageEl, buttonEl, seconds, baseMessage, onFinish) {
     let remaining = seconds;
@@ -313,7 +313,7 @@ function startRetryCountdown(messageEl, buttonEl, seconds, baseMessage, onFinish
 }
 window.startRetryCountdown = startRetryCountdown;
 
-// إصلاح حواف ومساحة الشاشة عند إغلاق النوافذ المنبثقة
+// Fixing the page's edges and scroll space when a modal closes
 const fixBodyPadding = () => {
     document.body.style.paddingRight = '0';
     document.body.style.overflow = '';
@@ -332,7 +332,7 @@ document.addEventListener('hidden.bs.offcanvas', () => {
     fixBodyPadding();
 });
 
-// تشغيل الـ loading تلقائياً عند تقديم أي فورمة غير مستثناة
+// Showing the loader automatically when any non-exempt form is submitted
 document.addEventListener('submit', (e) => {
     if (!e.defaultPrevented && !e.target.classList.contains('search-form') && !e.target.classList.contains('no-spinner')) {
         showLoading();
@@ -340,34 +340,35 @@ document.addEventListener('submit', (e) => {
 });
 
 // ══════════════════════════════════════════════════════════════
-// بديل احتياطي لـSweetAlert2 حين لا يُحمَّل
+// A fallback for SweetAlert2 when it does not load
 // ══════════════════════════════════════════════════════════════
 //
-// أكثر من أربعين موضعاً في المشروع تنادي `Swal.fire` مباشرة، وكثير
-// منها **ينتظر ردّها** قبل أن يفعل شيئاً:
+// More than forty places in the project call `Swal.fire` directly, and many of them
+// **await its answer** before doing anything:
 //
 //     const result = await Swal.fire({ ... });
 //     if (!result.isConfirmed) return;
 //
-// فإن غاب `Swal` — بصمة SRI خاطئة، أو CDN محجوب، أو انقطاع شبكة —
-// رُمي ReferenceError داخل دالة async، فصار وعداً مرفوضاً لا يلتقطه
-// أحد. والنتيجة أن الزر يبدو **معطّلاً بلا سبب**: لا حوار ولا رسالة
-// ولا خطأ مرئي، وضغطة المستخدم تذهب إلى العدم.
+// So if `Swal` is missing — a wrong SRI hash, a blocked CDN, or a network outage — a
+// ReferenceError is thrown inside an async function, becoming a rejected promise nobody
+// catches. The result is a button that looks **broken for no reason**: no dialog, no
+// message, no visible error, and the user's click goes nowhere.
 //
-// وهذا ليس افتراضاً: زرّ «Take It» في لوحة الطلبات بدا معطّلاً لهذا
-// السبب بالضبط، وذهب التشخيص إلى سباق تزامن في قاعدة البيانات.
+// And this is not hypothetical: the "Take It" button in the orders panel looked broken
+// for exactly this reason, and the diagnosis went off toward a race condition in the
+// database.
 //
-// البديل هنا يستعمل `confirm`/`alert` الأصليين — قبيحان لكنهما
-// يعملان دائماً — ويعيد كائناً بنفس شكل نتيجة SweetAlert
-// ({ isConfirmed, isDismissed, value }) كي يمرّ الكود المنتظِر بلا
-// تعديل. الهدف ألّا يصمت شيء أبداً، لا أن يبدو جميلاً.
+// The fallback here uses the native `confirm` and `alert` — ugly, but they always work —
+// and returns an object shaped like a SweetAlert result
+// ({ isConfirmed, isDismissed, value }) so the awaiting code passes through unchanged. The
+// goal is that nothing ever goes silent, not that it looks good.
 (function installSwalFallback() {
     function ensure() {
         if (typeof window.Swal !== 'undefined') return;
 
         console.error(
-            '[ui] SweetAlert2 لم يُحمَّل — تحقّق من بصمة SRI في assets_helper.php '
-            + 'ومن سياسة CSP في public/.htaccess. يعمل الآن بديل احتياطي.'
+            '[ui] SweetAlert2 did not load — check the SRI hash in assets_helper.php '
+            + 'and the CSP in public/.htaccess. A fallback is running instead.'
         );
 
         const text = (o) => [o && o.title, o && o.text].filter(Boolean).join('\n\n')
@@ -379,9 +380,9 @@ document.addEventListener('submit', (e) => {
                     ? { title: options, text: arguments[1] }
                     : (options || {});
 
-                // toast بلا زرّ تأكيد إشعارٌ لا سؤال — لا يوقف
-                // المستخدم بـalert، ولا يُسجَّل سطراً لكل ظهور: رسالة
-                // التركيب أعلاه قيلت مرّة وتكفي.
+                // A toast with no confirm button is a notification, not a question — it does
+                // not stop the user with an alert, and it does not log a line per appearance:
+                // the setup message above was said once and that is enough.
                 if (opts.toast || opts.showConfirmButton === false) {
                     return Promise.resolve({ isConfirmed: true, isDismissed: false, value: true });
                 }
@@ -401,8 +402,8 @@ document.addEventListener('submit', (e) => {
         };
     }
 
-    // بعد التحميل الكامل لا عند DOMContentLoaded: وسم SweetAlert
-    // يحمل `defer` في فوتر المتجر، فقد لا يكون نُفّذ بعد.
+    // After the full load rather than at DOMContentLoaded: the SweetAlert tag carries
+    // `defer` in the store footer, so it may not have executed yet.
     if (document.readyState === 'complete') {
         ensure();
     } else {

@@ -1,5 +1,5 @@
 // ══════════════════════════════════════════════════════════════
-// js/features/product-details.js — تفاعلات صفحة تفاصيل المنتج
+// js/features/product-details.js — the product details page's interactions
 // ══════════════════════════════════════════════════════════════
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -74,11 +74,12 @@ document.addEventListener('DOMContentLoaded', () => {
             btn.classList.toggle('active', parseInt(btn.dataset.variantId) === variant.id);
         });
 
-        // ⚠️ لا `qtyInput.max = variant.stock` هنا.
+        // ⚠️ No `qtyInput.max = variant.stock` here.
         //
-        // المخزون المطلق ليس السقف الصحيح: ما في سلّة المستخدم من هذه
-        // النسخة محجوزٌ منه. الحساب كلّه في applyQtyLimits أدناه، ويُستدعى
-        // بعد ضبط currentVariantId في آخر هذه الدالة.
+        // The absolute stock is not the right ceiling: whatever this user already has of
+        // this variant in their cart is spoken for. The whole calculation lives in
+        // applyQtyLimits below, called after currentVariantId is set at the end of this
+        // function.
         const qtyInput = document.getElementById('productQty');
         if (qtyInput) qtyInput.value = variant.stock > 0 ? 1 : 0;
 
@@ -100,22 +101,23 @@ document.addEventListener('DOMContentLoaded', () => {
         const addBtn = document.getElementById('addCartBtn');
         if (addBtn) addBtn.disabled = variant.stock <= 0;
 
-        // القاعدة في stockBadge() بـjs/core/utils.js، مرآةً لـgetStockBadge()
-        // في PHP. كانت مكتوبة هنا بـif/else — وهي النسخة الثالثة من نفس
-        // القاعدة في المشروع. صفحة التفاصيل وحدها تعرض البادج الأخضر،
-        // فالوسيط الثاني true (نفس ما يفعله الـview عند العرض من الخادم).
+        // The rule lives in stockBadge() in js/core/utils.js, mirroring getStockBadge() in
+        // PHP. It used to be written here as an if/else — the third copy of the same rule in
+        // the project. The details page alone shows the green badge, so the second argument
+        // is true (the same thing the view does when rendering from the server).
         const stockBadgeEl = document.getElementById('stockBadge');
         if (stockBadgeEl) {
             const badge = stockBadge(variant.stock, true);
             stockBadgeEl.classList.remove('bg-danger', 'bg-warning', 'text-dark', 'bg-success');
-            // badge.class قد يحمل صنفين ('bg-warning text-dark') فيُقسَّم
+            // badge.class may carry two classes ('bg-warning text-dark'), so it is split
             badge.class.split(' ').forEach(c => stockBadgeEl.classList.add(c));
             stockBadgeEl.textContent = badge.label;
         }
 
         currentVariantId = variant.id;
 
-        // بعد تثبيت النسخة المختارة: يُعاد حساب المتاح لها هي، لا لسابقتها.
+        // Once the chosen variant is fixed: the availability is recomputed for it, not for
+        // the previous one.
         applyQtyLimits();
     }
 
@@ -130,12 +132,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const panel = document.getElementById('allColorsPanel');
         const icon  = document.getElementById('toggleArrowIcon');
         if (!panel || !icon) return;
-        // ⚠️ الحالة تُقرأ من `d-none` لا من style.display.
+        // ⚠️ The state is read from `d-none`, not from style.display.
         //
-        // اللوحة تبدأ بـ`d-none` في الترميز، وstyle.display يبدأ سلسلة
-        // فارغة — فكان `expanded` يساوي true عند أول نقرة، فتُخفي
-        // مخفياً ولا يظهر شيء. ولو ظهر لما نفع: `d-none` تحمل
-        // !important فتغلب أي نمط مضمّن.
+        // The panel starts with `d-none` in the markup, and style.display starts as an
+        // empty string — so `expanded` was true on the first click, hiding something already
+        // hidden and showing nothing. And even if it had shown, it would not have helped:
+        // `d-none` carries !important and beats any inline style.
         const expanded = !panel.classList.contains('d-none');
         panel.classList.toggle('d-none', expanded);
         icon.textContent = expanded ? '▾' : '▴';
@@ -148,33 +150,34 @@ document.addEventListener('DOMContentLoaded', () => {
     const minus = document.getElementById('minusBtn');
 
     // ══════════════════════════════════════════════════════════
-    // سقف العدّاد = المخزون **ناقص ما في السلّة**
+    // The counter's ceiling = the stock **minus what is in the cart**
     // ══════════════════════════════════════════════════════════
     //
-    // كان السقف هو المخزون المطلق: `max="<?= $stock ?>"` في الـview،
-    // و`qtyInput.max = variant.stock` عند تبديل اللون. فمن عنده خمس
-    // قطع في المخزون واثنتان في سلّته كان العدّاد يسمح له بخمس، ثم
-    // يرفض عند الضغط على «Add To Cart» بتوست «Only 3 more available».
+    // The ceiling used to be the absolute stock: `max="<?= $stock ?>"` in the view, and
+    // `qtyInput.max = variant.stock` when the colour changed. So somebody with five in
+    // stock and two in their cart had a counter that let them pick five, and was then
+    // refused on pressing "Add To Cart" with a toast saying "Only 3 more available".
     //
-    // أي أن المستخدم يُمنَع **بعد** أن يختار لا **قبله** — وهو أسوأ
-    // ترتيب: يبدو أن الرقم مقبول ثم يُرفض بلا سبب ظاهر على الشاشة.
+    // Which means the user is stopped **after** choosing rather than **before** — the
+    // worst order: the number looks acceptable and is then refused with no visible reason
+    // on screen.
     //
-    // ── ولماذا الحساب هنا لا في الخادم ────────────────────────
+    // ── And why the calculation lives here rather than on the server ──
     //
-    // لأن السلّة تتغيّر بعد رسم الصفحة: يفتح المستخدم السلّة الجانبية
-    // ويحذف سطراً، أو يضيف من تبويب آخر. قيمة يحسبها PHP مرّة واحدة
-    // عند التحميل تشيخ فوراً وتعيد العطل من الجهة الأخرى — تسمح بأقلّ
-    // مما يجوز.
+    // Because the cart changes after the page renders: the user opens the sidebar and
+    // removes a line, or adds from another tab. A value PHP computes once at load goes
+    // stale immediately and reproduces the fault from the other side — permitting less
+    // than it should.
     //
-    // والبيانات كلّها موجودة في المتصفّح أصلاً: مخزون كل نسخة في
-    // PRODUCT_VARIANTS، والسلّة في مرآة cart.js. فيبقى السقف صحيحاً
-    // بعد كل تغيّر بلا إعادة تحميل، ما دمنا نستمع لـ`cart:updated`.
+    // And all the data is already in the browser: each variant's stock in
+    // PRODUCT_VARIANTS, and the cart in cart.js's mirror. So the ceiling stays correct
+    // after every change with no reload, as long as we listen for `cart:updated`.
     function cartQtyFor(variantId) {
         const cart = window.getCartData ? window.getCartData() : [];
-        // `Number()` على الطرفين ثم `===`: كلا الجانبين رقمٌ فعلاً —
-        // CartModel::getForUser تُحوّل id وvariant_id بـ(int)، وpageData
-        // تكتبهما أرقاماً — لكن التحويل الصريح يجعل ذلك عقداً مقروءاً
-        // لا افتراضاً عن شكل JSON قادم من الخادم.
+        // `Number()` on both sides then `===`: both really are numbers —
+        // CartModel::getForUser casts id and variant_id with (int), and pageData writes them
+        // as numbers — but the explicit conversion makes that a legible contract rather than
+        // an assumption about the shape of JSON coming from the server.
         const productId = Number(window.PRODUCT_ID);
         const vId       = Number(variantId);
         const line = cart.find(
@@ -192,7 +195,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const addCartBtn = document.getElementById('addCartBtn');
 
-    /** يضبط سقف العدّاد وحالة زرَّي (+) و«Add To Cart» على المتاح. */
+    /** Sets the counter's ceiling and the state of the (+) and "Add To Cart" buttons from what is available. */
     function applyQtyLimits() {
         if (!qty) return;
 
@@ -202,17 +205,18 @@ document.addEventListener('DOMContentLoaded', () => {
         qty.max = String(remaining);
         qty.dataset.remaining = String(remaining);
 
-        // صفر متاح: العدّاد يعرض صفراً ولا يقبل رفعاً، والزرّان معطّلان.
-        // (المخزون قد يكون موجوداً كلّه في السلّة — وهي حالة مختلفة عن
-        // نفاد المخزون، فلا نُخفي الكتلة ولا نُظهر «أبلغني عند التوفّر».)
+        // Zero available: the counter shows zero and accepts no increase, and both buttons
+        // are disabled. (The stock may exist entirely inside the cart — a different case
+        // from being out of stock, so the block is not hidden and "notify me when
+        // available" is not shown.)
         const value = Math.min(Math.max(1, Number(qty.value) || 1), Math.max(remaining, 1));
         qty.value = remaining === 0 ? 0 : value;
 
         if (plus) plus.disabled = remaining === 0 || Number(qty.value) >= remaining;
 
-        // ⚠️ لا نلمس زرّ الإضافة إن كان معطّلاً لسبب آخر: الزائر غير
-        // المسجَّل يراه معطّلاً بـdata-action="self-enable" ليفتح مودال
-        // الدخول. تفعيله هنا يكسر ذلك المسار.
+        // ⚠️ The add button is not touched if it is disabled for another reason: a
+        // signed-out visitor sees it disabled with data-action="self-enable" so it opens the
+        // login modal. Enabling it here breaks that path.
         if (addCartBtn && !addCartBtn.hasAttribute('data-action')) {
             addCartBtn.disabled = remaining === 0;
         }
@@ -248,12 +252,12 @@ document.addEventListener('DOMContentLoaded', () => {
         };
     }
 
-    // الكتابة اليدوية تُقيَّد كذلك — وإلا التفّ المستخدم على الزرّين
-    // بكتابة الرقم مباشرةً في الحقل.
+    // Typing by hand is constrained too — otherwise the user gets around both buttons by
+    // typing the number straight into the field.
     if (qty) qty.addEventListener('input', applyQtyLimits);
 
-    // كل تغيّر في السلّة يعيد الحساب: حذف سطر من السلّة الجانبية يجب
-    // أن يُعيد المتاح فوراً، لا بعد إعادة تحميل الصفحة.
+    // Every cart change recomputes it: removing a line in the sidebar must restore the
+    // availability immediately, not after a page reload.
     document.addEventListener('cart:updated', applyQtyLimits);
 
     applyQtyLimits();
@@ -264,9 +268,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const variant = productVariants.find(v => v.id === currentVariantId);
         if (!variant || variant.stock <= 0) return;
 
-        // ⚠️ لم يعد يُبنى كائن منتج كامل: الخادم يخزّن «ماذا وكم» فقط،
-        // والاسم واللون والسعر والصورة تُقرأ من القاعدة عند العرض.
-        // بناؤها هنا كان يعني نسخةً ثانية قد تشيخ عن أصلها.
+        // ⚠️ A full product object is no longer built: the server stores "what and how
+        // many" alone, and the name, colour, price and image are read from the database at
+        // display time. Building them here meant a second copy that could go stale against
+        // its original.
         const existing = (window.getCartData ? window.getCartData() : [])
             .find(i => i.id == window.PRODUCT_ID && i.variant_id == currentVariantId);
         const currentQtyInCart = existing ? existing.quantity : 0;

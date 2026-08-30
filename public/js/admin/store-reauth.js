@@ -1,13 +1,13 @@
 // ══════════════════════════════════════════════════════════════
-// js/admin/store-reauth.js — إعادة التحقق قبل الرجوع من وضع المتجر
+// js/admin/store-reauth.js — re-authenticating before returning from store mode
 // ══════════════════════════════════════════════════════════════
 //
-// كان هذا الملف كتلة <script> مضمّنة (63 سطراً) في
-// app/views/admin/store-reauth.php. نقل خالص: الكتلة لم تكن تحقن أي
-// قيمة PHP، تقرأ window.URLROOT فقط (يضبطه سطر واحد في الـview —
-// وهو تمرير بيانات لا منطق، فبقي مكانه).
+// This file used to be an inline <script> block (63 lines) in
+// app/views/admin/store-reauth.php. A pure move: the block injected no PHP values, it
+// reads window.URLROOT alone (set by a single line in the view — which is passing data
+// rather than logic, so it stayed where it was).
 //
-// updateCsrfToken تأتي من js/core/csrf.js المحمَّل قبل هذا الملف.
+// updateCsrfToken comes from js/core/csrf.js, loaded before this file.
 
 (function () {
     'use strict';
@@ -28,15 +28,14 @@
             try {
                 const fd = new FormData(form);
 
-                // fetchWithCsrfRetry تعمل هنا: الـview يضبط window.URLROOT
-                // فتختار /admin/csrf. الفائدة ملموسة — بلا الغلاف، فشل
-                // التوكن يُلزم الأدمن بكتابة كلمة سرّه من جديد، ومعه
-                // يتعافى الطلب صامتاً.
+                // fetchWithCsrfRetry works here: the view sets window.URLROOT, so it picks
+                // /admin/csrf. The benefit is tangible — without the wrapper, a token failure
+                // makes the admin type their password again; with it, the request recovers
+                // silently.
                 //
-                // ملاحظة: الغلاف يستدعي response.json() بلا حارس، فاستجابة
-                // غير JSON تصل الآن إلى catch الخارجي وتُعرض بـ«Connection
-                // error» بدل «Unexpected server response». كلتاهما رسالة خطأ
-                // للحالة نفسها.
+                // Note: the wrapper calls response.json() unguarded, so a non-JSON response
+                // now reaches the outer catch and is shown as "Connection error" rather than
+                // "Unexpected server response". Both are error messages for the same case.
                 const data = await fetchWithCsrfRetry(window.URLROOT + '/admin/store-mode/reauth', {
                     method: 'POST',
                     body: fd,
@@ -53,7 +52,7 @@
                 } else {
                     alertEl.className = 'alert-msg error visible';
                     alertEl.textContent = data.message || 'Verification failed.';
-                    // تحديث توكن CSRF إن أعادته اللوحة بعد الفشل
+                    // Refresh the CSRF token if the panel returned one after the failure
                     if (data.csrf_token && typeof updateCsrfToken === 'function') {
                         updateCsrfToken(data.csrf_token);
                     }
@@ -64,10 +63,10 @@
                 alertEl.textContent = 'Connection error. Please try again.';
             } finally {
                 btn.disabled = false;
-                // ⚠️ كان هنا 'Verify &amp; Return' — و textContent لا يفكّ
-                // كيانات HTML، فكان الزر يعرض «Verify &amp; Return» حرفياً
-                // بعد أول محاولة فاشلة. الماركب في الـview يستعمل &amp;
-                // لأنه HTML؛ هنا نصّ خام فيُكتب المحرف نفسه.
+                // ⚠️ This used to be 'Verify &amp; Return' — and textContent does not decode
+                // HTML entities, so the button displayed "Verify &amp; Return" literally after
+                // the first failed attempt. The markup in the view uses &amp; because it is
+                // HTML; here it is plain text, so the character itself is written.
                 btn.textContent = 'Verify & Return';
             }
         });

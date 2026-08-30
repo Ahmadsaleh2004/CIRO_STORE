@@ -1,16 +1,16 @@
 // ══════════════════════════════════════════════════════════════
-// js/admin/support.js — منطق صفحة Support Messages بلوحة الأدمن
+// js/admin/support.js — the logic for the Support Messages page in the admin panel
 // ══════════════════════════════════════════════════════════════
 
 document.addEventListener('DOMContentLoaded', function () {
 
-    // Guard — لا تشتغل إلا بصفحة Support فعلاً (نفس مبدأ site-settings.js)
+    // Guard — it runs only on the Support page (the same principle as site-settings.js)
     if (!document.getElementById('supportMessagesList')) return;
 
     // ── Reply ─────────────────────────────────────────────────
     document.querySelectorAll('.btn-reply-support').forEach(function (btn) {
         btn.addEventListener('click', function (e) {
-            e.stopPropagation(); // منع تفعيل حدث الكارد
+            e.stopPropagation(); // Stop the card's own handler firing
 
             const userId   = btn.dataset.userId;
             const userName = btn.dataset.userName;
@@ -42,7 +42,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 fd.append('user_id',    userId);
                 fd.append('reply_text', replyText);
 
-                // TODO: Rate limiting على عملية الرد — تذكرة منفصلة (غير موجود بالمشروع الجديد حالياً)
+                // TODO: rate limiting on replies — tracked separately (not present in the rewrite yet)
 
                 fetchWithCsrfRetry(window.URLROOT + '/admin/support/reply', {
                     method: 'POST',
@@ -63,7 +63,7 @@ document.addEventListener('DOMContentLoaded', function () {
     // ── Delete ────────────────────────────────────────────────
     document.querySelectorAll('.btn-delete-support').forEach(function (btn) {
         btn.addEventListener('click', function (e) {
-            e.stopPropagation(); // منع تفعيل حدث الكارد
+            e.stopPropagation(); // Stop the card's own handler firing
 
             const msgId = btn.dataset.msgId;
 
@@ -111,11 +111,11 @@ document.addEventListener('DOMContentLoaded', function () {
     document.querySelectorAll('.support-msg-card').forEach(function (card) {
         card.addEventListener('click', function () {
             const uid = card.dataset.userId;
-            if (!uid || uid === '0') return; // Guest — لا ملف مستخدم
+            if (!uid || uid === '0') return; // A guest — there is no user profile
 
-            // الراوت هو /admin/users/details?id=… لا /admin/users/{id}.
-            // كان الثاني مكتوباً هنا مع TODO يقول إن الصفحة «لسا مو منشأة» —
-            // وهي منشأة منذ البداية بشكل آخر، فكانت كل نقرة تعطي 404.
+            // The route is /admin/users/details?id=… not /admin/users/{id}.
+            // The latter was written here with a TODO saying the page "is not built yet" —
+            // and it has existed from the start in another form, so every click gave a 404.
             window.location.href = window.URLROOT + '/admin/users/details?id=' + encodeURIComponent(uid);
         });
     });

@@ -1,15 +1,15 @@
 // ══════════════════════════════════════════════════════════════
 // public/js/admin/category-picker.js
-// منطق Modal اختيار/إضافة/حذف الكاتوجريز
-// يُستخدم من صفحتي Add/Edit Product فقط (وضع واحد: select)
+// The logic for the category choose / add / delete modal.
+// Used by the Add and Edit Product pages alone (a single mode: select).
 //
-// المتغيرات المحقونة من PHP:
+// The variables injected from PHP:
 //   window._categoriesData       — [{id,name,is_core,product_count}]
-//   window._currentCategoryIds   — (edit فقط) [1,2,...]
+//   window._currentCategoryIds   — (edit only) [1,2,…]
 //
-// ⚠️ يستخدم window.URLROOT — لا BASE_URL
-// يستعمل fetchWithCsrfRetry لنقاط الكتابة. نقطة اقتراح التصنيفات
-// وحدها تبقى fetch عارياً — لا تتحقق من CSRF أصلاً (راجع تعليقها).
+// ⚠️ It uses window.URLROOT — not BASE_URL.
+// It uses fetchWithCsrfRetry for the writing endpoints. The category suggestion endpoint
+// alone stays a bare fetch — it does not verify CSRF at all (see its own comment).
 // ══════════════════════════════════════════════════════════════
 
 let selectedCategoryIds    = new Set();
@@ -18,10 +18,10 @@ let allCategoriesData      = [];
 
 document.addEventListener('DOMContentLoaded', () => {
 
-    // ── تهيئة البيانات ──────────────────────────────────────────
+    // ── Initialising the data ───────────────────────────────────
     allCategoriesData = (window._categoriesData || []).map(c => ({ ...c }));
 
-    // صفحة Edit: ابدأ بالكاتوجريز الحالية للمنتج
+    // The edit page: start from the product's current categories
     if (Array.isArray(window._currentCategoryIds)) {
         selectedCategoryIds = new Set(window._currentCategoryIds.map(Number));
         renderSelectedChips();
@@ -31,7 +31,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const openBtn = document.getElementById('openCategoryPickerBtn');
     if (!modalEl) return;
 
-    // ── فتح الـ Modal ────────────────────────────────────────────
+    // ── Opening the modal ───────────────────────────────────────
     openBtn?.addEventListener('click', () => {
         renderCategoryPickerList();
         new bootstrap.Modal(modalEl).show();
@@ -41,8 +41,8 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('confirmCategorySelectionBtn')?.addEventListener('click', () => {
         if (selectedCategoryIds.size === 0) {
             const errEl = document.getElementById('categoryRequiredError');
-            // `d-none` في الترميز = display:none !important، فالإظهار
-            // والإخفاء كلاهما عبر classList لا عبر style.display.
+            // `d-none` in the markup means display:none !important, so both showing and
+            // hiding go through classList rather than style.display.
             if (errEl) errEl.classList.remove('d-none');
             return;
         }
@@ -52,13 +52,13 @@ document.addEventListener('DOMContentLoaded', () => {
         bootstrap.Modal.getInstance(modalEl)?.hide();
     });
 
-    // ── إضافة كاتوجري جديدة ─────────────────────────────────────
+    // ── Adding a new category ───────────────────────────────────
     document.getElementById('addCategoryBtn')?.addEventListener('click', addNewCategory);
     document.getElementById('newCategoryInput')?.addEventListener('keydown', e => {
         if (e.key === 'Enter') { e.preventDefault(); addNewCategory(); }
     });
 
-    // ── اقتراحات التشابه (debounce 300ms) ───────────────────────
+    // ── Similarity suggestions (debounced by 300ms) ─────────────
     let debounceTimer;
     document.getElementById('newCategoryInput')?.addEventListener('input', e => {
         clearTimeout(debounceTimer);
@@ -69,12 +69,12 @@ document.addEventListener('DOMContentLoaded', () => {
         debounceTimer = setTimeout(() => fetchSuggestions(q), 300);
     });
 
-    // ── تأكيد الحذف ─────────────────────────────────────────────
+    // ── Confirming a deletion ───────────────────────────────────
     document.getElementById('confirmCategoryDeleteBtn')?.addEventListener('click', confirmCategoryDelete);
 });
 
 // ════════════════════════════════════════════════════════════
-// بناء قائمة الكاتوجريز بنمط .perm-item (نفس manage-admins)
+// Building the category list in the .perm-item style (the same as manage-admins)
 // ════════════════════════════════════════════════════════════
 function renderCategoryPickerList() {
     const list = document.getElementById('categoryPickerList');
@@ -115,7 +115,7 @@ function renderCategoryPickerList() {
         });
     });
 
-    // delete icons — e.preventDefault() يمنع تفعيل الـ checkbox
+    // The delete icons — e.preventDefault() stops the checkbox toggling
     list.querySelectorAll('.cat-delete-icon').forEach(icon => {
         icon.addEventListener('click', e => {
             e.preventDefault();
@@ -149,7 +149,7 @@ function renderSelectedChips() {
 }
 
 // ════════════════════════════════════════════════════════════
-// إضافة كاتوجري جديدة — AJAX
+// Adding a new category — over AJAX
 // ════════════════════════════════════════════════════════════
 async function addNewCategory() {
     const input = document.getElementById('newCategoryInput');
@@ -185,7 +185,7 @@ async function addNewCategory() {
 }
 
 // ════════════════════════════════════════════════════════════
-// اقتراحات التشابه (debounce 300ms)
+// Similarity suggestions (debounced by 300ms)
 // ════════════════════════════════════════════════════════════
 async function fetchSuggestions(q) {
     const suggestEl = document.getElementById('categorySuggestions');
@@ -213,7 +213,7 @@ async function fetchSuggestions(q) {
 }
 
 // ════════════════════════════════════════════════════════════
-// فتح تأكيد حذف كاتوجري
+// Opening the category deletion confirmation
 // ════════════════════════════════════════════════════════════
 function openDeleteConfirm(id, name) {
     categoryDeleteTargetId = id;
@@ -231,12 +231,12 @@ function openDeleteConfirm(id, name) {
 
     new bootstrap.Modal(document.getElementById('categoryDeleteModal')).show();
 
-    // أعد ترتيب الـ select بحيث الأقرب بالمعنى أولاً
+    // Reorder the select so the closest match by meaning comes first
     //
-    // صار هذا النداء يمرّ بشبكة الأمان: suggestCategory كانت النقطة
-    // الوحيدة التي تقبل POST بلا فحص CSRF، فأصبحت تمرّ بـbeginJsonPost.
-    // ولأن csrf.js لم يعد يكتشف الفشل بنصّ الرسالة بل بـerror_code، فأي
-    // نقطة خارج الشبكة تفقد التعافي من توكن منتهٍ.
+    // This call now goes through the safety net: suggestCategory was the one endpoint
+    // accepting a POST with no CSRF check, and it now passes through beginJsonPost. And
+    // because csrf.js no longer detects the failure by the message text but by error_code,
+    // any endpoint outside the net loses its recovery from an expired token.
     const fd = new FormData();
     fd.append('q', name);
     fd.append('csrf_token', window._csrfToken || '');
@@ -258,7 +258,7 @@ function openDeleteConfirm(id, name) {
 }
 
 // ════════════════════════════════════════════════════════════
-// تأكيد حذف — AJAX
+// Confirming a deletion — over AJAX
 // ════════════════════════════════════════════════════════════
 async function confirmCategoryDelete() {
     const select = document.getElementById('delCatDestination');

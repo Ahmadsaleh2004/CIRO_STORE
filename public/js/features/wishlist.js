@@ -28,11 +28,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     await renderWishlist();
 });
 
-// getStockBadgeJs حُذفت — القاعدة الآن في stockBadge() بـjs/core/utils.js،
-// مرآةً لـgetStockBadge() في PHP. هذه الصفحة لا تعرض بادج «متوفّر»
-// الأخضر (بادج على كل بطاقة ضجيج بصري)، فالوسيط الثاني يبقى false.
+// getStockBadgeJs was removed — the rule now lives in stockBadge() in js/core/utils.js,
+// mirroring getStockBadge() in PHP. This page does not show the green "in stock" badge (a
+// badge on every card is visual noise), so the second argument stays false.
 
-// [FIX] المسار مُحدَّث من /handlers/product_stock_handler.php إلى Route الجديد
+// [FIX] The path was updated from /handlers/product_stock_handler.php to the new route
 async function fetchLiveStock(ids) {
     try {
         const params = new URLSearchParams();
@@ -48,24 +48,25 @@ async function fetchLiveStock(ids) {
 }
 
 // ══════════════════════════════════════════════════════════════
-// سقف عدّاد بطاقة المفضّلة = المخزون **ناقص ما في السلّة**
+// A wishlist card's counter ceiling = the stock **minus what is in the cart**
 // ══════════════════════════════════════════════════════════════
 //
-// نفس مبدأ صفحة التفاصيل وبطاقات القائمة: المنع قبل الاختيار لا
-// بعده. كان العدّاد هنا يسقّف بالمخزون المطلق، ثم يكتشف المستخدم عند
-// الضغط على «Add to Cart» أن ما في سلّته محسوبٌ عليه — بتوست
+// The same principle as the details page and the list cards: stop them before the choice
+// rather than after it. The counter here used to cap at the absolute stock, and the user
+// then discovered on pressing "Add to Cart" that what is in their cart counts against
+// them — through a toast
 // «You already have the maximum available quantity».
 //
-// ── حالة تخصّ المفضّلة وحدها ───────────────────────────────
+// ── A case belonging to the wishlist alone ──────────────────
 //
-// عناصر المفضّلة تُخزَّن في localStorage، وبعضها قديم بلا
-// `variant_id` — أُضيف الحقل لاحقاً. فمطابقة سطر السلّة بـvariant_id
-// وحده كانت ستفشل على تلك العناصر وتُرجع «صفر في السلّة»، أي سقفاً
-// أوسع من الحقيقة.
+// Wishlist items are stored in localStorage, and some are old ones with no `variant_id`
+// — the field was added later. So matching a cart line by variant_id alone would have
+// failed on those items and returned "zero in the cart", that is, a ceiling wider than the
+// truth.
 //
-// ولذلك: إن عُرفت النسخة طابقناها، وإلّا جمعنا كل سطور السلّة لهذا
-// المنتج. والمخزون المعروض هنا مخزون المنتج لا النسخة (يأتي من
-// WishlistController::stock)، فالجمع هو المقابل الصحيح له.
+// So: when the variant is known it is matched, and otherwise every cart line for this
+// product is summed. And the stock displayed here is the product's, not the variant's (it
+// comes from WishlistController::stock), so the sum is its correct counterpart.
 function cartQtyForWishlist(productId, variantId) {
     const cart = window.getCartData ? window.getCartData() : [];
     const pid  = Number(productId);
@@ -82,7 +83,7 @@ function cartQtyForWishlist(productId, variantId) {
     return line ? Number(line.quantity) || 0 : 0;
 }
 
-/** المتاح فعلاً لبطاقة، من سمات حقلها. */
+/** What is genuinely available for a card, from its field's attributes. */
 function wishlistRemaining(input) {
     const stock = Number(input.getAttribute('data-wl-stock')) || 0;
     const inCart = cartQtyForWishlist(
@@ -93,7 +94,7 @@ function wishlistRemaining(input) {
     return Math.max(0, stock - inCart);
 }
 
-/** يضبط سقف كل بطاقة وحالة أزرارها على المتاح. */
+/** Sets every card's ceiling and its buttons' state from what is available. */
 function applyWishlistQtyLimits() {
     document.querySelectorAll('[data-wl-qty-input]').forEach(input => {
         const id        = input.getAttribute('data-wl-qty-input');
@@ -108,9 +109,9 @@ function applyWishlistQtyLimits() {
         const plusBtn = document.querySelector(`[data-wl-qty="${id}"][data-wl-delta="1"]`);
         if (plusBtn) plusBtn.disabled = remaining === 0 || Number(input.value) >= remaining;
 
-        // كزرّ صفحة التفاصيل: لا نلمس زرّاً معطّلاً لسبب آخر — الزائر
-        // غير المسجَّل يراه معطّلاً بـdata-action="self-enable" ليفتح
-        // مودال الدخول.
+        // As on the details page: a button disabled for another reason is not touched — a
+        // signed-out visitor sees it disabled with data-action="self-enable" so it opens the
+        // login modal.
         const addBtn = document.querySelector(`.add-to-cart-wl[data-id="${id}"]`);
         if (addBtn && !addBtn.hasAttribute('data-action')) {
             addBtn.disabled = remaining === 0;
@@ -132,19 +133,19 @@ function applyWishlistQtyLimits() {
 }
 window.applyWishlistQtyLimits = applyWishlistQtyLimits;
 
-// السلّة تتغيّر بعد رسم البطاقات — حذف سطر من السلّة الجانبية يجب أن
-// يُعيد المتاح هنا فوراً. الحدث يبثّه refreshCartUI في cart.js.
+// The cart changes after the cards render — removing a line in the sidebar must restore
+// the availability here immediately. The event is emitted by refreshCartUI in cart.js.
 document.addEventListener('cart:updated', applyWishlistQtyLimits);
 
 window.changeWishlistQty = (id, val) => {
     const input = document.getElementById('qty-' + id);
     if (!input) return;
 
-    // ⚠️ السقف يُقرأ من المتاح لا من المخزون.
+    // ⚠️ The ceiling is read from what is available, not from the stock.
     //
-    // كانت الدالة تستقبل `stock` وسيطاً ثالثاً من سمة على الزرّ،
-    // فتسقّف بالمخزون المطلق وتقول «Only N left in stock» — وهي رسالة
-    // صحيحة عن المخزون وخاطئة عمّا يستطيع المستخدم إضافته.
+    // The function used to take `stock` as a third argument from an attribute on the
+    // button, capping at the absolute stock and saying "Only N left in stock" — a message
+    // that is true about the stock and false about what the user can actually add.
     const remaining = wishlistRemaining(input);
 
     let v = (parseInt(input.value, 10) || 1) + val;
@@ -212,8 +213,9 @@ async function renderWishlist() {
 
         const badge = stockBadge(stock);
         const inStock = stock > 0;
-        // حالة "نبّهني" تأتي من السيرفر (WishlistController::stock) — تُبقي هذه
-        // الصفحة متطابقة مع product.php و product_dit.php لنفس المستخدم والمنتج.
+        // The "notify me" state comes from the server (WishlistController::stock) — it keeps
+        // this page consistent with product.php and product_dit.php for the same user and
+        // product.
         const alreadyNotified = !!(live && live.already_notified);
 
         return `
@@ -272,22 +274,23 @@ async function renderWishlist() {
         </div>`;
     }).join('');
 
-    // ── أزرار الكمية وحقلها ────────────────────────────────────
+    // ── The quantity buttons and their field ────────────────────
     //
-    // ⚠️ كانت هذه ثلاثة معالجات مضمّنة داخل innerHTML:
-    // onclick على زرَّي (−) و(+)، وoninput وonchange على الحقل.
-    // وسياسة CSP في public/.htaccess بلا script-src 'unsafe-inline'
-    // تحجب المعالج المضمّن مهما كان مصدره — فكانت أزرار الكمية في
-    // صفحة المفضّلة **ميتة تماماً**: تُنقر ولا يتغيّر شيء.
+    // ⚠️ These used to be three inline handlers inside innerHTML: an onclick on the (−)
+    // and (+) buttons, and oninput and onchange on the field. And the CSP in
+    // public/.htaccess, without script-src 'unsafe-inline', blocks an inline handler
+    // whatever its source — so the quantity buttons on the wishlist page were **completely
+    // dead**: they were clicked and nothing changed.
     //
-    // وكان `max=""` فارغاً في الحقل نفسه، فلم يكن للمتصفّح سقف يعرفه
-    // أصلاً؛ صار `max="${stock}"` كي يحدّه قبل أن يحدّه الكود.
+    // And `max=""` was empty on the field itself, so the browser had no ceiling to know at
+    // all; it became `max="${stock}"` so the browser constrains it before the code does.
     //
-    // الربط هنا يقع بعد كل إعادة رسم لأن renderWishlist تُستدعى مجدداً
-    // بعد كل تغيير — وهو نفس ما تفعله الكتلتان أدناه.
-    // ولم يعد المخزون يُمرَّر وسيطاً: السقف صار المتاح (المخزون ناقص
-    // ما في السلّة)، وتقرؤه changeWishlistQty من سمات الحقل نفسه —
-    // فلا تحمل الأزرار نسخةً ثانية منه قد تشيخ عن حقلها.
+    // The binding here happens after every re-render, because renderWishlist is called
+    // again after every change — the same thing the two blocks below do.
+    // And the stock is no longer passed as an argument: the ceiling is now what is
+    // available (the stock minus what is in the cart), and changeWishlistQty reads it from
+    // the field's own attributes — so the buttons carry no second copy of it that could go
+    // stale against their field.
     document.querySelectorAll('[data-wl-qty]').forEach(btn => {
         btn.addEventListener('click', () => {
             window.changeWishlistQty(
@@ -298,8 +301,8 @@ async function renderWishlist() {
     });
 
     document.querySelectorAll('[data-wl-qty-input]').forEach(input => {
-        // تنقية الأرقام كانت في oninput؛ نُبقيها على input كي يبقى
-        // المنع فورياً أثناء الكتابة لا بعد مغادرة الحقل.
+        // The numeric sanitising was in oninput; it stays on input so the constraint remains
+        // immediate while typing rather than after leaving the field.
         input.addEventListener('input', () => {
             input.value = input.value.replace(/[^0-9]/g, '');
         });
@@ -309,8 +312,8 @@ async function renderWishlist() {
         });
     });
 
-    // البطاقات تُرسم من جديد عند كل تغيير في المفضّلة، فالسقف يُحسب
-    // بعد الرسم مباشرةً لا عند التحميل وحده.
+    // The cards are re-rendered on every wishlist change, so the ceiling is computed
+    // straight after the render rather than at load alone.
     applyWishlistQtyLimits();
 
     document.querySelectorAll('.remove-fav').forEach(btn => {
@@ -376,9 +379,10 @@ async function renderWishlist() {
                 }
             }
 
-            // ⚠️ لا سطر منتج يُبنى هنا: الخادم يخزّن «ماذا وكم»، والسعر
-            // والاسم والصورة تُقرأ من القاعدة عند العرض. ولذلك سقط حساب
-            // السعر الحيّ الذي كان هنا — لم يبقَ له مستعمل.
+            // ⚠️ No product line is built here: the server stores "what and how many", and
+            // the price, name and image are read from the database at display time. Which is
+            // why the live price calculation that used to be here was dropped — nothing uses
+            // it any more.
             if (!variantId) {
                 if (typeof showToast === 'function') showToast('Please choose a colour first.', 'warning');
                 return;

@@ -1,11 +1,11 @@
 // ══════════════════════════════════════════════════════════════
-// public/js/shared/order-cancel.js — زر إلغاء/حذف الطلب المشترك
-// (يستخدمه my-info.php للمستخدم + order-details.php للأدمن)
-// السياق يُحدَّد عبر data-context على الزر (user | admin).
-// CSRF: window._csrfToken (سياق الأدمن من navbar.php) أو
-//       window.CSRF_INFO (سياق المستخدم من my-info.php).
-// fetchWithCsrfRetry تعمل في السياقين: تختار /admin/csrf عند وجود
-// window.URLROOT (الأدمن) و/auth/csrf عند وجود BASE_URL (المتجر).
+// public/js/shared/order-cancel.js — the shared cancel/delete order button.
+// (Used by my-info.php for the user and order-details.php for the admin.)
+// The context is set through data-context on the button (user | admin).
+// CSRF: window._csrfToken (the admin context, from navbar.php) or
+//       window.CSRF_INFO (the user context, from my-info.php).
+// fetchWithCsrfRetry works in both: it picks /admin/csrf when window.URLROOT exists (the
+// admin) and /auth/csrf when BASE_URL exists (the store).
 // ══════════════════════════════════════════════════════════════
 
 document.querySelectorAll('.order-cancel-btn').forEach(btn => {

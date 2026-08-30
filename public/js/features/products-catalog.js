@@ -1,5 +1,5 @@
 // ══════════════════════════════════════════════════════════════
-// js/features/products-catalog.js — ميزات وعرض المنتجات والسلايدر والفلترة
+// js/features/products-catalog.js — the product display, the slider and the filtering
 // ══════════════════════════════════════════════════════════════
 
 /**
@@ -40,27 +40,27 @@ function showSkeletons(containerId, count = 6) {
 window.showSkeletons = showSkeletons;
 
 /**
- * Render Slider (Home Page) — الآن مبني بالكامل من قاعدة البيانات
- * عبر window.dbHomeSliders (من BrandingModel::getActiveSlidersForHome)
+ * Render the home page slider — now built entirely from the database, through
+ * window.dbHomeSliders (from BrandingModel::getActiveSlidersForHome).
  */
 function renderSlider(homeSliders) {
     const sliderInner  = document.getElementById('slider-inner');
     const sliderSection = document.getElementById('mainSlider');
     if (!sliderInner) return;
 
-    // ⚠️ لا تُعِد بناء ما صُيِّر على الخادم.
+    // ⚠️ Do not rebuild what the server already rendered.
     //
-    // السلايدر صار يُصيَّر في home.php ويصل في HTML جاهزاً. وإعادة
-    // بنائه هنا تمحو صورةً حمّلها المتصفح سلفاً وتُنزّلها من جديد —
-    // وميضٌ مرئي وطلب مهدور، وضياع fetchpriority="high" على الشريحة
-    // الأولى وهي أكبر عنصر مرئي في الصفحة.
+    // The slider is now rendered in home.php and arrives ready in the HTML. Rebuilding it
+    // here erases an image the browser has already loaded and downloads it again — a
+    // visible flash and a wasted request, and the loss of fetchpriority="high" on the first
+    // slide, which is the page's largest contentful paint.
     //
-    // الدالة تبقى للتحديث الحيّ (معاينة لوحة التحكّم مثلاً) وللارتداد
-    // لو صار الخادم لا يُصيّر يوماً.
+    // The function remains for live updates (the admin panel's preview, for instance) and
+    // as a fallback should the server ever stop rendering it.
     if (sliderInner.children.length > 0) return;
 
     if (!homeSliders || !homeSliders.length) {
-        // لا توجد بيانات سلايدر بعد — أخفِ القسم بالكامل بدل ترك مساحة فارغة
+        // No slider data yet — hide the section entirely rather than leave an empty space
         if (sliderSection) sliderSection.style.display = 'none';
         return;
     }
@@ -69,16 +69,16 @@ function renderSlider(homeSliders) {
     sliderInner.innerHTML = homeSliders.map((slide, index) => {
         const items = slide.items || [];
         const count = items.length;
-        // كلاس يحدد سلوك الفليكس/الهوفر حسب عدد الصور (راجع home-slider.css)
+        // A class setting the flex and hover behaviour from the image count (see home-slider.css)
         const countClass = count >= 5 ? 'compact-count' : ('count-' + count);
 
         const itemsHtml = items.map(item => {
-            // ⚠️ البنية هنا يجب أن تطابق app/views/home.php حرفاً بحرف.
+            // ⚠️ The structure here must match app/views/home.php character for character.
             //
-            // الصفحة تُرسَم من الخادم أوّلاً (لأن السلايدر هو LCP)،
-            // وهذه الدالة تعيد بناءها عند التحديث الحيّ. اختلاف بنية
-            // بينهما يعني أن ما يراه الزائر يتغيّر شكله بعد التحديث
-            // بلا سبب مفهوم — و home-slider.css مكتوبة لبنية واحدة.
+            // The page is rendered from the server first (because the slider is the LCP),
+            // and this function rebuilds it on a live update. A structural difference between
+            // the two means what the visitor sees changes shape after an update for no
+            // comprehensible reason — and home-slider.css is written for one structure.
             const title = item.title || '';
             const desc  = item.description || '';
 
@@ -173,16 +173,16 @@ window.renderHomeSections = renderHomeSections;
 // ── Catalog Helpers (used in pages/products.php) ──────────────
 
 // ══════════════════════════════════════════════════════════════
-// سقف عدّاد البطاقة = المخزون **ناقص ما في السلّة**
+// A card's counter ceiling = the stock **minus what is in the cart**
 // ══════════════════════════════════════════════════════════════
 //
-// بطاقات القائمة تطبع `max="<?= $stock ?>"` — المخزون المطلق. وهو
-// نفس عطل صفحة التفاصيل: من عنده خمس قطع واثنتان في سلّته يرفع
-// العدّاد إلى خمس، ثم يُرفض عند الضغط بتوست «Only 3 more available».
-// المنع بعد الاختيار لا قبله.
+// The list cards print `max="<?= $stock ?>"` — the absolute stock. It is the same fault
+// as on the details page: somebody with five in stock and two in their cart raises the
+// counter to five and is then refused on pressing add, with a toast saying
+// "Only 3 more available". Stopping them after the choice rather than before it.
 //
-// والبيانات كلّها في البطاقة أصلاً: زرّ الإضافة يحمل data-product-id
-// وdata-variant-id وdata-stock. فلا حاجة إلى شيء من الخادم.
+// And all the data is already on the card: the add button carries data-product-id,
+// data-variant-id and data-stock. So nothing is needed from the server.
 function cartQtyForCard(productId, variantId) {
     const cart = window.getCartData ? window.getCartData() : [];
     const line = cart.find(
@@ -193,7 +193,7 @@ function cartQtyForCard(productId, variantId) {
     return line ? Number(line.quantity) || 0 : 0;
 }
 
-/** يعيد ضبط `max` لكل بطاقة ظاهرة، ويعطّل ما نفد المتاح منه. */
+/** Resets `max` on every visible card, and disables the ones with nothing available. */
 function applyCatalogQtyLimits() {
     document.querySelectorAll('[data-action="add-to-cart"]').forEach(btn => {
         const productId = btn.getAttribute('data-product-id');
@@ -217,9 +217,9 @@ function applyCatalogQtyLimits() {
     });
 }
 
-// كل تغيّر في السلّة يعيد الحساب — حذف سطر من السلّة الجانبية يجب أن
-// يُعيد المتاح في البطاقات فوراً. والحدث يبثّه refreshCartUI في
-// cart.js بعد الجلب الأوّلي وبعد كل تعديل.
+// Every cart change recomputes it — removing a line in the sidebar must restore the
+// availability on the cards immediately. The event is emitted by refreshCartUI in cart.js
+// after the initial fetch and after every change.
 document.addEventListener('cart:updated', applyCatalogQtyLimits);
 document.addEventListener('DOMContentLoaded', applyCatalogQtyLimits);
 
@@ -229,12 +229,12 @@ window.changeQtyDB = (id, val) => {
     const input = document.getElementById('qty-' + id);
     if (!input) return;
 
-    // ⚠️ `Number.isNaN` لا `|| Infinity`.
+    // ⚠️ `Number.isNaN`, not `|| Infinity`.
     //
-    // كان `parseInt(max) || Infinity`، و`parseInt('0')` يساوي صفراً —
-    // وهو زائف. فبطاقةٌ متاحها صفر (كلّ مخزونها في السلّة) كانت تسقط
-    // إلى Infinity، أي إلى **لا سقف إطلاقاً**: العدّاد يرتفع بلا حدّ
-    // في الحالة الوحيدة التي يجب أن يقف فيها تماماً.
+    // It used to be `parseInt(max) || Infinity`, and `parseInt('0')` is zero — which is
+    // falsy. So a card with zero available (all of its stock already in the cart) fell
+    // through to Infinity, that is, to **no ceiling at all**: the counter rose without
+    // limit in the one case where it should have stopped dead.
     const parsed = parseInt(input.getAttribute('max'), 10);
     const max    = Number.isNaN(parsed) ? Infinity : parsed;
 
@@ -242,12 +242,13 @@ window.changeQtyDB = (id, val) => {
     if (v >= 1 && v <= max) input.value = v;
 };
 
-// ⚠️ لم تعد تكتب في localStorage: السلّة على الخادم منذ هجرة 0011،
-// وcartAdd في js/features/cart.js هي المدخل الوحيد للكتابة.
+// ⚠️ It no longer writes to localStorage: the cart has lived on the server since
+// migration 0011, and cartAdd in js/features/cart.js is the only way in for writes.
 //
-// وفحص المخزون يبقى هنا رغم أنه فحصٌ في العميل: غرضه رسالةٌ فورية
-// («بقيت قطعتان») لا حماية. الحماية في placeOrder داخل معاملة تقفل
-// الصفّ — والسلّة نيّةٌ لا حجز.
+// And the stock check stays here despite being a client-side check: its purpose is an
+// immediate message ("two left") rather than protection. The protection lives in
+// placeOrder, inside a transaction that locks the row — and a cart is an intention, not a
+// reservation.
 window.addToCartDB = async (id, variantId, price, stock) => {
     const input = document.getElementById('qty-' + id);
     const qty   = parseInt(input?.value || 1);
@@ -270,19 +271,20 @@ window.addToCartDB = async (id, variantId, price, stock) => {
     if (cb) { cb.classList.add('cart-bounce'); setTimeout(() => cb.classList.remove('cart-bounce'), 500); }
 };
 
-// ── الصفحة الرئيسية: السلايدر وأقسام المنتجات ─────────────────
-// نُقل من كتلة <script> مضمّنة في views/home.php. البيانات نفسها
-// (window.dbHomeSliders و window.dbProducts) ما زالت تصل من سطرَي
-// json_encode هناك — تمرير بيانات لا منطق.
+// ── The home page: the slider and the product sections ───────
+// Moved out of an inline <script> block in views/home.php. The data itself
+// (window.dbHomeSliders and window.dbProducts) still arrives from the two json_encode
+// lines there — passing data, not logic.
 document.addEventListener('DOMContentLoaded', () => {
-    // dbHomeSliders تعلنها الرئيسية وحدها؛ صفحة المنتجات تعلن dbProducts
-    // فقط. الفحص عليها تحديداً كي لا يعمل هذا على صفحة لا تخصّه.
+    // dbHomeSliders is declared by the home page alone; the products page declares only
+    // dbProducts. The check is on that specifically, so this does not run on a page it does
+    // not belong to.
     if (!Array.isArray(window.dbHomeSliders)) return;
 
     renderSlider(window.dbHomeSliders);
 
     if (window.dbProducts && window.dbProducts.length > 0) {
-        // renderHomeSections لا تستدعي renderSlider داخلياً، فيُستدعى أعلاه
+        // renderHomeSections does not call renderSlider internally, so it is called above
         const prods = window.dbProducts.map(p => ({
             ...p,
             image: p.image_path || p.image || '',
@@ -291,16 +293,16 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-// ── صفحة المنتجات: أزرار المفضّلة ─────────────────────────────
-// نُقل من كتلة <script> مضمّنة في views/product/product.php. كل زر
-// يحمل بيانات منتجه في data-product أصلاً، فلا حاجة لأي حقن PHP هنا.
+// ── The products page: the wishlist buttons ──────────────────
+// Moved out of an inline <script> block in views/product/product.php. Each button already
+// carries its product's data in data-product, so no PHP injection is needed here.
 document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('.favorite-btn[data-product]').forEach(btn => {
         let p;
         try {
             p = JSON.parse(btn.dataset.product);
         } catch (e) {
-            console.error('favorite-btn: data-product غير صالح', e);
+            console.error('favorite-btn: invalid data-product', e);
             return;
         }
         const wl = JSON.parse(localStorage.getItem('wishlist') || '[]');

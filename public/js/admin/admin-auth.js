@@ -1,38 +1,37 @@
 /**
- * admin-auth.js — منطق فورم تسجيل دخول الأدمن
+ * admin-auth.js — the admin sign-in form's logic
  *
- * المسؤوليات:
- *  1. إرسال الفورم عبر fetch (JSON response)
- *  2. إظهار hCaptcha widget بعد أول محاولة فاشلة فقط (تحميل كسول)
- *  3. عرض رسائل الخطأ / النجاح
- *  4. إدارة حالة الحظر (lockout timer)
+ * Responsibilities:
+ *  1. submitting the form through fetch (a JSON response)
+ *  2. showing the hCaptcha widget only after the first failed attempt (lazy loading)
+ *  3. displaying the error and success messages
+ *  4. managing the lockout state (its timer)
  *
- * ⚠️ **لا يستعمل fetchWithCsrfRetry — عن قصد، لثلاثة أسباب مفحوصة:**
+ * ⚠️ **It does not use fetchWithCsrfRetry — deliberately, for three verified reasons:**
  *
- *  1. الغلاف يختار نقطة التوكن بـ`typeof window.URLROOT !== 'undefined'`،
- *     و**صفحة تسجيل الدخول لا تعرّف window.URLROOT** (تقرأ الجذر من
- *     <meta name="urlroot"> إلى APP_ROOT أدناه). فسيسقط إلى الفرع الآخر
- *     `window.BASE_URL + '/auth/csrf'` وBASE_URL غير معرّف هنا أيضاً —
- *     أي أن إعادة المحاولة ستضرب "undefined/auth/csrf".
- *  2. الملف **يجدّد التوكن بنفسه** أصلاً: refreshCsrfToken() تُستدعى بعد
- *     كل فشل وتجلب /admin/csrf وتحدّث حقل الفورم — نفس عمل الغلاف،
- *     مكتوباً لسياق هذه الصفحة.
- *  3. يستعمل كائن الاستجابة (res.ok) قبل قراءة JSON، والغلاف يُرجع
- *     البيانات المُحلَّلة لا Response.
+ *  1. the wrapper picks its token endpoint with `typeof window.URLROOT !== 'undefined'`,
+ *     and **the sign-in page does not define window.URLROOT** (it reads the root from
+ *     <meta name="urlroot"> into APP_ROOT below). So it would fall through to the other
+ *     branch, `window.BASE_URL + '/auth/csrf'`, and BASE_URL is not defined here either —
+ *     meaning the retry would hit "undefined/auth/csrf".
+ *  2. the file **renews the token itself** already: refreshCsrfToken() is called after
+ *     every failure, fetches /admin/csrf and updates the form's field — the same work the
+ *     wrapper does, written for this page's context.
+ *  3. it uses the response object (res.ok) before reading the JSON, and the wrapper
+ *     returns the parsed data rather than a Response.
  *
- * (التعليقات المشابهة في ملفات الأدمن الأخرى كانت **خاطئة** — تلك
- * الصفحات تعرّف window.URLROOT فعلاً — وأُزيلت. هذا الملف الاستثناء
- * الحقيقي الوحيد.)
+ * (Similar comments in the other admin files were **wrong** — those pages do define
+ * window.URLROOT — and were removed. This file is the one genuine exception.)
  *
- * لا يعتمد على: cart.js / wishlist.js / notifications.js / auth.js
- * ولا يلمس أي منطق خاص بالمستخدم العادي.
+ * It depends on none of: cart.js / wishlist.js / notifications.js / auth.js,
+ * and it touches no logic belonging to the regular user.
  */
 
 'use strict';
 
 (function () {
 
-    // ── ثوابت ──────────────────────────────────────────────────────────────
+    // ── Constants ──────────────────────────────────────────────────────────
     const FORM_SELECTOR         = '#adminLoginForm';
     const BTN_SELECTOR          = '#loginBtn';
     const ALERT_SELECTOR        = '#alertMsg';
@@ -41,20 +40,20 @@
     const LOCKOUT_COUNTDOWN_ID  = 'lockoutCountdown';
     const TWOFAGROUP_SELECTOR   = '#twofaGroup';
 
-    // تحديد جذر التطبيق (يُستخدم لبناء مسارات الـ AJAX)
+    // Determining the application root (used to build the AJAX paths)
     const APP_ROOT = document.querySelector('meta[name="urlroot"]')?.content
                         || window.location.origin;
 
     const LOGIN_ENDPOINT        = APP_ROOT + '/admin/login';
     const LOGIN_2FA_ENDPOINT    = APP_ROOT + '/admin/login/2fa';
 
-    // حالة داخلية
+    // Internal state
     let captchaLoaded     = false;
     let captchaWidgetId   = null;
     let lockoutInterval   = null;
     let requiresTwofa     = false;
 
-    // ── DOM جاهز ───────────────────────────────────────────────────────────
+    // ── DOM ready ──────────────────────────────────────────────────────────
     document.addEventListener('DOMContentLoaded', init);
 
     function init() {
@@ -64,7 +63,7 @@
         form.addEventListener('submit', handleSubmit);
     }
 
-    // ── معالجة الإرسال ─────────────────────────────────────────────────────
+    // ── Handling the submission ────────────────────────────────────────────
     async function handleSubmit(e) {
         e.preventDefault();
 
@@ -78,7 +77,7 @@
         try {
             const formData = new FormData(form);
 
-            // أضف hCaptcha response إن كان الـ widget محمَّل
+            // Add the hCaptcha response if the widget is loaded
             if (captchaLoaded && captchaWidgetId !== null && typeof hcaptcha !== 'undefined') {
                 const captchaVal = hcaptcha.getResponse(captchaWidgetId);
                 formData.set('h-captcha-response', captchaVal);
@@ -101,7 +100,7 @@
             }
 
             if (data.success) {
-                // نجاح — SweetAlert ترحيبي ثم التوجيه
+                // Success — a welcome SweetAlert, then the redirect
                 btn.disabled = true;
                 Swal.fire({
                     icon: 'success',
@@ -115,16 +114,16 @@
                     window.location.href = data.redirect || (window.location.origin + '/admin/home');
                 });
             } else if (data.requires_2fa) {
-                // خطوة 2FA — أظهر حقل الكود وحوّل الـ POST القادم لمسار /admin/login/2fa
+                // The 2FA step — show the code field and point the next POST at /admin/login/2fa
                 requiresTwofa = true;
                 const group = document.querySelector(TWOFAGROUP_SELECTOR);
                 if (group) {
-                    // ⚠️ classList لا style.display: الحقل يحمل `d-none`
-                    // في الترميز، وهي `display:none !important` — فلا
-                    // يهزمها نمط مضمّن مهما كانت قيمته. وقد كان يعمل
-                    // سابقاً لسببٍ خاطئ: سمة class مكرّرة في
-                    // admin/login.php أسقطت `d-none` كلّياً، فكان الحقل
-                    // ظاهراً منذ فتح الصفحة لا بعد طلب الخادم.
+                    // ⚠️ classList, not style.display: the field carries `d-none` in the
+                    // markup, which is `display:none !important` — so no inline style beats it,
+                    // whatever its value. It used to work for the wrong reason: a duplicated
+                    // class attribute in admin/login.php dropped `d-none` entirely, so the
+                    // field was visible from the moment the page opened rather than after the
+                    // server asked for it.
                     group.classList.remove('d-none');
                     const codeInput = document.getElementById('adminTOTP');
                     codeInput.required = true;
@@ -132,20 +131,20 @@
                 }
                 showAlert(alertEl, data.message || 'Enter your 2FA code.', 'success');
             } else {
-                // فشل
+                // Failure
                 showAlert(alertEl, data.message || 'Login failed.', 'error');
 
-                // إعادة ضبط hCaptcha إن كانت محمّلة
+                // Reset hCaptcha if it is loaded
                 if (captchaLoaded && captchaWidgetId !== null && typeof hcaptcha !== 'undefined') {
                     hcaptcha.reset(captchaWidgetId);
                 }
 
-                // هل نُظهر الـ CAPTCHA؟
+                // Should the CAPTCHA be shown?
                 if (data.show_captcha) {
                     loadCaptchaIfNeeded();
                 }
 
-                // إعادة توليد CSRF token
+                // Reissue the CSRF token
                 refreshCsrfToken(form);
             }
 
@@ -157,32 +156,32 @@
         }
     }
 
-    // ── تحميل hCaptcha بشكل كسول (فقط عند الحاجة) ──────────────────────────
+    // ── Loading hCaptcha lazily (only when it is needed) ───────────────────
     function loadCaptchaIfNeeded() {
         const container = document.getElementById(CAPTCHA_CONTAINER_ID);
         if (!container) return;
 
-        // أظهر الحاوية أولاً
+        // Show the container first
         container.style.display = 'block';
         container.setAttribute('aria-hidden', 'false');
 
-        if (captchaLoaded) return; // لا تُحمّله مرتين
+        if (captchaLoaded) return; // Do not load it twice
 
-        // احصل على site key من meta tag أو من global var
+        // Get the site key from a meta tag or from a global variable
         const siteKey = getSiteKey();
         if (!siteKey) {
             console.warn('admin-auth.js: HCAPTCHA_SITE_KEY not found');
             return;
         }
 
-        // تحميل script hCaptcha ديناميكياً
+        // Load the hCaptcha script dynamically
         const script = document.createElement('script');
         script.src   = 'https://js.hcaptcha.com/1/api.js?render=explicit&onload=adminHcaptchaOnLoad';
         script.async = true;
         script.defer = true;
         document.head.appendChild(script);
 
-        // Callback عند جهوزية الـ API
+        // The callback for when the API is ready
         window.adminHcaptchaOnLoad = function () {
             captchaLoaded    = true;
             captchaWidgetId  = hcaptcha.render(CAPTCHA_CONTAINER_ID, {
@@ -194,30 +193,30 @@
     }
 
     /**
-     * يحاول الحصول على hCaptcha Site Key من:
-     * 1. data attribute على الـ captcha container
-     * 2. window.HCAPTCHA_SITE_KEY (يمكن تمريره من الـ View)
+     * It tries to obtain the hCaptcha site key from:
+     * 1. a data attribute on the captcha container
+     * 2. window.HCAPTCHA_SITE_KEY (which the view can pass)
      */
     function getSiteKey() {
         const container = document.getElementById(CAPTCHA_CONTAINER_ID);
         const key = (container?.dataset?.sitekey || window.HCAPTCHA_SITE_KEY || '').trim();
 
-        // قيمة placeholder غير مستبدلة (YOUR_HCAPTCHA_SITE_KEY_HERE) تُعامل كأنها
-        // غير مضبوطة — بدون هذا الفحص تُمرَّر إلى hcaptcha.render() فيفشل الويدجت
-        // بصمت ولا يُنتج حقل h-captcha-response إطلاقًا. هذا يطابق الفحص المقابل
-        // في AdminAuthController::verifyCaptcha() فيبقى الطرفان متسقين.
+        // An unreplaced placeholder (YOUR_HCAPTCHA_SITE_KEY_HERE) is treated as unset —
+        // without this check it is passed to hcaptcha.render(), the widget fails silently,
+        // and no h-captcha-response field is produced at all. This matches the corresponding
+        // check in AdminAuthController::verifyCaptcha(), keeping the two sides consistent.
         if (!key || key.startsWith('YOUR_')) return null;
 
         return key;
     }
 
-    // ── تحديث CSRF Token بعد كل فشل ───────────────────────────────────────
+    // ── Refreshing the CSRF token after every failure ─────────────────────
     async function refreshCsrfToken(form) {
         try {
             const csrfInput = form.querySelector('input[name="csrf_token"]');
             if (!csrfInput) return;
 
-            // endpoint مخصص لجلسة الأدمن — منفصل عن /auth/csrf العام
+            // An endpoint specific to the admin session — separate from the public /auth/csrf
             const res  = await fetch(APP_ROOT + '/admin/csrf', {
                 credentials: 'same-origin',
                 headers:     { 'X-Requested-With': 'XMLHttpRequest' },
@@ -227,11 +226,11 @@
                 if (d.token) csrfInput.value = d.token;
             }
         } catch {
-            // صامت — الفشل هنا لا يوقف العمل
+            // Silent — a failure here does not stop anything
         }
     }
 
-    // ── مؤقت الحظر (للعرض فقط — الحظر الحقيقي server-side) ────────────────
+    // ── The lockout timer (for display alone — the real lockout is server-side) ──
     function startLockoutTimer(minutes) {
         const timerEl     = document.getElementById(LOCKOUT_TIMER_ID);
         const countdownEl = document.getElementById(LOCKOUT_COUNTDOWN_ID);
@@ -285,7 +284,7 @@
         }
     }
 
-    // export للاستخدام الخارجي إن احتجنا لاحقاً
+    // Exported for external use, should it be needed later
     window.adminAuth = { startLockoutTimer };
 
 })();

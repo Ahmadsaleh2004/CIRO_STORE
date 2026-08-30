@@ -1,22 +1,21 @@
 // ══════════════════════════════════════════════════════════════
-// js/admin/my-info.js — صفحة «بياناتي» في لوحة التحكم
+// js/admin/my-info.js — the "my info" page in the admin panel
 // ══════════════════════════════════════════════════════════════
 //
-// كان هذا الملف كتلتَي <script> مضمّنتين (144 سطراً) داخل
-// app/views/admin/my-info.php: تحديث بيانات الحساب، وتفعيل/تعطيل 2FA.
+// This file used to be two inline <script> blocks (144 lines) inside
+// app/views/admin/my-info.php: updating the account details, and enabling or disabling 2FA.
 //
-// النقل هنا نقل خالص بلا سمات data-*: الكتلتان لم تكونا تحقنان أي قيمة
-// PHP إطلاقاً — كل ما تحتاجانه هو window.URLROOT (يضبطه
-// admin/inc/head.php) ومعرّفات عناصر DOM.
+// The move here is pure, with no data-* attributes: neither block injected any PHP value
+// at all — all they need is window.URLROOT (set by admin/inc/head.php) and DOM element ids.
 //
-// يُحمَّل عبر extraScripts من AdminMyInfoController، لا من فوتر الأدمن:
-// فوتر الأدمن يحمّل ثلاثة عشر ملفاً على كل صفحة، ولا داعي لإضافة رابع
-// عشر يخصّ صفحة واحدة. ملف my-info.css محمَّل بنفس الطريقة أصلاً.
+// Loaded through extraScripts from AdminMyInfoController rather than from the admin
+// footer: that footer already loads thirteen files on every page, and there is no reason
+// to add a fourteenth belonging to one page. my-info.css is already loaded the same way.
 
 (function () {
     'use strict';
 
-    // ── تحديث بيانات الحساب ─────────────────────────────────────
+    // ── Updating the account details ────────────────────────────
     document.getElementById('adminProfileForm')?.addEventListener('submit', async e => {
         e.preventDefault();
         const form  = e.target;
@@ -47,7 +46,7 @@
         }
     });
 
-    // ── 2FA (TOTP) — تفعيل / تعطيل عبر AJAX ─────────────────────
+    // ── 2FA (TOTP) — enabling and disabling over AJAX ───────────
     const msgEl = document.getElementById('twofaMsg');
     if (!msgEl) return;
 
@@ -59,9 +58,9 @@
         msgEl.style.display = 'block';
     }
 
-    // fetchWithCsrfRetry تدعم أجسام JSON منذ المرحلة 6ب-1: تعيد بناء
-    // الجسم بالتوكن الجديد وتحافظ على بقية الحقول. قبل ذلك كانت تفسده،
-    // ولهذا كان هذا الملف يستعمل fetch عارياً.
+    // fetchWithCsrfRetry has supported JSON bodies since phase 6b-1: it rebuilds the body
+    // with the new token and preserves the remaining fields. Before that it corrupted them,
+    // which is why this file used a bare fetch.
     async function postJson(url, data) {
         return fetchWithCsrfRetry(window.URLROOT + url, {
             method:  'POST',
@@ -72,7 +71,7 @@
 
     const csrf = () => document.querySelector('#adminProfileForm [name="csrf_token"]')?.value || '';
 
-    // تفعيل — الخطوة 1: توليد secret وإظهار QR
+    // Enabling — step 1: generate the secret and show the QR code
     const enableBtn = document.getElementById('twofaEnableBtn');
     if (enableBtn) {
         enableBtn.addEventListener('click', async () => {
@@ -85,12 +84,12 @@
                     enableBtn.disabled = false;
                     return;
                 }
-                // ⚠️ twofaSetupStep يحمل `d-none` في الترميز، وهي
-                // `display:none !important` — فـstyle.display='block'
-                // لا يظهرها. كانت خطوة إعداد المصادقة الثنائية لا تُفتح
-                // إطلاقاً: يُنشأ السرّ على الخادم ولا يراه الأدمن.
+                // ⚠️ twofaSetupStep carries `d-none` in the markup, which is
+                // `display:none !important` — so style.display='block' does not reveal it.
+                // The two-factor setup step never opened at all: the secret was created on
+                // the server and the admin never saw it.
                 //
-                // twofaSetup لا يحمل d-none، فيبقى إخفاؤه بـstyle.
+                // twofaSetup does not carry d-none, so hiding it with style still works.
                 document.getElementById('twofaSetup').style.display = 'none';
                 document.getElementById('twofaSetupStep').classList.remove('d-none');
                 document.getElementById('twofaQr').src  = d.qrcode_url;
@@ -102,14 +101,14 @@
             }
         });
 
-        // إلغاء الإعداد
+        // Cancelling the setup
         document.getElementById('twofaCancelBtn').addEventListener('click', () => {
             document.getElementById('twofaSetupStep').classList.add('d-none');
             document.getElementById('twofaSetup').style.display = 'block';
             enableBtn.disabled = false;
         });
 
-        // تفعيل — الخطوة 2: تأكيد الكود الأول
+        // Enabling — step 2: confirming the first code
         document.getElementById('twofaConfirmBtn').addEventListener('click', async () => {
             const code = document.getElementById('twofaCode').value.trim();
             if (!/^\d{6}$/.test(code)) {
@@ -139,7 +138,7 @@
         });
     }
 
-    // تعطيل — يتطلب كلمة المرور الحالية
+    // Disabling — it requires the current password
     const disableForm = document.getElementById('twofaDisableForm');
     if (disableForm) {
         disableForm.addEventListener('submit', async e => {

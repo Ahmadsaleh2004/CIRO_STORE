@@ -1,19 +1,18 @@
 // ══════════════════════════════════════════════════════════════
-// public/js/admin/dashboard-chart.js — رسم مبيعات آخر 30 يوماً
+// public/js/admin/dashboard-chart.js — the last 30 days' sales chart
 // ══════════════════════════════════════════════════════════════
 //
-// كان هذا المنطق كتلة <script> مضمّنة يبنيها
-// AdminDashboardController بضمّ النصوص. وسياسة CSP في
-// public/.htaccess تمنع script-src 'unsafe-inline'، فكانت الكتلة
-// **محجوبة في كل تحميل**: canvas فارغ وسطر `Refused to execute
-// inline script` في الـconsole، بلا أي أثر آخر.
+// This logic used to be an inline <script> block that AdminDashboardController assembled
+// by string concatenation. And the CSP in public/.htaccess forbids
+// script-src 'unsafe-inline', so the block was **blocked on every load**: an empty canvas
+// and a `Refused to execute inline script` line in the console, and no other trace.
 //
-// ولم يكن السماح ببصمة حلاًّ: بصمة CSP تُحسب على المحتوى حرفاً
-// بحرف، ومحتوى تلك الكتلة يحمل أرقام مبيعات اليوم — فيتغيّر كل يوم
-// وتبطل البصمة كل ليلة.
+// And permitting it by hash was no solution: a CSP hash is computed over the content
+// character for character, and that block's content carries the day's sales figures — so
+// it changes daily and the hash expires every night.
 //
-// فالمنطق هنا في ملف يسمح به `'self'`، والأرقام تعبر كبيانات في
-// جزيرة JSON يطبعها app/views/admin/dashboard.php ويلتقطها
+// So the logic lives here in a file `'self'` permits, and the figures travel as data in
+// a JSON island that app/views/admin/dashboard.php prints and that is picked up by
 // js/core/page-data.js.
 
 (function () {
@@ -23,13 +22,13 @@
         var canvas = document.getElementById('salesChart');
         if (!canvas) return;
 
-        // الملف يُحمَّل في صفحة اللوحة وحدها، لكن الحارس يبقى: غياب
-        // المكتبة (بصمة SRI خاطئة، أو CDN محجوب) يجب أن يُقال صراحةً
-        // لا أن يظهر كـcanvas فارغ بلا سبب.
+        // The file is only loaded on the dashboard page, but the guard stays: a missing
+        // library (a wrong SRI hash, or a blocked CDN) must be stated outright rather than
+        // appearing as an empty canvas with no explanation.
         if (typeof window.Chart === 'undefined') {
             console.error(
-                '[dashboard-chart] Chart.js لم يُحمَّل — راجع بصمة '
-                + "'chartjs' في app/helpers/assets_helper.php."
+                '[dashboard-chart] Chart.js did not load — check the '
+                + "'chartjs' integrity hash in app/helpers/assets_helper.php."
             );
             return;
         }
@@ -37,8 +36,8 @@
         var ctx = window.ADMIN_SALES_CHART;
         if (!ctx || !Array.isArray(ctx.labels) || !Array.isArray(ctx.values)) {
             console.error(
-                '[dashboard-chart] جزيرة ADMIN_SALES_CHART مفقودة أو معطوبة — '
-                + 'راجع pageData في app/views/admin/dashboard.php.'
+                '[dashboard-chart] The ADMIN_SALES_CHART island is missing or malformed — '
+                + 'check pageData in app/views/admin/dashboard.php.'
             );
             return;
         }

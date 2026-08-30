@@ -1,35 +1,37 @@
 // ══════════════════════════════════════════════════════════════
-// js/features/cart.js — محرك سلة التسوق وتزامن المخزون
+// js/features/cart.js — the shopping cart engine and stock synchronisation
 // ══════════════════════════════════════════════════════════════
 
 // ══════════════════════════════════════════════════════════════
-// طبقة التخزين — الخادم هو المرجع، والذاكرة مرآةٌ له
+// The storage layer — the server is the source of truth, and memory is its mirror
 // ══════════════════════════════════════════════════════════════
 //
-// كانت السلّة في localStorage بالكامل: لا تتبع المستخدم بين أجهزته،
-// وتضيع بمسح بيانات المتصفّح أو بنافذة خاصة — وضياع سلّة مليئة خسارة
-// بيع لا إزعاج واجهة. وما يضعه الناس ولا يشترونه لم يكن يصل الخادم قط.
+// The cart used to live entirely in localStorage: it did not follow the user between
+// devices, and it vanished when browser data was cleared or in a private window — and
+// losing a full cart is a lost sale, not a UI annoyance. And what people put in and did
+// not buy never reached the server at all.
 //
-// ── لماذا مرآة في الذاكرة لا استدعاء غير متزامن في كل موضع ──
+// ── Why a mirror in memory rather than an async call at every site ──
 //
-// `getCartData()` تُستدعى من ستّة ملفات (checkout · products-catalog ·
-// product-details · wishlist · ui · هذا الملف)، وكلّها تفترضها
-// **متزامنة**. تحويلها إلى async يعني `await` في كل موضع، وكل موضع
-// نسيَ الـawait يقرأ Promise كأنه مصفوفة — عطلٌ صامت يظهر متأخّراً.
+// `getCartData()` is called from six files (checkout · products-catalog ·
+// product-details · wishlist · ui · this one), and all of them assume it is
+// **synchronous**. Making it async means an `await` at every site, and every site that
+// forgets the await reads a Promise as though it were an array — a silent fault that
+// surfaces late.
 //
-// فالمرآة تُبقي العقد كما هو: القراءة متزامنة من الذاكرة، والكتابة
-// وحدها تذهب إلى الخادم وتُحدّث المرآة من ردّه. أي أن ستّة ملفات لا
-// تتغيّر، والتغيير محصور في هذا الملف وفي مواضع الإضافة الثلاثة.
+// So the mirror keeps the contract as it is: reads are synchronous from memory, and only
+// writes go to the server and refresh the mirror from its response. Which means six files
+// do not change, and the change is confined to this file and the three add sites.
 //
-// ── والخادم يردّ بالسلّة كاملةً بعد كل تعديل ────────────────
+// ── And the server responds with the whole cart after every change ──
 //
-// وهذا ما يحلّ تعارض التبويبين بلا منطق إضافي: من يعدّل يرى نتيجة
-// تعديله ونتيجة تعديل غيره في الاستجابة نفسها.
+// which is what resolves the two-tab conflict with no extra logic: whoever makes a
+// change sees both their own result and the other tab's in the same response.
 
-/** مرآة السلّة. المصدر الحقيقي جدول cart_items على الخادم. */
+/** The cart's mirror. The real source is the cart_items table on the server. */
 let cartCache = [];
 
-/** هل المستخدم مسجَّل؟ الزائر لا سلّة له أصلاً — الأزرار مخفيّة عنه. */
+/** Is the user signed in? A visitor has no cart at all — the buttons are hidden from them. */
 function cartEnabled() {
     return Boolean(document.getElementById('cartSidebar'));
 }
@@ -45,10 +47,10 @@ function getCartData() {
 window.getCartData = getCartData;
 
 /**
- * يقرأ السلّة من الخادم ويملأ المرآة.
+ * Reads the cart from the server and fills the mirror.
  *
- * تُستدعى عند تحميل الصفحة وبعد كل تعديل. وفشلها لا يُفرّغ المرآة:
- * انقطاع شبكة لحظي يجب ألّا يُظهر السلّة فارغة لمن يملأها.
+ * Called on page load and after every change. Its failure does not empty the mirror: a
+ * momentary network outage must not show an empty cart to somebody filling one.
  */
 async function loadCart() {
     if (!cartEnabled()) return;
@@ -61,32 +63,34 @@ async function loadCart() {
             refreshCartUI();
         }
     } catch (e) {
-        console.error('cart: تعذّر جلب السلّة من الخادم', e);
+        console.error('cart: could not fetch the cart from the server', e);
     }
 }
 window.loadCart = loadCart;
 
 /**
- * تعديلات جارية لكل variant — تمنع تراكم النقرات السريعة.
+ * The in-flight change per variant — it stops rapid clicks piling up.
  *
- * ⚠️ بلا هذا، كل نقرة تقرأ المرآة **قبل** أن يصل ردّ سابقتها، فترى
- * كمية قديمة. وأثره مقيس: عشر نقرات سريعة على منتج مخزونه خمسة كانت
- * تمرّ كلّها من فحص المخزون في المتصفّح لأن كلّاً منها ترى «صفر في
- * السلّة».
+ * ⚠️ Without it, every click reads the mirror **before** the previous click's response
+ * arrives, and so sees a stale quantity. The effect was measured: ten rapid clicks on a
+ * product with five in stock all passed the browser's stock check, because each of them
+ * saw "zero in the cart".
  *
- * الخادم يسقّف الآن بالمخزون فلا تكذب القاعدة. لكن السلسلة هنا تمنع
- * الوميض أيضاً — رقمٌ يقفز ثم يرتدّ — وتوفّر تسع رحلات شبكة من عشر.
+ * The server now caps at the stock, so the database does not lie. But the chaining here
+ * also prevents the flicker — a number that jumps and then springs back — and saves nine
+ * network round trips out of ten.
  *
- * والمفتاح هو الـvariant لا عامّ: تعديل سطرٍ لا يمنع تعديل غيره.
+ * And the key is the variant rather than a global one: changing one line does not block
+ * changing another.
  *
  * @type {Map<string|number, Promise<boolean>>}
  */
 const inFlight = new Map();
 
-/** يسلسل التعديلات على نفس الـvariant، ويترك المختلفة متوازية. */
+/** Serialises changes to the same variant, and leaves different ones in parallel. */
 function serialise(key, task) {
     const previous = inFlight.get(key) ?? Promise.resolve(true);
-    // catch كي لا يُسقط فشلٌ واحد السلسلة كلّها لهذا الـvariant.
+    // A catch, so one failure does not bring down the whole chain for this variant.
     const next = previous.catch(() => false).then(task);
 
     inFlight.set(key, next);
@@ -98,11 +102,11 @@ function serialise(key, task) {
 }
 
 /**
- * ينفّذ تعديلاً على الخادم ويُحدّث المرآة من ردّه.
+ * Performs a change on the server and refreshes the mirror from its response.
  *
- * ⚠️ المرآة تُحدَّث من **الاستجابة** لا من تخمين محلي. التحديث
- * المتفائل (عدّل محلياً ثم أرسل) يعرض للزبون حالةً قد لا تكون قد
- * وقعت — وسلّة تعرض ما ليس فيها أسوأ من سلّة بطيئة.
+ * ⚠️ The mirror is refreshed from **the response** rather than from a local guess. An
+ * optimistic update (change locally then send) shows the customer a state that may never
+ * have happened — and a cart showing what is not in it is worse than a slow cart.
  */
 async function cartMutate(path, payload) {
     if (!cartEnabled()) return false;
@@ -125,13 +129,13 @@ async function cartMutate(path, payload) {
 
         return Boolean(data.success);
     } catch (e) {
-        console.error('cart: فشل تعديل السلّة', e);
+        console.error('cart: the cart change failed', e);
         if (typeof showToast === 'function') showToast('Network error. Please try again.', 'error');
         return false;
     }
 }
 
-/** إضافة كمية — تُجمَع مع الموجود على الخادم، ومسلسَلة لكل variant. */
+/** Add a quantity — summed with what is already on the server, and serialised per variant. */
 async function cartAdd(productId, variantId, qty = 1) {
     return serialise(variantId, () => cartMutate('/cart/add', {
         product_id: Number(productId),
@@ -141,30 +145,29 @@ async function cartAdd(productId, variantId, qty = 1) {
 }
 window.cartAdd = cartAdd;
 
-/** ضبط كمية سطر ضبطاً مطلقاً — الصفر يحذفه. */
+/** Set a line's quantity absolutely — zero removes it. */
 async function cartSetQuantity(variantId, qty) {
     return serialise(variantId, () => cartMutate('/cart/update', { variant_id: Number(variantId), qty: Number(qty) }));
 }
 window.cartSetQuantity = cartSetQuantity;
 
-/** حذف سطر. */
+/** Remove a line. */
 async function cartRemove(variantId) {
     return serialise(variantId, () => cartMutate('/cart/remove', { variant_id: Number(variantId) }));
 }
 window.cartRemove = cartRemove;
 
 /**
- * يضبط المرآة مباشرةً ويعيد الرسم — **بلا كتابة على الخادم**.
+ * Sets the mirror directly and re-renders — **with no write to the server**.
  *
- * ⚠️ كان اسمها `saveCart` وكانت تكتب في localStorage. وبعد انتقال
- * السلّة إلى الخادم بقيت بالاسم نفسه «للتوافق» وهي لا تحفظ شيئاً —
- * اسمٌ يَعِد بما لا يفعله، وهو أسوأ من غياب الدالة: من يقرأ
- * `saveCart(cart)` يظنّ سلّته حُفظت.
+ * ⚠️ It used to be called `saveCart` and wrote to localStorage. After the cart moved to
+ * the server it kept the same name "for compatibility" while saving nothing — a name
+ * promising what it does not do, which is worse than the function's absence: whoever reads
+ * `saveCart(cart)` believes their cart was saved.
  *
- * ومسحٌ للمستدعين أثبت أنها بلا مستدعٍ واحد في الإنتاج: كل الكتابة
- * تمرّ بـcartAdd و cartSetQuantity و cartRemove. فما بقي لها إلا
- * استعمال واحد مشروع — تهيئة المرآة في الاختبارات بلا خادم — والاسم
- * الجديد يقول ذلك.
+ * And a sweep of its callers proved it has not one caller in production: every write goes
+ * through cartAdd, cartSetQuantity and cartRemove. So it has one legitimate use left —
+ * seeding the mirror in tests without a server — and the new name says so.
  */
 function setCartMirror(items) {
     if (Array.isArray(items)) {
@@ -178,17 +181,18 @@ function refreshCartUI() {
     if (typeof updateCounters === 'function') updateCounters();
     renderCart();
 
-    // ── إشعار بقيّة الصفحة أن المرآة تغيّرت ───────────────────────
+    // ── Telling the rest of the page that the mirror changed ─────
     //
-    // هذه الدالة هي المعبر الوحيد لكل تغيّر في السلّة: يمرّ بها
-    // loadCart بعد الجلب الأوّلي، وsetCartMirror بعد كل إضافة أو
-    // تعديل أو حذف يردّ به الخادم. فبثّ الحدث هنا يعني موضعاً واحداً
-    // يستحيل أن يُنسى، لا سطراً يُضاف عند كل عملية.
+    // This function is the single passage for every cart change: loadCart goes through it
+    // after the initial fetch, and setCartMirror after every add, change or delete the
+    // server answers. So emitting the event here means one place that cannot be forgotten,
+    // rather than a line added at every operation.
     //
-    // ولماذا حدث لا استدعاء مباشر: صفحة تفاصيل المنتج تحتاج أن تعيد
-    // حساب سقف عدّاد الكمية بعد كل تغيّر (المتاح = المخزون ناقص ما في
-    // السلّة)، وcart.js لا يعرف بوجودها ولا يجب أن يعرف. الحدث يقلب
-    // الاتجاه: المهتمّ يستمع، والمصدر لا يحمل قائمة بمن يهمّه الأمر.
+    // And why an event rather than a direct call: the product details page needs to
+    // recompute the quantity counter's ceiling after every change (available = stock minus
+    // what is in the cart), and cart.js does not know it exists and should not. The event
+    // inverts the direction: whoever cares listens, and the source carries no list of who
+    // cares.
     document.dispatchEvent(new CustomEvent('cart:updated', {
         detail: { items: cartCache },
     }));
@@ -232,41 +236,43 @@ function renderCart() {
 window.renderCart = renderCart;
 
 /**
- * يُصحّح السلّة بعد أن يتغيّر المخزون تحتها.
+ * Corrects the cart after the stock changes beneath it.
  *
  * ══════════════════════════════════════════════════════════════
- * ⚠️ عطلٌ قِيس وأُصلح: التصحيح كان لا يغادر المتصفّح
+ * ⚠️ A measured and fixed fault: the correction never left the browser
  * ══════════════════════════════════════════════════════════════
  *
- * النسخة السابقة كانت تبني `updatedCart` بـreduce وتُعدّل الكمية
- * **داخل الحلقة**. و`getCartData()` تُرجع المرآة بالمرجع، فكان
- * `item.quantity = info.stock` يكتب في المرآة نفسها. ثم تأتي المصفاة
- * التي تقرّر ما يُرسَل إلى الخادم فتقارن:
+ * The previous version built `updatedCart` with a reduce and changed the quantity
+ * **inside the loop**. And `getCartData()` returns the mirror by reference, so
+ * `item.quantity = info.stock` wrote into the mirror itself. Then came the filter deciding
+ * what to send to the server, and it compared:
  *
  *     info.stock < cart.find(...).quantity
  *
- * وquantity كانت قد صارت info.stock — فالشرط `x < x` كاذب دائماً،
- * ولم يُستدعَ cartSetQuantity قطّ.
+ * and quantity had already become info.stock — so the condition `x < x` is always false,
+ * and cartSetQuantity was never called.
  *
- * الأثر: الشاشة تعرض الكمية المخفَّضة والخادم يحتفظ بالقديمة. فيصل
- * الزبون إلى الدفع فيُرفض بـout_of_stock عن سلّة تبدو سليمة أمامه.
+ * The effect: the screen shows the reduced quantity while the server keeps the old one.
+ * So the customer reaches checkout and is refused with out_of_stock, over a cart that
+ * looks perfectly fine in front of them.
  *
- * ── ولماذا اختفى استدعاء /cart/check-stock ──────────────────
+ * ── And why the /cart/check-stock call disappeared ──────────
  *
- * لأنه صار زائداً. `/cart` تضمّ product_variants في كل قراءة فتُرجع
- * `stock` و`price` الحيَّين مع كل سطر، وتُسقط المخفيّ والمحذوف من
- * تلقائها. فالمرآة **هي** بيانات المخزون الطازجة — واستدعاء نقطة
- * ثانية لجلبها كان رحلة شبكة تسأل عمّا تملكه الإجابة أصلاً.
+ * Because it became redundant. `/cart` joins product_variants on every read, so it
+ * returns live `stock` and `price` with each line and drops the hidden and deleted ones on
+ * its own. So the mirror **is** the fresh stock data — and calling a second endpoint to
+ * fetch it was a network round trip asking for what the answer already held.
  *
- * وما بقي عملٌ حقيقي: نافدٌ يُحذف، وكميةٌ تجاوزت المتاح تُخفَّض —
- * وكلاهما يُكتب على الخادم، ثم تُعاد القراءة منه.
+ * What remains is real work: an out-of-stock line is removed, and a quantity beyond what
+ * is available is reduced — both written to the server, and then read back from it.
  */
 async function syncCartWithStock() {
     const cart = getCartData();
     if (cart.length === 0) return;
 
-    // القراءة قبل أي تعديل: نلتقط النيّة الأصلية للزبون كي نقارنها
-    // بالمتاح. القراءة بعد التعديل هي بالضبط ما أسقط النسخة السابقة.
+    // Read before any change: the customer's original intent is captured so it can be
+    // compared against what is available. Reading after the change is exactly what brought
+    // the previous version down.
     const soldOut = cart.filter(i => i.variant_id && Number(i.stock) <= 0);
     const excess  = cart.filter(i =>
         i.variant_id && Number(i.stock) > 0 && Number(i.quantity) > Number(i.stock)
@@ -274,7 +280,7 @@ async function syncCartWithStock() {
 
     if (soldOut.length === 0 && excess.length === 0) return;
 
-    // تُلتقط الأسماء الآن: بعد loadCart تختفي السطور المحذوفة من المرآة.
+    // The names are captured now: after loadCart, the removed lines are gone from the mirror.
     const soldOutNames = soldOut.map(i => i.name + (i.color_name ? ` (${i.color_name})` : ''));
     const excessNames  = excess.map(i => `${i.name} (${i.stock})`);
 
@@ -284,11 +290,11 @@ async function syncCartWithStock() {
             ...excess.map(i => cartSetQuantity(i.variant_id, Number(i.stock))),
         ]);
     } catch (e) {
-        console.error('syncCartWithStock: تعذّر تصحيح السلّة', e);
+        console.error('syncCartWithStock: could not correct the cart', e);
         return;
     }
 
-    // القراءة من الخادم بعد التصحيح — لا ثقة بما في الذاكرة بعد كتابة.
+    // Read from the server after correcting — memory is not trusted after a write.
     await loadCart();
 
     if (soldOutNames.length > 0 && typeof showToast === 'function') {
@@ -302,7 +308,7 @@ async function syncCartWithStock() {
 
 window.syncCartWithStock = syncCartWithStock;
 
-// تهيئة تفاعلات السلة بالـ DOM
+// Wiring the cart's interactions to the DOM
 document.addEventListener("DOMContentLoaded", () => {
     document.addEventListener("click", (e) => {
         if (e.target.closest("#cart-items-list")) {
@@ -317,12 +323,12 @@ document.addEventListener("DOMContentLoaded", () => {
             );
             if (!item || !variantId) return;
 
-            // ⚠️ الكمية تُرسَل **مطلقةً** لا كفارق (+1/−1).
+            // ⚠️ The quantity is sent **absolutely**, not as a delta (+1/−1).
             //
-            // الفارق يفترض أن ما في الشاشة هو ما في القاعدة، وهو افتراض
-            // يسقط بنقرتين سريعتين أو بتبويب ثانٍ: فارقان يصلان فيصير
-            // المجموع ثلاثة بدل اثنين. والقيمة المطلقة تجعل آخر نقرة
-            // تفوز — وهو السلوك الذي يتوقّعه من يضغط الزرّ.
+            // A delta assumes that what is on the screen is what is in the database, an
+            // assumption that falls over on two rapid clicks or a second tab: two deltas
+            // arrive and the total becomes three instead of two. An absolute value makes the
+            // last click win — which is the behaviour whoever presses the button expects.
             if (btn.classList.contains("plus")) {
                 const maxStock = typeof item.stock === 'number' ? item.stock : Infinity;
                 if (item.quantity >= maxStock) {
@@ -331,7 +337,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 }
                 cartSetQuantity(variantId, item.quantity + 1);
             } else if (btn.classList.contains("minus")) {
-                // الصفر حذفٌ على الخادم، فالنقصان من واحد يزيل السطر.
+                // Zero is a deletion on the server, so decrementing from one removes the line.
                 cartSetQuantity(variantId, item.quantity - 1);
             } else if (btn.classList.contains("remove-item")) {
                 cartRemove(variantId);
@@ -340,10 +346,11 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
-    // السلّة تُجلب من الخادم أوّلاً، ثم يُفحص مخزونها.
+    // The cart is fetched from the server first, and its stock is checked afterwards.
     //
-    // الترتيب لازم: syncCartWithStock تعمل على ما في المرآة، والمرآة
-    // فارغة قبل أن يردّ /cart. تشغيلها قبله كان سيفحص لا شيء ثم يصمت.
+    // The order is required: syncCartWithStock works on what is in the mirror, and the
+    // mirror is empty before /cart answers. Running it first would have checked nothing and
+    // then said nothing.
     loadCart().then(() => {
         if (getCartData().length > 0) {
             syncCartWithStock();

@@ -1,45 +1,45 @@
 /**
  * js/features/notifications.js
- * جرس الإشعارات وسايدبارها — **لصفحات المتجر وحدها**.
+ * The notification bell and its sidebar — **for the store pages alone**.
  *
- * ⚠️ لا تُضف هنا فرعاً للأدمن. لوحة الأدمن يخدمها ملف مستقل هو
- * js/admin/admin-notifications.js، بجلسة أخرى (admin_session لا
- * PHPSESSID) ونقاط أخرى (/admin/notifications/*) وماركب مختلف.
+ * ⚠️ Do not add an admin branch here. The admin panel is served by a file of its own,
+ * js/admin/admin-notifications.js, with a different session (admin_session rather than
+ * PHPSESSID), different endpoints (/admin/notifications/*) and different markup.
  *
- * كان هذا الملف يحمل وضعين: يكتشف #adminNotifBell فيتصرّف كملف أدمن،
- * وإلا فكملف متجر. **والفرع الأول لم يُنفَّذ ولا مرة**، لأن ثلاث
- * حقائق مستقلة تمنعه:
- *   1. #adminNotifBell موجود في app/views/admin/inc/navbar.php وحده.
- *   2. هذا الملف مُدرَج في app/views/inc/footer.php وحده — فوتر المتجر.
- *   3. layout الأدمن في Core/Controller يستدعي admin/inc/footer.php،
- *      وهو ملف مختلف تماماً لا يذكر هذا السكربت.
- * أي أن الجرس الذي يبحث عنه لا يكون في الصفحة أبداً حين يعمل الملف.
+ * This file used to carry two modes: it detected #adminNotifBell and behaved as the
+ * admin file, and otherwise as the store one. **And the first branch never once ran**,
+ * because three independent facts prevent it:
+ *   1. #adminNotifBell exists in app/views/admin/inc/navbar.php alone.
+ *   2. this file is included from app/views/inc/footer.php alone — the store's footer.
+ *   3. the admin layout in Core/Controller includes admin/inc/footer.php, an entirely
+ *      different file that never mentions this script.
+ * Which is to say the bell it looks for is never on the page while this file runs.
  */
 
 (function () {
-    // ⚠️ 'use strict' أوّل عبارة في الدالة — قبل أي `let`.
+    // ⚠️ 'use strict' is the first statement in the function — before any `let`.
     //
-    // كانت مكتوبة **بعد** تعريف notifCountdownInterval أدناه، وهذا
-    // يُبطلها تماماً: التوجيه لا يُفعّل الوضع الصارم إلا وهو في
-    // «مقدّمة التوجيهات» (Directive Prologue) — أي سلسلةٌ حرفية تسبقها
-    // سلاسل حرفية وحدها. فأي عبارة قبلها تحوّلها إلى تعبير نصّي لا
-    // أثر له، يُقيَّم ويُهمَل.
+    // It used to be written **after** the notifCountdownInterval declaration below, which
+    // nullifies it entirely: the directive only enables strict mode while it is in the
+    // "directive prologue" — that is, a string literal preceded by string literals alone.
+    // So any statement before it turns it into an inert string expression, evaluated and
+    // discarded.
     //
-    // والفارق ليس نظرياً في ملف كهذا: بلا الوضع الصارم يصير الإسناد
-    // إلى متغيّر غير معرَّف إنشاءً لمتغيّر عام صامت — وهو بالضبط العطل
-    // الموثَّق في رأس js/admin/admin-notifications.js، حيث نشأت
-    // `allNotifs` عامّةً ضمنيةً وانهار الجرس عند أول فشل شبكة.
+    // And the difference is not theoretical in a file like this: without strict mode,
+    // assigning to an undeclared variable silently creates a global — precisely the fault
+    // documented at the top of js/admin/admin-notifications.js, where `allNotifs` came into
+    // being as an implicit global and the bell collapsed on the first network failure.
     'use strict';
 
-    // مؤقّت العدّ التنازلي. **التعريف هنا لا بعد أول استعمال.**
+    // The countdown timer. **Declared here rather than after its first use.**
     //
-    // كان مكتوباً أسفل الملف، بعد renderSidebar التي تقرأه بنحو ستّين
-    // سطراً. لم يكن ينفجر لأن التعريف يُنفَّذ عند تحميل الملف بينما
-    // renderSidebar تُستدعى لاحقاً — لكنه بالضبط شكل عطل TDZ الذي وقع
-    // في account.js: يكفي أن يُستدعى القارئ مرّة واحدة أثناء تنفيذ جسم
-    // الـIIFE ليُرمى ReferenceError.
+    // It used to be written at the bottom of the file, some sixty lines after
+    // renderSidebar, which reads it. It did not blow up because the declaration executes
+    // when the file loads while renderSidebar is called later — but it is exactly the shape
+    // of the TDZ fault that hit account.js: one call to the reader during the IIFE's body
+    // is enough to throw a ReferenceError.
     //
-    // النقل إلى الأعلى يزيل صنف الخطر كله بلا تغيير سلوك.
+    // Moving it to the top removes the entire class of risk with no behavioural change.
     let notifCountdownInterval = null;
 
     const userBell = document.getElementById('notifBell');
@@ -59,18 +59,19 @@
 
     let allNotifs = [];
 
-    // ── الشارة: موضع واحد يكتبها ──────────────────────────────
+    // ── The badge: one place writes it ──────────────────────────
     //
-    // ⚠️ `classList` لا `style.display`.
+    // ⚠️ `classList`, not `style.display`.
     //
-    // الشارة تحمل `d-none` في الترميز (inc/navbar.php)، وهي في
-    // Bootstrap ‏`display:none !important` — فلا يزيلها إسناد
-    // `style.display = ''` مهما تكرّر. أي أن **عدّاد الإشعارات لم يظهر
-    // ولا مرّة**: الرقم يُكتب في العنصر بأمانة، والعنصر مخفيّ.
+    // The badge carries `d-none` in the markup (inc/navbar.php), which in Bootstrap is
+    // `display:none !important` — so assigning `style.display = ''` does not remove it,
+    // however often it is repeated. Which means **the notification counter never once
+    // appeared**: the number was faithfully written into the element, and the element was
+    // hidden.
     //
-    // وكان الإسناد مكرّراً في خمسة مواضع بنفس السطرين. التكرار هو ما
-    // جعل العطل واحداً في خمسة أماكن بدل واحد — فصار هنا موضعاً واحداً
-    // تقرؤه بقيّة الملف.
+    // And the assignment was repeated across five places with the same two lines. That
+    // repetition is what made one fault appear in five places instead of one — so it is now
+    // a single place the rest of the file reads.
     function setBadge(unread) {
         if (!cfg.badge) return;
 
@@ -79,9 +80,9 @@
         cfg.badge.classList.toggle('d-none', n === 0);
     }
 
-    // يُضبط عند 401 كي يتوقّف الاستطلاع: جلسة منتهية لا تتعافى بإعادة
-    // المحاولة، والاستمرار يعني طلباً مرفوضاً كل ثلاثين ثانية إلى ما
-    // لا نهاية — وكلّه صامت.
+    // Set on a 401 so the polling stops: an expired session does not recover through
+    // retrying, and carrying on means a refused request every thirty seconds, forever — all
+    // of it silent.
     let pollTimer = null;
     let sessionExpired = false;
 
@@ -91,12 +92,11 @@
         try {
             const res  = await fetch(window.BASE_URL + '/notifications/list');
 
-            // ⚠️ 401 تُعالَج قبل قراءة الجسم.
+            // ⚠️ A 401 is handled before the body is read.
             //
-            // كان السطر `if (!data.success) return;` يبتلع انتهاء
-            // الجلسة كما يبتلع أي فشل آخر: الجرس يتجمّد على آخر رقم
-            // رآه، والمستخدم يظنّ أنه لا إشعارات لديه بينما هو مخرَج
-            // من جلسته أصلاً.
+            // The line `if (!data.success) return;` swallowed an expired session just as it
+            // swallowed any other failure: the bell froze on the last number it saw, and the
+            // user believed they had no notifications while in fact they had been signed out.
             if (res.status === 401) {
                 sessionExpired = true;
                 if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
@@ -125,22 +125,22 @@
             cfg.sidebarList.innerHTML = '<li class="notif-empty">No notifications</li>';
             return;
         }
-        // الاسمان حرفيّان لا متغيّران: كان هنا ترشيح بـisAdmin يختار بين
-        // اسمَي الأدمن واسمَي المتجر، وكان يقع دائماً على هذين. ولاحظ أن
-        // المتغيّر المحلي dismissFn كان **يُظلّل** الدالة dismissFn المعرَّفة
-        // في نطاق الـIIFE — تظليل بلا ضرر هنا، لكنه من نفس عائلة العطل
-        // الذي عطّل «إضافة عنوان» في features/account.js.
-        // ⚠️ لا `onclick=` هنا.
+        // The two names are literals rather than variables: there used to be an isAdmin
+        // selection here choosing between the admin names and the store names, and it always
+        // landed on these two. Note also that the local dismissFn **shadowed** the dismissFn
+        // declared in the IIFE's scope — harmless shadowing here, but from the same family
+        // of fault that disabled "add address" in features/account.js.
+        // ⚠️ No `onclick=` here.
         //
-        // كان السطران يحملان onclick نصّاً داخل innerHTML، وسياسة CSP
-        // في public/.htaccess تمنع script-src 'unsafe-inline'. والمنع
-        // يشمل المعالجات المضمّنة أياً كان طريق وصولها إلى المستند —
-        // فحقنها من جافاسكربت لا يعفيها. فكان كل عنصر إشعار لا يُفتح،
-        // وكل زرّ ✕ لا يحذف، بلا أي أثر سوى سطر رفض في الـconsole.
+        // The two lines used to carry an onclick as text inside innerHTML, and the CSP in
+        // public/.htaccess forbids script-src 'unsafe-inline'. That prohibition covers inline
+        // handlers however they reach the document — injecting them from JavaScript does not
+        // exempt them. So no notification item opened and no ✕ button deleted, with no trace
+        // beyond a refusal line in the console.
         //
-        // البديل: البيانات في سمات data-*، والنقر يفوَّض إلى مستمع
-        // واحد على القائمة نفسها (أسفل هذه الدالة) — وهو نفس النمط
-        // الذي تتبعه بقيّة الواجهة عبر js/core/inline-actions.js.
+        // The alternative: the data lives in data-* attributes, and the click is delegated
+        // to a single listener on the list itself (below this function) — the same pattern
+        // the rest of the interface follows through js/core/inline-actions.js.
         cfg.sidebarList.innerHTML = allNotifs.map(n => `
             <li class="notif-item ${n.is_read == 1 ? 'read' : 'unread'}"
                 data-id="${n.id}" data-notif-open="${n.id}">
@@ -226,9 +226,10 @@
         });
     };
 
-    // لم يعد شيء يستدعي هذا الاسم: الماركب كان يذكره نصّاً في onclick
-    // وقد صار التفويض عبر data-notif-open. والتصدير باقٍ لأنه واجهة
-    // عامة قد تنفع في التنقيح من الـconsole — لا لأن أحداً يعتمد عليه.
+    // Nothing calls this name any more: the markup used to mention it as text in an
+    // onclick, and the delegation now happens through data-notif-open. The export remains
+    // because it is a public surface that may be useful for debugging from the console — not
+    // because anything depends on it.
     window.openNotifDetail = openDetail;
 
     async function markAsRead(id) {
@@ -267,25 +268,25 @@
         }
     };
 
-    // كسابقه: لم يعد الماركب يستدعيه نصّاً بعد نقل الحذف إلى
-    // data-notif-dismiss. يبقى مصدَّراً للتنقيح لا للاعتماد.
+    // As above: the markup no longer calls it as text, since the deletion moved to
+    // data-notif-dismiss. It stays exported for debugging rather than for depending on.
     window.dismissNotif = dismissFn;
 
-    // ── تفويض النقر على قائمة الإشعارات ────────────────────────
+    // ── Delegating clicks on the notification list ──────────────
     //
-    // مستمع واحد على القائمة لا معالج على كل عنصر: القائمة تُعاد
-    // بناؤها بالكامل عند كل جلب (innerHTML)، فربط مستمع بكل عنصر
-    // يعني إعادة الربط بعد كل رسم — ونسيانها مرّة واحدة يعيد العطل.
-    // التفويض من الأب يبقى صالحاً مهما تغيّر ما بداخله.
+    // One listener on the list rather than a handler per item: the list is rebuilt
+    // entirely on every fetch (innerHTML), so binding a listener to each item means
+    // rebinding after every render — and forgetting once reproduces the fault. Delegation
+    // from the parent stays valid however much its contents change.
     //
-    // وموضعه هنا — **بعد** تعريف openDetail وdismissFn لا قبلهما —
-    // مقصود. الاستدعاء لا يقع إلا عند نقرة المستخدم، فالسبق لا يضرّ
-    // وقت التشغيل؛ لكن هذا الملف يحمل في ترويسته تحذيراً من عائلة
-    // أعطال TDZ التي عطّلت features/account.js، ومخالفة الشكل الآمن
-    // هنا تناقض ذلك التحذير نصّاً.
+    // And its position here — **after** openDetail and dismissFn are declared rather than
+    // before them — is deliberate. The call only happens on a user's click, so ordering does
+    // no harm at runtime; but this file's header carries a warning about the family of TDZ
+    // faults that disabled features/account.js, and violating the safe shape here would
+    // contradict that warning in so many words.
     //
-    // الترتيب داخل المستمع مقصود أيضاً: زرّ الحذف يُفحص أوّلاً، فنقرة
-    // عليه تحذف ولا تفتح التفاصيل معه.
+    // The order inside the listener is deliberate too: the delete button is checked first,
+    // so a click on it deletes without opening the details as well.
     if (cfg.sidebarList) {
         cfg.sidebarList.addEventListener('click', function (event) {
             const dismissBtn = event.target.closest('[data-notif-dismiss]');
