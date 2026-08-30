@@ -6,11 +6,11 @@ use App\Core\Model;
 use Exception;
 
 /**
- * SettingsModel — يغطي جدول website_settings (صف واحد ثابت id=1 دائماً)
+ * SettingsModel — covers the website_settings table (always a single row, id=1).
  */
 class SettingsModel extends Model
 {
-    /** الحقول القابلة للتعديل من الفورم العام (بدون شرط صلاحية إضافية) */
+    /** The fields editable from the general form, with no extra permission required. */
     public const GENERAL_FIELDS = [
         'footer_text', 'facebook_url', 'instagram_url', 'snapchat_url',
         'whatsapp_number', 'tiktok_url', 'twitter_x_url', 'google_maps_url',
@@ -18,11 +18,11 @@ class SettingsModel extends Model
         'site_url', 'return_policy', 'privacy_policy', 'terms_and_conditions',
     ];
 
-    /** حقول إضافية تظهر فقط لصاحب صلاحية can_manage_checkout_settings */
+    /** Extra fields shown only to a holder of can_manage_checkout_settings. */
     public const CHECKOUT_FIELDS = ['default_currency', 'default_language'];
 
     /**
-     * جلب صف الإعدادات الحالي (صف واحد فقط id=1)
+     * Fetch the current settings row (there is only ever one, id=1).
      *
      * @return array<string, mixed>
      */
@@ -38,8 +38,9 @@ class SettingsModel extends Model
     }
 
     /**
-     * تحديث الإعدادات. $data مصفوفة [field => value] مُفلترة مسبقاً من الكونترولر
-     * (فقط الحقول المسموحة حسب صلاحيات الأدمن — راجع AdminSiteSettingsController::save()).
+     * Update the settings. $data is a [field => value] array already filtered by the
+     * controller (only the fields the admin's permissions allow — see
+     * AdminSiteSettingsController::save()).
      *
      * @param array<string, mixed> $data
      */

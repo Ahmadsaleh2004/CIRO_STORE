@@ -6,10 +6,10 @@ use App\Core\Model;
 use Exception;
 
 /**
- * BackupModel — نسخ احتياطي لقاعدة البيانات SQL.
- * التخزين: <root>/storage/backups (خارج public/ تمامًا + حماية .htaccess).
- * الإنشاء: يحاول mysqldump عبر exec() أولًا، فإن فشل يلجأ لتصدير PHP-native
- * (SHOW CREATE TABLE + SELECT * لكل جدول).
+ * BackupModel — SQL database backups.
+ * Storage: <root>/storage/backups (entirely outside public/, plus .htaccess protection).
+ * Creation: it tries mysqldump through exec() first, and on failure falls back to a
+ * PHP-native export (SHOW CREATE TABLE + SELECT * per table).
  */
 class BackupModel extends Model
 {
@@ -18,7 +18,7 @@ class BackupModel extends Model
     private const PATTERN = '/^backup_\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}\.sql$/';
 
     /**
-     * إنشاء نسخة جديدة.
+     * Create a new backup.
      * @return array{success: bool, filename: string|null, message: string}
      */
     public static function createBackup(): array
@@ -31,15 +31,15 @@ class BackupModel extends Model
         $filename = self::PREFIX . date('Y-m-d_H-i-s') . '.sql';
         $path     = $dir . DIRECTORY_SEPARATOR . $filename;
 
-        // 1) محاولة mysqldump عبر exec() — الطريقة القياسية
+        // 1) Try mysqldump through exec() — the standard route
         $dump = self::tryMysqldump($path);
         if ($dump['success'] && is_file($path) && filesize($path) > 0) {
             return ['success' => true, 'filename' => $filename, 'message' => 'Backup created via mysqldump.'];
         }
 
-        // 2) Fallback: تصدير SQL يدوي عبر PDO
+        // 2) Fallback: a manual SQL export through PDO
         $sql = self::exportSqlNative();
-        // exportSqlNative معلَنة `: string`، فـis_string كانت دائماً true.
+        // exportSqlNative is declared `: string`, so is_string was always true.
         if ($sql === '') {
             return ['success' => false, 'filename' => null, 'message' => 'Both mysqldump and native export failed.'];
         }
@@ -52,9 +52,9 @@ class BackupModel extends Model
     }
 
     /**
-     * محاولة تشغيل mysqldump — يجرب عدّة مسارات شائعة للـ binary.
+     * Try to run mysqldump — it attempts several common paths for the binary.
      *
-     * @return array{success: bool, message?: string} — success وحده مضمون؛ الرسالة تُرفَق عند الفشل
+     * @return array{success: bool, message?: string} — only success is guaranteed; the message is attached on failure
      */
     private static function tryMysqldump(string $path): array
     {
@@ -72,16 +72,17 @@ class BackupModel extends Model
             $candidates[] = '/usr/bin/mysqldump';
         }
 
-        // ── كلمة السر لا تُمرَّر على سطر الأوامر ────────────────────
+        // ── The password is never passed on the command line ───────
         //
-        // كانت تُمرَّر بـ--password=… . وسطر أوامر أي عملية **مقروء لكل
-        // مستخدمي الجهاز**: `ps aux` على لينكس، وTask Manager أو
-        // Get-CimInstance Win32_Process على ويندوز. وmysqldump نفسه يحذّر
-        // من ذلك. الهروب بـescapeshellarg يمنع الحقن ولا يمنع القراءة —
-        // مشكلتان مختلفتان.
+        // It used to be passed as --password=… . And any process's command line is
+        // **readable by every user on the machine**: `ps aux` on Linux, and Task Manager
+        // or Get-CimInstance Win32_Process on Windows. mysqldump itself warns about this.
+        // Escaping with escapeshellarg prevents injection; it does not prevent reading —
+        // two different problems.
         //
-        // البديل: ملف إعدادات مؤقّت يقرأه mysqldump بـ--defaults-extra-file،
-        // ويجب أن يكون **أول** وسيط وإلا تجاهله. يُحذف في finally مهما حدث.
+        // The alternative: a temporary options file that mysqldump reads with
+        // --defaults-extra-file, which must be the **first** argument or it is ignored.
+        // It is deleted in a finally block whatever happens.
         $cnfPath = null;
         try {
             $cnfPath = tempnam(sys_get_temp_dir(), 'cs_dump_');
@@ -89,12 +90,12 @@ class BackupModel extends Model
                 return ['success' => false];
             }
 
-            // صلاحيات ضيّقة قبل الكتابة (بلا أثر على ويندوز لكن لازمة على
-            // لينكس حيث tempnam يعطي 0600 أصلاً — التثبيت صراحةً أوضح).
+            // Tight permissions before writing (no effect on Windows, but necessary on
+            // Linux, where tempnam already gives 0600 — setting it explicitly is clearer).
             @chmod($cnfPath, 0600);
 
-            // القيم داخل ملف ini لا تُهرَّب بـescapeshellarg — تُقتبس
-            // ويُهرَّب المحرف \ و" وحدهما، وهذا ما يفهمه قارئ my.cnf.
+            // Values inside an ini file are not escaped with escapeshellarg — they are
+            // quoted, with only \ and " escaped, which is what a my.cnf reader understands.
             $q = static fn (string $v): string => '"' . str_replace(['\\', '"'], ['\\\\', '\\"'], $v) . '"';
             $ini = "[client]\n"
                  . 'host=' . $q(DB_HOST) . "\n"
@@ -121,26 +122,26 @@ class BackupModel extends Model
                     $name,
                     $out
                 );
-                // الأمر لا يحمل أي مدخل مستخدم: $bin من قائمة مسارات
-                // مكتوبة في هذا الملف، و$name من ثابت DB_NAME، و$path
-                // و$cnfPath مولَّدان داخلياً — وكلها تمرّ بـescapeshellarg.
-                // وكلمة السر لم تعد على سطر الأوامر أصلاً.
+                // The command carries no user input: $bin comes from a list of paths written
+                // in this file, $name from the DB_NAME constant, and $path and $cnfPath are
+                // generated internally — and all of them pass through escapeshellarg. The
+                // password is no longer on the command line at all.
                 // nosemgrep: php.lang.security.exec-use.exec-use
                 @exec($cmd, $_, $code);
                 if ($code === 0 && is_file($path) && filesize($path) > 0) {
                     return ['success' => true];
                 }
-                // $path مولَّد في createBackup من طابع زمني، لا مدخل فيه.
+                // $path is generated in createBackup from a timestamp; there is no input in it.
                 // nosemgrep: php.lang.security.unlink-use.unlink-use,cairo-unlink-unvalidated-path
-                @unlink($path); // مسح أي ملف جزئي قبل التجربة التالية
+                @unlink($path); // Clear any partial file before the next attempt
             }
 
             return ['success' => false];
         } finally {
-            // الملف يحمل كلمة السر — لا يجوز أن يبقى في مجلد المؤقتات
-            // ولو فشل كل شيء أو رُمي استثناء.
+            // The file carries the password — it must not be left in the temp directory,
+            // even if everything failed or an exception was thrown.
             if ($cnfPath !== null && is_file($cnfPath)) {
-                // $cnfPath من tempnam() في هذه الدالة — لا مدخل مستخدم.
+                // $cnfPath comes from tempnam() in this method — no user input.
                 // nosemgrep: php.lang.security.unlink-use.unlink-use,cairo-unlink-unvalidated-path
                 @unlink($cnfPath);
             }
@@ -148,7 +149,7 @@ class BackupModel extends Model
     }
 
     /**
-     * تصدير SQL كامل يدويًا عبر PDO (fallback إن لم يتوفر mysqldump).
+     * A complete manual SQL export through PDO (the fallback when mysqldump is unavailable).
      */
     private static function exportSqlNative(): string
     {
@@ -202,7 +203,7 @@ class BackupModel extends Model
     }
 
     /**
-     * قائمة النسخ الموجودة (الاسم، الحجم بالبايت + بصيغة مقروءة، التاريخ).
+     * The list of existing backups (name, size in bytes and in a readable form, date).
      *
      * @return list<array<string, mixed>>
      */
@@ -236,7 +237,7 @@ class BackupModel extends Model
     }
 
     /**
-     * حذف نسخة — يقبل اسم ملف مفهرس فقط (عبر getBackupPath).
+     * Delete a backup — it accepts only a resolved file name (through getBackupPath).
      */
     public static function deleteBackup(string $filename): bool
     {
@@ -244,16 +245,17 @@ class BackupModel extends Model
         if ($path === null) {
             return false;
         }
-        // getBackupPath هي الحارس: تشترط basename($f) === $f، وتطابق
-        // نمطاً صارماً للاسم، وتتحقق is_file — فما يصل هنا مسار مفهرس
-        // داخل مجلد النسخ لا غير.
+        // getBackupPath is the guard: it requires basename($f) === $f, matches a strict
+        // name pattern, and checks is_file — so what reaches here is a path resolved
+        // inside the backup directory and nothing else.
         // nosemgrep: php.lang.security.unlink-use.unlink-use
         return @unlink($path);
     }
 
     /**
-     * مسار آمن داخل مجلد الباك اب — يرفض أي Path Traversal.
-     * يُقبل الاسم فقط لو: basename() مطابق تمامًا + بالصيغة المطلوبة + ملف موجود.
+     * A safe path inside the backup directory — it refuses any path traversal.
+     * A name is accepted only if: basename() matches it exactly, it is in the required
+     * form, and the file exists.
      */
     public static function getBackupPath(string $filename): ?string
     {
@@ -268,7 +270,7 @@ class BackupModel extends Model
         return is_file($path) ? $path : null;
     }
 
-    /** مجلد التخزين (يبقى خارج public/ — الدفاع الأساسي). */
+    /** The storage directory (it stays outside public/ — the primary defence). */
     public static function getDir(): string
     {
         return self::DIR;

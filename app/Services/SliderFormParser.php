@@ -5,37 +5,38 @@ namespace App\Services;
 use App\Models\BrandingModel;
 
 /**
- * SliderFormParser — يحوّل نموذج السلايدر الخام إلى شرائح جاهزة للحفظ.
+ * SliderFormParser — turns the raw slider form into slides ready to be saved.
  *
- * استُخرج من AdminBrandingController::save، وكانت 139 سطراً تخلط أربعة
- * أشياء: قراءة بنية $_FILES المتداخلة، والتحقق من المدخلات، ورفع الصور،
- * وتنسيق الاستجابة (تحويل مع رسالة). الأربعة معاً تجعل الدالة مستحيلة
- * الاختبار: كل مسار خطأ ينتهي بـheader() وexit.
+ * Extracted from AdminBrandingController::save, which was 139 lines mixing four
+ * things: reading the nested $_FILES structure, validating the input, uploading the
+ * images, and formatting the response (a redirect with a message). All four together
+ * made the method impossible to test: every error path ended in header() and exit.
  *
- * الحدّ المرسوم هنا: هذه الخدمة **لا تعرف HTTP**. لا تحوّل ولا تُنهي
- * الطلب ولا تلمس $_SESSION. ترجع نتيجة تصف ما حدث، والكنترولر يقرّر
- * كيف يعرضها. وبهذا صار كل مسار خطأ قابلاً للاختبار بلا خادم.
+ * The line drawn here: this service **knows nothing about HTTP**. It does not
+ * redirect, does not end the request, and does not touch $_SESSION. It returns a result
+ * describing what happened, and the controller decides how to present it. With that,
+ * every error path became testable with no server.
  *
- * ⚠️ الرفع له أثر جانبي على القرص: ملفات تُكتب قبل أن تكتمل صحّة بقيّة
- * النموذج. ولهذا تُرجَع قائمة `uploaded` مع كل نتيجة — نجحت أو فشلت —
- * كي يمسحها المستدعي عند الفشل. بلا ذلك يترك كل إرسال فاشل صوراً
- * يتيمة على القرص، وهو ما كان الكود القديم يعالجه بـcleanupNewUploads
- * مكرَّرة في خمسة مواضع.
+ * ⚠️ Uploading has a side effect on disk: files are written before the rest of the
+ * form is known to be valid. That is why an `uploaded` list is returned with every
+ * result — successful or not — so the caller can clear them on a failure. Without it,
+ * every failed submission leaves orphaned images on disk, which the old code addressed
+ * with cleanupNewUploads repeated in five places.
  */
 final class SliderFormParser
 {
-    /** القيمتان منقولتان كما هما من الكنترولر — لا تغيير في السلوك. */
+    /** Both values were moved across from the controller unchanged — no behavioural change. */
     public const MAX_SLIDES = 12;
     public const MAX_ITEMS_PER_SLIDE = 10;
 
     /**
      * @param  list<array<string, mixed>> $rawSlides   $_POST['slides']
      * @param  array<string, mixed> $filesSlides $_FILES['slides']
-     * @param  string $uploadDir   المجلد المطلق لحفظ الصور
+     * @param  string $uploadDir   The absolute directory to save the images into
      * @return array{slides: list<array>, images: list<string>, uploaded: list<string>, error: string|null}
-     *         `slides` الشرائح الجاهزة · `images` كل مسارات الصور بعد
-     *         المعالجة (لمقارنة اليتيمة) · `uploaded` الجديدة على القرص
-     *         (للتنظيف عند الفشل) · `error` رسالة العرض أو null.
+     *         `slides` the finished slides · `images` every image path after processing
+     *         (for finding the orphans) · `uploaded` the newly written files (for cleanup
+     *         on failure) · `error` a message to display, or null.
      */
     public static function parse(array $rawSlides, array $filesSlides, string $uploadDir): array
     {
@@ -60,7 +61,7 @@ final class SliderFormParser
         foreach ($rawSlides as $slideIndex => $slideData) {
             $rawItems = $slideData['items'] ?? [];
             if (empty($rawItems)) {
-                continue; // شريحة بلا صور أصلاً = تجاهلها بصمت
+                continue; // A slide with no images at all — skip it silently
             }
             if (count($rawItems) > self::MAX_ITEMS_PER_SLIDE) {
                 return $fail('A slide has too many images (max ' . self::MAX_ITEMS_PER_SLIDE . ').');
@@ -84,8 +85,8 @@ final class SliderFormParser
                     return $fail('Unsafe link URL (javascript:/data:/vbscript: are not allowed).');
                 }
 
-                // الصورة اليدوية: ملف جديد له أولوية، وإلا نحتفظ بالمسار
-                // القديم المُرسَل مخفياً.
+                // The manual image: a newly uploaded file takes priority; otherwise the old
+                // path, submitted as a hidden field, is kept.
                 $manualImagePath = trim($itemData['existing_manual_image'] ?? '') ?: null;
 
                 $fileEntry = self::extractFileEntry($filesSlides, $slideIndex, $itemIndex);
@@ -93,7 +94,7 @@ final class SliderFormParser
                     $newPath = BrandingModel::uploadSliderImage($fileEntry, $uploadDir);
                     if ($newPath) {
                         $manualImagePath = $newPath;
-                        // الجديدة وحدها — لا تُحذف أبداً صورة قديمة موجودة.
+                        // The new ones alone — an existing old image is never deleted.
                         $uploaded[] = $newPath;
                     }
                 }
@@ -135,10 +136,11 @@ final class SliderFormParser
     }
 
     /**
-     * هل الرابط يحمل مخطّطاً ينفّذ كوداً؟
+     * Does the URL carry a scheme that executes code?
      *
-     * الفحص على النصّ بعد تجريد المسافات وتوحيد الحالة: `JaVaScRiPt :`
-     * مخطّط صالح للمتصفح، وأي فحص يقارن النصّ كما هو يفوته.
+     * The check runs on the string after stripping whitespace and normalising case:
+     * `JaVaScRiPt :` is a valid scheme to a browser, and any check comparing the string
+     * as-is misses it.
      */
     public static function isUnsafeUrl(?string $url): bool
     {
@@ -158,16 +160,16 @@ final class SliderFormParser
     }
 
     /**
-     * يستخرج ملفاً واحداً من بنية $_FILES المصفوفية.
+     * Extracts a single file from the array-shaped $_FILES structure.
      *
-     * ⚠️ البنية متداخلة لا مسطّحة. اسم الحقل في الفورم هو
-     * slides[i][items][j][manual_image]، وPHP يقلب التداخل فيصير المفتاح
-     * الأوّل هو خاصّية الملف لا موضعه:
+     * ⚠️ The structure is nested, not flat. The form field is named
+     * slides[i][items][j][manual_image], and PHP inverts the nesting so the first key
+     * becomes the file's property rather than its position:
      *
      *     $_FILES['slides']['tmp_name'][$i]['items'][$j]['manual_image']
      *
-     * أي أن الخصائص الخمس تُقرأ من خمسة مسارات متوازية، لا من مصفوفة
-     * واحدة. هذا هو سبب وجود هذه الدالة أصلاً.
+     * Which is to say the five properties are read from five parallel paths, not from
+     * one array. That is the reason this method exists at all.
      *
      * @param array<string, mixed> $filesSlides
      * @param int $slideIndex

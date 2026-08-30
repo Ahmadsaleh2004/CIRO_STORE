@@ -8,7 +8,7 @@ use Exception;
 class ContactModel extends Model
 {
     /**
-     * حفظ رسالة تواصل جديدة في قاعدة البيانات
+     * Save a new contact message to the database.
      */
     public static function save(?int $userId, string $fullName, string $email, string $message): bool
     {

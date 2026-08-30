@@ -6,16 +6,17 @@ use App\Core\Model;
 use Exception;
 
 /**
- * CategoryModel — إدارة جدول categories الديناميكي (بعد migration ENUM→VARCHAR)
+ * CategoryModel — managing the dynamic categories table (after the ENUM→VARCHAR migration).
  */
 class CategoryModel extends Model
 {
-    /** الأربع كاتوجريز الأساسية بترتيبها الثابت الإلزامي — لا تُغيَّر */
+    /** The four core categories in their fixed, mandatory order — do not change. */
     public const CORE_ORDER = ['phone', 'computer', 'accessories', 'gaming'];
 
     /**
-     * كل الكاتوجريز مرتبة: الأساسية أولاً بترتيب CORE_ORDER، ثم الباقي أبجدياً.
-     * كل صف يتضمن product_count (عدد المنتجات المرتبطة فعلياً عبر product_category_pivot).
+     * Every category, ordered: the core ones first in CORE_ORDER, then the rest
+     * alphabetically. Each row includes product_count (how many products are actually
+     * linked through product_category_pivot).
      *
      * @return list<array<string, mixed>>
      */
@@ -41,7 +42,7 @@ class CategoryModel extends Model
                 }
             }
 
-            // رتّب الأساسية بترتيب CORE_ORDER الثابت
+            // Sort the core ones by the fixed CORE_ORDER
             $orderedCore = [];
             foreach (self::CORE_ORDER as $name) {
                 if (isset($core[$name])) {
@@ -49,7 +50,7 @@ class CategoryModel extends Model
                 }
             }
 
-            // رتّب الباقي أبجدياً
+            // Sort the rest alphabetically
             usort($extra, fn($a, $b) => strcasecmp($a['name'], $b['name']));
 
             return array_merge($orderedCore, $extra);
@@ -59,7 +60,7 @@ class CategoryModel extends Model
         }
     }
 
-    /** يتحقق من وجود اسم (case-insensitive) — يُستخدم لمنع التكرار عند الإضافة */
+    /** Checks whether a name exists (case-insensitively) — used to prevent duplicates on add. */
     public static function nameExists(string $name): bool
     {
         try {
@@ -70,16 +71,16 @@ class CategoryModel extends Model
             return (bool)$stmt->fetch();
         } catch (Exception $e) {
             error_log("CategoryModel::nameExists Error: " . $e->getMessage());
-            // الأمان: بحالة الخطأ نفترض موجود لمنع تكرار محتمل
+            // Safety: on an error we assume it exists, to prevent a possible duplicate
             return true;
         }
     }
 
     /**
-     * يقترح أقرب الكاتوجريز بالمعنى (تشابه نصي) لاسم مُدخل من الأدمن.
-     * يُستخدم بحالتين: (أ) أثناء الكتابة بحقل "إضافة كاتوجري" لمنع التكرار،
-     * (ب) عند حذف كاتوجري لاقتراح وجهة النقل.
-     * يرجع مصفوفة مرتبة تنازلياً حسب نسبة التشابه (similar_text %).
+     * Suggests the closest categories by meaning (textual similarity) to a name the
+     * admin typed. Used in two situations: (a) while typing in the "add category" field,
+     * to prevent duplicates, and (b) when deleting a category, to suggest a destination.
+     * Returns an array sorted by descending similarity (similar_text %).
      *
      * @return list<array<string, mixed>>
      */
@@ -111,8 +112,8 @@ class CategoryModel extends Model
     }
 
     /**
-     * إضافة كاتوجري جديدة. يرجع الـ id الجديد أو null عند الفشل/التكرار.
-     * is_core تُضبط دائماً 0 — لا يمكن إنشاء كاتوجري أساسية جديدة عبر الواجهة.
+     * Add a new category. Returns the new id, or null on failure or a duplicate.
+     * is_core is always set to 0 — a new core category cannot be created through the UI.
      */
     public static function create(string $name): ?int
     {
@@ -132,7 +133,7 @@ class CategoryModel extends Model
         }
     }
 
-    /** يرجع true لو الكاتوجري أساسية (محمية من الحذف) */
+    /** Returns true if the category is a core one (protected from deletion). */
     public static function isCore(int $id): bool
     {
         try {
@@ -141,18 +142,19 @@ class CategoryModel extends Model
             return (bool)$stmt->fetchColumn();
         } catch (Exception $e) {
             error_log("CategoryModel::isCore Error: " . $e->getMessage());
-            // الأمان: بحالة الخطأ نمنع الحذف
+            // Safety: on an error we block the deletion
             return true;
         }
     }
 
     /**
-     * حذف كاتوجري ونقل كل منتجاتها إلى $destinationCategoryId أولاً.
-     * يُرفض إذا كانت الكاتوجري أساسية (is_core=1) أو إذا $destinationCategoryId غير موجود.
-     * عملية واحدة (transaction): نقل الربط بـ product_category_pivot ثم حذف الصف.
+     * Delete a category, first moving all of its products to $destinationCategoryId.
+     * Refused if the category is a core one (is_core=1) or if $destinationCategoryId does
+     * not exist. One transaction: move the links in product_category_pivot, then delete
+     * the row.
      *
-     * المنطق: UPDATE IGNORE يتجاهل التكرار (منتج مرتبط أصلاً بكلا الكاتوجريز)،
-     * ثم DELETE تنضف أي صف قديم تبقّى مرتبطاً بالكاتوجري المحذوفة.
+     * The logic: UPDATE IGNORE skips duplicates (a product already linked to both
+     * categories), then DELETE clears any old row still pointing at the deleted category.
      */
     public static function deleteAndReassign(int $categoryId, int $destinationCategoryId): bool
     {
@@ -167,14 +169,14 @@ class CategoryModel extends Model
         try {
             $db->beginTransaction();
 
-            // انقل كل ربط المنتجات للوجهة الجديدة، متجنبين تكرار المفتاح المركب
+            // Move every product link to the new destination, avoiding a duplicate composite key
             $db->prepare("
                 UPDATE IGNORE product_category_pivot
                 SET category_id = ?
                 WHERE category_id = ?
             ")->execute([$destinationCategoryId, $categoryId]);
 
-            // احذف أي روابط تكرارية تبقّت (المنتج كان مرتبط أصلاً بالوجهتين معاً)
+            // Delete any duplicate links left over (the product was already linked to both)
             $db->prepare("DELETE FROM product_category_pivot WHERE category_id = ?")
                ->execute([$categoryId]);
 
@@ -190,7 +192,7 @@ class CategoryModel extends Model
         }
     }
 
-    /** يجلب اسم كاتوجري واحدة بالـ id — يُستخدم برسائل التأكيد بالواجهة */
+    /** Fetches one category's name by id — used in the UI's confirmation messages. */
     /**
      * @return array<string, mixed>|null
      */

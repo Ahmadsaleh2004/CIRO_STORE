@@ -6,23 +6,23 @@ use App\Core\Model;
 use Exception;
 
 /**
- * AdminModel — يغطي جدول admins حصراً
- * لا يلمس جدول users بأي شكل من الأشكال
+ * AdminModel — covers the admins table exclusively.
+ * It does not touch the users table in any way.
  */
 class AdminModel extends Model
 {
     // ════════════════════════════════════════════════════════
-    // الحدود والنوافذ الزمنية لـ Rate Limiting (أشد من المستخدم العادي)
+    // Rate-limiting allowances and windows (stricter than for a regular user)
     // ════════════════════════════════════════════════════════
     private const MAX_FAILED_ATTEMPTS = 3;
     private const WINDOW_MINUTES      = 30;
     private const LOCKOUT_MINUTES     = 30;
 
     // ════════════════════════════════════════════════════════
-    // جلب أدمن بالإيميل من جدول admins فقط
+    // Fetch an admin by email, from the admins table alone
     // ════════════════════════════════════════════════════════
     /**
-     * @return array<string, mixed>|null صفّ admins كما يعيده fetch()
+     * @return array<string, mixed>|null An admins row as fetch() returns it
      */
     public static function findByEmail(string $email): ?array
     {
@@ -39,7 +39,7 @@ class AdminModel extends Model
     }
 
     // ════════════════════════════════════════════════════════
-    // عدد المحاولات الفاشلة خلال النافذة الزمنية
+    // The count of failed attempts within the time window
     // ════════════════════════════════════════════════════════
     public static function getFailedAttempts(string $email): int
     {
@@ -59,7 +59,7 @@ class AdminModel extends Model
     }
 
     // ════════════════════════════════════════════════════════
-    // تسجيل محاولة تسجيل الدخول (ناجحة أو فاشلة)
+    // Record a sign-in attempt, successful or failed
     // ════════════════════════════════════════════════════════
     public static function logLoginAttempt(string $email, bool $success): void
     {
@@ -77,7 +77,7 @@ class AdminModel extends Model
     }
 
     // ════════════════════════════════════════════════════════
-    // فحص Rate Limiting — 3 محاولات فاشلة خلال 30 دقيقة = حظر 30 دقيقة
+    // Rate-limit check — 3 failed attempts within 30 minutes means a 30-minute lockout
     // ════════════════════════════════════════════════════════
     public static function isRateLimited(string $email): bool
     {
@@ -92,12 +92,12 @@ class AdminModel extends Model
             return (int)$stmt->fetchColumn() >= self::MAX_FAILED_ATTEMPTS;
         } catch (Exception $e) {
             error_log("AdminModel::isRateLimited Error: " . $e->getMessage());
-            return false; // الأمان: في حالة الخطأ لا نحجب
+            return false; // Safety: on an error we do not lock anyone out
         }
     }
 
     // ════════════════════════════════════════════════════════
-    // تحديث last_activity للأدمن
+    // Update the admin's last_activity
     // ════════════════════════════════════════════════════════
     public static function updateActivity(int $adminId): void
     {
@@ -111,10 +111,10 @@ class AdminModel extends Model
     }
 
     // ════════════════════════════════════════════════════════
-    // جلب أدمن بالـ ID من جدول admins
+    // Fetch an admin by id, from the admins table
     // ════════════════════════════════════════════════════════
     /**
-     * @return array<string, mixed>|null صفّ admins كما يعيده fetch()
+     * @return array<string, mixed>|null An admins row as fetch() returns it
      */
     public static function findById(int $id): ?array
     {
@@ -131,10 +131,10 @@ class AdminModel extends Model
     }
 
     // ════════════════════════════════════════════════════════
-    // جلب صلاحيات أدمن من جدول admin_permissions
+    // Fetch an admin's permissions from the admin_permissions table
     // ════════════════════════════════════════════════════════
     /**
-     * @return array<string, mixed> صفّ admin_permissions، أو [] إن لم يوجد
+     * @return array<string, mixed> An admin_permissions row, or [] if there is none
      */
     public static function getPermissions(int $adminId): array
     {
@@ -150,7 +150,7 @@ class AdminModel extends Model
     }
 
     // ════════════════════════════════════════════════════════
-    // تسجيل عملية بجدول admin_audit_log
+    // Record an action in the admin_audit_log table
     // ════════════════════════════════════════════════════════
     public static function logAction(
         int $adminId,
@@ -172,7 +172,7 @@ class AdminModel extends Model
     }
 
     // ════════════════════════════════════════════════════════
-    // تحديث بيانات أدمن (الاسم / الهاتف / كلمة المرور إن وُجدت)
+    // Update an admin's details (name / phone / password, if given)
     // ════════════════════════════════════════════════════════
     /**
      * @param array<string, mixed> $data
@@ -206,10 +206,10 @@ class AdminModel extends Model
     }
 
     // ════════════════════════════════════════════════════════
-    // نظام الهرمية — خريطة قيم الرتب (A أعلى، D أدنى)
+    // The hierarchy — a map of rank values (A highest, D lowest)
     // ════════════════════════════════════════════════════════
 
-    /** خريطة قيمة الرتبة — كلما الرقم أعلى، الرتبة أعلى (A=4 أعلى ... D=1 أدنى) */
+    /** A map of rank to value — the higher the number, the higher the rank (A=4 highest … D=1 lowest). */
     private const RANK_VALUES = ['A' => 4, 'B' => 3, 'C' => 2, 'D' => 1];
 
     public static function getRankValue(string $role): int
@@ -217,7 +217,7 @@ class AdminModel extends Model
         return self::RANK_VALUES[$role] ?? 0;
     }
 
-    /** true فقط إذا رتبة $actorRole أعلى STRICTLY من رتبة $targetRole */
+    /** True only when $actorRole ranks STRICTLY above $targetRole. */
     public static function canManageTarget(string $actorRole, string $targetRole): bool
     {
         return self::getRankValue($actorRole) > self::getRankValue($targetRole);
@@ -226,11 +226,11 @@ class AdminModel extends Model
     public static function getRootAdminId(): ?int
     {
         try {
-            // ORDER BY صريح: بدونه ترتيب الصفوف من صنع المحرّك، فقد
-            // يتغيّر «الروت» بين استدعاءين على البيانات نفسها. رتبة A
-            // واحدة اليوم (ولا سبيل لإنشاء ثانية — canManageTarget تشترط
-            // رتبة أعلى من A وهي غير موجودة)، لكن اعتماد الحظّ في تعريف
-            // الروت ليس شيئاً يُترك للمستقبل.
+            // An explicit ORDER BY: without it the row order is the engine's to choose, so
+            // "root" could change between two calls over the same data. There is one rank A
+            // today (and no way to create a second — canManageTarget requires a rank above
+            // A, which does not exist), but leaving the definition of root to luck is not
+            // something to hand to the future.
             $id = self::db()
                 ->query("SELECT id FROM admins WHERE role='A' ORDER BY id ASC LIMIT 1")
                 ->fetchColumn();
@@ -242,10 +242,10 @@ class AdminModel extends Model
     }
 
     // ════════════════════════════════════════════════════════
-    // جلب بيانات الأدمنية مع الصلاحيات
+    // Fetch the admins together with their permissions
     // ════════════════════════════════════════════════════════
 
-    /** كل الأدمنية + صلاحياتهم (LEFT JOIN)، مرتبين حسب تاريخ الإضافة */
+    /** Every admin plus their permissions (a LEFT JOIN), ordered by when they were added. */
     /**
      * @return list<array<string, mixed>>
      */
@@ -269,7 +269,7 @@ class AdminModel extends Model
         }
     }
 
-    /** نفس الاستعلام أعلاه بس لأدمن واحد (لصفحة admin-details) */
+    /** The same query as above but for one admin (for the admin details page). */
     /**
      * @return array<string, mixed>|null
      */
@@ -305,7 +305,7 @@ class AdminModel extends Model
     }
 
     // ════════════════════════════════════════════════════════
-    // تحقق من كلمة مرور + تحقق من تكرار الإيميل
+    // Password verification, and an email duplication check
     // ════════════════════════════════════════════════════════
 
     public static function verifyPassword(int $adminId, string $plainPassword): bool
@@ -334,15 +334,15 @@ class AdminModel extends Model
     }
 
     // ════════════════════════════════════════════════════════
-    // CRUD: إنشاء / حذف / تحديث صلاحيات
+    // CRUD: create / delete / update permissions
     // ════════════════════════════════════════════════════════
 
     /**
-     * إنشاء أدمن جديد + صلاحياته بمعاملة واحدة (transaction)
-     * يرجع الـ id الجديد أو null عند الفشل
+     * Create a new admin together with their permissions, in one transaction.
+     * Returns the new id, or null on failure.
      *
      * @param array<string, mixed> $data
-     * @param array<string, bool> $perms خريطة «اسم الصلاحية ← ممنوحة». ليست قائمة أسماء — راجع findByPermsAndRanks التي تستقبل قائمة، والفرق مقصود.
+     * @param array<string, bool> $perms A map of permission name → granted. Not a list of names — see findByPermsAndRanks, which takes a list; the difference is deliberate.
      */
     public static function createAdmin(array $data, array $perms): ?int
     {
@@ -395,26 +395,27 @@ class AdminModel extends Model
     }
 
     /**
-     * يحذف أدمناً — والمعرّفات الباقية لا تتحرّك.
+     * Deletes an admin — and the remaining ids do not move.
      *
-     * ⚠️ كان هنا زحفٌ لكل معرّف أكبر من المحذوف: يُنقَص واحداً عبر تسعة
-     * جداول، مع SET FOREIGN_KEY_CHECKS=0 وALTER TABLE AUTO_INCREMENT في
-     * النهاية. حُذف كلّه، لثلاثة أسباب لا واحد:
+     * ⚠️ There used to be a renumbering of every id above the deleted one: decremented
+     * by one across nine tables, with SET FOREIGN_KEY_CHECKS=0 and an ALTER TABLE
+     * AUTO_INCREMENT at the end. All of it was removed, for three reasons rather than one:
      *
-     *   1. **الـALTER كان يكسر الـtransaction.** ALTER TABLE في MySQL
-     *      يسبّب implicit commit — فالـbeginTransaction أعلاه كان ينتهي
-     *      عنده، ورollBack() في catch لا يجد ما يتراجع عنه. أي أن زحف
-     *      المعرّفات عبر التسعة جداول كان **غير قابل للتراجع** لو فشل
-     *      شيء بعده، ومع فحص المفاتيح مُطفأ.
+     *   1. **The ALTER broke the transaction.** ALTER TABLE in MySQL causes an implicit
+     *      commit — so the beginTransaction above ended there, and the rollBack() in the
+     *      catch had nothing left to roll back. Which means the id renumbering across
+     *      nine tables was **irreversible** if anything failed after it, and with the key
+     *      checks switched off.
      *
-     *   2. **المعرّف كان مقترناً بالتخويل.** BackupController كان يمنح
-     *      حقّ تنزيل القاعدة كاملة لـ`getCurrentAdminId() !== 1` — أي
-     *      لموضعٍ في طابور، لا لشخص. وزحفٌ واحد كان كفيلاً بأن يرث
-     *      شخصٌ آخر ذلك الحقّ صامتاً.
+     *   2. **The id was tied to authorisation.** BackupController granted the right to
+     *      download the entire database on `getCurrentAdminId() !== 1` — that is, to a
+     *      position in a sequence rather than to a person. And one renumbering was enough
+     *      for somebody else to inherit that right, silently.
      *
-     *   3. **المعرّف هوية لا ترتيب عرض.** قرار صاحب المشروع: من كان
-     *      معرّفه 10 يبقى 10 مدى الحياة. الفجوات بعد الحذف مقصودة،
-     *      والترقيم المتسلسل في الجداول يُحسب في الـview من ترتيب الصف.
+     *   3. **An id is an identity, not a display order.** The project owner's decision:
+     *      whoever had id 10 keeps id 10 for life. The gaps left by deletions are
+     *      intended, and the sequential numbering in the tables is computed in the view
+     *      from the row's position.
      */
     public static function deleteAdmin(int $id): bool
     {
@@ -433,9 +434,9 @@ class AdminModel extends Model
         }
     }
 
-    /** تحديث الرتبة + الصلاحيات معًا في معاملة واحدة */
+    /** Update the rank and the permissions together, in one transaction. */
     /**
-     * @param array<string, bool> $perms خريطة «اسم الصلاحية ← ممنوحة». ليست قائمة أسماء — راجع findByPermsAndRanks التي تستقبل قائمة، والفرق مقصود.
+     * @param array<string, bool> $perms A map of permission name → granted. Not a list of names — see findByPermsAndRanks, which takes a list; the difference is deliberate.
      */
     public static function updatePermissions(int $id, ?string $newRole, array $perms, int $editorAdminId): bool
     {
@@ -447,7 +448,7 @@ class AdminModel extends Model
                 $db->prepare("UPDATE admins SET role=?, updated_at=NOW(), last_modified_by=? WHERE id=?")
                    ->execute([$newRole, $editorAdminId, $id]);
             } else {
-                // لا تغيير بالرتبة — لسا لازم نحدّث updated_at لأن تعديل صلاحيات صار فعليًا
+                // No rank change — updated_at still needs updating, because a permission change did happen
                 $db->prepare("UPDATE admins SET updated_at=NOW(), last_modified_by=? WHERE id=?")->execute([$editorAdminId, $id]);
             }
 
@@ -480,10 +481,10 @@ class AdminModel extends Model
     }
 
     // ════════════════════════════════════════════════════════
-    // إشعارات الأدمن (admin_notifications)
+    // Admin notifications (admin_notifications)
     // ════════════════════════════════════════════════════════
 
-    /** إرسال إشعار فردي لأدمن */
+    /** Send a single notification to an admin. */
     public static function sendNotification(
         int $recipientAdminId,
         string $title,
@@ -505,18 +506,18 @@ class AdminModel extends Model
     }
 
     /**
-     * أدمنية يتوفر فيهم: أي صلاحية من $perms AND رتبة من $ranks (لـ Broadcast)
-     * يرجع مصفوفة من الـ IDs
+     * Admins matching: any permission from $perms AND a rank from $ranks (for broadcasts).
+     * Returns an array of ids.
      *
-     * ⚠️ `$perms` هنا **قائمة أسماء** لا خريطة — بخلاف createAdmin و
-     * updatePermissions اللتين تستقبلان `array<string, bool>`. الاسم
-     * واحد والشكل مختلف، وهو فرق لا يظهر في توقيع `array` المجرّد.
-     * (كتبتُ هنا خطأً `array<string, bool>` أوّل مرّة، فأمسكه PHPStan
-     * فوراً بعشرة أخطاء في مواضع الاستدعاء — وهو غرض هذا المستوى.)
+     * ⚠️ `$perms` here is **a list of names**, not a map — unlike createAdmin and
+     * updatePermissions, which take `array<string, bool>`. The name is the same and the
+     * shape is different, a distinction the bare `array` signature does not show.
+     * (`array<string, bool>` was written here by mistake at first, and PHPStan caught it
+     * immediately with ten errors at the call sites — which is the point of this level.)
      *
      * @param list<string> $perms
      * @param list<string> $ranks
-     * @return list<int> معرّفات الأدمنية المطابقين
+     * @return list<int> The ids of the matching admins
      */
     public static function findByPermsAndRanks(array $perms, array $ranks): array
     {
@@ -551,12 +552,12 @@ class AdminModel extends Model
     }
 
     /**
-     * أدمنية يملكون صلاحية معيّنة AND رتبتهم أعلى (Strictly Higher) من رتبة
-     * $actorRole — مع استثناء رتبة A (الأدمن الأساسي) دائماً من النتيجة، حتى لو
-     * كانت رتبته أعلى فعلياً من $actorRole.
-     * يُستخدم لإشعارات "أبلغ المشرفين الأعلى مباشرة" بدون إزعاج الأدمن الجذر.
+     * Admins holding a given permission AND ranking strictly above $actorRole — with
+     * rank A (the root admin) always excluded from the result, even though it does rank
+     * above $actorRole.
+     * Used for "notify the supervisors directly above" without disturbing the root admin.
      *
-     * @return int[] IDs الأدمنية المستهدفين (قد تكون مصفوفة فارغة)
+     * @return int[] The target admins' ids (possibly an empty array)
      */
     public static function findHigherRankWithPermission(string $perm, string $actorRole): array
     {
@@ -659,7 +660,7 @@ class AdminModel extends Model
     }
 
     // ═════════════════════════════════════════════════════════
-    // سجل أفعال أدمن معيّن من admin_audit_log (لصفحة details)
+    // One admin's action log from admin_audit_log (for the details page)
     // ════════════════════════════════════════════════════════
 
     /**
@@ -684,8 +685,8 @@ class AdminModel extends Model
     }
 
     /**
-     * سجل تدقيق مفلتر: فقط target_type ضمن القائمة المُعطاة.
-     * تُستخدم لأقسام Admin Details المتخصصة (Orders/User/Product/Branding/Support/Site Config).
+     * A filtered audit log: only the target_types in the given list.
+     * Used by the specialised Admin Details sections (Orders/User/Product/Branding/Support/Site Config).
      *
      * @param list<string> $targetTypes
      * @return list<array<string, mixed>>
@@ -713,9 +714,11 @@ class AdminModel extends Model
     }
 
     /**
-     * سجل تدقيق مفلتر بالاستبعاد: كل شيء ما عدا target_type المذكرة، بالإضافة لأي صف
-     * target_type فيه NULL (تسجيل دخول/خروج، تحديث بروفايل، تفعيل/تعطيل 2FA... إلخ).
-     * تُستخدم لقسم "Admin Actions Log" العام، بعد ما صار عنده أقسام متخصصة منفصلة.
+     * A filtered audit log by exclusion: everything except the listed target_types, plus
+     * any row whose target_type is NULL (sign-in and sign-out, profile updates, enabling
+     * and disabling 2FA, and so on).
+     * Used by the general "Admin Actions Log" section, now that it has separate
+     * specialised sections.
      *
      * @param list<string> $excludeTypes
      * @return list<array<string, mixed>>
@@ -748,8 +751,8 @@ class AdminModel extends Model
     }
 
     /**
-     * كل أفعال أي أدمن كانت على target_type='user' AND target_id=$userId
-     * (لصفحة user-details — سجل نشاط الأدمنية على هاد المستخدم)
+     * Every admin action against target_type='user' AND target_id=$userId
+     * (for the user details page — the log of admin activity on this user).
      *
      * @return list<array<string, mixed>>
      */
@@ -774,7 +777,7 @@ class AdminModel extends Model
     }
 
     // ════════════════════════════════════════════════════════
-    // تصدير CSV — Role A فقط (نفس تقييد القديم)
+    // CSV export — rank A only (the same restriction as before)
     // ════════════════════════════════════════════════════════
 
     /**
@@ -799,8 +802,8 @@ class AdminModel extends Model
     }
 
     /**
-     * إنشاء رمز إعادة تعيين كلمة المرور للأدمن (صالح 60 دقيقة).
-     * يرجع التوكن الخام (يُرسل للإيميل) — يُخزَّن hash منه فقط في الجدول.
+     * Create a password reset token for an admin (valid for 60 minutes).
+     * It returns the raw token, which is emailed — only a hash of it is stored in the table.
      */
     public static function createPasswordReset(string $email, string $userType = 'admin'): ?string
     {
@@ -809,8 +812,8 @@ class AdminModel extends Model
             $token = bin2hex(random_bytes(32));
             $tokenHash = hash('sha256', $token);
 
-            // الانتهاء يُحسب داخل MySQL (DATE_ADD) ليتطابق مع NOW() المستخدمة في التحقق —
-            // مهم لأن منطقة PHP الزمنية قد تختلف عن منطقة MySQL
+            // The expiry is computed inside MySQL (DATE_ADD) so it lines up with the NOW()
+            // used when verifying — this matters because PHP's timezone may differ from MySQL's
             $stmt = $db->prepare("INSERT INTO password_resets (email, user_type, token_hash, expires_at) VALUES (?, ?, ?, DATE_ADD(NOW(), INTERVAL 60 MINUTE))");
             $stmt->execute([$email, $userType, $tokenHash]);
 
@@ -822,7 +825,7 @@ class AdminModel extends Model
     }
 
     /**
-     * التحقق من صحة رمز إعادة تعيين كلمة مرور الأدمن (غير مستخدم وغير منتهٍ).
+     * Verify an admin's password reset token (unused and unexpired).
      */
     public static function validatePasswordResetToken(string $email, string $token, string $userType = 'admin'): bool
     {
@@ -839,7 +842,7 @@ class AdminModel extends Model
     }
 
     /**
-     * استهلاك الرمز بعد استخدامه (يمنع إعادة استخدام نفس الرابط)
+     * Consume the token once used, which prevents reusing the same link.
      */
     public static function consumePasswordResetToken(string $email, string $token, string $userType = 'admin'): void
     {
@@ -850,7 +853,7 @@ class AdminModel extends Model
     }
 
     /**
-     * تحديث كلمة مرور الأدمن (تستقبل الـ hash الجاهز)
+     * Update the admin's password (it receives the already-computed hash).
      */
     public static function updatePassword(int $adminId, string $newPasswordHash): bool
     {
@@ -865,14 +868,14 @@ class AdminModel extends Model
     }
 
     // ════════════════════════════════════════════════════════
-    // التحقق الثنائي (2FA / TOTP) — اختياري لكل أدمن
+    // Two-factor authentication (2FA / TOTP) — optional per admin
     // ════════════════════════════════════════════════════════
 
     public static function enable2FA(int $adminId, string $secret): bool
     {
         $db = self::db();
-        // last_totp_slice تُصفَّر مع كل تفعيل: السرّ جديد، فالشرائح
-        // المستهلَكة تخصّ سرّاً آخر ولا معنى لتوريثها.
+        // last_totp_slice is cleared on every activation: the secret is new, so the
+        // consumed slices belong to a different secret and carrying them over is meaningless.
         $stmt = $db->prepare(
             "UPDATE admins SET totp_secret = ?, totp_enabled = 1, last_totp_slice = NULL WHERE id = ?"
         );
@@ -889,12 +892,12 @@ class AdminModel extends Model
     }
 
     /**
-     * يسجّل آخر شريحة TOTP استُهلكت — يمنع إعادة استخدام الكود نفسه.
+     * Records the last consumed TOTP slice — which prevents reusing the same code.
      *
-     * الشرط `last_totp_slice IS NULL OR last_totp_slice < ?` ليس تزيّناً:
-     * طلبان متزامنان بالكود نفسه قد يمرّان معاً من فحص التحقق قبل أن
-     * يكتب أيّهما. الشرط يجعل الكتابة نفسها هي الحَكَم، فينجح أحدهما
-     * فقط — وترجع الدالة false للآخر ليرفضه المستدعي.
+     * The condition `last_totp_slice IS NULL OR last_totp_slice < ?` is not decoration:
+     * two concurrent requests with the same code can both clear the verification check
+     * before either writes. The condition makes the write itself the arbiter, so only one
+     * succeeds — and the method returns false for the other, for the caller to refuse.
      */
     public static function consumeTotpSlice(int $adminId, int $slice): bool
     {

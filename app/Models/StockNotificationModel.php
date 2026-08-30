@@ -7,23 +7,25 @@ use PDO;
 use Exception;
 
 /**
- * StockNotificationModel — جدول stock_notifications: طلبات "نبّهني عند
- * توفّر المنتج".
+ * StockNotificationModel — the stock_notifications table: "notify me when this
+ * product is available" requests.
  *
- * لماذا موديل مستقل؟
- * كانت استعلامات هذا الجدول مكتوبة مباشرة داخل ثلاثة كنترولرز
- * (Wishlist / Product / AdminProducts)، وأربعة منها متطابقة حرفياً.
- * الجدول كيان قائم بذاته لا يخصّ المنتج ولا المستخدم وحدهما، فجمعه هنا
- * أوضح من توزيعه على ProductModel و UserModel.
+ * Why a model of its own?
+ * The queries against this table used to be written inline inside three controllers
+ * (Wishlist / Product / AdminProducts), four of them identical word for word. The
+ * table is an entity in its own right, belonging to neither the product nor the
+ * user alone, so gathering it here is clearer than splitting it across ProductModel
+ * and UserModel.
  *
- * كل الدوال static اتساقاً مع بقية موديلات المشروع، وكلها تبتلع
- * الاستثناء وتسجّله ثم تُرجع قيمة محايدة — نفس نمط ProductModel و
- * AdminModel: فشل استعلام ثانوي يجب ألّا يُسقط الصفحة كلها.
+ * Every method is static, consistent with the rest of the project's models, and
+ * they all swallow the exception, log it, and return a neutral value — the same
+ * pattern as ProductModel and AdminModel: a secondary query failing must not bring
+ * the whole page down.
  */
 class StockNotificationModel extends Model
 {
     /**
-     * هل طلب هذا المستخدم إشعاراً عن هذا المنتج؟
+     * Has this user requested a notification for this product?
      */
     public static function exists(int $productId, int $userId): bool
     {
@@ -41,7 +43,7 @@ class StockNotificationModel extends Model
     }
 
     /**
-     * كل المنتجات التي طلب هذا المستخدم إشعاراً عنها.
+     * Every product this user has requested a notification for.
      *
      * @return int[]
      */
@@ -60,8 +62,8 @@ class StockNotificationModel extends Model
     }
 
     /**
-     * نفس السابقة لكن مقيّدة بمجموعة منتجات — لتفادي جلب كل طلبات
-     * المستخدم عند الحاجة لحالة بضعة منتجات فقط.
+     * The same as above but restricted to a set of products — to avoid fetching all of
+     * a user's requests when only a handful of products' status is needed.
      *
      * @param  int[] $productIds
      * @return int[]
@@ -88,9 +90,9 @@ class StockNotificationModel extends Model
     }
 
     /**
-     * يسجّل طلب إشعار إن لم يكن مسجّلاً.
+     * Records a notification request, if one is not recorded already.
      *
-     * @return bool true إذا أُضيف صفّ جديد، false إذا كان موجوداً أو فشل.
+     * @return bool true if a new row was inserted; false if it already existed or the insert failed.
      */
     public static function add(int $productId, int $userId): bool
     {
@@ -110,7 +112,7 @@ class StockNotificationModel extends Model
     }
 
     /**
-     * عدد الطلبات المسجّلة على منتج.
+     * How many requests are recorded against a product.
      */
     public static function countForProduct(int $productId): int
     {
@@ -127,7 +129,7 @@ class StockNotificationModel extends Model
     }
 
     /**
-     * معرّفات المستخدمين المنتظرين توفّر منتج.
+     * The ids of the users waiting for a product to come back in stock.
      *
      * @return int[]
      */
@@ -146,8 +148,9 @@ class StockNotificationModel extends Model
     }
 
     /**
-     * يحذف كل طلبات الإشعار على منتج — تُستدعى بعد إرسال الإشعارات
-     * فعلياً، حتى لا يُبلَّغ المستخدم مرتين عن نفس التوفّر.
+     * Deletes every notification request against a product — called after the
+     * notifications have actually been sent, so a user is not told twice about the same
+     * restock.
      */
     public static function clearForProduct(int $productId): void
     {

@@ -6,12 +6,12 @@ use App\Core\Model;
 use Exception;
 
 /**
- * NotificationModel — يغطي جدول notifications (إشعارات المستخدمين)
+ * NotificationModel — covers the notifications table (user notifications).
  */
 class NotificationModel extends Model
 {
     /**
-     * جلب قائمة الإشعارات للمستخدم
+     * Fetch the user's notification list.
      *
      * @return list<array<string, mixed>>
      */
@@ -35,7 +35,7 @@ class NotificationModel extends Model
     }
 
     /**
-     * عدد الإشعارات غير المقروءة
+     * The unread notification count.
      */
     public static function countUnread(int $userId): int
     {
@@ -52,7 +52,7 @@ class NotificationModel extends Model
     }
 
     /**
-     * تحديد إشعار واحد كمقروء
+     * Mark a single notification read.
      */
     public static function markRead(int $notifId, int $userId): bool
     {
@@ -70,7 +70,7 @@ class NotificationModel extends Model
     }
 
     /**
-     * تحديد كل الإشعارات كمقروءة
+     * Mark every notification read.
      */
     public static function markAllRead(int $userId): bool
     {
@@ -87,7 +87,7 @@ class NotificationModel extends Model
     }
 
     /**
-     * إخفاء إشعار (dismiss) — نحذفه مؤقتاً من القائمة عبر تحديد is_read
+     * Dismiss a notification — it leaves the list by way of setting is_read.
      */
     public static function dismiss(int $notifId, int $userId): bool
     {
@@ -95,7 +95,7 @@ class NotificationModel extends Model
     }
 
     /**
-     * حذف كل الإشعارات للمستخدم
+     * Delete all of the user's notifications.
      */
     public static function deleteAll(int $userId): bool
     {
@@ -110,7 +110,7 @@ class NotificationModel extends Model
     }
 
     /**
-     * إدراج إشعار جديد (يستخدمه Checkout / Order عند الحاجة)
+     * Insert a new notification (used by checkout and orders as needed).
      */
     public static function insert(int $userId, string $title, string $message, ?int $adminId = null, ?string $relatedType = null, ?int $relatedId = null): bool
     {

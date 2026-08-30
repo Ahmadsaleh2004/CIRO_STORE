@@ -5,8 +5,8 @@ namespace App\Models;
 use App\Core\Model;
 
 /**
- * AdminDashboardModel — استعلامات إحصائيات لوحة تحكم الأدمن فقط.
- * موديل منفصل خاص بالـ Dashboard، لا يلمس أي موديل آخر.
+ * AdminDashboardModel — statistics queries for the admin dashboard alone.
+ * A model of its own for the dashboard; it touches no other model.
  */
 class AdminDashboardModel extends Model
 {
@@ -51,10 +51,10 @@ class AdminDashboardModel extends Model
     }
 
     /**
-     * عدد الإشعارات غير المقروءة لأدمن معيّن.
-     * ملاحظة: نظام الإشعارات الكامل (notif sidebar) لسا مو مبني بالجديد،
-     * لهيك هون استعلام مباشر وبسيط بس على جدول admin_notifications
-     * بدل الاعتماد على helper مو موجود بعد.
+     * The unread notification count for one admin.
+     * Note: the full notification system (the sidebar) is not built in the rewrite yet,
+     * so this is a simple direct query against admin_notifications rather than a
+     * dependency on a helper that does not exist.
      */
     public static function getUnreadNotificationsCount(int $adminId): int
     {
@@ -76,7 +76,7 @@ class AdminDashboardModel extends Model
         )->fetchColumn();
     }
 
-    /** مبيعات آخر 30 يوم — لرسم الـ Chart. */
+    /** Sales over the last 30 days — for the chart. */
     /**
      * @return list<array<string, mixed>>
      */
@@ -91,7 +91,7 @@ class AdminDashboardModel extends Model
         )->fetchAll();
     }
 
-    /** توزيع المستخدمين: نشط / غير نشط / محظور (3 إنذارات فأكثر). */
+    /** User distribution: active / inactive / blocked (three strikes or more). */
     /**
      * @return array<string, mixed>
      */
@@ -119,7 +119,7 @@ class AdminDashboardModel extends Model
         return ['active' => $active, 'not_active' => $notActive, 'blocked' => $blocked];
     }
 
-    /** أفضل 12 منتج مبيعًا، مع دعم بحث اختياري بالاسم. */
+    /** The 12 best-selling products, with optional search by name. */
     /**
      * @return list<array<string, mixed>>
      */

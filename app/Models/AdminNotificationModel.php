@@ -6,13 +6,14 @@ use App\Core\Model;
 use Exception;
 
 /**
- * AdminNotificationModel — يغطي جدول admin_notifications (إشعارات الأدمنية)
- * الإدراج لا يتم هنا — فقط عبر AdminModel::sendNotification() الموجودة.
+ * AdminNotificationModel — covers the admin_notifications table.
+ * Insertion does not happen here — only through the existing
+ * AdminModel::sendNotification().
  */
 class AdminNotificationModel extends Model
 {
     /**
-     * جلب قائمة الإشعارات لأدمن معيّن، الأحدث أولًا
+     * Fetch one admin's notification list, newest first.
      *
      * @return list<array<string, mixed>>
      */
@@ -36,7 +37,7 @@ class AdminNotificationModel extends Model
     }
 
     /**
-     * عدد الإشعارات غير المقروءة لأدمن معيّن
+     * The unread notification count for one admin.
      */
     public static function countUnread(int $adminId): int
     {
@@ -53,7 +54,7 @@ class AdminNotificationModel extends Model
     }
 
     /**
-     * تحديد إشعار واحد كمقروء — مشروط بـ admin_id (منع IDOR)
+     * Mark a single notification read — conditioned on admin_id, to prevent IDOR.
      */
     public static function markRead(int $notifId, int $adminId): bool
     {
@@ -71,7 +72,7 @@ class AdminNotificationModel extends Model
     }
 
     /**
-     * تحديد كل إشعارات الأدمن كمقروءة
+     * Mark all of an admin's notifications read.
      */
     public static function markAllRead(int $adminId): bool
     {
@@ -88,7 +89,7 @@ class AdminNotificationModel extends Model
     }
 
     /**
-     * حذف كل إشعارات الأدمن
+     * Delete all of an admin's notifications.
      */
     public static function deleteAll(int $adminId): bool
     {
@@ -103,7 +104,7 @@ class AdminNotificationModel extends Model
     }
 
     /**
-     * حذف إشعار واحد للأدمن — مشروط بـ admin_id (منع IDOR)
+     * Delete a single notification for an admin — conditioned on admin_id, to prevent IDOR.
      */
     public static function dismiss(int $notifId, int $adminId): bool
     {

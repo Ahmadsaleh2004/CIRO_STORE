@@ -6,13 +6,13 @@ use App\Core\Model;
 use Exception;
 
 /**
- * UserModel — يغطي جدول users
- * عمليات: تسجيل الدخول، إنشاء حساب، البحث بالإيميل، تحديث البيانات
+ * UserModel — covers the users table.
+ * Operations: sign-in, account creation, lookup by email, and profile updates.
  */
 class UserModel extends Model
 {
     /**
-     * جلب مستخدم بالإيميل
+     * Fetch a user by email.
      *
      * @return array<string, mixed>|null
      */
@@ -31,7 +31,7 @@ class UserModel extends Model
     }
 
     /**
-     * جلب مستخدم بالـ ID
+     * Fetch a user by id.
      *
      * @return array<string, mixed>|null
      */
@@ -50,7 +50,7 @@ class UserModel extends Model
     }
 
     /**
-     * جلب مستخدم بـ google_id (إذا وُجد العمود)
+     * Fetch a user by google_id (if the column exists).
      *
      * @return array<string, mixed>|null
      */
@@ -63,13 +63,13 @@ class UserModel extends Model
             $row = $stmt->fetch();
             return $row ?: null;
         } catch (Exception $e) {
-            // العمود قد لا يكون موجوداً بعد
+            // The column may not exist yet
             return null;
         }
     }
 
     /**
-     * التحقق من تكرار رقم الهاتف
+     * Check whether a phone number is already taken.
      */
     public static function phoneExists(string $phone): bool
     {
@@ -84,7 +84,7 @@ class UserModel extends Model
     }
 
     /**
-     * إنشاء مستخدم جديد
+     * Create a new user.
      *
      * @param array<string, mixed> $data
      */
@@ -117,7 +117,7 @@ class UserModel extends Model
     }
 
     /**
-     * إنشاء مستخدم عبر Google OAuth (بدون كلمة مرور محددة)
+     * Create a user through Google OAuth (with no password set).
      */
     public static function createFromGoogle(string $googleId, string $email, string $name): ?int
     {
@@ -141,7 +141,7 @@ class UserModel extends Model
     }
 
     /**
-     * تحديث google_id لمستخدم موجود
+     * Update the google_id of an existing user.
      */
     public static function updateGoogleId(int $userId, string $googleId): bool
     {
@@ -156,7 +156,7 @@ class UserModel extends Model
     }
 
     /**
-     * تحديث last_activity
+     * Update last_activity.
      */
     public static function updateActivity(int $userId): void
     {
@@ -169,7 +169,7 @@ class UserModel extends Model
     }
 
     /**
-     * تحديث بيانات الملف الشخصي
+     * Update the profile details.
      *
      * @param array<string, mixed> $data
      */
@@ -196,7 +196,7 @@ class UserModel extends Model
     }
 
     /**
-     * فحص عدد المخالفات (Strikes) — للتحقق من الحظر
+     * Check the strike count — used to determine whether the user is blocked.
      */
     public static function getStrikesCount(int $userId): int
     {
@@ -211,7 +211,8 @@ class UserModel extends Model
     }
 
     /**
-     * العدد الكلي للمستخدمين في النظام — غير مفلتر إطلاقًا (لعداد عنوان صفحة Manage Users)
+     * The total number of users in the system — entirely unfiltered (for the counter in
+     * the Manage Users page title).
      */
     public static function countAll(): int
     {
@@ -226,7 +227,7 @@ class UserModel extends Model
     }
 
     /**
-     * سجّل محاولة تسجيل الدخول
+     * Record a sign-in attempt.
      */
     public static function logLoginAttempt(string $email, bool $success): void
     {
@@ -244,7 +245,7 @@ class UserModel extends Model
     }
 
     /**
-     * فحص Rate Limiting — هل تجاوز المستخدم حد محاولات الدخول؟
+     * Rate-limit check — has this user exceeded the sign-in attempt allowance?
      */
     public static function isRateLimited(string $email, int $maxAttempts = 5, int $windowMinutes = 15): bool
     {
@@ -263,8 +264,9 @@ class UserModel extends Model
     }
 
     /**
-     * عدّاد المحاولات الفاشلة خلال النافذة الزمنية (رقم وليس boolean)
-     * نفس منطق isRateLimited() تمامًا لكنه يرجع COUNT بدل المقارنة بالحد الأقصى
+     * The count of failed attempts within the time window (a number, not a boolean).
+     * Exactly the same logic as isRateLimited(), but returning the COUNT rather than
+     * comparing it against the maximum.
      */
     public static function getFailedAttemptsCount(string $email, int $windowMinutes = 15): int
     {
@@ -283,18 +285,18 @@ class UserModel extends Model
     }
 
     // ════════════════════════════════════════════════════════
-    // إدارة اليوزرز — لوحة الأدمن (Users 02/03/04)
+    // User management — the admin panel (Users 02/03/04)
     // ════════════════════════════════════════════════════════
 
     /**
-     * قائمة يوزرز مع بحث بالاسم/الإيميل + فلترة بالحالة + Pagination.
+     * A user list with search by name or email, status filtering and pagination.
      * $status: 'all' | 'active' | 'not_active' | 'blocked'
-     *   - blocked     = عدد strikes >= 3
-     *   - not_active  = آخر نشاط أقدم من 90 يوم و strikes < 3
-     *   - active      = الباقي
-     * يرجع: ['rows' => array, 'total' => int]
+     *   - blocked     = a strike count of 3 or more
+     *   - not_active  = last activity older than 90 days, with fewer than 3 strikes
+     *   - active      = everyone else
+     * Returns: ['rows' => array, 'total' => int]
      *
-     * @return array<string, mixed> الصفوف مع بيانات الترقيم
+     * @return array<string, mixed> The rows together with the pagination data
      */
     public static function getAllForAdmin(
         string $search,
@@ -318,7 +320,7 @@ class UserModel extends Model
                 $params[] = "%{$search}%";
             }
 
-            // فلترة الحالة — blocked أولًا لأنه يعتمد فقط على strikes، مو last_activity
+            // Status filtering — blocked first, because it depends on strikes alone rather than last_activity
             $statusWhere = '';
             switch ($status) {
                 case 'blocked':
@@ -365,13 +367,13 @@ class UserModel extends Model
     }
 
     /**
-     * معرفات (IDs) اليوزرز المطابقين لأي من الحالات المختارة — لنظام الـ Broadcast.
-     * $statuses قيم من: 'active' | 'not_active' | 'blocked'
-     *   - blocked     = عدد strikes >= 3
-     *   - not_active  = آخر نشاط أقدم من 90 يوم و strikes < 3
-     *   - active      = الباقي
-     * نفس منطق التصنيف بـ getAllForAdmin() حرفيًا — لضمان تطابق الجمهور
-     * المستلم مع ما يعرضه جدول Manage Users تمامًا.
+     * The ids of the users matching any of the chosen statuses — for the broadcast
+     * system. $statuses takes values from: 'active' | 'not_active' | 'blocked'
+     *   - blocked     = a strike count of 3 or more
+     *   - not_active  = last activity older than 90 days, with fewer than 3 strikes
+     *   - active      = everyone else
+     * The classification logic is identical to getAllForAdmin(), word for word — so the
+     * receiving audience matches exactly what the Manage Users table shows.
      * @return int[]
      * @param list<string> $statuses
      */
@@ -414,7 +416,7 @@ class UserModel extends Model
         }
     }
 
-    /** كل أعمدة users + strikes_count ليوزر واحد (لصفحة details) */
+    /** Every users column plus strikes_count for one user (for the details page). */
     /**
      * @return array<string, mixed>|null
      */
@@ -435,7 +437,7 @@ class UserModel extends Model
         }
     }
 
-    /** كل صفوف user_strikes ليوزر معيّن، الأحدث أولًا */
+    /** Every user_strikes row for a given user, newest first. */
     /**
      * @return list<array<string, mixed>>
      */
@@ -454,9 +456,10 @@ class UserModel extends Model
     }
 
     /**
-     * إضافة إنذار (Strike) لمستخدم.
-     * عند الوصول لـ 3 إنذارات بالضبط: حظر تلقائي + إلغاء الطلبات المعلّقة
-     * (not_taken/taken) وإرجاع مخزونها عبر OrderModel::cancelAllPendingForUser.
+     * Add a strike to a user.
+     * On reaching exactly three strikes: an automatic block, plus cancelling their
+     * pending orders (not_taken/taken) and restoring that stock, through
+     * OrderModel::cancelAllPendingForUser.
      */
     public static function addStrike(int $userId, int $adminId, string $reason): bool
     {
@@ -478,14 +481,14 @@ class UserModel extends Model
         }
     }
 
-    /** حذف إنذار — يشترط أن الـ strike يخص $userId نفسه (منع IDOR) */
+    /** Remove a strike — it requires the strike to belong to $userId itself, to prevent IDOR. */
     public static function removeStrike(int $strikeId, int $userId): bool
     {
         try {
             $stmt = self::db()->prepare(
                 "DELETE FROM user_strikes WHERE id = ? AND user_id = ?"
             );
-            // execute() يرجع true حتى لو ما انحذف صف — لازم نتحقق من rowCount
+            // execute() returns true even when no row was deleted — rowCount must be checked
             return $stmt->execute([$strikeId, $userId]) && $stmt->rowCount() > 0;
         } catch (Exception $e) {
             error_log("UserModel::removeStrike Error: " . $e->getMessage());
@@ -494,10 +497,12 @@ class UserModel extends Model
     }
 
     /**
-     * حذف مستخدم نهائيًا + كل طلباته (بكل حالاتها) — عملية واحدة داخل transaction.
-     * لا نعتمد على أي ON DELETE CASCADE محتمل بقاعدة البيانات — الحذف صريح خطوة بخطوة
-     * (نفس نمط adminDeleteOrder فـ OrderModel) عشان نضمن الترتيب الصحيح ونقدر نرجع
-     * تفاصيل دقيقة عن اللي انحذف فعليًا للمستخدم في سجل التدقيق.
+     * Permanently delete a user together with all of their orders, whatever their
+     * status — one operation inside a transaction.
+     * It relies on no possible ON DELETE CASCADE in the database — the deletion is
+     * explicit, step by step (the same pattern as adminDeleteOrder in OrderModel), so the
+     * correct order is guaranteed and precise details of what was actually deleted can be
+     * returned for the audit record.
      *
      * @return array{
      *   success: bool,
@@ -557,8 +562,8 @@ class UserModel extends Model
     }
 
     /**
-     * إرسال إشعار فردي ليوزر — غلاف بسيط فوق NotificationModel::insert()
-     * (الموجودة والمختبرة) للحفاظ على التماثل مع AdminModel::sendNotification().
+     * Send a single notification to a user — a thin wrapper over the existing, tested
+     * NotificationModel::insert(), kept for symmetry with AdminModel::sendNotification().
      */
     public static function sendNotification(
         int $userId,
@@ -571,7 +576,7 @@ class UserModel extends Model
         \App\Models\NotificationModel::insert($userId, $title, $message, $senderAdminId, $relatedType, $relatedId);
     }
 
-    /** كل الأعمدة المطلوبة لتصدير CSV + strikes_count كعمود محسوب */
+    /** Every column needed for the CSV export, plus strikes_count as a computed column. */
     /**
      * @return list<array<string, mixed>>
      */
@@ -593,8 +598,8 @@ class UserModel extends Model
     }
 
     /**
-     * إنشاء رمز إعادة تعيين كلمة المرور (صالح 60 دقيقة).
-     * يرجع التوكن الخام (يُرسل للإيميل) — يُخزَّن hash منه فقط في الجدول.
+     * Create a password reset token (valid for 60 minutes).
+     * It returns the raw token, which is emailed — only a hash of it is stored in the table.
      */
     public static function createPasswordReset(string $email, string $userType = 'user'): ?string
     {
@@ -603,8 +608,8 @@ class UserModel extends Model
             $token = bin2hex(random_bytes(32));
             $tokenHash = hash('sha256', $token);
 
-            // الانتهاء يُحسب داخل MySQL (DATE_ADD) ليتطابق مع NOW() المستخدمة في التحقق —
-            // مهم لأن منطقة PHP الزمنية قد تختلف عن منطقة MySQL
+            // The expiry is computed inside MySQL (DATE_ADD) so it lines up with the NOW()
+            // used when verifying — this matters because PHP's timezone may differ from MySQL's
             $stmt = $db->prepare("INSERT INTO password_resets (email, user_type, token_hash, expires_at) VALUES (?, ?, ?, DATE_ADD(NOW(), INTERVAL 60 MINUTE))");
             $stmt->execute([$email, $userType, $tokenHash]);
 
@@ -616,7 +621,7 @@ class UserModel extends Model
     }
 
     /**
-     * التحقق من صحة رمز إعادة تعيين كلمة المرور (غير مستخدم وغير منتهٍ).
+     * Verify a password reset token (unused and unexpired).
      */
     public static function validatePasswordResetToken(string $email, string $token, string $userType = 'user'): bool
     {
@@ -633,7 +638,7 @@ class UserModel extends Model
     }
 
     /**
-     * استهلاك الرمز بعد استخدامه (يمنع إعادة استخدام نفس الرابط)
+     * Consume the token once it has been used, which prevents reusing the same link.
      */
     public static function consumePasswordResetToken(string $email, string $token, string $userType = 'user'): void
     {
@@ -644,7 +649,7 @@ class UserModel extends Model
     }
 
     /**
-     * تحديث كلمة مرور المستخدم (تستقبل الـ hash الجاهز)
+     * Update the user's password (it receives the already-computed hash).
      */
     public static function updatePassword(int $userId, string $newPasswordHash): bool
     {
@@ -659,8 +664,8 @@ class UserModel extends Model
     }
 
     /**
-     * إنشاء رمز تفعيل الإيميل للمستخدم (صالح 24 ساعة).
-     * يرجع التوكن الخام (يُرسل للإيميل) — يُخزَّن hash منه فقط في الجدول.
+     * Create an email verification token for the user (valid for 24 hours).
+     * It returns the raw token, which is emailed — only a hash of it is stored in the table.
      */
     public static function createEmailVerification(int $userId): ?string
     {
@@ -669,8 +674,8 @@ class UserModel extends Model
             $token = bin2hex(random_bytes(32));
             $tokenHash = hash('sha256', $token);
 
-            // الانتهاء يُحسب داخل MySQL (DATE_ADD) ليتطابق مع NOW() المستخدمة في التحقق —
-            // مهم لأن منطقة PHP الزمنية قد تختلف عن منطقة MySQL
+            // The expiry is computed inside MySQL (DATE_ADD) so it lines up with the NOW()
+            // used when verifying — this matters because PHP's timezone may differ from MySQL's
             $stmt = $db->prepare("INSERT INTO email_verifications (user_id, token_hash, expires_at) VALUES (?, ?, DATE_ADD(NOW(), INTERVAL 24 HOUR))");
             $stmt->execute([$userId, $tokenHash]);
             return $token;
@@ -681,7 +686,7 @@ class UserModel extends Model
     }
 
     /**
-     * تفعيل إيميل المستخدم عبر الرابط المرسل — يعيد true عند النجاح
+     * Verify the user's email through the emailed link — returns true on success.
      */
     public static function verifyEmailToken(string $token): bool
     {
@@ -709,7 +714,7 @@ class UserModel extends Model
     }
 
     /**
-     * هل إيميل المستخدم مفعّل؟ (يستخدم نفس الاتصال المتوفر للبحث)
+     * Is the user's email verified? (It uses the same connection available for the lookup.)
      */
     public static function isEmailVerified(int $userId): bool
     {
@@ -718,10 +723,10 @@ class UserModel extends Model
     }
 
     /**
-     * الاسم الكامل لمستخدم بمعرّفه، أو null إن لم يوجد.
+     * A user's full name by their id, or null if they do not exist.
      *
-     * نُقل من WishlistController حيث كان استعلاماً مكتوباً مباشرة داخل
-     * دالة إشعار الأدمنية بطلب "نبّهني عند التوفّر".
+     * Moved out of WishlistController, where it was a query written inline inside the
+     * function that notifies the admins of a "notify me when available" request.
      */
     public static function getFullNameById(int $userId): ?string
     {

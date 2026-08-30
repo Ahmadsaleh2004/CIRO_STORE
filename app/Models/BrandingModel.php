@@ -9,10 +9,11 @@ use Exception;
 class BrandingModel extends Model
 {
     /**
-     * كل الشرائح مرتبة sort_order ASC، وكل شريحة فيها items مرتبة sort_order ASC
-     * مع JOIN مع products لاسم/صورة/وصف المنتج الحالي (لتعبئة فورم التعديل).
+     * Every slide ordered by sort_order ASC, each carrying its items ordered by
+     * sort_order ASC, joined against products for the current product's name, image and
+     * description (to populate the edit form).
      *
-     * @return list<array<string, mixed>> مصفوفة شرائح كل واحدة: {id, sort_order, updated_by_admin_id, items[]}
+     * @return list<array<string, mixed>> An array of slides, each {id, sort_order, updated_by_admin_id, items[]}
      */
     public static function getFullSliderData(): array
     {
@@ -44,14 +45,14 @@ class BrandingModel extends Model
 
             $itemsBySlider = [];
             foreach ($items as $it) {
-                // روابط صور جاهزة للاستعمال — نفس اصطلاح searchProducts()
-                // في هذا الموديل: الحقل 'image' فيها ناتج fixImagePath.
+                // Ready-to-use image URLs — the same convention as searchProducts() in this
+                // model: its 'image' field is the output of fixImagePath.
                 //
-                // كان محرّر السلايدر يبني المسار في JS بـ
-                // URLROOT + '/' + product_image_path، و product_image_path
-                // اسم ملف عارٍ مثل "airpods.jpg" — فيخرج /airpods.jpg بدل
-                // /images/airpods.jpg وتُكسر **كل** صور المنتجات في المحرّر.
-                // fixImagePath هي التي تعرف قاعدة البادئة، وهي في PHP.
+                // The slider editor used to build the path in JavaScript as
+                // URLROOT + '/' + product_image_path, and product_image_path is a bare file
+                // name such as "airpods.jpg" — producing /airpods.jpg instead of
+                // /images/airpods.jpg and breaking **every** product image in the editor.
+                // fixImagePath is what knows the prefix rule, and it lives in PHP.
                 $it['product_image_url'] = $it['product_image_path']
                     ? fixImagePath($it['product_image_path'])
                     : null;
@@ -75,11 +76,11 @@ class BrandingModel extends Model
     }
 
     /**
-     * للعرض بالصفحة الرئيسية فقط — يرجع الحقول النهائية (صورة/رابط/وصف)
-     * محسوبة حسب active_mode داخل الـ SQL نفسه. يتجاهل العناصر غير المكتملة
-     * (Product بلا منتج فعلي، أو Manual بلا صورة).
+     * For the home page display only — it returns the final fields (image, link,
+     * description) computed from active_mode inside the SQL itself. Incomplete items are
+     * skipped (a Product item with no actual product, or a Manual one with no image).
      *
-     * @return list<array<string, mixed>> مصفوفة شرائح كل واحدة:
+     * @return list<array<string, mixed>> An array of slides, each:
      *         {id, items: [{image_path, link_url, title, description}]}
      */
     public static function getActiveSlidersForHome(): array
@@ -122,7 +123,7 @@ class BrandingModel extends Model
 
             $bySlider = [];
             foreach ($items as $it) {
-                // تجاهل أي عنصر Product بلا منتج فعلي، أو Manual بلا صورة — بيانات فاسدة/غير مكتملة
+                // Skip any Product item with no actual product, or Manual one with no image — corrupt or incomplete data
                 if (empty($it['image_path'])) {
                     continue;
                 }
@@ -149,10 +150,11 @@ class BrandingModel extends Model
     }
 
     /**
-     * بحث حي بالـ Popup اختيار منتج — يرجع فقط أعمدة العرض والتعبئة التلقائية.
+     * Live search in the product-picker popup — it returns only the columns needed for
+     * display and auto-fill.
      *
-     * @param string $q     كلمة البحث (فارغة = كل المنتجات)
-     * @param int    $limit عدد النتائج الأقصى
+     * @param string $q     The search term (empty = every product)
+     * @param int    $limit The maximum number of results
      * @return list<array<string, mixed>> [{id, name, image, description, link}]
      */
     public static function searchProducts(string $q, int $limit = 15): array
@@ -190,13 +192,13 @@ class BrandingModel extends Model
     }
 
     /**
-     * الحفظ الكامل (Full Replace): يحذف كل الشرائح القديمة (CASCADE على
-     * home_slider_items) ثم يُدرج كل شيء من جديد بترتيب الفورم — Transaction واحدة.
+     * A full replace: it deletes every old slide (cascading to home_slider_items) and
+     * then inserts everything afresh in the form's order — one transaction.
      *
-     * @param list<array<string, mixed>> $slides  مصفوفة مُنظّفة وجاهزة: [{items: [{active_mode, product_id,
+     * @param list<array<string, mixed>> $slides  A cleaned, ready array: [{items: [{active_mode, product_id,
      *                        product_link_url, product_description, manual_image_path,
      *                        manual_link_url, manual_description}]}]
-     * @param int     $adminId أدمن الحفظ الحالي (updated_by_admin_id + audit)
+     * @param int     $adminId The admin performing the save (updated_by_admin_id + audit)
      */
     public static function saveAll(array $slides, int $adminId): bool
     {
@@ -204,10 +206,10 @@ class BrandingModel extends Model
         try {
             $db->beginTransaction();
 
-            // 1) احذف كل شيء قديم (CASCADE يحذف home_slider_items تلقائياً)
+            // 1) Delete everything old (the cascade removes home_slider_items automatically)
             $db->exec("DELETE FROM home_sliders");
 
-            // 2) أدرج كل شيء من جديد بترتيب الفورم الحالي
+            // 2) Insert everything afresh, in the current form's order
             $sliderIns = $db->prepare("
                 INSERT INTO home_sliders (sort_order, updated_by_admin_id)
                 VALUES (?, ?)
@@ -251,10 +253,11 @@ class BrandingModel extends Model
     }
 
     /**
-     * كل مسارات manual_image_path الحالية بقاعدة البيانات (قبل الحذف) —
-     * تُقارن بالمسارات الجديدة لحذف الصور اليتيمة من القرص بعد نجاح الحفظ.
+     * Every current manual_image_path in the database (before the delete) — compared
+     * against the new paths so orphaned images can be removed from disk once the save
+     * succeeds.
      *
-     * @return string[] مسارات نسبية مثل images/slider_xxx.jpg
+     * @return string[] Relative paths such as images/slider_xxx.jpg
      */
     public static function collectAllImagePaths(): array
     {
@@ -269,18 +272,19 @@ class BrandingModel extends Model
     }
 
     /**
-     * رفع صورة سلايدر واحدة — نسخة مطابقة لمنطق AdminProductModel::uploadVariantImage()
-     * لكن بادئة اسم الملف `slider_` بدل `product_` لتمييز صور السلايدر بمجلد الصور.
+     * Upload a single slider image — identical in logic to
+     * AdminProductModel::uploadVariantImage(), but with the file-name prefix `slider_`
+     * rather than `product_`, so slider images are distinguishable in the images folder.
      *
-     * @param array<string, mixed> $fileEntry مصفوفة ملف واحدة من $_FILES
-     * @param string $uploadDir المجلد المطلق (مع trailing slash)
-     * @return string|null      المسار النسبي (images/slider_xxx.jpg) أو null عند فشل التحقق/الرفع
+     * @param array<string, mixed> $fileEntry A single file entry from $_FILES
+     * @param string $uploadDir The absolute directory (with a trailing slash)
+     * @return string|null      The relative path (images/slider_xxx.jpg), or null if validation or the upload failed
      */
     public static function uploadSliderImage(array $fileEntry, string $uploadDir): ?string
     {
-        // كان هنا نسخة مطابقة لمنطق AdminProductModel — والتعليق فوقها
-        // كان يقول ذلك صراحةً. صارتا واحدة في App\Core\ImageUpload،
-        // والفرق الوحيد (بادئة الاسم) وسيطاً.
+        // There used to be an identical copy of AdminProductModel's logic here — and the
+        // comment above it said so outright. The two are now one, in App\Core\ImageUpload,
+        // with the single difference (the name prefix) as a parameter.
         return \App\Core\ImageUpload::store($fileEntry, $uploadDir, 'slider_');
     }
 }

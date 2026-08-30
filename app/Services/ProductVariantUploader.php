@@ -5,35 +5,35 @@ namespace App\Services;
 use App\Models\AdminProductModel;
 
 /**
- * ProductVariantUploader — يحوّل مدخلات فورم المنتج الخام
- * (`$_POST['variants']` + `$_FILES['variants']`) إلى مصفوفة variants
- * جاهزة للحفظ، ويرفع صور كل variant في الطريق.
+ * ProductVariantUploader — turns the raw product form input
+ * (`$_POST['variants']` + `$_FILES['variants']`) into a variants array ready to be
+ * saved, uploading each variant's image along the way.
  *
- * لماذا خدمة مستقلة؟
- * كان هذا المنطق ثلاث دوال private داخل AdminProductsController، وهو
- * السبب الأكبر في طول storeAdd و storeEdit. لا علاقة له بدورة الطلب
- * ولا بالصلاحيات ولا بالاستجابة — هو تحويل مدخلات ورفع ملفات، فمكانه
- * خارج الكنترولر.
+ * Why a service of its own?
+ * This logic used to be three private methods inside AdminProductsController, and it
+ * was the single biggest reason storeAdd and storeEdit were as long as they were. It
+ * has nothing to do with the request cycle, the permissions, or the response — it is
+ * input transformation and file uploading, so it belongs outside the controller.
  *
- * ملاحظة على التصميم: الكلاس لا يقرأ من $_POST ولا $_FILES بنفسه —
- * كل ما يحتاجه يصله وسيطاً. النسخة القديمة كانت تقرأ
- * $_POST['default_variant'] من داخلها، وهي تبعية خفية تجعل اختبارها
- * أو إعادة استخدامها من سياق آخر مستحيلاً.
+ * A note on the design: the class reads from neither $_POST nor $_FILES itself —
+ * everything it needs arrives as a parameter. The old version read
+ * $_POST['default_variant'] from inside itself, a hidden dependency that made testing
+ * it, or reusing it from another context, impossible.
  *
- * كل الدوال static اتساقاً مع بقية طبقات المشروع.
+ * Every method is static, consistent with the rest of the project's layers.
  */
 class ProductVariantUploader
 {
     /**
-     * يبني مصفوفة الـvariants الجاهزة للحفظ.
+     * Builds the variants array ready to be saved.
      *
-     * يتجاهل أي صف بلا اسم لون أو بسعر ≤ 0 — هذه صفوف فارغة يتركها
-     * الفورم عند إضافة حقول ثم عدم ملئها.
+     * It skips any row with no colour name or a price ≤ 0 — those are the empty rows the
+     * form leaves behind when fields are added and then not filled in.
      *
      * @param  list<array<string, mixed>> $postVariants  $_POST['variants']
      * @param  array<string, mixed> $filesVariants $_FILES['variants']
-     * @param  string $uploadDir     مجلد الوجهة على القرص
-     * @param  int    $defaultIndex  ترتيب الـvariant الافتراضي كما أرسله الفورم
+     * @param  string $uploadDir     The destination directory on disk
+     * @param  int    $defaultIndex  The default variant's position, as the form submitted it
      * @return array<int,array<string,mixed>>
      */
     public static function parse(
@@ -52,14 +52,14 @@ class ProductVariantUploader
                 continue;
             }
 
-            // رفع الصورة الجديدة لهذا الـ variant (إن وجدت)
+            // Upload this variant's new image, if there is one
             $imagePath = null;
             $fileEntry = self::extractFileEntry($filesVariants, (int)$i);
             if ($fileEntry) {
                 $imagePath = AdminProductModel::uploadVariantImage($fileEntry, $uploadDir);
             }
 
-            // الاحتفاظ بالصورة القديمة إذا لم تُرفع صورة جديدة
+            // Keep the old image when no new one was uploaded
             if ($imagePath === null && !empty($v['existing_image'])) {
                 $imagePath = $v['existing_image'];
             }
@@ -83,12 +83,12 @@ class ProductVariantUploader
     }
 
     /**
-     * هل أُرسلت صورة واحدة على الأقل ضمن الـvariants؟
+     * Was at least one image submitted among the variants?
      *
-     * $_FILES لمدخل مصفوفي يأتي بشكلين حسب عمق التسمية في الفورم، لذا
-     * الفحص يتعامل مع القيمة كنص أو كمصفوفة متداخلة.
+     * $_FILES for an array input arrives in two shapes depending on the naming depth in
+     * the form, so the check handles the value as either a string or a nested array.
      *
-     * @param array<string, mixed> $filesVariants بنية $_FILES["variants"] المتشعّبة
+     * @param array<string, mixed> $filesVariants The nested $_FILES["variants"] structure
      */
     public static function hasAnyImage(array $filesVariants): bool
     {
@@ -114,8 +114,8 @@ class ProductVariantUploader
     }
 
     /**
-     * يحذف من القرص الصور التي رُفعت للتوّ — تُستدعى عند فشل الحفظ كي
-     * لا تتراكم ملفات يتيمة لا يشير إليها أي صف في قاعدة البيانات.
+     * Deletes the just-uploaded images from disk — called when a save fails, so orphaned
+     * files that no database row points at do not accumulate.
      *
      * @param list<array<string, mixed>> $parsedVariants
      */
@@ -125,8 +125,8 @@ class ProductVariantUploader
             if (empty($v['image_path'])) {
                 continue;
             }
-            // basename تجرّد أي مسار، فالنتيجة محصورة في $uploadDir
-            // بالبناء لا بالثقة في مصدر القيمة.
+            // basename strips any path, so the result is confined to $uploadDir by
+            // construction rather than by trusting where the value came from.
             $disk = rtrim($uploadDir, '/\\') . DIRECTORY_SEPARATOR . basename($v['image_path']);
             if (file_exists($disk)) {
                 // nosemgrep: php.lang.security.unlink-use.unlink-use,php.lang.security.injection.tainted-filename.tainted-filename
@@ -136,24 +136,24 @@ class ProductVariantUploader
     }
 
     /**
-     * يستخرج ملفاً واحداً من بنية $_FILES المصفوفية بشكل يفهمه
+     * Extracts a single file from the array-shaped $_FILES structure in the form expected by
      * AdminProductModel::uploadVariantImage.
      *
-     * ⚠️ بنية $_FILES هنا متداخلة، لا مسطّحة. اسم الحقل في الفورم هو
-     * variants[i][image] (راجع js/admin/products.js)، فيقلبها PHP إلى:
+     * ⚠️ The $_FILES structure here is nested, not flat. The form field is named
+     * variants[i][image] (see js/admin/products.js), which PHP inverts into:
      *
      *     $_FILES['variants']['tmp_name'][0]['image'] = '/tmp/phpXXXX'
      *
-     * أي أن tmp_name[$idx] مصفوفة مفتاحها 'image' وليس نصاً. النسخة
-     * السابقة من هذه الدالة كانت تفترضها نصاً، فتقارن
-     * $error !== UPLOAD_ERR_OK بينما $error مصفوفة — والمقارنة صادقة
-     * دائماً، فتُرجع null دائماً. النتيجة: صور الـvariants لم تكن تُرفع
-     * إطلاقاً من فورمي الإضافة والتعديل.
+     * meaning tmp_name[$idx] is an array keyed by 'image' rather than a string. The
+     * previous version of this method assumed it was a string and compared
+     * $error !== UPLOAD_ERR_OK while $error was an array — a comparison that is always
+     * true, so it always returned null. The result: variant images were never uploaded at
+     * all, from either the add or the edit form.
      *
-     * نتعامل هنا مع الشكلين معاً: المتداخل (الواقع الحالي) والمسطّح
-     * (لو تغيّر اسم الحقل مستقبلاً إلى variants_image[]).
+     * Both shapes are handled here: the nested one (today's reality) and the flat one (in
+     * case the field name ever changes to variants_image[]).
      *
-     * @param array<string, mixed> $filesVariants بنية $_FILES["variants"] المتشعّبة
+     * @param array<string, mixed> $filesVariants The nested $_FILES["variants"] structure
      * @return array<string, mixed>|null
      */
     private static function extractFileEntry(array $filesVariants, int $idx): ?array
@@ -161,7 +161,7 @@ class ProductVariantUploader
         $pick = static function (string $key, mixed $default) use ($filesVariants, $idx): mixed {
             $slot = $filesVariants[$key][$idx] ?? null;
             if (is_array($slot)) {
-                // الشكل المتداخل: خُذ 'image' إن وُجد، وإلا أول قيمة
+                // The nested shape: take 'image' if present, otherwise the first value
                 return $slot['image'] ?? (reset($slot) ?: $default);
             }
             return $slot ?? $default;

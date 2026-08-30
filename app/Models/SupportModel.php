@@ -6,13 +6,14 @@ use App\Core\Model;
 use Exception;
 
 /**
- * SupportModel — يغطي جدول contact_messages من جهة لوحة تحكم الأدمن فقط
- * (ContactModel المستخدم بجهة المتجر العام يبقى مسؤول فقط عن ::save() لإدخال رسالة جديدة)
+ * SupportModel — covers the contact_messages table from the admin panel's side only.
+ * (ContactModel, used on the public store side, stays responsible for ::save() alone,
+ * inserting a new message.)
  */
 class SupportModel extends Model
 {
     /**
-     * إجمالي عدد الرسائل (مع فلترة بحث اختيارية) — تستخدم لحساب الـ Pagination
+     * The total message count (with an optional search filter) — used to compute pagination.
      */
     public static function countAll(string $search = ''): int
     {
@@ -36,7 +37,7 @@ class SupportModel extends Model
     }
 
     /**
-     * جلب صفحة من الرسائل مع اسم المستخدم (LEFT JOIN users) مرتبة تنازلياً بتاريخ الإرسال
+     * Fetch a page of messages with the user's name (LEFT JOIN users), newest first.
      *
      * @return array<string, mixed>
      */
@@ -70,7 +71,8 @@ class SupportModel extends Model
     }
 
     /**
-     * رسائل الدعم يلي بعتها يوزر معيّن (بالـ user_id أو بنفس إيميله لو ما كان مسجّل وقتها)
+     * The support messages a given user sent — by user_id, or by the same email if they
+     * were not registered at the time.
      *
      * @return list<array<string, mixed>>
      */
@@ -92,7 +94,7 @@ class SupportModel extends Model
     }
 
     /**
-     * تحديد كل الرسائل كمقروءة (تُستدعى عند فتح الصفحة — نفس سلوك القديم بالحرف)
+     * Mark every message read (called when the page opens — the old behaviour, to the letter).
      */
     public static function markAllNotified(): void
     {
@@ -104,7 +106,7 @@ class SupportModel extends Model
     }
 
     /**
-     * حذف رسالة واحدة. يرجع true/false
+     * Delete a single message. Returns true or false.
      */
     public static function delete(int $messageId): bool
     {
@@ -118,7 +120,7 @@ class SupportModel extends Model
     }
 
     /**
-     * التحقق من وجود مستخدم بمعرّف معيّن (قبل إرسال رد له)
+     * Check that a user with the given id exists, before sending them a reply.
      */
     public static function userExists(int $userId): bool
     {
@@ -132,10 +134,10 @@ class SupportModel extends Model
         }
     }
     /**
-     * نصّ رسالة دعم بمعرّفها، أو null إن لم توجد.
+     * The text of a support message by its id, or null if it does not exist.
      *
-     * نُقل من AdminSupportController حيث كان استعلاماً مكتوباً مباشرة
-     * لقراءة الرسالة قبل حذفها (كي يُسجَّل نصّها في سجل الأدمن).
+     * Moved out of AdminSupportController, where it was a query written inline to read
+     * the message before deleting it (so its text could be recorded in the admin log).
      */
     public static function getMessageText(int $messageId): ?string
     {

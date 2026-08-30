@@ -10,28 +10,30 @@ use App\Models\UserModel;
 use App\Models\AdminProductModel;
 
 /**
- * StockNotifier — كل إشعارات المخزون في مكان واحد.
+ * StockNotifier — every stock notification in one place.
  *
- * لماذا خدمة مستقلة؟
- * كان هذا المنطق ثلاث دوال private موزّعة على كنترولرين
- * (AdminProductsController و WishlistController)، وكلها تكرّر نفس النمط:
- * اجلب قائمة المستهدفين، ثم أرسل لكل واحد إشعاراً بنص مبني هنا. النصوص
- * والرتب المستهدفة قرارات منتَج، لا قرارات كنترولر — وتفرّقها كان يعني
- * أن تغيير صياغة إشعار واحد يتطلّب البحث في ملفين.
+ * Why a service of its own?
+ * This logic used to be three private methods spread across two controllers
+ * (AdminProductsController and WishlistController), all repeating the same pattern:
+ * fetch the list of targets, then send each of them a notification whose text is built
+ * right there. The wording and the target ranks are product decisions, not controller
+ * decisions — and scattering them meant changing one notification's wording required
+ * searching two files.
  *
- * كل الدوال static اتساقاً مع بقية طبقات المشروع، ولا شيء منها يرمي:
- * فشل إرسال إشعار يجب ألّا يُسقط عملية حفظ منتج نجحت بالفعل.
+ * Every method is static, consistent with the rest of the project's layers, and none
+ * of them throws: a notification failing to send must not bring down a product save
+ * that has already succeeded.
  */
 class StockNotifier
 {
-    /** صلاحية الأدمن المعنيّ بإشعارات المخزون. */
+    /** The permission identifying the admins concerned with stock notifications. */
     private const PERM = 'can_manage_products';
 
     /**
-     * يُبلّغ كل مستخدم طلب "نبّهني" أن المنتج عاد للتوفّر، ثم يمسح
-     * الطلبات كي لا يُبلَّغ مرتين عن نفس التوفّر.
+     * Tells every user who requested "notify me" that the product is back in stock, then
+     * clears the requests so nobody is told twice about the same restock.
      *
-     * @param int|null $actorAdminId الأدمن الذي سبّب التغيير (لسجل الإشعار)
+     * @param int|null $actorAdminId The admin who caused the change (for the notification record)
      */
     public static function productBackInStock(int $productId, string $productName, ?int $actorAdminId = null): void
     {
@@ -56,11 +58,11 @@ class StockNotifier
     }
 
     /**
-     * يُبلّغ الأدمنية أن منتجاً نفد بالكامل — لا يفعل شيئاً إن كان
-     * المخزون لا يزال أكبر من صفر.
+     * Tells the admins a product has run out entirely — it does nothing while the stock
+     * is still above zero.
      *
-     * يشمل الرتب الأربع بما فيها A: نفاد المخزون حدث تشغيلي يعني كل من
-     * يدير المنتجات.
+     * It covers all four ranks including A: a stock-out is an operational event that
+     * concerns everyone who manages products.
      */
     public static function productOutOfStock(int $productId, string $productName): void
     {
@@ -81,10 +83,10 @@ class StockNotifier
     }
 
     /**
-     * يُبلّغ الأدمنية أن مستخدماً طلب إشعاراً عند توفّر منتج.
+     * Tells the admins that a user has asked to be notified when a product is available.
      *
-     * الرتبة A مستثناة هنا عمداً — طلب زبون واحد ليس حدثاً يستدعي
-     * إزعاج الأدمن الأساسي، بخلاف نفاد المخزون.
+     * Rank A is excluded here deliberately — one customer's request is not an event
+     * warranting disturbing the root admin, unlike a stock-out.
      */
     public static function customerRequestedNotification(int $productId, int $requestingUserId): void
     {
@@ -105,8 +107,8 @@ class StockNotifier
     }
 
     /**
-     * يرسل إشعاراً واحداً لكل أدمن ضمن الرتب المعطاة ولديه صلاحية
-     * إدارة المنتجات. النمط المشترك بين الدالتين أعلاه.
+     * Sends one notification to each admin within the given ranks who holds the
+     * product-management permission. The pattern shared by the two methods above.
      *
      * @param string[] $ranks
      */

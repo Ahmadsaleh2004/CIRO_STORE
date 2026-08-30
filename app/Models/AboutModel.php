@@ -5,13 +5,13 @@ namespace App\Models;
 use App\Core\Model;
 
 /**
- * AboutModel — يوفّر بيانات صفحة "About Us"
- * البيانات الثابتة مُعرَّفة هنا (يمكن ربطها بـ website_settings لاحقاً)
+ * AboutModel — supplies the data for the "About Us" page.
+ * The static details are defined here (they can be tied to website_settings later).
  */
 class AboutModel extends Model
 {
     /**
-     * يُرجع معلومات المتجر الثابتة
+     * Returns the store's static details.
      *
      * @return array<string, mixed>
      */

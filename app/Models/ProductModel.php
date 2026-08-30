@@ -9,7 +9,7 @@ use Exception;
 class ProductModel extends Model
 {
     /**
-     * جلب كافة المنتجات المتاحة للعرض من قاعدة البيانات
+     * Fetch every product available for display from the database.
      *
      * @return list<array<string, mixed>>
      */
@@ -26,7 +26,7 @@ class ProductModel extends Model
     }
 
     /**
-     * عدد كل المنتجات المرئية (لأجل الـ Pagination)
+     * The count of all visible products (for pagination).
      */
     public static function countVisible(): int
     {
@@ -41,13 +41,12 @@ class ProductModel extends Model
     }
 
     /**
-     * جلب المنتجات المرئية صفحة صفحة مع أسماء الأقسام (categories)
+     * Fetch the visible products page by page, along with their category names.
      *
-     * ⚠️ تُرجع **الصفوف وحدها** لا بيانات ترقيم، خلافاً لأخواتها
-     * (UserModel::getAllForAdmin و OrderModel::getAdminOrdersList
-     * تُرجعان خريطة فيها rows وtotal). الاسم يوحي بغير ذلك — والتعليق
-     * هنا كُتب أوّل مرّة بالقياس عليهما، فكان كاذباً حتى كشفه تدقيقٌ
-     * وقت التشغيل.
+     * ⚠️ It returns **the rows alone**, not pagination data, unlike its siblings
+     * (UserModel::getAllForAdmin and OrderModel::getAdminOrdersList return a map with
+     * rows and total). The name suggests otherwise — and the comment here was first
+     * written by analogy with them, so it was false until a runtime audit caught it.
      *
      * @return list<array<string, mixed>>
      */
@@ -76,7 +75,7 @@ class ProductModel extends Model
     }
 
     /**
-     * جلب منتج واحد بواسطة الـ ID
+     * Fetch a single product by id.
      *
      * @return array<string, mixed>|null
      */
@@ -95,7 +94,7 @@ class ProductModel extends Model
     }
 
     /**
-     * جلب خيارات/أنواع المنتج (Variants)
+     * Fetch a product's variants.
      *
      * @return list<array<string, mixed>>
      */
@@ -113,7 +112,7 @@ class ProductModel extends Model
     }
 
     /**
-     * جلب كافة التقييمات الخاصة بمنتج معين مع أسماء المستخدمين
+     * Fetch every review for a given product, along with the reviewers' names.
      *
      * @return list<array<string, mixed>>
      */
@@ -137,7 +136,7 @@ class ProductModel extends Model
     }
 
     /**
-     * جلب تقييم مستخدم محدد لمنتج معين
+     * Fetch one user's review of a given product.
      *
      * @return array<string, mixed>|null
      */
@@ -156,7 +155,7 @@ class ProductModel extends Model
     }
 
     /**
-     * جلب المنتجات المشابهة (بناءً على التصنيف أو الشركة المصنعة)
+     * Fetch related products (by category, or by manufacturer).
      *
      * @return list<array<string, mixed>>
      */
@@ -165,7 +164,7 @@ class ProductModel extends Model
         try {
             $db = self::db();
 
-            // 1. البحث عن منتجات تشترك في نفس التصنيف
+            // 1. Look for products sharing the same category
             $stmt = $db->prepare("
                 SELECT DISTINCT p.* 
                 FROM products p
@@ -178,7 +177,7 @@ class ProductModel extends Model
             $stmt->execute([$productId, $productId]);
             $related = $stmt->fetchAll();
 
-            // 2. إذا لم نجد منتجات بنفس التصنيف، نبحث عن منتجات لنفس الشركة المصنعة
+            // 2. If none share a category, look for products from the same manufacturer
             if (empty($related) && !empty($manufacturer)) {
                 $stmt2 = $db->prepare("SELECT * FROM products WHERE manufacturer = ? AND id != ? LIMIT 4");
                 $stmt2->execute([$manufacturer, $productId]);
@@ -192,25 +191,26 @@ class ProductModel extends Model
         }
     }
     /**
-     * جلب بيانات المخزون/السعر الحية لمجموعة IDs — تُستخدم من صفحة الويش ليست
+     * Fetch live stock and price data for a set of ids — used by the wishlist page.
      *
      * @param list<int> $ids
-     * ⚠️ المفتاح **عدد صحيح** لا نصّ رغم `(string)` في البناء: PHP
-     * يُحوّل المفاتيح النصّية العددية إلى أعداد صحيحة تلقائياً، فالصبّ
-     * هناك بلا أثر. كُتب التعليق أوّل مرّة اتّباعاً للصبّ الظاهر، وكشف
-     * تدقيقُ وقت التشغيل أنه يصف نيّةً لا واقعاً.
+     * ⚠️ The key is an **integer**, not a string, despite the `(string)` in the
+     * construction: PHP converts numeric string keys to integers automatically, so that
+     * cast has no effect. The comment was first written by following the visible cast,
+     * and a runtime audit revealed it described an intention rather than a fact.
      *
-     * @return array<int, array{stock_quantity: int, price: float, discount_percentage: float, price_after_discount: float, is_visible: int}> مفهرسة بمعرّف المنتج
+     * @return array<int, array{stock_quantity: int, price: float, discount_percentage: float, price_after_discount: float, is_visible: int}> keyed by product id
      */
     public static function findStockByIds(array $ids): array
     {
         try {
             $db = self::db();
             $placeholders = implode(',', array_fill(0, count($ids), '?'));
-            // ⚠️ لا نقرأ products.stock_quantity مباشرة — هذا العمود لا يُحدَّث
-            // إطلاقاً من لوحة تحكم الأدمن الحالية (INSERT/UPDATE لا يشمله)، والمخزون
-            // الحقيقي بالكامل موجود بجدول product_variants. نجمعه هون بدلاً منه، مع
-            // COALESCE كـ fallback فقط لو المنتج بلا variants إطلاقاً (حالة نادرة).
+            // ⚠️ products.stock_quantity is not read directly — that column is never
+            // updated by the current admin panel (neither INSERT nor UPDATE touches it),
+            // and the real stock lives entirely in product_variants. It is summed here
+            // instead, with a COALESCE as a fallback only for a product with no variants
+            // at all (a rare case).
             $stmt = $db->prepare("
                 SELECT p.id,
                        COALESCE(SUM(pv.stock_quantity), p.stock_quantity, 0) AS stock_quantity,
@@ -225,16 +225,17 @@ class ProductModel extends Model
 
             $result = [];
             foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
-                // ⚠️ لا صبّ إلى نصّ. كان هنا `(string)$row['id']` وهو
-                // **بلا أثر**: PHP يُحوّل أي مفتاح نصّي عددي إلى عدد
-                // صحيح تلقائياً، فالمفتاح كان int دائماً رغم الصبّ.
+                // ⚠️ No cast to a string. There used to be `(string)$row['id']` here, and it
+                // was **inert**: PHP converts any numeric string key to an integer
+                // automatically, so the key was always an int despite the cast.
                 //
-                // وضرره أنه يُضلّل قارئين: البشر يظنّون المفاتيح نصّية،
-                // وPHPStan يستنتج ذلك أيضاً فيقبل تعليقاً كاذباً. كشفه
-                // تدقيقُ وقت التشغيل حين قارن الشكل المُعلَن بالفعلي.
+                // Its harm was misleading two readers: people believed the keys were
+                // strings, and PHPStan inferred the same and accepted a false annotation. A
+                // runtime audit caught it by comparing the declared shape against the actual
+                // one.
                 //
-                // والعميل يقرأها بـString(variant_id) على أي حال، وهو
-                // يعمل مع الحالتين — فالحذف لا يمسّ سلوكاً.
+                // The client reads them with String(variant_id) regardless, which works
+                // either way — so removing the cast changes no behaviour.
                 $result[(int)$row['id']] = [
                     'stock_quantity'       => (int)$row['stock_quantity'],
                     'price'                => (float)$row['price'],
@@ -251,7 +252,8 @@ class ProductModel extends Model
     }
 
     /**
-     * إضافة/تحديث تقييم مستخدم لمنتج (Upsert) — تُرجع مصفوفة ['ok' => bool, 'message' => string]
+     * Add or update a user's review of a product (an upsert) — it returns
+     * ['ok' => bool, 'message' => string].
      *
      * @return array{ok: bool, message: string}
      */
@@ -287,12 +289,11 @@ class ProductModel extends Model
     }
 
     /**
-     * اسم منتج بمعرّفه، أو null إن لم يوجد.
+     * A product's name by its id, or null if it does not exist.
      *
-     * كان هذا الاستعلام مكتوباً مرتين: هنا (عبر WishlistController) وفي
-     * AdminProductModel. اسم المنتج ليس مفهوماً خاصاً بلوحة التحكم،
-     * فمكانه الطبيعي موديل المتجر، و AdminProductModel::getNameById
-     * صارت تفوّض إليه.
+     * This query used to be written twice: here (through WishlistController) and in
+     * AdminProductModel. A product's name is not an admin-panel concept, so its natural
+     * home is the store model, and AdminProductModel::getNameById now delegates to it.
      */
     public static function getNameById(int $productId): ?string
     {
@@ -307,11 +308,11 @@ class ProductModel extends Model
         }
     }
     /**
-     * بيانات المخزون والسعر الحالية لمجموعة variants — لفحص السلة قبل
-     * إتمام الطلب. تُرجع الظاهرة فقط (is_visible = 1) كي لا تُباع نسخة
-     * من منتج أُخفي بعد إضافته للسلة.
+     * Current stock and price data for a set of variants — for checking the cart before
+     * an order completes. It returns only the visible ones (is_visible = 1), so a variant
+     * of a product hidden after it was added to the cart cannot be sold.
      *
-     * نُقل من CartController::checkStock حيث كان استعلاماً مكتوباً مباشرة.
+     * Moved out of CartController::checkStock, where it was an inline query.
      *
      * @param  int[] $variantIds
      * @return array<int,array<string,mixed>>
@@ -351,32 +352,33 @@ class ProductModel extends Model
     }
 
     /**
-     * نفس بيانات findVariantsStock لكن **بقفل للكتابة**، ومفهرسة بمعرّف
-     * الـvariant — للاستعمال داخل معاملة إنشاء الطلب وحدها.
+     * The same data as findVariantsStock but **with a write lock**, keyed by variant id —
+     * for use inside the order-creation transaction alone.
      *
-     * ── لماذا نسخة ثانية بدل وسيط `$forUpdate` ────────────────────
+     * ── Why a second method rather than a `$forUpdate` parameter ──
      *
-     * لأن الاثنتين تخدمان عقدين مختلفين. findVariantsStock تُستدعى من
-     * نقطة عامة (/cart/check-stock) خارج أي معاملة، و`FOR UPDATE` هناك
-     * بلا معنى: بلا معاملة يُفكّ القفل فوراً. أسوأ من ذلك، لو صارت
-     * الدالة الواحدة تقفل أحياناً، لصار سلوكها معلّقاً بسياق المُستدعي
-     * — وهو ما لا يراه من يقرأ سطر النداء.
+     * Because the two serve different contracts. findVariantsStock is called from a
+     * public endpoint (/cart/check-stock) outside any transaction, and `FOR UPDATE` there
+     * is meaningless: without a transaction the lock is released at once. Worse, if one
+     * method sometimes locked, its behaviour would hang on the caller's context — which
+     * is not visible to whoever reads the call site.
      *
-     * ⚠️ لا تستدعِ هذه خارج معاملة مفتوحة. القفل يمتدّ حتى COMMIT أو
-     * ROLLBACK؛ وبلا معاملة يسقط في نفس اللحظة فتحصل على تكلفة القفل
-     * بلا فائدته.
+     * ⚠️ Do not call this outside an open transaction. The lock lasts until COMMIT or
+     * ROLLBACK; without a transaction it drops in the same instant, so you pay the lock's
+     * cost without its benefit.
      *
-     * القفل يشمل صفوف `products` أيضاً لأن الاستعلام يضمّها — وMariaDB
-     * لا تدعم `FOR UPDATE OF` التي كانت ستحصر القفل في `pv` وحدها،
-     * وCI يعمل على MySQL 8. الصياغة المجرّدة تعمل على الاثنين، والاتّساع
-     * مقبول: الطلب يقرأ هذه الصفوف ليكتب مخزونها بعد سطور.
+     * The lock covers the `products` rows too, because the query joins them — and
+     * MariaDB does not support `FOR UPDATE OF`, which would have confined the lock to
+     * `pv` alone, while CI runs on MySQL 8. The plain form works on both, and the extra
+     * breadth is acceptable: the order reads these rows in order to write their stock a
+     * few lines later.
      *
-     * الفهرسة بمعرّف الـvariant لا قائمة مسطّحة: المستدعي يبحث عن سطر
-     * بعينه لكل عنصر سلّة، والبحث الخطّي في حلقة هو ما يجعل طلباً من
-     * عشرين عنصراً يمسح المصفوفة عشرين مرة.
+     * Keyed by variant id rather than a flat list: the caller looks up one particular
+     * row per cart item, and a linear search inside a loop is what makes a twenty-item
+     * order scan the array twenty times.
      *
      * @param  int[] $variantIds
-     * @return array<int,array<string,mixed>> مفهرسة بـvariant_id
+     * @return array<int,array<string,mixed>> keyed by variant_id
      */
     public static function findVariantsForUpdate(array $variantIds): array
     {
@@ -387,13 +389,14 @@ class ProductModel extends Model
 
         $placeholders = implode(',', array_fill(0, count($variantIds), '?'));
 
-        // بلا try/catch عن قصد — خلافاً لأخوات هذه الدالة.
+        // No try/catch, deliberately — unlike this method's siblings.
         //
-        // تلك تبتلع الاستثناء وتُرجع [] لأنها تخدم عرضاً: قائمة فارغة
-        // تعني «لا بيانات» ولا ضرر. أمّا هنا فالقائمة الفارغة تعني
-        // «لا سعر معروف»، وابتلاعُها داخل معاملة يحوّل عطلاً تقنياً إلى
-        // «سعرك تغيّر» — رسالة كاذبة تُخفي العطل عن السجلّ وعن الزبون.
-        // الاستثناء يصعد إلى placeOrder التي تتراجع وتسجّل السبب الحقيقي.
+        // Those swallow the exception and return [] because they serve a display: an
+        // empty list means "no data" and does no harm. Here an empty list means "no known
+        // price", and swallowing that inside a transaction turns a technical fault into
+        // "your price changed" — a false message that hides the fault from the log and
+        // from the customer. The exception propagates to placeOrder, which rolls back and
+        // records the real cause.
         $stmt = self::db()->prepare("
             SELECT
                 pv.id            AS variant_id,

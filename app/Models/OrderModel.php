@@ -6,15 +6,15 @@ use App\Core\Model;
 use Exception;
 
 /**
- * OrderModel — يغطي جداول: orders, order_items, user_addresses
+ * OrderModel — covers the orders, order_items and user_addresses tables.
  */
 class OrderModel extends Model
 {
     // ════════════════════════════════════════════════════════
-    // عناوين المستخدم
+    // User addresses
     // ════════════════════════════════════════════════════════
 
-    /** جلب عناوين مستخدم */
+    /** Fetch a user's addresses. */
     /**
      * @return list<array<string, mixed>>
      */
@@ -34,15 +34,16 @@ class OrderModel extends Model
     }
 
     /**
-     * يبني لقطة نصّية للعنوان لحظة الطلب.
+     * Builds a textual snapshot of the address at the moment of the order.
      *
-     * تُستدعى من داخل معاملة placeOrder، فالصفّ مقروء في نفس النافذة
-     * التي تُكتب فيها بقيّة الطلب — لا نافذة يتغيّر العنوان خلالها بين
-     * القراءة والكتابة.
+     * It is called from inside the placeOrder transaction, so the row is read in the
+     * same window the rest of the order is written in — there is no window in which the
+     * address could change between the read and the write.
      *
-     * العنوان الغائب (حُذف بين اختيار الزبون وضغطه «أكّد») يُرجع null
-     * لا نصّاً فارغاً: «العنوان غير مسجَّل» حقيقة مختلفة عن «العنوان
-     * معروف وهو فراغ»، والتمييز بينهما هو كل قيمة اللقطة.
+     * A missing address (deleted between the customer choosing it and pressing
+     * "confirm") returns null rather than an empty string: "no address on record" is a
+     * different fact from "the address is known and it is blank", and telling the two
+     * apart is the whole value of the snapshot.
      *
      * @return array{text: ?string, phone: ?string}
      */
@@ -59,8 +60,8 @@ class OrderModel extends Model
             return ['text' => null, 'phone' => null];
         }
 
-        // array_filter يُسقط الفارغ فلا تظهر فواصل معلّقة لعنوان بلا
-        // مدينة أو بلا تسمية.
+        // array_filter drops the empties, so no dangling commas appear for an address
+        // with no city or no label.
         $parts = array_filter([
             $row['label']        ?? '',
             $row['full_address'] ?? '',
@@ -74,7 +75,7 @@ class OrderModel extends Model
         ];
     }
 
-    /** إضافة عنوان جديد */
+    /** Add a new address. */
     /**
      * @param array<string, mixed> $data
      */
@@ -83,7 +84,7 @@ class OrderModel extends Model
         try {
             $db = self::db();
 
-            // إذا العنوان الجديد is_default → أزل الـ default من الباقي
+            // If the new address is_default → clear the default from the rest
             if (!empty($data['is_default'])) {
                 $db->prepare("UPDATE user_addresses SET is_default=0 WHERE user_id=?")
                    ->execute([$userId]);
@@ -109,7 +110,7 @@ class OrderModel extends Model
         }
     }
 
-    /** حذف عنوان */
+    /** Delete an address. */
     public static function deleteAddress(int $addressId, int $userId): bool
     {
         try {
@@ -123,74 +124,79 @@ class OrderModel extends Model
     }
 
     // ════════════════════════════════════════════════════════
-    // الطلبات
+    // Orders
     // ════════════════════════════════════════════════════════
 
-    /** الطلب أُنشئ. */
+    /** The order was created. */
     public const PLACE_OK = 'ok';
 
-    /** سعر عنصر أو أكثر لم يعد يطابق ما عُرض على الزبون — الطلب مرفوض. */
+    /** One or more item prices no longer match what the customer was shown — the order is refused. */
     public const PLACE_PRICE_CHANGED = 'price_changed';
 
-    /** عنصر لم يعد موجوداً أو أُخفي بعد إضافته للسلّة. */
+    /** An item no longer exists, or was hidden after being added to the cart. */
     public const PLACE_UNAVAILABLE = 'unavailable';
 
-    /** المخزون لم يعد يكفي أحد العناصر. */
+    /** Stock is no longer sufficient for one of the items. */
     public const PLACE_OUT_OF_STOCK = 'out_of_stock';
 
-    /** عطل تقني — لا ذنب للزبون ولا لسلّته. */
+    /** A technical fault — no fault of the customer's, nor of their cart's. */
     public const PLACE_ERROR = 'error';
 
     /**
-     * إنشاء طلب جديد: تسعير من القاعدة، ثم تخفيض المخزون، داخل معاملة واحدة.
+     * Create a new order: price from the database, then decrement the stock, inside one
+     * transaction.
      *
      * ══════════════════════════════════════════════════════════
-     * ⚠️ السعر لا يأتي من العميل. أبداً.
+     * ⚠️ The price never comes from the client. Ever.
      * ══════════════════════════════════════════════════════════
      *
-     * كانت هذه الدالة تقرأ `$item['price']` وتجمعه في `total_amount`
-     * وتكتبه في `price_at_purchase`. والسلّة تُبنى في `localStorage`
-     * ويرسلها المتصفح كما هي — أي أن **السعر كان مُدخَلاً من المستخدم**.
-     * طلبٌ يُرسل بـ`price: 0.01` كان يمرّ بتوكن صحيح وجلسة صحيحة وحارس
-     * `auth` سليم، ويُخفّض المخزون فعلاً، ويصل الأدمن كطلب مشروع تماماً.
-     * والخنق لا يراه: الطلب واحد لا ألف.
+     * This method used to read `$item['price']`, sum it into `total_amount` and write
+     * it into `price_at_purchase`. And the cart is built in `localStorage` and sent by
+     * the browser as-is — meaning **the price was user input**. An order submitted with
+     * `price: 0.01` passed with a valid token, a valid session and a sound `auth` guard,
+     * genuinely decremented the stock, and reached the admin as an entirely legitimate
+     * order. And the throttle does not see it: that is one order, not a thousand.
      *
-     * الآن كل قيمة مالية تُقرأ من القاعدة داخل المعاملة نفسها التي
-     * ستكتب المخزون — فلا نافذة بين قراءة السعر وحجز الكمية.
+     * Now every monetary value is read from the database inside the same transaction
+     * that will write the stock — so there is no window between reading the price and
+     * reserving the quantity.
      *
-     * ── ما الذي يبقى قادماً من العميل ─────────────────────────
+     * ── What still comes from the client ──────────────────────
      *
-     * ثلاثة حقول لا رابع لها: `product_id` و`variant_id` و`qty` — أي
-     * «ماذا أريد وكم». و`shown_price` حقلٌ رابع **يُقارَن ولا يُخزَّن
-     * ولا يُحسب منه شيء**: هو ما عرضه المتصفح على الزبون، ووجوده يجيب
-     * عن سؤال واحد — هل تغيّر السعر بين لحظة العرض ولحظة الإرسال؟
+     * Three fields and no fourth: `product_id`, `variant_id` and `qty` — that is, "what
+     * I want and how many". And `shown_price` is a fourth field that is **compared, never
+     * stored, and never computed from**: it is what the browser displayed to the
+     * customer, and its presence answers exactly one question — did the price change
+     * between the moment of display and the moment of submission?
      *
-     * حتى `color_name_snapshot` صار يُقرأ من القاعدة: كان يأتي من
-     * العميل، ولقطةٌ يكتبها الطرف الذي تُوثَّق ضدّه ليست لقطة.
+     * Even `color_name_snapshot` is now read from the database: it used to come from the
+     * client, and a snapshot written by the party it is meant to document is not a
+     * snapshot.
      *
-     * ── لماذا الرفض لا التمرير بسعر الخادم ────────────────────
+     * ── Why refuse rather than proceed at the server's price ──
      *
-     * قرار منتج صريح: الزبون لا يُفاجأ بمبلغ لم يوافق عليه. والدفع عند
-     * الاستلام يجعل المفاجأة عند الباب لا على الشاشة — حيث تكلفتها
-     * رفضُ استلام وشحنةٌ راجعة. فحين يختلف السعر تُلغى العملية كلّها
-     * وتُعاد الأسعار الصحيحة ليراجع الزبون سلّته ويقرّر.
+     * An explicit product decision: the customer is never surprised by an amount they
+     * did not agree to. And cash on delivery moves the surprise to the doorstep rather
+     * than the screen — where its cost is a refused delivery and a returned shipment. So
+     * when a price differs, the whole operation is cancelled and the correct prices are
+     * returned for the customer to review their cart and decide.
      *
-     * ── المقارنة بالقروش لا بالعشريات ─────────────────────────
+     * ── Comparing in minor units rather than decimals ─────────
      *
-     * `0.1 + 0.2 !== 0.3` في أي حساب عشري ثنائي، و`price_after_discount`
-     * عمود محسوب بـ`round(...,2)`. المقارنة على `float` كانت سترفض
-     * طلبات سليمة بفروق لا وجود لها إلا في التمثيل. القروش أعداد صحيحة،
-     * وتساويها تساوٍ حقيقي.
+     * `0.1 + 0.2 !== 0.3` in any binary floating-point arithmetic, and
+     * `price_after_discount` is a column computed with `round(...,2)`. Comparing on
+     * `float` would have refused sound orders over differences that exist only in the
+     * representation. Minor units are integers, and their equality is real equality.
      *
-     * ── العائد ────────────────────────────────────────────────
+     * ── The return value ──────────────────────────────────────
      *
-     * مصفوفة لا `?int`. النتيجة لم تعد ثنائية: «نجح» و«فشل» كانتا
-     * تُختصران في `null`، فيقول الكنترولر للزبون «قد تكون بعض المنتجات
-     * نفدت» عن عطل قاعدة بيانات أو عن سعر تغيّر أو عن منتج أُخفي. الرمز
-     * يفصل الحالات، والرسالة تصير صادقة.
+     * An array, not a `?int`. The outcome is no longer binary: "succeeded" and "failed"
+     * were both collapsed into `null`, so the controller told the customer "some items
+     * may be out of stock" about a database outage, a changed price, or a hidden product
+     * alike. The code separates the cases, and the message becomes honest.
      *
      * @param  list<array{product_id: int, variant_id: int|null, qty: int, shown_price: float}> $items
-     *         عناصر منظَّفة من الكنترولر:
+     *         Items already sanitised by the controller:
      *                      [['product_id'=>int,'variant_id'=>?int,
      *                        'qty'=>int,'shown_price'=>float], ...]
      * @return array{status:string, order_id?:int, duplicate?:bool,
@@ -210,11 +216,12 @@ class OrderModel extends Model
         $db = self::db();
 
         try {
-            // ── Idempotency: قبل المعاملة عمداً ──────────────────
+            // ── Idempotency: before the transaction, deliberately ──
             //
-            // إعادة إرسال المفتاح نفسه يجب أن تُرجع الطلب القائم لا أن
-            // تفتح معاملة وتقفل صفوف مخزون ثم تتراجع عنها. والعمود يحمل
-            // UNIQUE، فالسباق بين طلبين متزامنين يفشل عند الإدراج لا هنا.
+            // Resending the same key must return the existing order rather than open a
+            // transaction, lock stock rows and then roll them back. The column carries a
+            // UNIQUE constraint, so a race between two concurrent requests fails at the
+            // insert rather than here.
             $dup = $db->prepare("SELECT order_id FROM orders WHERE idempotency_key=? LIMIT 1");
             $dup->execute([$idempotencyKey]);
             $existing = $dup->fetchColumn();
@@ -228,32 +235,32 @@ class OrderModel extends Model
 
             $db->beginTransaction();
 
-            // ── الترتيب قبل أي قفل ───────────────────────────────
+            // ── Sorting before any lock ──────────────────────────
             //
-            // كان الفرز يجري بعد إدراج صفّ الطلب وقبل حلقة المخزون،
-            // وغرضه منع الـdeadlock بين طلبين متزامنين يقفلان الصفوف
-            // نفسها بترتيبين متعاكسين. وهو الآن يسبق **القراءة القافلة**
-            // أيضاً، لأن القفل صار يبدأ من هناك لا من UPDATE.
+            // The sort used to happen after the order row was inserted and before the stock
+            // loop, and its purpose is to prevent a deadlock between two concurrent orders
+            // locking the same rows in opposite orders. It now precedes **the locking read**
+            // as well, because the locking begins there rather than at the UPDATE.
             usort($items, fn($a, $b) => ($a['variant_id'] ?? 0) <=> ($b['variant_id'] ?? 0));
 
-            // ── قراءة السعر والمخزون الحقيقيين، بقفل ─────────────
+            // ── Reading the real price and stock, under a lock ───
             //
-            // ⚠️ لا مسار للعنصر بلا variant — وهذا قرار مقيس لا إغفال.
+            // ⚠️ There is no path for an item without a variant — a measured decision, not
+            // an oversight.
             //
-            // المتجر يفرض أن لكل منتج variant واحداً على الأقل، في
-            // موضعين صراحةً: AdminProductsController::storeAdd و
-            // ::storeEdit كلتاهما ترفضان بـ«At least one variant with a
-            // valid name and price is required». والقاعدة تؤكّده: صفر
-            // منتج من ستة عشر بلا variant.
+            // The store enforces at least one variant per product, explicitly in two
+            // places: AdminProductsController::storeAdd and ::storeEdit both refuse with
+            // "At least one variant with a valid name and price is required". And the
+            // database confirms it: zero products out of sixteen without a variant.
             //
-            // وكل مسارات الإضافة للسلّة تمرّر معرّفاً حقيقياً
-            // (data-variant-id في صفحتَي المنتج، وcart.js يحمله معه).
-            // فالعنصر بلا variant لا يأتي من واجهة المتجر إطلاقاً.
+            // And every add-to-cart path passes a real id (data-variant-id on both product
+            // pages, and cart.js carries it along). So an item without a variant never
+            // arrives from the store front at all.
             //
-            // البديل — تخفيض products.stock_quantity لهذه الحالة — كان
-            // سيُنشئ **مصدرَي حقيقة للمخزون** في دالة واحدة: عمود في
-            // products وآخر في product_variants، ولا شيء يوفّق بينهما.
-            // وهذا ثمن أغلى بكثير من رفض حالة لا تحدث.
+            // The alternative — decrementing products.stock_quantity for that case — would
+            // have created **two sources of truth for stock** inside one method: a column in
+            // products and another in product_variants, with nothing reconciling them. That
+            // is a far higher price than refusing a case that does not occur.
             $variantIds = [];
             foreach ($items as $item) {
                 if (empty($item['variant_id'])) {
@@ -265,12 +272,13 @@ class OrderModel extends Model
 
             $variants = ProductModel::findVariantsForUpdate($variantIds);
 
-            // ── التسعير والتحقّق قبل كتابة أي صفّ ────────────────
+            // ── Pricing and validation before any row is written ──
             //
-            // الحلقة كاملةً قبل أي INSERT: الرفض حينها لا يحتاج تراجعاً
-            // عن كتابةٍ حدثت، والأهمّ أنه يجمع **كل** الأسعار المتغيّرة
-            // لا أوّلها. زبون بثلاثة أسعار تغيّرت يستحق أن يراها مرّة
-            // واحدة، لا أن يعيد المحاولة ثلاث مرّات ليكتشفها واحداً واحداً.
+            // The whole loop before any INSERT: a refusal then needs no rolling back of a
+            // write that already happened, and more importantly it collects **all** the
+            // changed prices rather than the first. A customer with three changed prices
+            // deserves to see them at once, not to retry three times discovering them one
+            // by one.
             $priced      = [];
             $total       = 0.0;
             $priceDrifts = [];
@@ -283,17 +291,17 @@ class OrderModel extends Model
 
                 $row = $variants[$variantId] ?? null;
 
-                // غير موجود، أو أُخفي بعد إضافته للسلّة (الاستعلام يحمل
-                // is_visible = 1). الحالتان واحدة من زاوية الزبون: هذا
-                // العنصر لم يعد قابلاً للشراء.
+                // Either it does not exist, or it was hidden after being added to the cart
+                // (the query carries is_visible = 1). From the customer's side both are the
+                // same: this item can no longer be bought.
                 if ($row === null) {
                     $db->rollBack();
                     return ['status' => self::PLACE_UNAVAILABLE];
                 }
 
-                // ⚠️ الـvariant يجب أن يخصّ المنتج المُرسَل. بلا هذا
-                // الفحص يستطيع طلبٌ أن يقرن variant رخيصاً بمنتج آخر،
-                // فيُخزَّن سطر order_items بمنتجٍ لم يُسعَّر سعرُه.
+                // ⚠️ The variant must belong to the product that was sent. Without this
+                // check an order could pair a cheap variant with a different product, and an
+                // order_items row would be stored for a product whose price was never used.
                 if ((int) $row['product_id'] !== $productId) {
                     $db->rollBack();
                     return ['status' => self::PLACE_UNAVAILABLE];
@@ -319,7 +327,7 @@ class OrderModel extends Model
                     'variant_id' => $variantId,
                     'qty'        => $qty,
                     'unit_price' => $unitPrice,
-                    // اللقطة من القاعدة لا من العميل.
+                    // The snapshot comes from the database, not from the client.
                     'color_name' => $row['color_name'] ?? null,
                 ];
             }
@@ -332,21 +340,23 @@ class OrderModel extends Model
                 ];
             }
 
-            // ── لقطة العنوان ─────────────────────────────────────
+            // ── The address snapshot ─────────────────────────────
             //
-            // العنوان يُنسخ نصّاً في صفّ الطلب لا يُشار إليه وحسب.
+            // The address is copied as text into the order row, not merely referenced.
             //
-            // كان address_id مفتاحاً حيّاً بـON DELETE SET NULL، أي أن
-            // عنوان الطلب ليس ملكاً للطلب: تعديلُ المستخدم لعنوانه
-            // يغيّر وجهة طلبٍ **سُلّم فعلاً** بأثر رجعي، وحذفُه يمحو
-            // عنوان طلبات مكتملة نهائياً ولا نسخة في أي مكان.
+            // address_id used to be a live foreign key with ON DELETE SET NULL, meaning the
+            // order's address did not belong to the order: a user editing their address
+            // retroactively changed the destination of an order that had **already been
+            // delivered**, and deleting it erased the address of completed orders
+            // permanently, with no copy anywhere.
             //
-            // وهذا صنف خطأ لا يظهر في اختبار وظيفي ولا في أي شاشة —
-            // يظهر يوم يُسأل «أين أُرسل هذا الطلب؟» فلا يكون للسؤال
-            // جواب. المفتاح يبقى للربط، واللقطة هي المرجع التاريخي.
+            // This is a class of error that shows up in no functional test and on no
+            // screen — it shows up the day somebody asks "where was this order sent?" and
+            // the question has no answer. The key stays for the relationship, and the
+            // snapshot is the historical record.
             $snapshot = self::addressSnapshot($addressId);
 
-            // ── الكتابة ──────────────────────────────────────────
+            // ── The writes ───────────────────────────────────────
             $stmt = $db->prepare(
                 "INSERT INTO orders (user_id, address_id, address_snapshot,
                                     address_phone_snapshot, total_amount, payment_method,
@@ -384,16 +394,16 @@ class OrderModel extends Model
                     $item['unit_price'],
                 ]);
 
-                // الشرط `stock_quantity >= ?` يبقى رغم أن الصفّ مقفول
-                // ومقروء أعلاه: القفل يمنع تغيّره من طلب آخر، لا من خطأ
-                // في هذه الدالة. والشرط هو ما يجعل الحجز ذرّياً في
-                // الحالتين.
+                // The `stock_quantity >= ?` condition stays even though the row is locked and
+                // was read above: the lock prevents another request changing it, not a bug in
+                // this method. And the condition is what makes the reservation atomic in
+                // either case.
                 //
-                // ولا فرع `if ($variantId)` هنا بعد الآن: كل عنصر يصل
-                // إلى هذا السطر يحمل variant بالتأكيد — الفحص فوق
-                // يرفض ما دونه قبل قراءة سعر واحد. وكان الفرع القديم
-                // يعني أن عنصراً بلا variant **يُباع بلا أن يمسّ أي
-                // عدّاد مخزون**: مبيعات بلا حدّ لمنتج نفد.
+                // And there is no `if ($variantId)` branch here any more: every item reaching
+                // this line certainly carries a variant — the check above refuses anything
+                // without one before a single price is read. The old branch meant an item
+                // without a variant **was sold without touching any stock counter**: unlimited
+                // sales of a product that had run out.
                 $stmtStock->execute([$item['qty'], $item['variant_id'], $item['qty']]);
                 if (!$stmtStock->rowCount()) {
                     $db->rollBack();
@@ -414,13 +424,14 @@ class OrderModel extends Model
     }
 
     /**
-     * إلغاء طلب (من المستخدم) — حذف نهائي (Hard Delete).
-     * فقط الطلبات بحالة not_taken: يُرجَع المخزون أولًا ثم يُحذف
-     * صف الطلب مع عناصره وسجل انتهاء المهلة نهائيًا (لا يبقى بالـ DB).
+     * Cancel an order, by the user — a hard delete.
+     * Only orders in the not_taken state: the stock is restored first, then the order row
+     * is deleted along with its items and its expiry log, permanently (nothing remains in
+     * the database).
      *
-     * ملاحظات النطاق المتعمد:
-     * - cancelAllPendingForUser() (كاسكيد الحظر) و adminCancelDelivery()
-     *   يبقيان Soft Cancel (status='cancelled') — سجل التدقيق محفوظ.
+     * Notes on the deliberate scope:
+     * - cancelAllPendingForUser() (the block cascade) and adminCancelDelivery() remain
+     *   soft cancels (status='cancelled') — the audit trail is preserved.
      */
     public static function cancelOrder(int $orderId, int $userId): bool
     {
@@ -429,7 +440,7 @@ class OrderModel extends Model
         try {
             $db->beginTransaction();
 
-            // تحقق من الطلب وملكيته
+            // Verify the order and its ownership
             $stmt = $db->prepare(
                 "SELECT order_id, status, stock_restored
                  FROM orders WHERE order_id=? AND user_id=? LIMIT 1"
@@ -442,7 +453,7 @@ class OrderModel extends Model
                 return false;
             }
 
-            // إرجاع المخزون أولًا (قبل الحذف، بنفس منطق stock_restored الموجود أصلاً)
+            // Restore the stock first (before the delete, with the same stock_restored logic as elsewhere)
             if (!$order['stock_restored']) {
                 $items = $db->prepare(
                     "SELECT variant_id, quantity FROM order_items WHERE order_id=? AND variant_id IS NOT NULL"
@@ -456,9 +467,9 @@ class OrderModel extends Model
                 }
             }
 
-            // حذف نهائي — order_items و order_expiry_log يملكان FK يحيل لـ orders.order_id
-            // (بإعداد ON DELETE CASCADE بالشيمات) لكن الحذف اليدوي الصريح ههنا
-            // يضمن ترتيبًا واضحًا مستقلاً عن سلوك الـ DB.
+            // A hard delete — order_items and order_expiry_log both hold a foreign key onto
+            // orders.order_id (with ON DELETE CASCADE in the schema), but deleting explicitly
+            // here guarantees a clear order independent of the database's behaviour.
             $db->prepare("DELETE FROM order_items WHERE order_id=?")->execute([$orderId]);
             $db->prepare("DELETE FROM order_expiry_log WHERE order_id=?")->execute([$orderId]);
             $db->prepare("DELETE FROM orders WHERE order_id=?")->execute([$orderId]);
@@ -476,7 +487,7 @@ class OrderModel extends Model
     }
 
     /**
-     * جلب طلبات المستخدم مع العناصر
+     * Fetch the user's orders together with their items.
      *
      * @return list<array<string, mixed>>
      */
@@ -495,7 +506,7 @@ class OrderModel extends Model
             $stmt->execute([$userId]);
             $orders = $stmt->fetchAll();
 
-            // جلب العناصر لكل طلب
+            // Fetch the items for each order
             $stmtItems = $db->prepare(
                 "SELECT oi.*, p.name AS product_name, pv.color_name, pv.image_path
                  FROM order_items oi
@@ -516,12 +527,12 @@ class OrderModel extends Model
     }
 
     // ════════════════════════════════════════════════════════
-    // إدارة اليوزرز — لوحة الأدمن (Users 02/03/04)
+    // User management — the admin panel (Users 02/03/04)
     // ════════════════════════════════════════════════════════
 
     /**
-     * كل طلبات يوزر مع عدد عناصر كل طلب، الأحدث أولًا.
-     * يستخدمها UserModel::addStrike() وصفحة user-details لعرض السجل.
+     * Every one of a user's orders with each order's item count, newest first.
+     * Used by UserModel::addStrike() and by the user details page to show the history.
      *
      * @return list<array<string, mixed>>
      */
@@ -544,9 +555,12 @@ class OrderModel extends Model
     }
 
     /**
-     * إلغاء كل طلبات يوزر المعلّقة (not_taken/taken) وإرجاع مخزونها بمعاملة واحدة.
-     * يُستدعى تلقائيًا من UserModel::addStrike() عند الوصول لـ 3 إنذارات (حظر تلقائي).
-     * يحترم عمود stock_restored لمنع الإرجاع المضاعف — نفس منطق cancelOrder().
+     * Cancel all of a user's pending orders (not_taken/taken) and restore their stock, in
+     * one transaction.
+     * Called automatically from UserModel::addStrike() on reaching three strikes (an
+     * automatic block).
+     * It respects the stock_restored column to prevent a double restore — the same logic
+     * as cancelOrder().
      */
     public static function cancelAllPendingForUser(int $userId): void
     {
@@ -555,10 +569,11 @@ class OrderModel extends Model
         try {
             $db->beginTransaction();
 
-            // القفل يحمي المخزون لا الحالة وحدها: لو جرى إلغاء آخر
-            // للطلب نفسه في اللحظة نفسها (إلغاء يدوي من الزبون مع
-            // الحظر التلقائي)، لقرأ الاثنان `stock_restored = 0` فأرجعا
-            // المخزون **مرّتين** — وهذا مخزون يُباع ولا وجود له.
+            // The lock protects the stock, not merely the status: if another cancellation
+            // of the same order happened at the same instant (a manual cancellation by the
+            // customer alongside the automatic block), both would read `stock_restored = 0`
+            // and restore the stock **twice** — and that is stock that gets sold while not
+            // existing.
             $stmt = $db->prepare(
                 "SELECT order_id, status, stock_restored
                  FROM orders
@@ -600,10 +615,10 @@ class OrderModel extends Model
     }
 
     // ════════════════════════════════════════════════════════
-    // إدارة الطلبات — لوحة الأدمن (Orders 02/03/04/05)
+    // Order management — the admin panel (Orders 02/03/04/05)
     // ════════════════════════════════════════════════════════
 
-    /** تعليم كل الطلبات كمقروءة — يُستدعى من AdminOrdersController::index() بعد عرض القائمة */
+    /** Mark every order read — called from AdminOrdersController::index() after the list renders. */
     public static function markAllOrdersNotified(): void
     {
         try {
@@ -614,10 +629,11 @@ class OrderModel extends Model
     }
 
     /**
-     * إرجاع تلقائي (Lazy Check) للطلبات المأخوذة التي انتهت مهلة الـ 4 ساعات:
-     * status='taken' ومرّ على taken_at أكثر من 4 ساعات → يُسجَّل بـ order_expiry_log
-     * ثم يُعاد الطلب لـ not_taken مع تصفير taken_by_admin_id و taken_at.
-     * يُستدعى في بداية كل طلب لصفحة Orders (القائمة أو التفاصيل) — بدون Cron Job.
+     * A lazy automatic release of taken orders past their 4-hour deadline:
+     * status='taken' with taken_at more than 4 hours ago → recorded in order_expiry_log,
+     * then the order returns to not_taken with taken_by_admin_id and taken_at cleared.
+     * Called at the start of every request for an Orders page (the list or the details) —
+     * with no cron job.
      *
      * @return array<int, array{order_id:int, previous_admin_id:?int}> The orders that were
      *         just reverted by this call, so the caller can log/notify. Empty array if none.
@@ -629,19 +645,20 @@ class OrderModel extends Model
         try {
             $db->beginTransaction();
 
-            // الحد يُحسب داخل MySQL (NOW()) — لا مقارنة بتوقيت PHP
-            // (مناطق PHP/MySQL مختلفة أحيانًا، فتجنُّب الحساب بأنفسنا يضمن الدقة)
-            // ⚠️ `FOR UPDATE` ليست احتياطاً هنا.
+            // The cut-off is computed inside MySQL (NOW()) — no comparison against PHP's
+            // clock (PHP's and MySQL's timezones sometimes differ, so leaving the arithmetic
+            // to the database guarantees accuracy)
+            // ⚠️ `FOR UPDATE` is not a precaution here.
             //
-            // هذه الدالة تعمل بلا Cron: تُستدعى في مطلع **كل**
-            // طلب لصفحة الطلبات. فأدمنان يفتحان الصفحة معاً
-            // يقرآن نفس الطلبات المنتهية، فيُدرج كلّ منهما سطراً في
-            // order_expiry_log ويُرسل إشعاراً — فيصير للحدث الواحد
-            // سجلّان وإشعاران. والتحديث نفسه متماثل فلا يُظهر العطل،
-            // والسجلّ وحده يشهد عليه.
+            // This method runs with no cron: it is called at the start of **every** request
+            // for an Orders page. So two admins opening the page together read the same
+            // expired orders, each inserts a row into order_expiry_log and sends a
+            // notification — and one event ends up with two records and two notifications.
+            // The update itself is idempotent, so it does not reveal the fault; the log
+            // alone bears witness to it.
             //
-            // القفل يسلسل الاثنين: يقف الثاني حتى يُتمّ الأوّل،
-            // ثم يقرأ قراءةً طازجة فلا يجد ما ينتهي.
+            // The lock serialises the two: the second waits until the first finishes, then
+            // reads afresh and finds nothing left to expire.
             $stmt = $db->prepare(
                 "SELECT order_id, taken_by_admin_id, taken_at FROM orders
                  WHERE status='taken' AND taken_at < DATE_SUB(NOW(), INTERVAL 4 HOUR)
@@ -660,10 +677,11 @@ class OrderModel extends Model
                      WHERE order_id=? AND status='taken'"
                 );
                 foreach ($expired as $row) {
-                    // التحديث أوّلاً ثم السجلّ — والشرط `status='taken'`
-                    // في العبارة نفسها. فإن سبقنا أحد رغم القفل (طلب أخذه
-                    // أدمن آخر أو أُنجز لتوّه)، لم نُدرج سطراً عن انتهاء لم
-                    // يقع. السجلّ يتبع الواقع لا النيّة.
+                    // The update first and the log second — with the `status='taken'` condition
+                    // in the statement itself. So if somebody got there first despite the lock
+                    // (an order taken by another admin, or just completed), no row is inserted
+                    // about an expiry that never happened. The log follows the facts, not the
+                    // intention.
                     $updStmt->execute([$row['order_id']]);
 
                     if ($updStmt->rowCount() === 0) {
@@ -691,11 +709,12 @@ class OrderModel extends Model
     }
 
     /**
-     * قائمة الطلبات لصفحة admin/orders مع فلترة + بحث + ترقيم صفحات.
-     * ترتيب العرض: not_taken أولاً، ثم taken، ثم cancelled، ثم completed، والأحدث أولاً داخل كل مجموعة.
+     * The order list for the admin/orders page, with filtering, search and pagination.
+     * Display order: not_taken first, then taken, then cancelled, then completed, newest
+     * first within each group.
      *
      * @param array{status?: string, search?: string} $filters
-     * @return array<string, mixed> الصفوف مع بيانات الترقيم
+     * @return array<string, mixed> The rows together with the pagination data
      */
     public static function getAdminOrdersList(array $filters, int $page, int $perPage = 20): array
     {
@@ -771,7 +790,7 @@ class OrderModel extends Model
     }
 
     /**
-     * كل بيانات طلب واحد لصفحة تفاصيل الطلب (admin/orders/details)
+     * Every detail of one order, for the order details page (admin/orders/details).
      *
      * @return array<string, mixed>|null
      */
@@ -800,9 +819,11 @@ class OrderModel extends Model
     }
 
     /**
-     * عناصر طلب واحد مع المنتج واللون (variant) — نفس JOIN المستخدم بـ getUserOrders()
-     * لضمان عرض صورة/اسم اللون الصحيح بدل صورة المنتج العامة فقط.
-     * name اللون من color_name_snapshot (وقت الشراء) مع fallback للحالي pv.color_name.
+     * One order's items with their product and colour variant — the same JOIN
+     * getUserOrders() uses, so the correct variant image and colour name are shown rather
+     * than only the generic product image.
+     * The colour name comes from color_name_snapshot (as at purchase time), falling back
+     * to the current pv.color_name.
      *
      * @return list<array<string, mixed>>
      */
@@ -827,7 +848,7 @@ class OrderModel extends Model
     }
 
     /**
-     * أخذ طلب من قائمة not_taken (تعيين الحالة taken للأدمن الحالي).
+     * Take an order off the not_taken list (setting the status to taken for the current admin).
      *
      * @return array{success: bool, message: string, targetUserId: int|null}
      */
@@ -835,20 +856,19 @@ class OrderModel extends Model
     {
         $db = self::db();
         try {
-            // ⚠️ معاملة و`FOR UPDATE` — كانت هذه الدالة وحدها بلا قفل.
+            // ⚠️ A transaction and a `FOR UPDATE` — this method alone had no lock.
             //
-            // كان الفحص والكتابة عبارتين منفصلتين بلا معاملة: يقرأ
-            // أدمنان الحالة `not_taken` في اللحظة نفسها، فيمرّ الشرط
-            // عند كليهما، ثم تكتب الكتابتان — والأخيرة تفوز. فيظنّ
-            // الأوّل أنه يحمل الطلب بينما `taken_by_admin_id` يحمل اسم
-            // الثاني، ويعمل الاثنان على طلب واحد.
+            // The check and the write used to be two separate statements with no
+            // transaction: two admins read the `not_taken` status at the same instant, the
+            // condition passed for both, then both writes landed — and the last one won. So
+            // the first believes they are holding the order while `taken_by_admin_id` carries
+            // the second's name, and the two work on one order.
             //
-            // ونظيرتها `adminReleaseOrder` كانت مقفلة صحيحةً منذ
-            // البداية — فالنمط الصائب موجود في الملف نفسه على بعد
-            // مئة سطر.
+            // Its counterpart `adminReleaseOrder` was correctly locked from the start — so
+            // the right pattern existed in this same file, a hundred lines away.
             //
-            // `FOR UPDATE` تقفل الصفّ حتى نهاية المعاملة، فيقف الثاني
-            // منتظراً ثم يقرأ الحالة الجديدة `taken` فيُرفض بأدب.
+            // `FOR UPDATE` holds the row until the transaction ends, so the second waits,
+            // then reads the new `taken` status and is politely refused.
             $db->beginTransaction();
 
             $stmt = $db->prepare("SELECT status, user_id FROM orders WHERE order_id=? LIMIT 1 FOR UPDATE");
@@ -865,9 +885,10 @@ class OrderModel extends Model
                 return ['success' => false, 'message' => 'Cannot take this order — invalid status.', 'targetUserId' => null];
             }
 
-            // شرط الحالة مكرَّر في الكتابة عمداً: القفل يكفي، لكن
-            // تكراره يجعل العبارة صحيحة بذاتها لا بسياقها — فلو نُقلت
-            // يوماً خارج المعاملة لم تصر بابياً مفتوحاً بصمت.
+            // The status condition is repeated in the write deliberately: the lock is
+            // sufficient, but repeating it makes the statement correct in itself rather than
+            // by its context — so if it were ever moved outside the transaction it would not
+            // silently become an open door.
             $upd = $db->prepare(
                 "UPDATE orders SET status='taken', taken_at=NOW(), taken_by_admin_id=?
                  WHERE order_id=? AND status='not_taken'"
@@ -893,7 +914,7 @@ class OrderModel extends Model
     }
 
     /**
-     * إنهاء تسليم طلب (completed) مع تسجيل الأدمن كمنفّذ العملية لو كان الحقل فارغًا.
+     * Complete an order's delivery, recording the admin as the actor if the field is empty.
      *
      * @return array{success: bool, message: string, targetUserId: int|null}
      */
@@ -901,19 +922,19 @@ class OrderModel extends Model
     {
         $db = self::db();
         try {
-            // ⚠️ فحص الحالة كان غائباً تماماً، لا ناقصاً.
+            // ⚠️ The status check was entirely absent, not merely incomplete.
             //
-            // كانت الدالة تقرأ `user_id` وحده ثم تكتب `completed` على
-            // أي طلب — مهما كانت حالته. فطلبٌ **ملغى** (وقد أُعيد
-            // مخزونه إلى المستودع) كان يُقلَب إلى «مكتمل» بطلبٍ واحد
-            // إلى /admin/orders/mark-delivered، فيظهر في تقارير
-            // المبيعات بلا بضاعة خرجت.
+            // The method used to read `user_id` alone and then write `completed` onto any
+            // order, whatever its status. So a **cancelled** order (whose stock had already
+            // been returned to the warehouse) could be flipped to "completed" with a single
+            // request to /admin/orders/mark-delivered, and would appear in the sales reports
+            // with no goods having left.
             //
-            // والواجهة لا تعرض الزرّ إلا على طلب `taken` — لكن الحراسة
-            // في الواجهة ليست حراسة: النقطة تقبل طلباً مباشراً.
+            // The interface only shows the button on a `taken` order — but guarding in the
+            // interface is not guarding: the endpoint accepts a direct request.
             //
-            // و`FOR UPDATE` تمنع أن يمرّ فحصٌ قديم على حالة تغيّرت بين
-            // القراءة والكتابة.
+            // And `FOR UPDATE` prevents a stale check passing against a status that changed
+            // between the read and the write.
             $db->beginTransaction();
 
             $stmt = $db->prepare("SELECT status, user_id FROM orders WHERE order_id=? LIMIT 1 FOR UPDATE");
@@ -949,8 +970,9 @@ class OrderModel extends Model
     }
 
     /**
-     * إلغاء تسليم طلب (cancelled) مع إرجاع مخزون الألوان (variants) بشكل صحيح،
-     * يحترم عمود stock_restored لمنع الإرجاع المضاعف — نفس منطق cancelOrder().
+     * Cancel an order's delivery, correctly restoring the variants' stock.
+     * It respects the stock_restored column to prevent a double restore — the same logic
+     * as cancelOrder().
      *
      * @return array{success: bool, message: string, targetUserId: int|null}
      */
@@ -999,9 +1021,10 @@ class OrderModel extends Model
     }
 
     /**
-     * حذف نهائي (Hard Delete) لطلب مكتمل أو مُلغى (status='completed' أو 'cancelled')
-     * من لوحة الأدمن. يرفض أي طلب بغير هاتين الحالتين — يحفظ سجل التدقيق
-     * للطلبات المُلْغاة عبر cancelAllPendingForUser() / adminCancelDelivery() (Soft Cancel).
+     * A hard delete of a completed or cancelled order (status='completed' or 'cancelled')
+     * from the admin panel. It refuses any order in another state — which preserves the
+     * audit trail for orders cancelled through cancelAllPendingForUser() or
+     * adminCancelDelivery() (soft cancels).
      *
      * @return array{success: bool, message: string}
      */
@@ -1025,7 +1048,7 @@ class OrderModel extends Model
                 return ['success' => false, 'message' => 'Only completed or cancelled orders can be deleted permanently.'];
             }
 
-            // حذف نهائي — نفس ترتيب الحذف اليدوي الصريح المستخدم بـ cancelOrder()
+            // A hard delete — the same explicit manual ordering cancelOrder() uses
             $db->prepare("DELETE FROM order_items WHERE order_id=?")->execute([$orderId]);
             $db->prepare("DELETE FROM order_expiry_log WHERE order_id=?")->execute([$orderId]);
             $db->prepare("DELETE FROM orders WHERE order_id=?")->execute([$orderId]);
@@ -1092,8 +1115,9 @@ class OrderModel extends Model
     }
 
     /**
-     * مساعدة: user_id لطلب معيّن أو null — تُستخدم بعملية report_issue
-     * (لا تُعدّل حالة الطلب، فقط إشعار للمستخدم + audit log).
+     * A helper: an order's user_id, or null — used by the report_issue operation
+     * (which does not change the order's status, only notifies the user and writes an
+     * audit entry).
      */
     public static function getOrderUserId(int $orderId): ?int
     {
@@ -1109,7 +1133,8 @@ class OrderModel extends Model
     }
 
     /**
-     * كل الطلبات المطابقة للفلترة (بدون pagination) لتصدير CSV — نفس منطق getAdminOrdersList().
+     * Every order matching the filters (without pagination) for the CSV export — the same
+     * logic as getAdminOrdersList().
      *
      * @param array{status?: string, search?: string} $filters
      * @return list<array<string, mixed>>
@@ -1171,13 +1196,14 @@ class OrderModel extends Model
     }
 
     /**
-     * طلبات تولّاها أدمن معيّن — الأحدث أولًا. يشمل:
-     *   (أ) الطلبات التي حالتها الحالية taken_by_admin_id = $adminId (كما كان سابقاً)
-     *   (ب) طلبات سابقة انتهت مهلتها وأُرجعت تلقائياً بينما كان هذا الأدمن يحملها
-     *       (عبر order_expiry_log.previous_admin_id) — تُعلَّم بـ was_auto_released=1
-     *       لأن حالتها الحالية بالجدول orders قد تكون تغيّرت منذ ذلك الحين (أخذها أدمن آخر
-     *       لاحقاً مثلاً)، فلا يصح عرض بادج الحالة العادي لها.
-     * تُستخدم بصفحة تفاصيل الأدمن (manage-admins/details).
+     * The orders a given admin handled — newest first. It covers:
+     *   (a) orders whose current taken_by_admin_id = $adminId (as before);
+     *   (b) earlier orders that expired and were released automatically while this admin
+     *       was holding them (through order_expiry_log.previous_admin_id) — flagged with
+     *       was_auto_released=1, because their current status in the orders table may have
+     *       changed since (another admin taking them later, say), so showing them the
+     *       ordinary status badge would be wrong.
+     * Used on the admin details page (manage-admins/details).
      *
      * @return list<array<string, mixed>>
      */

@@ -7,36 +7,40 @@ use App\Core\Throttle;
 use App\Models\AdminModel;
 
 /**
- * AdminSessionOpener — كل ما يحدث لحظة اكتمال دخول الأدمن.
+ * AdminSessionOpener — everything that happens the moment an admin sign-in completes.
  *
- * وُجدت لأن هذه الأسطر كانت مكتوبة **مرّتين حرفياً**: في
- * AdminAuthController::login (للحساب بلا مصادقة ثنائية) وفي
- * verify2FALogin (بعد الكود الصحيح). والتعليق فوق الثانية كان يقول
- * ذلك صراحةً: «نفس الكود المستخدم بعد نجاح كلمة المرور».
+ * It exists because these lines were written **twice, word for word**: in
+ * AdminAuthController::login (for an account without two-factor) and in
+ * verify2FALogin (after a correct code). The comment above the second said so
+ * outright: "the same code used after the password succeeds".
  *
- * الازدواج هنا أخطر منه في أي موضع آخر، لأن ما يُنسى في إحدى النسختين
- * لا يظهر كخطأ بل كفجوة: مسار دخول لا يُدوّر معرّف الجلسة، أو لا يحمّل
- * الصلاحيات، أو لا يكتب في سجلّ التدقيق. ثلاثتها صامتة.
+ * Duplication is more dangerous here than anywhere else, because what gets forgotten
+ * in one of the two copies does not surface as an error but as a gap: a sign-in path
+ * that does not rotate the session id, or does not load the permissions, or does not
+ * write to the audit log. All three are silent.
  *
- * وقد كاد ذلك يحدث فعلاً في هذه الجولة: مسح عدّاد الخنق أُضيف إلى
- * المسارين يدوياً، وكان يكفي أن يُنسى أحدهما ليدفع من دخل عبر المصادقة
- * الثنائية ثمن محاولاته في المرّة التالية.
+ * And it nearly happened in this very round: clearing the throttle counter was added
+ * to both paths by hand, and forgetting one of them would have been enough to make
+ * anyone signing in through two-factor pay for their attempts the next time.
  *
- * ⚠️ الخدمة لا تعرف شيئاً عن HTTP: لا ترد ولا تُنهي الطلب ولا تلمس
- * توكن CSRF. الكنترولر يبقى صاحب الاستجابة، وهذه تفتح الجلسة وحدها.
+ * ⚠️ The service knows nothing about HTTP: it does not respond, does not end the
+ * request, and does not touch the CSRF token. The controller stays the owner of the
+ * response; this opens the session and nothing more.
  */
 final class AdminSessionOpener
 {
     /**
-     * يفتح جلسة أدمن كاملة، ويسجّل، ويُشعر صاحبها.
+     * Opens a full admin session, records it, and notifies its owner.
      *
-     * ترتيب الخطوات مقصود:
-     *   1. تدوير معرّف الجلسة **قبل** كتابة أي شيء فيها — وإلا كُتبت
-     *      الهوية في المعرّف القديم الذي قد يعرفه مهاجم (تثبيت جلسة).
-     *   2. الصلاحيات بعد الهوية، لأنها تُقرأ بالمعرّف.
-     *   3. البريد أخيراً وعبر الطابور — لا ينتظره الداخل.
+     * The order of the steps is deliberate:
+     *   1. rotate the session id **before** writing anything into it — otherwise the
+     *      identity is written into the old id, which an attacker may know (session
+     *      fixation);
+     *   2. the permissions after the identity, because they are read by the id;
+     *   3. the email last, and through the queue — whoever is signing in does not wait
+     *      for it.
      *
-     * @param array<string, mixed> $admin صفّ الأدمن كما تُرجعه AdminModel
+     * @param array<string, mixed> $admin The admin row as AdminModel returns it
      */
     public static function open(array $admin): void
     {
@@ -44,10 +48,10 @@ final class AdminSessionOpener
 
         session_regenerate_id(true);
 
-        // التوكن يتبع المعرّف. regenerate_id تُبقي محتوى الجلسة — ومنه
-        // csrf_token — فتوكنُ صفحة دخول الأدمن (وهي صفحة عامّة يصلها
-        // أي أحد) كان يبقى صالحاً بحرفه داخل جلسة أدمن كاملة الصلاحية.
-        // هنا أخطر موضع لهذا التوريث في المشروع كلّه.
+        // The token follows the id. regenerate_id keeps the session contents — csrf_token
+        // among them — so the token from the admin sign-in page (a public page anyone can
+        // reach) stayed valid, character for character, inside a fully privileged admin
+        // session. This is the most dangerous place in the project for that inheritance.
         rotateCsrfToken();
 
         $_SESSION['admin_id']    = $adminId;
@@ -65,13 +69,14 @@ final class AdminSessionOpener
     }
 
     /**
-     * يمسح عدّادات الخنق التي عبَرها هذا الدخول.
+     * Clears the throttle counters this sign-in passed through.
      *
-     * الدخول اكتمل، فلا معنى لأن يدفع صاحبه ثمن محاولاته الفاشلة في
-     * المرّة القادمة — ومن نحرس منه لا يصل إلى هنا أصلاً.
+     * The sign-in completed, so there is no sense in its owner paying for their failed
+     * attempts next time — and whoever we are guarding against never reaches here at all.
      *
-     * الدلوان معاً دائماً: من دخل بلا مصادقة ثنائية لم يلمس دلو 2FA،
-     * ومسحه لا يضرّ؛ أمّا نسيان أحدهما فيترك نصف الأثر.
+     * Always both buckets: somebody signing in without two-factor never touched the 2FA
+     * bucket, and clearing it does no harm; whereas forgetting one of them leaves half
+     * the trace behind.
      */
     private static function clearThrottleBuckets(): void
     {
@@ -81,11 +86,12 @@ final class AdminSessionOpener
     }
 
     /**
-     * إيميل تنبيه بدخول جديد.
+     * A new-sign-in alert email.
      *
-     * القيم نائبات لا نصّ محقون: HTTP_USER_AGENT ترويسة يتحكّم بها
-     * المرسِل كلياً، وحقنها المباشر كان يوصل HTML يكتبه المهاجم إلى
-     * صندوق بريد الأدمن. Mailer::template تهرّب كل نائبة.
+     * The values are placeholders rather than interpolated text: HTTP_USER_AGENT is a
+     * header entirely under the sender's control, and interpolating it directly delivered
+     * HTML written by an attacker into the admin's inbox. Mailer::template escapes every
+     * placeholder.
      *
      * @param array<string, mixed> $admin
      */
@@ -94,21 +100,21 @@ final class AdminSessionOpener
         Mailer::queue(
             $admin['email'],
             $admin['full_name'] ?? 'Admin',
-            'تسجيل دخول جديد لحسابك',
+            'A new sign-in to your account',
             Mailer::template(
-                'تسجيل دخول جديد',
-                'تم تسجيل دخول جديد لحساب الأدمن الخاص بك.<br><br>'
-                . '<b>الوقت:</b> {time}<br>'
-                . '<b>عنوان IP:</b> {ip}<br>'
-                . '<b>الجهاز/المتصفح:</b> {ua}<br><br>'
-                . 'إذا لم تكن أنت، غيّر كلمة المرور فورًا وتواصل مع الدعم.',
+                'New sign-in',
+                'A new sign-in to your admin account was recorded.<br><br>'
+                . '<b>Time:</b> {time}<br>'
+                . '<b>IP address:</b> {ip}<br>'
+                . '<b>Device / browser:</b> {ua}<br><br>'
+                . 'If this was not you, change your password immediately and contact support.',
                 self::requestFingerprint()
             )
         );
     }
 
     /**
-     * بصمة الطلب: الوقت وعنوان IP والمتصفح.
+     * The request's fingerprint: the time, the IP address and the browser.
      *
      * @return array<string, string>
      */
