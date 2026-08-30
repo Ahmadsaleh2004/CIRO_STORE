@@ -1,7 +1,7 @@
 openapi: 3.0.0
 info:
   title: 'Cairo Store API'
-  description: "كل نقاط المتجر ولوحة التحكم.\r\n\r\nملاحظة عامة على الأخطاء: نقاط JSON في هذا المشروع تُرجع 200 حتى عند\r\nفشل التحقق، والنتيجة تُقرأ من الحقل success في الجسم لا من كود HTTP.\r\nالاستثناءات الوحيدة هي 302 (تحويل لتسجيل الدخول) و403 (صلاحية ناقصة)\r\nو404 (راوت غير موجود). هذا سلوك قائم يعتمد عليه الـfrontend، ووُثّق\r\nهنا كما هو لا كما ينبغي أن يكون."
+  description: "Every store and admin-panel endpoint.\n\nA general note on errors: the JSON endpoints in this project return 200 even\nwhen validation fails, and the outcome is read from the `success` field in the\nbody rather than from the HTTP status. The only exceptions are 302 (redirect\nto sign-in), 403 (missing permission) and 404 (unregistered route). This is\nexisting behaviour the front end depends on, and it is documented here as it\nis rather than as it ought to be."
   version: 1.1.0
 servers:
   -
@@ -3094,24 +3094,24 @@ paths:
 components:
   schemas:
     ApiResponse:
-      title: 'غلاف استجابة JSON الموحّد'
-      description: "الشكل الذي تُرجعه كل نقطة JSON في المشروع، من Controller::respond().\r\n\r\nكود HTTP يبقى 200 حتى عند الفشل. النتيجة تُقرأ من الحقل success لا\r\nمن كود الحالة. هذا سلوك قائم يعتمد عليه الـfrontend في 34 ملف JS."
+      title: 'The unified JSON response envelope'
+      description: "The shape every JSON endpoint in the project returns, from Controller::respond().\n\nThe HTTP status stays 200 even on failure. The outcome is read from the\n`success` field, not from the status code. This is existing behaviour that the\nfront end depends on across 34 JavaScript files."
       required:
         - success
         - message
       properties:
         success:
-          description: 'مصدر الحقيقة الوحيد لنجاح العملية أو فشلها.'
+          description: 'The single source of truth for whether the operation succeeded.'
           type: boolean
           example: true
         message:
-          description: 'نصّ للعرض على المستخدم. لا تعتمد عليه برمجياً — راجع error_code.'
+          description: 'Text to show the user. Do not depend on it programmatically — see error_code.'
           type: string
-          example: 'تمت العملية بنجاح.'
+          example: 'The operation completed successfully.'
       type: object
     ApiError:
-      title: 'استجابة فشل تحمل رمزاً صريحاً'
-      description: "مثل ApiResponse لكن success=false ومعها error_code اختياري.\r\n\r\nالرمز عقد بين الخادم والمتصفح، والنصّ للعرض وحده. الفصل بينهما ليس\r\nتفضيلاً أسلوبياً: كان js/core/csrf.js يكتشف فشل CSRF بمطابقة بداية\r\nنصّ الرسالة، فأي نقطة تصوغ رسالتها بشكل آخر تفقد إعادة المحاولة\r\nالتلقائية بصمت. حدث ذلك ثلاث مرّات قبل أن يُستبدل النصّ برمز."
+      title: 'A failure response carrying an explicit code'
+      description: "Like ApiResponse, but with success=false and an optional error_code alongside.\n\nThe code is a contract between server and browser; the text is for display\nalone. Separating them is not a stylistic preference: js/core/csrf.js used to\ndetect a CSRF failure by matching the start of the message text, so any\nendpoint that worded its message differently lost the automatic retry, silently.\nThat happened three times before the text was replaced by a code."
       required:
         - success
         - message
@@ -3123,15 +3123,15 @@ components:
           type: string
           example: 'Invalid CSRF token, please refresh and try again.'
         error_code:
-          description: 'رمز ثابت تقرأه الآلة. يُضاف حين يحتاج العميل التصرّف لا العرض فقط.'
+          description: 'A stable machine-readable code. Added when the client needs to act rather than merely display.'
           type: string
           example: csrf_invalid
           enum:
             - csrf_invalid
       type: object
     Product:
-      title: منتج
-      description: 'صفّ من جدول products. الأسعار decimal(10,2) وتصل كنصوص من PDO.'
+      title: Product
+      description: 'A row from the products table. Prices are decimal(10,2) and arrive from PDO as strings.'
       properties:
         id:
           type: integer
@@ -3179,7 +3179,7 @@ components:
           type: string
           nullable: true
         stock_quantity:
-          description: 'العمود unsigned فلا قيمة سالبة ممكنة. العتبة 50 تحوّل الشارة إلى «محدود».'
+          description: 'The column is unsigned, so no negative value is possible. A threshold of 50 flips the badge to "limited".'
           type: integer
           example: 12
         sales_count:
@@ -3197,8 +3197,8 @@ components:
           format: date-time
       type: object
     ProductVariant:
-      title: 'نسخة لونية من منتج'
-      description: 'صفّ من product_variants. لكل منتج variant افتراضي واحد (is_default).'
+      title: 'A colour variant of a product'
+      description: 'A row from product_variants. Every product has exactly one default variant (is_default).'
       properties:
         id:
           type: integer
@@ -3245,7 +3245,7 @@ components:
           example: 0
       type: object
     Category:
-      title: تصنيف
+      title: Category
       properties:
         id:
           type: integer
@@ -3255,8 +3255,8 @@ components:
           example: Smartphones
       type: object
     StockBadge:
-      title: 'شارة المخزون'
-      description: "ناتج getStockBadge() في app/helpers/stock_badge_helper.php.\r\n\r\nللدالة مرآة في JS (stockBadge في js/core/utils.js) تخدم البطاقات التي\r\nيبنيها المتصفح. العتبة 50 والنصوص مكرّرة بين اللغتين عمداً في مشروع\r\nبلا خطوة بناء. القيمة null تعني «لا شارة» — مخزون وفير في سياق لا\r\nيطلب شارة خضراء."
+      title: 'Stock badge'
+      description: "The output of getStockBadge() in app/helpers/stock_badge_helper.php.\n\nThe function has a mirror in JavaScript (stockBadge in js/core/utils.js) that\nserves the cards the browser builds. The threshold of 50 and the label strings\nare duplicated across the two languages deliberately, in a project with no\nbuild step. A null means \"no badge\" — plentiful stock in a context that does\nnot call for a green one."
       properties:
         label:
           type: string
@@ -3267,8 +3267,8 @@ components:
       type: object
       nullable: true
     OrderItem:
-      title: 'سطر في طلب'
-      description: 'السعر مخزَّن وقت الشراء لا مقروءاً من المنتج — تغيير سعر المنتج لاحقاً لا يمسّ طلباً منجزاً.'
+      title: 'An order line'
+      description: 'The price is stored at purchase time rather than read from the product — changing a product price later does not touch a completed order.'
       properties:
         id:
           type: integer
@@ -3289,7 +3289,7 @@ components:
           example: '54999.00'
       type: object
     Order:
-      title: طلب
+      title: Order
       properties:
         id:
           type: integer
@@ -3298,7 +3298,7 @@ components:
           type: integer
           nullable: true
         status:
-          description: 'حالة الطلب. الانتقالات محكومة في OrderModel داخل معاملات.'
+          description: 'The order status. Transitions are governed in OrderModel, inside transactions.'
           type: string
           example: pending
         total_price:
@@ -3306,7 +3306,7 @@ components:
           format: decimal
           example: '109998.00'
         taken_by_admin_id:
-          description: 'الأدمن المستلم. يُفرَج عنه تلقائياً بعد المهلة (order_expiry_log).'
+          description: 'The admin holding it. Released automatically once the deadline passes (order_expiry_log).'
           type: integer
           nullable: true
         created_at:
@@ -3314,7 +3314,7 @@ components:
           format: date-time
       type: object
     Address:
-      title: 'عنوان مستخدم'
+      title: 'A user address'
       properties:
         id:
           type: integer
@@ -3331,8 +3331,8 @@ components:
           nullable: true
       type: object
     User:
-      title: 'مستخدم متجر'
-      description: 'حقل password لا يظهر في أي استجابة إطلاقاً.'
+      title: 'Store user'
+      description: 'The password field never appears in any response.'
       properties:
         id:
           type: integer
@@ -3354,8 +3354,8 @@ components:
           format: date-time
       type: object
     Admin:
-      title: 'حساب أدمن'
-      description: "الرتب مرتّبة تماماً: A=4 أعلى من B=3 أعلى من C=2 أعلى من D=1.\r\n\r\nالقاعدة الحاكمة في AdminModel::canManageTarget هي «أكبر تماماً» لا\r\n«أكبر أو يساوي» — فلا يدير أدمنٌ رتبتَه. لو كانت الثانية لاستطاع كل\r\nأدمن حذف أقرانه، ومنهم من أضاف حسابه. ورتبة A تتجاوز كل الصلاحيات."
+      title: 'Admin account'
+      description: "The ranks are totally ordered: A=4 outranks B=3 outranks C=2 outranks D=1.\n\nThe governing rule in AdminModel::canManageTarget is \"strictly greater\", not\n\"greater than or equal\" — so no admin manages their own rank. Were it the\nlatter, every admin could delete their peers, among them whoever created their\naccount. Rank A overrides every permission."
       properties:
         id:
           type: integer
@@ -3385,8 +3385,8 @@ components:
           format: date-time
       type: object
     AdminPermissions:
-      title: 'صلاحيات أدمن'
-      description: 'صفّ من admin_permissions. رتبة A تتجاوزها كلها في hasPermission().'
+      title: 'Admin permissions'
+      description: 'A row from admin_permissions. Rank A overrides all of them in hasPermission().'
       properties:
         can_manage_admins:
           type: boolean
@@ -3408,7 +3408,7 @@ components:
           type: boolean
       type: object
     Notification:
-      title: إشعار
+      title: Notification
       properties:
         id:
           type: integer
@@ -3433,7 +3433,7 @@ components:
           format: date-time
       type: object
     SupportMessage:
-      title: 'رسالة دعم'
+      title: 'Support message'
       properties:
         id:
           type: integer
@@ -3452,7 +3452,7 @@ components:
           format: date-time
       type: object
     SliderItem:
-      title: 'شريحة في السلايدر'
+      title: 'A slider slide'
       properties:
         id:
           type: integer
@@ -3468,27 +3468,27 @@ components:
           type: integer
       type: object
     CsrfToken:
-      title: 'توكن CSRF'
-      description: "مطلوب في كل نقطة POST عدا ثلاث موثّقة الاستثناء.\r\n\r\nيُقرأ من $_POST أو من جسم JSON معاً (Controller::requestData)، فيصحّ\r\nإرساله بأيّ من الشكلين. عند الفشل تُرجع النقطة error_code بقيمة\r\ncsrf_invalid، فيجلب js/core/csrf.js توكناً جديداً ويعيد المحاولة\r\nمرّة واحدة تلقائياً."
+      title: 'CSRF token'
+      description: "Required on every POST endpoint except three whose exemption is documented.\n\nIt is read from $_POST and from a JSON body alike (Controller::requestData), so\nsending it in either form is valid. On failure the endpoint returns error_code\nwith the value csrf_invalid, and js/core/csrf.js fetches a fresh token and\nretries exactly once, automatically."
       type: string
       example: 3f2a9c1e8b7d6f5a4c3b2a190e8d7c6b5a4f3e2d1c0b9a8f7e6d5c4b3a291807
   responses:
     JsonSuccess:
-      description: 'نجاح — success=true.'
+      description: 'Success — success=true.'
       content:
         application/json:
           schema:
             $ref: '#/components/schemas/ApiResponse'
     HtmlPage:
-      description: 'صفحة HTML كاملة.'
+      description: 'A complete HTML page.'
       content:
         text/html: {  }
     CsvDownload:
-      description: 'ملف CSV للتحميل (Content-Disposition: attachment).'
+      description: 'A CSV file for download (Content-Disposition: attachment).'
       content:
         text/csv: {  }
     CsrfFailure:
-      description: "فشل التحقق من توكن CSRF.\r\n\r\nكود HTTP يبقى 200 — الفشل يُقرأ من success=false ومن error_code.\r\nالعميل (js/core/csrf.js) يكتشف الرمز، يجلب توكناً جديداً، ويعيد\r\nالمحاولة مرّة واحدة تلقائياً. لذلك لا يرى المستخدم هذا الخطأ عادةً."
+      description: "CSRF token validation failed.\n\nThe HTTP status stays 200 — the failure is read from success=false and from\nerror_code. The client (js/core/csrf.js) detects the code, fetches a fresh\ntoken, and retries exactly once, automatically. Which is why the user does not\nnormally see this error at all."
       content:
         application/json:
           schema:
@@ -3498,7 +3498,7 @@ components:
             message: 'Invalid CSRF token, please refresh and try again.'
             error_code: csrf_invalid
     ValidationFailure:
-      description: "مدخلات غير صالحة (حقل ناقص، بريد غير صحيح، رسالة أقصر من الحدّ…).\r\n\r\nكود HTTP يبقى 200 كبقية نقاط JSON؛ التمييز من success=false."
+      description: "Invalid input (a missing field, a malformed email, a message below the minimum length…).\n\nThe HTTP status stays 200 as on every other JSON endpoint; the distinction comes from success=false."
       content:
         application/json:
           schema:
@@ -3507,7 +3507,7 @@ components:
             success: false
             message: 'Message is too short (at least 10 characters).'
     MethodNotAllowed:
-      description: 'الطلب لم يصل بـPOST. يُرفض في Controller::beginJsonPost قبل أي منطق.'
+      description: 'The request did not arrive as a POST. Refused in Controller::beginJsonPost before any logic runs.'
       content:
         application/json:
           schema:
@@ -3516,7 +3516,7 @@ components:
             success: false
             message: 'Method not allowed.'
     SessionExpired:
-      description: "لا جلسة صالحة. يُرجعها Middleware::requireAdmin لطلبات AJAX/POST\r\nبكود 401؛ أما طلبات الصفحات الكاملة فتُحوَّل بـ302 إلى صفحة الدخول."
+      description: "No valid session. Middleware::requireAdmin returns this with a 401 for\nAJAX/POST requests; full page requests are redirected to the sign-in page with\na 302 instead."
       content:
         application/json:
           schema:
@@ -3525,7 +3525,7 @@ components:
             success: false
             message: 'Session expired. Please log in again.'
     PermissionDenied:
-      description: "الجلسة صالحة لكن الصلاحية ناقصة (Middleware::requirePermission).\r\n\r\nرتبة A تتجاوز كل الصلاحيات، فلا تصل إلى هنا أبداً. والرسالة عامة\r\nعمداً: كشف اسم الصلاحية الناقصة للزائر يرسم له خريطة النظام."
+      description: "The session is valid but the permission is missing (Middleware::requirePermission).\n\nRank A overrides every permission, so it never reaches here. The message is\ndeliberately generic: naming the missing permission would draw the caller a map\nof the system."
       content:
         application/json:
           schema:
@@ -3534,102 +3534,102 @@ components:
             success: false
             message: 'Access denied. You do not have permission for this action.'
     NotFoundPage:
-      description: 'راوت غير مسجَّل أو مورد غير موجود. صفحة HTML من ErrorPage::notFound.'
+      description: 'An unregistered route or a missing resource. An HTML page from ErrorPage::notFound.'
       content:
         text/html: {  }
     ServiceUnavailable:
-      description: "عطل تقني يمنع إكمال الطلب — أبرزه فشل الاتصال بقاعدة البيانات.\r\n\r\n503 لا 500 عمداً: الخدمة غير متاحة مؤقتاً لا «خطأ في الخادم»،\r\nوالفرق يهمّ محرّكات البحث وأدوات المراقبة. التفاصيل تذهب إلى سجلّ\r\nالأخطاء ولا تُطبع للزائر أبداً — رسالة PDO تحمل اسم المضيف واسم\r\nالقاعدة واسم المستخدم."
+      description: "A technical fault preventing the request from completing — most often a failed database connection.\n\n503 rather than 500, deliberately: the service is temporarily unavailable, not\n\"a server error\", and the difference matters to search engines and monitoring\ntools. The details go to the error log and are never printed to the visitor — a\nPDO message carries the host name, the database name and the user name."
       content:
         text/html: {  }
     RedirectToLogin:
-      description: 'تحويل 302 إلى صفحة الدخول مع حفظ الوجهة الأصلية في الجلسة.'
+      description: 'A 302 redirect to the sign-in page, with the original destination kept in the session.'
       headers:
         Location:
-          description: 'وجهة التحويل.'
+          description: 'The redirect destination.'
           schema:
             type: string
     RedirectWithFlash:
-      description: 'تحويل 302 مع رسالة flash في الجلسة تُعرَض في الصفحة التالية.'
+      description: 'A 302 redirect with a flash message in the session, shown on the next page.'
       headers:
         Location:
-          description: 'وجهة التحويل.'
+          description: 'The redirect destination.'
           schema:
             type: string
   securitySchemes:
     adminSessionAuth:
       type: apiKey
-      description: 'PHP session cookie — يُنشأ تلقائياً عند تسجيل الدخول ويُرسل مع كل طلب محمي'
+      description: 'PHP session cookie — created automatically at sign-in and sent with every protected request'
       name: admin_session
       in: cookie
     userSessionAuth:
       type: apiKey
-      description: "جلسة المستخدم العادي — منفصلة تماماً عن admin_session بالاسم\r\nوالمحتوى، فلا يمكن الوصول لبيانات الأدمن من جلسة مستخدم ولا العكس\r\n(راجع isUser/isAdmin في auth_helper.php)."
+      description: "The regular user session — entirely separate from admin_session in both name\nand contents, so admin data cannot be reached from a user session or the other\nway round (see isUser/isAdmin in auth_helper.php)."
       name: PHPSESSID
       in: cookie
 tags:
   -
     name: 'Store - Pages'
-    description: 'صفحات المتجر الثابتة: الرئيسية، من نحن، اتصل بنا.'
+    description: 'Static store pages: home, about, contact.'
   -
     name: 'Store - Products'
-    description: 'تصفّح المنتجات وتفاصيلها والنسخ اللونية.'
+    description: 'Browsing products, their details, and their colour variants.'
   -
     name: 'Store - Auth'
-    description: 'تسجيل الدخول والحساب الجديد، واستعادة كلمة السر، ودخول Google.'
+    description: 'Sign-in, registration, password recovery, and Google sign-in.'
   -
     name: 'Store - Cart'
-    description: 'السلّة — محفوظة في المتصفح ويُتحقّق من مخزونها عند الخروج.'
+    description: 'The cart — kept on the server, with its stock verified at checkout.'
   -
     name: 'Store - Checkout'
-    description: 'إتمام الطلب وإلغاؤه، وعناوين الشحن.'
+    description: 'Placing and cancelling an order, and shipping addresses.'
   -
     name: 'Store - Account'
-    description: 'بيانات المستخدم وعناوينه وكلمة سرّه.'
+    description: "The user's profile, addresses and password."
   -
     name: 'Store - Wishlist'
-    description: 'المفضّلة، وتنبيه توفّر المخزون.'
+    description: 'The wishlist, and back-in-stock alerts.'
   -
     name: 'Store - Notifications'
-    description: 'إشعارات المستخدم — القائمة والتعليم كمقروء والحذف.'
+    description: 'User notifications — listing, marking read, and deleting.'
   -
     name: 'Admin - Auth'
-    description: "دخول لوحة التحكم: كلمة السر، ثم TOTP إن كان مفعّلاً، وhCaptcha.\r\n\r\nجلسة الأدمن اسمها admin_session ومنفصلة تماماً عن جلسة المتجر.\r\nو«وضع المتجر» يسمح للأدمن بتصفّح الواجهة العامة، والخروج منه يتطلّب\r\nإعادة إدخال كلمة السر."
+    description: "Signing in to the admin panel: password, then TOTP if enabled, plus hCaptcha.\n\nThe admin session is named admin_session and is entirely separate from the\nstore session. \"Store mode\" lets an admin browse the public surface, and\nleaving it requires entering the password again."
   -
     name: 'Admin - Home'
-    description: 'الصفحة الرئيسية للوحة — بطاقات الوصول السريع.'
+    description: 'The panel landing page — quick-access cards.'
   -
     name: 'Admin - Dashboard'
-    description: 'الإحصاءات: المبيعات والطلبات المعلّقة والمستخدمون الجدد.'
+    description: 'Statistics: sales, pending orders, and new users.'
   -
     name: 'Admin - Manage Products'
-    description: 'إضافة المنتجات وتعديلها وحذفها، والنسخ اللونية والتصنيفات.'
+    description: 'Adding, editing and deleting products, plus colour variants and categories.'
   -
     name: 'Admin - Manage Orders'
-    description: "الطلبات: الاستلام والتسليم والإفراج والإلغاء.\r\n\r\nالطلب المستلَم يُفرَج عنه تلقائياً بعد انتهاء المهلة، ويُسجَّل ذلك في\r\norder_expiry_log. وكل انتقال حالة يجري داخل معاملة."
+    description: "Orders: taking, delivering, releasing and cancelling.\n\nA taken order is released automatically once its deadline passes, and that is\nrecorded in order_expiry_log. Every state transition runs inside a transaction."
   -
     name: 'Admin - Manage Users'
-    description: 'المستخدمون: العرض والحظر والضربات والحذف.'
+    description: 'Users: viewing, blocking, strikes and deletion.'
   -
     name: 'Admin - Manage Admins'
-    description: "حسابات الأدمنية وصلاحياتهم.\r\n\r\nمحكومة بقاعدة الرتب: A أعلى من B أعلى من C أعلى من D، ولا يدير أدمنٌ\r\nرتبتَه — المقارنة «أكبر تماماً» لا «أكبر أو يساوي»."
+    description: "Admin accounts and their permissions.\n\nGoverned by the rank rule: A outranks B outranks C outranks D, and no admin\nmanages their own rank — the comparison is \"strictly greater\", not \"greater\nthan or equal\"."
   -
     name: 'Admin - Support'
-    description: 'رسائل الدعم الواردة من نموذج «اتصل بنا».'
+    description: 'Support messages arriving from the contact form.'
   -
     name: 'Admin - Messaging'
-    description: 'إشعار مستخدم بعينه، أو بثّ رسالة لمجموعة.'
+    description: 'Notifying one particular user, or broadcasting to a group.'
   -
     name: 'Admin - Notifications'
-    description: 'إشعارات الأدمن — تصل من أفعال أدمنية أدنى رتبة.'
+    description: 'Admin notifications — raised by the actions of lower-ranked admins.'
   -
     name: 'Admin - Branding'
-    description: 'سلايدر الصفحة الرئيسية والهوية البصرية.'
+    description: 'The home page slider and the visual identity.'
   -
     name: 'Admin - Site Settings'
-    description: 'إعدادات المتجر العامة.'
+    description: 'General store settings.'
   -
     name: 'Admin - My Info'
-    description: 'ملف الأدمن الشخصي وكلمة سرّه وتفعيل TOTP.'
+    description: "The admin's own profile, password, and TOTP setup."
   -
     name: 'Admin - Backup'
-    description: 'النسخ الاحتياطي لقاعدة البيانات — رتبة A وحدها. كلمة السر تُمرَّر عبر ملف خيارات لا سطر أوامر.'
+    description: 'Database backups — rank A only. The password is passed through an options file, never on the command line.'

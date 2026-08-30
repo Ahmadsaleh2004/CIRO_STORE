@@ -2,51 +2,54 @@
 
 /**
  * app/config/monitoring.php
- * تهيئة رصد الأخطاء (Sentry) ومعالِجات الالتقاط.
+ * Error monitoring setup (Sentry) and the capture handlers.
  *
  * ══════════════════════════════════════════════════════════════
- * لماذا
+ * Why
  * ══════════════════════════════════════════════════════════════
  *
- * كان كل ما يحدث عند الخطأ سطراً في `storage/php-error.log` — ملفاً
- * لا يفتحه أحد. أي أن عطلاً في صفحة الدفع الساعة الثانية فجراً
- * يُكتشف حين يشتكي زبون، إن اشتكى.
+ * All that used to happen on an error was a line in `storage/php-error.log` — a
+ * file nobody opens. Which means a fault on the checkout page at two in the
+ * morning is discovered when a customer complains, if they complain.
  *
- * وهذا ليس افتراضاً: صفحة الدفع كانت **معطّلة كلياً** منذ كومِت
- * الأساس — تعارض أسماء حقول يجعل كل عنصر سلّة يسقط — ولم يلاحظ أحد.
- * لو كان الرصد قائماً لوصل التنبيه مع أوّل محاولة شراء.
+ * And this is not hypothetical: the checkout page was **entirely broken** from
+ * the baseline commit onward — a field-name mismatch that made every cart item
+ * drop out — and nobody noticed. Had monitoring been in place, the alert would
+ * have arrived with the first attempted purchase.
  *
  * ══════════════════════════════════════════════════════════════
- * ثلاثة شروط للتشغيل — والغياب هو الوضع الافتراضي
+ * Three conditions to run — and absence is the default
  * ══════════════════════════════════════════════════════════════
  *
- * لا شيء هنا يعمل ما لم يوجد `SENTRY_DSN` في `.env`. فالمطوّر الذي
- * يستنسخ المستودع لا يحتاج حساباً ولا يدفع طلب شبكة واحداً، والملف
- * كلّه يصير سطر `return` واحداً.
+ * Nothing here runs unless `SENTRY_DSN` exists in `.env`. A developer who clones
+ * the repository needs no account and pays for no network request, and the whole
+ * file collapses to a single `return`.
  *
- * والاختبارات مستثناة صراحةً: `APP_ENV=testing` يمنع التهيئة. بلا
- * ذلك كانت كل استثناءات الاختبارات المقصودة تُرسَل إلى Sentry فتغرق
- * المشروع في ضجيج، وتُستهلك حصّة الحساب على أخطاء ليست أخطاء.
+ * Tests are excluded explicitly: `APP_ENV=testing` prevents initialisation.
+ * Without that, every deliberately thrown test exception would be sent to Sentry,
+ * drowning the project in noise and spending the account's quota on errors that
+ * are not errors.
  *
- * وCLI مشمول عمداً: سكربتات scripts/ (المهاجر، طابور البريد) تعمل
- * بلا مراقب بشري — وهي أولى بالرصد لا أحقّ بالاستثناء.
+ * CLI is included deliberately: the scripts under scripts/ (the migrator, the
+ * mail queue) run with no human watching — which makes them the first candidates
+ * for monitoring, not the first for exemption.
  */
 
 declare(strict_types=1);
 
 /**
- * مفاتيح لا تغادر الخادم أبداً.
+ * Keys that never leave the server.
  *
- * ⚠️ هذه أهمّ قائمة في الملف. Sentry يرسل سياق الطلب مع كل خطأ، وسياق
- * الطلب يشمل `$_POST` — أي كلمات المرور وتوكنات CSRF وأكواد 2FA
- * ومفاتيح الاستعادة. وإرسالها إلى طرف ثالث ليس تسريباً محتملاً بل
- * تسريبٌ بالتصميم.
+ * ⚠️ This is the most important list in the file. Sentry sends the request
+ * context with every error, and the request context includes `$_POST` — that is,
+ * passwords, CSRF tokens, 2FA codes and reset keys. Sending those to a third
+ * party is not a possible leak but a leak by design.
  *
- * `send_default_pii => false` أدناه تمنع الأساس (الكوكيز، عنوان IP،
- * ترويسات المصادقة). وهذه القائمة تغطّي ما يخصّ هذا المشروع تحديداً
- * ولا يعرفه المُرسِل الافتراضي.
+ * `send_default_pii => false` below blocks the basics (cookies, IP address,
+ * authentication headers). This list covers what is specific to this project and
+ * unknown to the default sender.
  *
- * من يضيف حقلاً حسّاساً جديداً في أي نموذج مسؤول عن إضافته هنا.
+ * Whoever adds a new sensitive field to any form is responsible for adding it here.
  */
 const MONITORING_SCRUB_KEYS = [
     'password',
@@ -65,10 +68,11 @@ const MONITORING_SCRUB_KEYS = [
 ];
 
 /**
- * ينظّف مصفوفة من القيم الحسّاسة — تعاودياً.
+ * Scrubs sensitive values out of an array — recursively.
  *
- * التعاود ليس تزيّناً: جسم JSON قد يحمل الحقل داخل كائن متداخل،
- * وتنظيف المستوى الأوّل وحده يعطي إحساساً بالأمان بلا أمان.
+ * The recursion is not decoration: a JSON body may carry the field inside a
+ * nested object, and scrubbing the top level alone gives a feeling of safety
+ * without the safety.
  *
  * @param  array<string,mixed> $data
  * @return array<string,mixed>
@@ -90,7 +94,7 @@ function monitoringScrub(array $data): array
 }
 
 /**
- * يهيّئ Sentry ويربط معالِجات الالتقاط — أو لا يفعل شيئاً.
+ * Initialises Sentry and wires the capture handlers — or does nothing at all.
  */
 function initMonitoring(): void
 {
@@ -100,13 +104,14 @@ function initMonitoring(): void
         return;
     }
 
-    // الاختبارات ترمي استثناءات عمداً. إرسالها يغرق المشروع في ضجيج
-    // ويستهلك الحصّة على ما ليس عطلاً.
+    // Tests throw exceptions deliberately. Sending them drowns the project in noise
+    // and spends the quota on what is not a fault.
     //
-    // القراءة من env() لا من ثابت APP_ENV: tests/phpstan-bootstrap.php
-    // يعرّف الثابت بقيمة 'testing' كي يرى المحلّل الثوابت، فيستنتج أن
-    // المقارنة صحيحة دائماً ويعتبرها خطأ. والقراءة من المصدر أصحّ
-    // منطقياً أيضاً — لا تعتمد على أن config.php عرّف الثابت بعد.
+    // Read from env() rather than the APP_ENV constant: tests/phpstan-bootstrap.php
+    // defines the constant as 'testing' so the analyser can see the constants, which
+    // makes it conclude the comparison is always true and report it as an error.
+    // Reading from the source is also more correct logically — it does not depend on
+    // config.php having defined the constant yet.
     $environment = (string) (env('APP_ENV', 'production') ?? 'production');
 
     if ($environment === 'testing') {
@@ -114,10 +119,10 @@ function initMonitoring(): void
     }
 
     if (!class_exists(\Sentry\SentrySdk::class)) {
-        // الحزمة غير مثبَّتة (تركيب بلا composer install مثلاً).
-        // الغياب لا يجوز أن يُسقط التطبيق: الرصد يخدم التشغيل ولا
-        // يشترطه.
-        error_log('SENTRY_DSN مضبوط لكن حزمة sentry/sentry غير مثبَّتة.');
+        // The package is not installed (an install without composer install, say).
+        // Its absence must not bring the application down: monitoring serves the
+        // running system, it is not a precondition for it.
+        error_log('SENTRY_DSN is set but the sentry/sentry package is not installed.');
         return;
     }
 
@@ -125,16 +130,17 @@ function initMonitoring(): void
         'dsn'         => $dsn,
         'environment' => $environment,
 
-        // ⚠️ false صراحةً لا اتّكالاً على الافتراضي: تمنع إرسال عنوان
-        // IP والكوكيز وترويسات المصادقة. الكوكي هنا يحمل معرّف الجلسة،
-        // ومن يملكه يملك الجلسة.
+        // ⚠️ false explicitly rather than relying on the default: it blocks sending
+        // the IP address, the cookies and the authentication headers. The cookie here
+        // carries the session id, and whoever holds it holds the session.
         'send_default_pii' => false,
 
-        // تتبّع الأداء مُطفأ افتراضياً: يرسل عيّنة من **كل** طلب لا من
-        // الأخطاء وحدها، فيستهلك الحصّة بسرعة بلا حاجة قائمة.
+        // Performance tracing is off by default: it samples **every** request rather
+        // than errors alone, so it burns through the quota quickly with no standing
+        // need for it.
         'traces_sample_rate' => (float) env('SENTRY_TRACES_SAMPLE_RATE', '0.0'),
 
-        // آخر مصفاة قبل مغادرة البيانات للخادم.
+        // The last filter before the data leaves the server.
         'before_send' => static function (\Sentry\Event $event): \Sentry\Event {
             $request = $event->getRequest();
 
@@ -142,7 +148,7 @@ function initMonitoring(): void
                 if (isset($request['data']) && is_array($request['data'])) {
                     $request['data'] = monitoringScrub($request['data']);
                 }
-                // الرابط قد يحمل توكن استعادة أو تحقّق بريد في الـquery.
+                // The URL may carry a reset or email-verification token in its query string.
                 if (isset($request['query_string']) && is_string($request['query_string'])) {
                     parse_str($request['query_string'], $parsed);
                     $request['query_string'] = http_build_query(monitoringScrub($parsed));
@@ -159,43 +165,46 @@ function initMonitoring(): void
 }
 
 /**
- * يربط الاستثناءات غير الملتقَطة والأخطاء القاتلة.
+ * Wires up uncaught exceptions and fatal errors.
  *
  * ══════════════════════════════════════════════════════════════
- * ⚠️ عطل قِيس وأُصلح: ثلاثة أحداث لاستثناء واحد
+ * ⚠️ A measured and fixed fault: three events for one exception
  * ══════════════════════════════════════════════════════════════
  *
- * النسخة الأولى من هذه الدالة كانت تفعل ثلاثة أشياء تتضاعف:
+ * The first version of this function did three things that compounded:
  *
- *   1. تلتقط الاستثناء بنفسها،
- *   2. ثم تفوّض إلى `$previousException` — وهو **معالج Sentry نفسه**
- *      المسجَّل داخل init()، فيلتقطه ثانيةً،
- *   3. ثم يتحوّل الاستثناء إلى E_ERROR فيلتقطه معالج الإغلاق ثالثةً.
+ *   1. it captured the exception itself,
+ *   2. then delegated to `$previousException` — which is **Sentry's own handler**,
+ *      registered inside init(), so it captured it a second time,
+ *   3. then the exception became an E_ERROR and the shutdown handler captured it a
+ *      third time.
  *
- * قيس فعلياً: `before_send` استُدعيت **ثلاث مرّات** لاستثناء واحد.
- * أي ثلاثة تنبيهات، وثلاثة أضعاف الحصّة، ومجموعة أحداث تبدو ثلاث
- * أعطال وهي عطل واحد.
+ * Actually measured: `before_send` was called **three times** for one exception.
+ * Which is three alerts, triple the quota, and a set of events that looks like
+ * three faults while being one.
  *
- * وأسوأ من التكرار: التفويض إلى معالج Sentry كان **يمنع صفحة الخطأ**.
- * ذلك المعالج يترك PHP يطبع «Fatal error: Uncaught …» ولا يعود، فلا
- * يُبلَغ سطر ErrorPage أدناه أبداً — بينما التعليق القديم كان يَعِد
- * صراحةً بـ«صفحة 500 نظيفة». مقيس: الاستثناء غير الملتقَط كان يطبع
- * الأثر الخام لا صفحة.
+ * And worse than the duplication: delegating to Sentry's handler **suppressed the
+ * error page**. That handler lets PHP print "Fatal error: Uncaught …" and never
+ * returns, so the ErrorPage line below was never reached — while the old comment
+ * explicitly promised "a clean 500 page". Measured: an uncaught exception printed
+ * the raw trace, not a page.
  *
- * ── العلاج ───────────────────────────────────────────────────
+ * ── The fix ──────────────────────────────────────────────────
  *
- * لا تفويض. هذا المعالج ينهي مسؤوليته بنفسه: يلتقط مرّة، ويسجّل، ثم
- * يعرض صفحة 500 ويخرج. وخروجه يمنع سلسلة المعالجات كلّها من العمل —
- * وهو المقصود، فهي مصدر التكرار.
+ * No delegation. This handler discharges its responsibility itself: it captures
+ * once, logs, then renders a 500 page and exits. Its exit stops the entire handler
+ * chain from running — which is the point, since that chain is the source of the
+ * duplication.
  *
- * ومعالج الإغلاق يحرس ما لا يراه هذا: نفاد الذاكرة، انتهاء المهلة،
- * خطأ تحليل في ملف مُضمَّن. تلك تُنهي الطلب قبل أن يصل إلى أي `catch`
- * أو أي معالج استثناءات، وهي بالضبط أعطال الإنتاج التي لا يراها أحد.
- * وحارسُ `$alreadyReported` يمنعه من تكرار ما التقطه المعالج الأوّل.
+ * The shutdown handler guards what this one cannot see: memory exhaustion, a
+ * timeout, a parse error in an included file. Those end the request before it
+ * reaches any `catch` or any exception handler, and they are precisely the
+ * production faults nobody sees. The `$alreadyReported` guard stops it repeating
+ * what the first handler already captured.
  */
 function registerMonitoringHandlers(): void
 {
-    // يُشارك بين المعالجين: من أبلغ أوّلاً يمنع الثاني من التكرار.
+    // Shared between the two handlers: whichever reports first stops the other repeating.
     $alreadyReported = new ArrayObject(['done' => false]);
 
     set_exception_handler(static function (\Throwable $e) use ($alreadyReported): void {
@@ -206,9 +215,9 @@ function registerMonitoringHandlers(): void
 
         error_log('Uncaught ' . get_class($e) . ': ' . $e->getMessage());
 
-        // ⚠️ لا تفويض إلى المعالج السابق. راجع التعليق أعلاه: ذلك
-        // المعالج هو معالج Sentry، والتفويض إليه يضاعف الحدث ويُلغي
-        // صفحة الخطأ معاً.
+        // ⚠️ No delegating to the previous handler. See the comment above: that
+        // handler is Sentry's, and delegating to it both duplicates the event and
+        // cancels the error page.
         \App\Core\ErrorPage::serverError($e->getMessage(), 500);
     });
 
@@ -231,45 +240,51 @@ function registerMonitoringHandlers(): void
             $error['line']
         ));
 
-        // الإرسال غير متزامن بطبعه؛ الإغلاق الصريح يضمن مغادرة الحدث
-        // قبل أن تموت العملية. بدونه تُفقد أعطالٌ هي الأهمّ.
+        // Sending is asynchronous by nature; an explicit flush guarantees the event
+        // leaves before the process dies. Without it, the most important faults are
+        // the ones lost.
         //
-        // ⚠️ ولا يُضمَن في حالة واحدة: نفاد الذاكرة. المعالج نفسه يحتاج
-        // ذاكرةً ليُسلسل الحدث ويرسله، وقد لا تتوفّر. مقيس: العطل يُسجَّل
-        // محلياً دائماً، ووصوله إلى Sentry غير مضمون هناك وحدها.
+        // ⚠️ And it is not guaranteed in one case: memory exhaustion. The handler
+        // itself needs memory to serialise the event and send it, and there may be
+        // none. Measured: the fault is always written locally, and only there is its
+        // arrival at Sentry uncertain.
         \Sentry\SentrySdk::getCurrentHub()->getClient()?->flush();
     });
 }
 
 /**
- * يُبلّغ Sentry عن استثناء التُقط ولن يُعاد رميه.
+ * Reports to Sentry an exception that was caught and will not be rethrown.
  *
  * ══════════════════════════════════════════════════════════════
- * الفجوة التي تسدّها
+ * The gap it closes
  * ══════════════════════════════════════════════════════════════
  *
- * `initMonitoring` تربط معالِجين: واحد للاستثناءات غير الملتقَطة
- * وآخر للأخطاء القاتلة. وكلاهما يعمل حين **يصعد** الخطأ إلى أعلى.
+ * `initMonitoring` wires two handlers: one for uncaught exceptions and one for
+ * fatal errors. Both of them only run when the error **propagates** to the top.
  *
- * لكن هذا المشروع لا يدع الأخطاء تصعد: نحو مئة وخمسين موضعاً في
- * `app/Models/*` و`app/Core/*` تلتقط `Exception` وتكتب `error_log`
- * وتُرجع `false` أو `[]`. وهو أسلوب سليم — الواجهة لا يجب أن تنهار
- * لأن استعلاماً فشل — لكن أثره أن Sentry أعمى عن كل فشل قاعدة بيانات
- * في التطبيق كلّه. لوحة الرصد خضراء بينما الطلبات تفشل صامتة.
+ * But this project does not let errors propagate: some hundred and fifty places
+ * across `app/Models/*` and `app/Core/*` catch `Exception`, write an `error_log`,
+ * and return `false` or `[]`. That is a sound approach — the interface should not
+ * collapse because a query failed — but its effect is that Sentry is blind to
+ * every database failure in the whole application. The monitoring dashboard is
+ * green while requests fail silently.
  *
  * ══════════════════════════════════════════════════════════════
- * لماذا دالة لا سطر مكرَّر
+ * Why a function rather than a repeated line
  * ══════════════════════════════════════════════════════════════
  *
- * `\Sentry\captureException($e)` مباشرةً تعني `class_exists` قبلها في
- * كل موضع — وإلا انفجر التطبيق على تركيب بلا `composer install`،
- * فيصير الرصدُ سبب العطل بدل أن يكشفه. وموضع واحد ينسى الحارس يكفي.
+ * Calling `\Sentry\captureException($e)` directly would mean a `class_exists`
+ * before it at every site — otherwise the application blows up on an install
+ * without `composer install`, and monitoring becomes the cause of the fault rather
+ * than what reveals it. One site forgetting the guard is enough.
  *
- * وهي صامتة عمداً في كل حالات الغياب: الرصد يخدم التشغيل ولا يشترطه.
+ * It is silent by design in every absence case: monitoring serves the running
+ * system, it is not a precondition for it.
  *
- * ⚠️ ولا تُغني عن `error_log`. السجلّ المحلي يبقى المصدر الذي يعمل
- * بلا شبكة وبلا DSN وفي بيئة الاختبار — و`before_send` هنا يُعقّم
- * الحقول الحسّاسة، أي أن ما يصل Sentry أنقص عمداً ممّا في السجلّ.
+ * ⚠️ And it does not replace `error_log`. The local log remains the source that
+ * works with no network, no DSN, and in the test environment — and `before_send`
+ * here scrubs the sensitive fields, which means what reaches Sentry is
+ * deliberately less complete than what is in the log.
  */
 function reportException(\Throwable $e): void
 {
@@ -277,8 +292,8 @@ function reportException(\Throwable $e): void
         return;
     }
 
-    // لا هَب ⇒ لم تُستدعَ initMonitoring، أو استُدعيت وخرجت باكراً
-    // (لا DSN، أو بيئة اختبار). الالتقاط حينها بلا وجهة.
+    // No hub ⇒ initMonitoring was never called, or was called and returned early
+    // (no DSN, or the test environment). A capture then has nowhere to go.
     if (\Sentry\SentrySdk::getCurrentHub()->getClient() === null) {
         return;
     }

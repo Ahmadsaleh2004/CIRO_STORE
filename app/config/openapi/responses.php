@@ -2,18 +2,20 @@
 
 /**
  * app/config/openapi/responses.php
- * استجابات مشتركة قابلة لإعادة الاستعمال.
+ * Shared, reusable responses.
  *
- * قبل هذا الملف كانت المواصفة تحمل 122 استجابة موزّعة هكذا:
- *     200 → 95 مرّة
+ * Before this file the spec carried 122 responses, distributed like this:
+ *     200 → 95 times
  *     302 → 18
  *     403 →  8
  *     401 →  1
- * و**صفر** من 400 و404 و422 و500. أي أن كل نقطة توثّق مسار النجاح
- * وحده، ومن يقرأ المواصفة لا يعرف كيف تفشل النقطة ولا كيف يتصرّف.
+ * and **zero** of 400, 404, 422 and 500. Which is to say every endpoint
+ * documented its happy path alone, and a reader of the spec could not tell how an
+ * endpoint fails or what to do about it.
  *
- * تُشار إليها من العمليات بـ`new OA\Response(ref: '#/components/responses/…')`
- * فتُكتب مرّة وتُستعمل مئة مرّة، ولا تتفرّق صياغاتها.
+ * Operations reference them with `new OA\Response(ref: '#/components/responses/…')`
+ * so each is written once and used a hundred times, and their wording never drifts
+ * apart.
  */
 
 namespace App\Config\OpenApi;
@@ -21,39 +23,40 @@ namespace App\Config\OpenApi;
 use OpenApi\Attributes as OA;
 
 // ══════════════════════════════════════════════════════════════
-// نجاح
+// Success
 // ══════════════════════════════════════════════════════════════
 
 #[OA\Response(
     response: 'JsonSuccess',
-    description: 'نجاح — success=true.',
+    description: 'Success — success=true.',
     content: new OA\JsonContent(ref: '#/components/schemas/ApiResponse')
 )]
 
 #[OA\Response(
     response: 'HtmlPage',
-    description: 'صفحة HTML كاملة.',
+    description: 'A complete HTML page.',
     content: new OA\MediaType(mediaType: 'text/html')
 )]
 
 #[OA\Response(
     response: 'CsvDownload',
-    description: 'ملف CSV للتحميل (Content-Disposition: attachment).',
+    description: 'A CSV file for download (Content-Disposition: attachment).',
     content: new OA\MediaType(mediaType: 'text/csv')
 )]
 
 // ══════════════════════════════════════════════════════════════
-// فشل
+// Failure
 // ══════════════════════════════════════════════════════════════
 
 #[OA\Response(
     response: 'CsrfFailure',
     description: <<<'TXT'
-    فشل التحقق من توكن CSRF.
+    CSRF token validation failed.
 
-    كود HTTP يبقى 200 — الفشل يُقرأ من success=false ومن error_code.
-    العميل (js/core/csrf.js) يكتشف الرمز، يجلب توكناً جديداً، ويعيد
-    المحاولة مرّة واحدة تلقائياً. لذلك لا يرى المستخدم هذا الخطأ عادةً.
+    The HTTP status stays 200 — the failure is read from success=false and from
+    error_code. The client (js/core/csrf.js) detects the code, fetches a fresh
+    token, and retries exactly once, automatically. Which is why the user does not
+    normally see this error at all.
     TXT,
     content: new OA\JsonContent(
         ref: '#/components/schemas/ApiError',
@@ -68,9 +71,9 @@ use OpenApi\Attributes as OA;
 #[OA\Response(
     response: 'ValidationFailure',
     description: <<<'TXT'
-    مدخلات غير صالحة (حقل ناقص، بريد غير صحيح، رسالة أقصر من الحدّ…).
+    Invalid input (a missing field, a malformed email, a message below the minimum length…).
 
-    كود HTTP يبقى 200 كبقية نقاط JSON؛ التمييز من success=false.
+    The HTTP status stays 200 as on every other JSON endpoint; the distinction comes from success=false.
     TXT,
     content: new OA\JsonContent(
         ref: '#/components/schemas/ApiError',
@@ -80,7 +83,7 @@ use OpenApi\Attributes as OA;
 
 #[OA\Response(
     response: 'MethodNotAllowed',
-    description: 'الطلب لم يصل بـPOST. يُرفض في Controller::beginJsonPost قبل أي منطق.',
+    description: 'The request did not arrive as a POST. Refused in Controller::beginJsonPost before any logic runs.',
     content: new OA\JsonContent(
         ref: '#/components/schemas/ApiError',
         example: ['success' => false, 'message' => 'Method not allowed.']
@@ -90,8 +93,9 @@ use OpenApi\Attributes as OA;
 #[OA\Response(
     response: 'SessionExpired',
     description: <<<'TXT'
-    لا جلسة صالحة. يُرجعها Middleware::requireAdmin لطلبات AJAX/POST
-    بكود 401؛ أما طلبات الصفحات الكاملة فتُحوَّل بـ302 إلى صفحة الدخول.
+    No valid session. Middleware::requireAdmin returns this with a 401 for
+    AJAX/POST requests; full page requests are redirected to the sign-in page with
+    a 302 instead.
     TXT,
     content: new OA\JsonContent(
         ref: '#/components/schemas/ApiError',
@@ -102,10 +106,11 @@ use OpenApi\Attributes as OA;
 #[OA\Response(
     response: 'PermissionDenied',
     description: <<<'TXT'
-    الجلسة صالحة لكن الصلاحية ناقصة (Middleware::requirePermission).
+    The session is valid but the permission is missing (Middleware::requirePermission).
 
-    رتبة A تتجاوز كل الصلاحيات، فلا تصل إلى هنا أبداً. والرسالة عامة
-    عمداً: كشف اسم الصلاحية الناقصة للزائر يرسم له خريطة النظام.
+    Rank A overrides every permission, so it never reaches here. The message is
+    deliberately generic: naming the missing permission would draw the caller a map
+    of the system.
     TXT,
     content: new OA\JsonContent(
         ref: '#/components/schemas/ApiError',
@@ -115,30 +120,30 @@ use OpenApi\Attributes as OA;
 
 #[OA\Response(
     response: 'NotFoundPage',
-    description: 'راوت غير مسجَّل أو مورد غير موجود. صفحة HTML من ErrorPage::notFound.',
+    description: 'An unregistered route or a missing resource. An HTML page from ErrorPage::notFound.',
     content: new OA\MediaType(mediaType: 'text/html')
 )]
 
 #[OA\Response(
     response: 'ServiceUnavailable',
     description: <<<'TXT'
-    عطل تقني يمنع إكمال الطلب — أبرزه فشل الاتصال بقاعدة البيانات.
+    A technical fault preventing the request from completing — most often a failed database connection.
 
-    503 لا 500 عمداً: الخدمة غير متاحة مؤقتاً لا «خطأ في الخادم»،
-    والفرق يهمّ محرّكات البحث وأدوات المراقبة. التفاصيل تذهب إلى سجلّ
-    الأخطاء ولا تُطبع للزائر أبداً — رسالة PDO تحمل اسم المضيف واسم
-    القاعدة واسم المستخدم.
+    503 rather than 500, deliberately: the service is temporarily unavailable, not
+    "a server error", and the difference matters to search engines and monitoring
+    tools. The details go to the error log and are never printed to the visitor — a
+    PDO message carries the host name, the database name and the user name.
     TXT,
     content: new OA\MediaType(mediaType: 'text/html')
 )]
 
 #[OA\Response(
     response: 'RedirectToLogin',
-    description: 'تحويل 302 إلى صفحة الدخول مع حفظ الوجهة الأصلية في الجلسة.',
+    description: 'A 302 redirect to the sign-in page, with the original destination kept in the session.',
     headers: [
         new OA\Header(
             header: 'Location',
-            description: 'وجهة التحويل.',
+            description: 'The redirect destination.',
             schema: new OA\Schema(type: 'string')
         ),
     ]
@@ -146,11 +151,11 @@ use OpenApi\Attributes as OA;
 
 #[OA\Response(
     response: 'RedirectWithFlash',
-    description: 'تحويل 302 مع رسالة flash في الجلسة تُعرَض في الصفحة التالية.',
+    description: 'A 302 redirect with a flash message in the session, shown on the next page.',
     headers: [
         new OA\Header(
             header: 'Location',
-            description: 'وجهة التحويل.',
+            description: 'The redirect destination.',
             schema: new OA\Schema(type: 'string')
         ),
     ]

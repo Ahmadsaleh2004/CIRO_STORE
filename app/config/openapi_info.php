@@ -2,19 +2,21 @@
 
 /**
  * app/config/openapi_info.php
- * تعريف معلومات OpenAPI العامة — يُفحص بواسطة zircote/swagger-php
- * لتوليد public/docs/openapi.yaml
+ * The top-level OpenAPI definition — scanned by zircote/swagger-php to generate
+ * public/docs/openapi.yaml.
  *
- * لماذا apiKey/cookie وليس http/bearer؟
- * لأن مصادقة الأدمن تعتمد على PHP session (admin_session cookie)
- * يُنشأ في AdminAuthController::login() عبر session_regenerate_id() + $_SESSION.
- * لا يوجد JWT أو Bearer token — الكوكي يُرسل تلقائياً مع كل طلب محمي.
+ * Why apiKey/cookie rather than http/bearer?
+ * Because admin authentication rests on a PHP session (the admin_session cookie),
+ * created in AdminAuthController::login() through session_regenerate_id() plus
+ * $_SESSION. There is no JWT and no bearer token — the cookie is sent
+ * automatically with every protected request.
  */
 
-// النطاق مطلوب بـPSR-4/PSR-12: كل كلاس في نطاق من مستوى واحد على
-// الأقل. الكلاس هنا علامة لا أكثر — وجوده كي تُعلَّق عليه سمات
-// swagger-php، ولا مستدعٍ له في المشروع (مفحوص). والنطاق لا يؤثّر على
-// الفحص: swagger-php يمسح المسارات لا الأسماء.
+// The namespace is required by PSR-4/PSR-12: every class lives in a namespace of
+// at least one level. The class here is a marker and nothing more — it exists so
+// swagger-php attributes have something to attach to, and it has no caller
+// anywhere in the project (verified). The namespace does not affect scanning:
+// swagger-php walks paths, not names.
 namespace App\Config;
 
 use OpenApi\Attributes as OA;
@@ -23,13 +25,14 @@ use OpenApi\Attributes as OA;
     version: '1.1.0',
     title: 'Cairo Store API',
     description: <<<'TXT'
-    كل نقاط المتجر ولوحة التحكم.
+    Every store and admin-panel endpoint.
 
-    ملاحظة عامة على الأخطاء: نقاط JSON في هذا المشروع تُرجع 200 حتى عند
-    فشل التحقق، والنتيجة تُقرأ من الحقل success في الجسم لا من كود HTTP.
-    الاستثناءات الوحيدة هي 302 (تحويل لتسجيل الدخول) و403 (صلاحية ناقصة)
-    و404 (راوت غير موجود). هذا سلوك قائم يعتمد عليه الـfrontend، ووُثّق
-    هنا كما هو لا كما ينبغي أن يكون.
+    A general note on errors: the JSON endpoints in this project return 200 even
+    when validation fails, and the outcome is read from the `success` field in the
+    body rather than from the HTTP status. The only exceptions are 302 (redirect
+    to sign-in), 403 (missing permission) and 404 (unregistered route). This is
+    existing behaviour the front end depends on, and it is documented here as it
+    is rather than as it ought to be.
     TXT
 )]
 #[OA\Server(
@@ -41,7 +44,7 @@ use OpenApi\Attributes as OA;
     type: 'apiKey',
     in: 'cookie',
     name: 'admin_session',
-    description: 'PHP session cookie — يُنشأ تلقائياً عند تسجيل الدخول ويُرسل مع كل طلب محمي'
+    description: 'PHP session cookie — created automatically at sign-in and sent with every protected request'
 )]
 #[OA\SecurityScheme(
     securityScheme: 'userSessionAuth',
@@ -49,75 +52,77 @@ use OpenApi\Attributes as OA;
     in: 'cookie',
     name: 'PHPSESSID',
     description: <<<'TXT'
-    جلسة المستخدم العادي — منفصلة تماماً عن admin_session بالاسم
-    والمحتوى، فلا يمكن الوصول لبيانات الأدمن من جلسة مستخدم ولا العكس
-    (راجع isUser/isAdmin في auth_helper.php).
+    The regular user session — entirely separate from admin_session in both name
+    and contents, so admin data cannot be reached from a user session or the other
+    way round (see isUser/isAdmin in auth_helper.php).
     TXT
 )]
 
 // ══════════════════════════════════════════════════════════════
-// الوسوم — تجميع الواجهة إلى قسمين
+// Tags — grouping the surface into two halves
 // ══════════════════════════════════════════════════════════════
 //
-// كانت الأوصاف تكرّر الأسماء حرفياً ('Admin Auth' وصفها 'Admin Auth')
-// — أي أنها لا تضيف شيئاً لمن يقرأ. والأسوأ أن التسمية كانت متناقضة:
-// ستّة وسوم بلا شرطة مقابل ستّة عشر بشرطة، **ومنها وسمان لنفس الشيء**
-// ('Admin My Info' و'Admin - My Info') فانقسمت نقاط الصفحة الواحدة بين
-// قسمين في صفحة التوثيق. وُحّدت كلها على `القسم - الاسم`.
+// The descriptions used to repeat the names verbatim ('Admin Auth' described as
+// 'Admin Auth') — adding nothing for whoever reads them. Worse, the naming was
+// inconsistent: six tags without a dash against sixteen with one, **including two
+// tags for the same thing** ('Admin My Info' and 'Admin - My Info'), which split
+// one page's endpoints across two sections of the documentation. They are now all
+// unified on `Section - Name`.
 //
-// الترتيب هنا هو ترتيب الظهور في Swagger UI: المتجر أولاً لأنه الواجهة
-// العامة، ثم لوحة التحكم.
+// The order here is the order they appear in Swagger UI: the store first, since
+// it is the public surface, then the admin panel.
 
-#[OA\Tag(name: 'Store - Pages', description: 'صفحات المتجر الثابتة: الرئيسية، من نحن، اتصل بنا.')]
-#[OA\Tag(name: 'Store - Products', description: 'تصفّح المنتجات وتفاصيلها والنسخ اللونية.')]
-#[OA\Tag(name: 'Store - Auth', description: 'تسجيل الدخول والحساب الجديد، واستعادة كلمة السر، ودخول Google.')]
-#[OA\Tag(name: 'Store - Cart', description: 'السلّة — محفوظة في المتصفح ويُتحقّق من مخزونها عند الخروج.')]
-#[OA\Tag(name: 'Store - Checkout', description: 'إتمام الطلب وإلغاؤه، وعناوين الشحن.')]
-#[OA\Tag(name: 'Store - Account', description: 'بيانات المستخدم وعناوينه وكلمة سرّه.')]
-#[OA\Tag(name: 'Store - Wishlist', description: 'المفضّلة، وتنبيه توفّر المخزون.')]
-#[OA\Tag(name: 'Store - Notifications', description: 'إشعارات المستخدم — القائمة والتعليم كمقروء والحذف.')]
+#[OA\Tag(name: 'Store - Pages', description: 'Static store pages: home, about, contact.')]
+#[OA\Tag(name: 'Store - Products', description: 'Browsing products, their details, and their colour variants.')]
+#[OA\Tag(name: 'Store - Auth', description: 'Sign-in, registration, password recovery, and Google sign-in.')]
+#[OA\Tag(name: 'Store - Cart', description: 'The cart — kept on the server, with its stock verified at checkout.')]
+#[OA\Tag(name: 'Store - Checkout', description: 'Placing and cancelling an order, and shipping addresses.')]
+#[OA\Tag(name: 'Store - Account', description: "The user's profile, addresses and password.")]
+#[OA\Tag(name: 'Store - Wishlist', description: 'The wishlist, and back-in-stock alerts.')]
+#[OA\Tag(name: 'Store - Notifications', description: 'User notifications — listing, marking read, and deleting.')]
 
 #[OA\Tag(
     name: 'Admin - Auth',
     description: <<<'TXT'
-    دخول لوحة التحكم: كلمة السر، ثم TOTP إن كان مفعّلاً، وhCaptcha.
+    Signing in to the admin panel: password, then TOTP if enabled, plus hCaptcha.
 
-    جلسة الأدمن اسمها admin_session ومنفصلة تماماً عن جلسة المتجر.
-    و«وضع المتجر» يسمح للأدمن بتصفّح الواجهة العامة، والخروج منه يتطلّب
-    إعادة إدخال كلمة السر.
+    The admin session is named admin_session and is entirely separate from the
+    store session. "Store mode" lets an admin browse the public surface, and
+    leaving it requires entering the password again.
     TXT
 )]
-#[OA\Tag(name: 'Admin - Home', description: 'الصفحة الرئيسية للوحة — بطاقات الوصول السريع.')]
-#[OA\Tag(name: 'Admin - Dashboard', description: 'الإحصاءات: المبيعات والطلبات المعلّقة والمستخدمون الجدد.')]
-#[OA\Tag(name: 'Admin - Manage Products', description: 'إضافة المنتجات وتعديلها وحذفها، والنسخ اللونية والتصنيفات.')]
+#[OA\Tag(name: 'Admin - Home', description: 'The panel landing page — quick-access cards.')]
+#[OA\Tag(name: 'Admin - Dashboard', description: 'Statistics: sales, pending orders, and new users.')]
+#[OA\Tag(name: 'Admin - Manage Products', description: 'Adding, editing and deleting products, plus colour variants and categories.')]
 #[OA\Tag(
     name: 'Admin - Manage Orders',
     description: <<<'TXT'
-    الطلبات: الاستلام والتسليم والإفراج والإلغاء.
+    Orders: taking, delivering, releasing and cancelling.
 
-    الطلب المستلَم يُفرَج عنه تلقائياً بعد انتهاء المهلة، ويُسجَّل ذلك في
-    order_expiry_log. وكل انتقال حالة يجري داخل معاملة.
+    A taken order is released automatically once its deadline passes, and that is
+    recorded in order_expiry_log. Every state transition runs inside a transaction.
     TXT
 )]
-#[OA\Tag(name: 'Admin - Manage Users', description: 'المستخدمون: العرض والحظر والضربات والحذف.')]
+#[OA\Tag(name: 'Admin - Manage Users', description: 'Users: viewing, blocking, strikes and deletion.')]
 #[OA\Tag(
     name: 'Admin - Manage Admins',
     description: <<<'TXT'
-    حسابات الأدمنية وصلاحياتهم.
+    Admin accounts and their permissions.
 
-    محكومة بقاعدة الرتب: A أعلى من B أعلى من C أعلى من D، ولا يدير أدمنٌ
-    رتبتَه — المقارنة «أكبر تماماً» لا «أكبر أو يساوي».
+    Governed by the rank rule: A outranks B outranks C outranks D, and no admin
+    manages their own rank — the comparison is "strictly greater", not "greater
+    than or equal".
     TXT
 )]
-#[OA\Tag(name: 'Admin - Support', description: 'رسائل الدعم الواردة من نموذج «اتصل بنا».')]
-#[OA\Tag(name: 'Admin - Messaging', description: 'إشعار مستخدم بعينه، أو بثّ رسالة لمجموعة.')]
-#[OA\Tag(name: 'Admin - Notifications', description: 'إشعارات الأدمن — تصل من أفعال أدمنية أدنى رتبة.')]
-#[OA\Tag(name: 'Admin - Branding', description: 'سلايدر الصفحة الرئيسية والهوية البصرية.')]
-#[OA\Tag(name: 'Admin - Site Settings', description: 'إعدادات المتجر العامة.')]
-#[OA\Tag(name: 'Admin - My Info', description: 'ملف الأدمن الشخصي وكلمة سرّه وتفعيل TOTP.')]
+#[OA\Tag(name: 'Admin - Support', description: 'Support messages arriving from the contact form.')]
+#[OA\Tag(name: 'Admin - Messaging', description: 'Notifying one particular user, or broadcasting to a group.')]
+#[OA\Tag(name: 'Admin - Notifications', description: 'Admin notifications — raised by the actions of lower-ranked admins.')]
+#[OA\Tag(name: 'Admin - Branding', description: 'The home page slider and the visual identity.')]
+#[OA\Tag(name: 'Admin - Site Settings', description: 'General store settings.')]
+#[OA\Tag(name: 'Admin - My Info', description: "The admin's own profile, password, and TOTP setup.")]
 #[OA\Tag(
     name: 'Admin - Backup',
-    description: 'النسخ الاحتياطي لقاعدة البيانات — رتبة A وحدها. كلمة السر تُمرَّر عبر ملف خيارات لا سطر أوامر.'
+    description: 'Database backups — rank A only. The password is passed through an options file, never on the command line.'
 )]
 
 class OpenApiInfo

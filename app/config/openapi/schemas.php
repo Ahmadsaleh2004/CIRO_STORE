@@ -2,15 +2,16 @@
 
 /**
  * app/config/openapi/schemas.php
- * المخططات المشتركة لمواصفة OpenAPI.
+ * The shared schemas for the OpenAPI specification.
  *
- * لماذا ملف مستقل؟ لأن المواصفة قبله كانت تحوي **صفر `$ref` وصفر
- * schema**: كل عملية من الـ103 تصف جسمها بأسطر مضمّنة تخصّها وحدها.
- * النتيجة أن شكل «الطلب» أو «المنتج» مكتوب عشرات المرّات بصياغات
- * تتفرّق كلما عُدِّلت واحدة — وهو بالضبط ما تمنعه المخططات.
+ * Why a file of its own? Because before it the spec contained **zero `$ref` and
+ * zero schemas**: each of the 103 operations described its body with inline lines
+ * belonging to it alone. The result was that the shape of "an order" or "a
+ * product" was written out dozens of times, in wordings that drifted apart every
+ * time one of them was edited — which is precisely what schemas prevent.
  *
- * كل شيء هنا يوصف **كما هو فعلاً** لا كما ينبغي أن يكون. الأنواع
- * والقابلية للإفراغ مأخوذة من مخطّط قاعدة البيانات الحقيقي
+ * Everything here describes the system **as it actually is**, not as it ought to
+ * be. The types and nullability are taken from the real database schema
  * (tests/fixtures/schema.sql).
  */
 
@@ -19,35 +20,36 @@ namespace App\Config\OpenApi;
 use OpenApi\Attributes as OA;
 
 // ══════════════════════════════════════════════════════════════
-// 1. غلاف الاستجابة الموحّد
+// 1. The unified response envelope
 // ══════════════════════════════════════════════════════════════
 //
-// كل نقاط JSON تُرجع {success, message, ...} — الشكل مفروض في
-// Controller::respond() ويعتمد عليه js/core/utils.js. توثيقه مرّة واحدة
-// يجعل أي انحراف عنه ظاهراً.
+// Every JSON endpoint returns {success, message, ...} — the shape is enforced in
+// Controller::respond() and js/core/utils.js depends on it. Documenting it once
+// makes any deviation from it visible.
 
 #[OA\Schema(
     schema: 'ApiResponse',
-    title: 'غلاف استجابة JSON الموحّد',
+    title: 'The unified JSON response envelope',
     description: <<<'TXT'
-    الشكل الذي تُرجعه كل نقطة JSON في المشروع، من Controller::respond().
+    The shape every JSON endpoint in the project returns, from Controller::respond().
 
-    كود HTTP يبقى 200 حتى عند الفشل. النتيجة تُقرأ من الحقل success لا
-    من كود الحالة. هذا سلوك قائم يعتمد عليه الـfrontend في 34 ملف JS.
+    The HTTP status stays 200 even on failure. The outcome is read from the
+    `success` field, not from the status code. This is existing behaviour that the
+    front end depends on across 34 JavaScript files.
     TXT,
     required: ['success', 'message'],
     properties: [
         new OA\Property(
             property: 'success',
             type: 'boolean',
-            description: 'مصدر الحقيقة الوحيد لنجاح العملية أو فشلها.',
+            description: 'The single source of truth for whether the operation succeeded.',
             example: true
         ),
         new OA\Property(
             property: 'message',
             type: 'string',
-            description: 'نصّ للعرض على المستخدم. لا تعتمد عليه برمجياً — راجع error_code.',
-            example: 'تمت العملية بنجاح.'
+            description: 'Text to show the user. Do not depend on it programmatically — see error_code.',
+            example: 'The operation completed successfully.'
         ),
     ],
     type: 'object'
@@ -55,14 +57,15 @@ use OpenApi\Attributes as OA;
 
 #[OA\Schema(
     schema: 'ApiError',
-    title: 'استجابة فشل تحمل رمزاً صريحاً',
+    title: 'A failure response carrying an explicit code',
     description: <<<'TXT'
-    مثل ApiResponse لكن success=false ومعها error_code اختياري.
+    Like ApiResponse, but with success=false and an optional error_code alongside.
 
-    الرمز عقد بين الخادم والمتصفح، والنصّ للعرض وحده. الفصل بينهما ليس
-    تفضيلاً أسلوبياً: كان js/core/csrf.js يكتشف فشل CSRF بمطابقة بداية
-    نصّ الرسالة، فأي نقطة تصوغ رسالتها بشكل آخر تفقد إعادة المحاولة
-    التلقائية بصمت. حدث ذلك ثلاث مرّات قبل أن يُستبدل النصّ برمز.
+    The code is a contract between server and browser; the text is for display
+    alone. Separating them is not a stylistic preference: js/core/csrf.js used to
+    detect a CSRF failure by matching the start of the message text, so any
+    endpoint that worded its message differently lost the automatic retry, silently.
+    That happened three times before the text was replaced by a code.
     TXT,
     required: ['success', 'message'],
     properties: [
@@ -75,7 +78,7 @@ use OpenApi\Attributes as OA;
         new OA\Property(
             property: 'error_code',
             type: 'string',
-            description: 'رمز ثابت تقرأه الآلة. يُضاف حين يحتاج العميل التصرّف لا العرض فقط.',
+            description: 'A stable machine-readable code. Added when the client needs to act rather than merely display.',
             enum: ['csrf_invalid'],
             example: 'csrf_invalid'
         ),
@@ -84,13 +87,13 @@ use OpenApi\Attributes as OA;
 )]
 
 // ══════════════════════════════════════════════════════════════
-// 2. كيانات المتجر
+// 2. Store entities
 // ══════════════════════════════════════════════════════════════
 
 #[OA\Schema(
     schema: 'Product',
-    title: 'منتج',
-    description: 'صفّ من جدول products. الأسعار decimal(10,2) وتصل كنصوص من PDO.',
+    title: 'Product',
+    description: 'A row from the products table. Prices are decimal(10,2) and arrive from PDO as strings.',
     properties: [
         new OA\Property(property: 'id', type: 'integer', example: 42),
         new OA\Property(property: 'name', type: 'string', example: 'iPhone 16 Pro'),
@@ -113,7 +116,7 @@ use OpenApi\Attributes as OA;
         new OA\Property(
             property: 'stock_quantity',
             type: 'integer',
-            description: 'العمود unsigned فلا قيمة سالبة ممكنة. العتبة 50 تحوّل الشارة إلى «محدود».',
+            description: 'The column is unsigned, so no negative value is possible. A threshold of 50 flips the badge to "limited".',
             example: 12
         ),
         new OA\Property(property: 'sales_count', type: 'integer', example: 130),
@@ -126,8 +129,8 @@ use OpenApi\Attributes as OA;
 
 #[OA\Schema(
     schema: 'ProductVariant',
-    title: 'نسخة لونية من منتج',
-    description: 'صفّ من product_variants. لكل منتج variant افتراضي واحد (is_default).',
+    title: 'A colour variant of a product',
+    description: 'A row from product_variants. Every product has exactly one default variant (is_default).',
     properties: [
         new OA\Property(property: 'id', type: 'integer', example: 7),
         new OA\Property(property: 'product_id', type: 'integer', example: 42),
@@ -147,7 +150,7 @@ use OpenApi\Attributes as OA;
 
 #[OA\Schema(
     schema: 'Category',
-    title: 'تصنيف',
+    title: 'Category',
     properties: [
         new OA\Property(property: 'id', type: 'integer', example: 3),
         new OA\Property(property: 'name', type: 'string', example: 'Smartphones'),
@@ -157,14 +160,15 @@ use OpenApi\Attributes as OA;
 
 #[OA\Schema(
     schema: 'StockBadge',
-    title: 'شارة المخزون',
+    title: 'Stock badge',
     description: <<<'TXT'
-    ناتج getStockBadge() في app/helpers/stock_badge_helper.php.
+    The output of getStockBadge() in app/helpers/stock_badge_helper.php.
 
-    للدالة مرآة في JS (stockBadge في js/core/utils.js) تخدم البطاقات التي
-    يبنيها المتصفح. العتبة 50 والنصوص مكرّرة بين اللغتين عمداً في مشروع
-    بلا خطوة بناء. القيمة null تعني «لا شارة» — مخزون وفير في سياق لا
-    يطلب شارة خضراء.
+    The function has a mirror in JavaScript (stockBadge in js/core/utils.js) that
+    serves the cards the browser builds. The threshold of 50 and the label strings
+    are duplicated across the two languages deliberately, in a project with no
+    build step. A null means "no badge" — plentiful stock in a context that does
+    not call for a green one.
     TXT,
     properties: [
         new OA\Property(property: 'label', type: 'string', example: 'Limited (7 left)'),
@@ -175,13 +179,13 @@ use OpenApi\Attributes as OA;
 )]
 
 // ══════════════════════════════════════════════════════════════
-// 3. الطلبات
+// 3. Orders
 // ══════════════════════════════════════════════════════════════
 
 #[OA\Schema(
     schema: 'OrderItem',
-    title: 'سطر في طلب',
-    description: 'السعر مخزَّن وقت الشراء لا مقروءاً من المنتج — تغيير سعر المنتج لاحقاً لا يمسّ طلباً منجزاً.',
+    title: 'An order line',
+    description: 'The price is stored at purchase time rather than read from the product — changing a product price later does not touch a completed order.',
     properties: [
         new OA\Property(property: 'id', type: 'integer'),
         new OA\Property(property: 'order_id', type: 'integer'),
@@ -195,14 +199,14 @@ use OpenApi\Attributes as OA;
 
 #[OA\Schema(
     schema: 'Order',
-    title: 'طلب',
+    title: 'Order',
     properties: [
         new OA\Property(property: 'id', type: 'integer', example: 1024),
         new OA\Property(property: 'user_id', type: 'integer', nullable: true),
         new OA\Property(
             property: 'status',
             type: 'string',
-            description: 'حالة الطلب. الانتقالات محكومة في OrderModel داخل معاملات.',
+            description: 'The order status. Transitions are governed in OrderModel, inside transactions.',
             example: 'pending'
         ),
         new OA\Property(property: 'total_price', type: 'string', format: 'decimal', example: '109998.00'),
@@ -210,7 +214,7 @@ use OpenApi\Attributes as OA;
             property: 'taken_by_admin_id',
             type: 'integer',
             nullable: true,
-            description: 'الأدمن المستلم. يُفرَج عنه تلقائياً بعد المهلة (order_expiry_log).'
+            description: 'The admin holding it. Released automatically once the deadline passes (order_expiry_log).'
         ),
         new OA\Property(property: 'created_at', type: 'string', format: 'date-time'),
     ],
@@ -219,7 +223,7 @@ use OpenApi\Attributes as OA;
 
 #[OA\Schema(
     schema: 'Address',
-    title: 'عنوان مستخدم',
+    title: 'A user address',
     properties: [
         new OA\Property(property: 'id', type: 'integer'),
         new OA\Property(property: 'user_id', type: 'integer'),
@@ -231,13 +235,13 @@ use OpenApi\Attributes as OA;
 )]
 
 // ══════════════════════════════════════════════════════════════
-// 4. المستخدمون والأدمنية
+// 4. Users and admins
 // ══════════════════════════════════════════════════════════════
 
 #[OA\Schema(
     schema: 'User',
-    title: 'مستخدم متجر',
-    description: 'حقل password لا يظهر في أي استجابة إطلاقاً.',
+    title: 'Store user',
+    description: 'The password field never appears in any response.',
     properties: [
         new OA\Property(property: 'id', type: 'integer', example: 88),
         new OA\Property(property: 'full_name', type: 'string'),
@@ -251,13 +255,14 @@ use OpenApi\Attributes as OA;
 
 #[OA\Schema(
     schema: 'Admin',
-    title: 'حساب أدمن',
+    title: 'Admin account',
     description: <<<'TXT'
-    الرتب مرتّبة تماماً: A=4 أعلى من B=3 أعلى من C=2 أعلى من D=1.
+    The ranks are totally ordered: A=4 outranks B=3 outranks C=2 outranks D=1.
 
-    القاعدة الحاكمة في AdminModel::canManageTarget هي «أكبر تماماً» لا
-    «أكبر أو يساوي» — فلا يدير أدمنٌ رتبتَه. لو كانت الثانية لاستطاع كل
-    أدمن حذف أقرانه، ومنهم من أضاف حسابه. ورتبة A تتجاوز كل الصلاحيات.
+    The governing rule in AdminModel::canManageTarget is "strictly greater", not
+    "greater than or equal" — so no admin manages their own rank. Were it the
+    latter, every admin could delete their peers, among them whoever created their
+    account. Rank A overrides every permission.
     TXT,
     properties: [
         new OA\Property(property: 'id', type: 'integer', example: 1),
@@ -273,8 +278,8 @@ use OpenApi\Attributes as OA;
 
 #[OA\Schema(
     schema: 'AdminPermissions',
-    title: 'صلاحيات أدمن',
-    description: 'صفّ من admin_permissions. رتبة A تتجاوزها كلها في hasPermission().',
+    title: 'Admin permissions',
+    description: 'A row from admin_permissions. Rank A overrides all of them in hasPermission().',
     properties: [
         new OA\Property(property: 'can_manage_admins', type: 'boolean'),
         new OA\Property(property: 'can_manage_products', type: 'boolean'),
@@ -291,7 +296,7 @@ use OpenApi\Attributes as OA;
 
 #[OA\Schema(
     schema: 'Notification',
-    title: 'إشعار',
+    title: 'Notification',
     properties: [
         new OA\Property(property: 'id', type: 'integer'),
         new OA\Property(property: 'title', type: 'string', example: 'Order Taken'),
@@ -306,7 +311,7 @@ use OpenApi\Attributes as OA;
 
 #[OA\Schema(
     schema: 'SupportMessage',
-    title: 'رسالة دعم',
+    title: 'Support message',
     properties: [
         new OA\Property(property: 'id', type: 'integer'),
         new OA\Property(property: 'user_id', type: 'integer', nullable: true),
@@ -320,7 +325,7 @@ use OpenApi\Attributes as OA;
 
 #[OA\Schema(
     schema: 'SliderItem',
-    title: 'شريحة في السلايدر',
+    title: 'A slider slide',
     properties: [
         new OA\Property(property: 'id', type: 'integer'),
         new OA\Property(property: 'slider_id', type: 'integer'),
@@ -332,19 +337,19 @@ use OpenApi\Attributes as OA;
 )]
 
 // ══════════════════════════════════════════════════════════════
-// 5. حقل CSRF — يتكرّر في كل نموذج POST
+// 5. The CSRF field — repeated in every POST form
 // ══════════════════════════════════════════════════════════════
 
 #[OA\Schema(
     schema: 'CsrfToken',
-    title: 'توكن CSRF',
+    title: 'CSRF token',
     description: <<<'TXT'
-    مطلوب في كل نقطة POST عدا ثلاث موثّقة الاستثناء.
+    Required on every POST endpoint except three whose exemption is documented.
 
-    يُقرأ من $_POST أو من جسم JSON معاً (Controller::requestData)، فيصحّ
-    إرساله بأيّ من الشكلين. عند الفشل تُرجع النقطة error_code بقيمة
-    csrf_invalid، فيجلب js/core/csrf.js توكناً جديداً ويعيد المحاولة
-    مرّة واحدة تلقائياً.
+    It is read from $_POST and from a JSON body alike (Controller::requestData), so
+    sending it in either form is valid. On failure the endpoint returns error_code
+    with the value csrf_invalid, and js/core/csrf.js fetches a fresh token and
+    retries exactly once, automatically.
     TXT,
     type: 'string',
     example: '3f2a9c1e8b7d6f5a4c3b2a190e8d7c6b5a4f3e2d1c0b9a8f7e6d5c4b3a291807'
