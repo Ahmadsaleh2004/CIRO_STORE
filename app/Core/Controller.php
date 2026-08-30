@@ -4,25 +4,25 @@ namespace App\Core;
 
 abstract class Controller
 {
-    /** الـlayouts المدعومة — أي قيمة أخرى خطأ برمجي لا خيار وقت تشغيل. */
+    /** The supported layouts — any other value is a programming error, not a runtime choice. */
     private const LAYOUTS = ['store', 'admin', 'bare'];
 
     /**
-     * يعرض view داخل أحد ثلاثة layouts.
+     * Renders a view inside one of three layouts.
      *
      * ┌─────────┬──────────────────────────────────────────────────┐
      * │ store   │ inc/head + inc/navbar + view + inc/footer        │
      * │ admin   │ admin/inc/head + admin/inc/navbar + view + …     │
-     * │ bare    │ الـview وحده — صفحة مستقلة تبني وسومها بنفسها     │
+     * │ bare    │ the view alone — a standalone page that builds its own tags │
      * └─────────┴──────────────────────────────────────────────────┘
      *
-     * صفحات `bare` (تسجيل دخول الأدمن، إعادة المصادقة، إعادة تعيين كلمة
-     * المرور) تستعمل `inc/head-bare.php` و`inc/footer-bare.php` بدل أن
-     * تكتب `<!DOCTYPE html>` بيدها.
+     * The `bare` pages (admin sign-in, re-authentication, password reset) use
+     * `inc/head-bare.php` and `inc/footer-bare.php` rather than writing
+     * `<!DOCTYPE html>` by hand.
      *
-     * @param string $view   مسار الـview تحت app/views بلا امتداد،
-     *                       مثل 'home' أو 'admin/orders/index'
-     * @param array<string, mixed> $data متغيرات تُستخرج للـview ولملفات الـlayout
+     * @param string $view   The view path under app/views without an extension,
+     *                       such as 'home' or 'admin/orders/index'
+     * @param array<string, mixed> $data Variables extracted for the view and the layout files
      * @param string $layout 'store' | 'admin' | 'bare'
      */
     protected function view(string $view, array $data = [], string $layout = 'store'): void
@@ -33,33 +33,36 @@ abstract class Controller
             );
         }
 
-        // المتغيرات المحلية مسبوقة بـ__ لأن extract($data) أدناه يكتب في
-        // نفس النطاق — مفتاح اسمه view أو layout كان سيدهسها.
+        // The local variables are prefixed with __ because extract($data) below writes
+        // into the same scope — a key named view or layout would have overwritten them.
         $__layout   = $layout;
         $__viewFile = APPROOT . '/views/' . $view . '.php';
 
-        // الفحص قبل أي إخراج. النسخة القديمة كانت تُخرج head و navbar ثم
-        // تكتشف غياب الـview، فيستحيل عندها إرسال كود 404 (الترويسات
-        // أُرسلت أصلاً) وتخرج نصف صفحة مكسورة.
+        // The check comes before any output. The old version emitted the head and
+        // navbar and then discovered the view was missing, at which point sending a 404
+        // is impossible (the headers have already gone) and half a broken page comes
+        // out.
         if (!is_file($__viewFile)) {
-            ErrorPage::notFound('view مفقود: ' . $__viewFile);
+            ErrorPage::notFound('missing view: ' . $__viewFile);
         }
 
-        // نبضة نشاط المستخدم — مخنوقة إلى مرة كل 15 دقيقة (راجع
-        // touchUserActivity في auth_helper.php). محصورة في layout المتجر
-        // عمداً: جلسة الأدمن منفصلة الاسم والمحتوى ونشاطها متتبَّع في
-        // AdminModel. ولا تنقلها إلى الـbootstrap — هناك تبدأ جلسة
-        // PHPSESSID قبل أن تضبط startAdminSession اسم جلسة الأدمن.
+        // The user activity heartbeat — throttled to once every 15 minutes (see
+        // touchUserActivity in auth_helper.php). Confined to the store layout
+        // deliberately: the admin session is separate in both name and contents, and its
+        // activity is tracked in AdminModel. Do not move this into the bootstrap — there
+        // a PHPSESSID session would start before startAdminSession sets the admin
+        // session name.
         if ($__layout === 'store') {
             touchUserActivity();
         }
 
-        // استخراج المتغيرات من مصفوفة $data لتصبح جاهزة للطباعة
+        // Extract the variables out of $data so the view can print them directly
         extract($data);
 
-        // require لا require_once: الأخيرة تمنع عرض نفس الملف مرتين في
-        // الطلب الواحد، وهو عطل كامن يظهر لحظة أن يعرض view نفس الـpartial
-        // مرتين. layout الأدمن يستعمل require منذ البداية بلا مشاكل.
+        // require rather than require_once: the latter stops the same file rendering
+        // twice in one request, which is a latent fault that surfaces the moment a view
+        // renders the same partial twice. The admin layout has used require from the
+        // start without trouble.
         switch ($__layout) {
             case 'store':
                 require APPROOT . '/views/inc/head.php';
@@ -81,26 +84,28 @@ abstract class Controller
         }
     }
 
-    // ملاحظة: صفحة الـ404 نفسها في App\Core\ErrorPage — لا هنا. كانت
-    // نسخة محلية في هذا الكلاس، لكن Router يحتاجها أيضاً وهو لا يرث
-    // Controller (ولا يجب أن يرثه)، فكانت ستُنسخ مرتين.
+    // Note: the 404 page itself lives in App\Core\ErrorPage, not here. There used to
+    // be a local copy in this class, but Router needs it too and does not extend
+    // Controller (and should not), so it would have been copied twice.
 
     // ═══════════════════════════════════════════════════════════
-    // استجابات JSON — مشتركة بين كل الكنترولرز
+    // JSON responses — shared across every controller
     // ═══════════════════════════════════════════════════════════
     //
-    // كانت respond() منسوخة حرفياً في 16 كنترولر (نسختان تختلفان في
-    // المسافات فقط). نُقلت هنا مرة واحدة: كنترولرز المتجر ترثها مباشرة،
-    // وكنترولرز الأدمن عبر AdminController الذي يرث هذا الكلاس.
+    // respond() used to be copied verbatim into 16 controllers (two copies differing
+    // only in whitespace). It was moved here once: the store controllers inherit it
+    // directly, and the admin controllers through AdminController, which extends this
+    // class.
 
     /**
-     * يطبع استجابة JSON موحّدة الشكل ويوقف التنفيذ.
+     * Prints a uniformly shaped JSON response and halts.
      *
-     * الشكل ثابت: {success, message, ...$extra}. الـfrontend يعتمد عليه
-     * في js/core/utils.js وبقية ملفات features، فلا تُغيَّر أسماء المفاتيح.
+     * The shape is fixed: {success, message, ...$extra}. The front end depends on it
+     * in js/core/utils.js and the rest of the feature files, so the key names must not
+     * change.
      *
-     * ملاحظة: لا يضبط رأس Content-Type — بعض النقاط تضبطه بنفسها قبل
-     * الاستدعاء، وبعضها يستدعي respond() بعد إخراج بدأ فعلاً.
+     * Note: it does not set the Content-Type header — some endpoints set it themselves
+     * before calling, and some call respond() after output has already begun.
      *
      * @param array<string, mixed> $extra
      */
@@ -114,7 +119,7 @@ abstract class Controller
     }
 
     /**
-     * اختصار لاستجابة فشل بلا بيانات إضافية.
+     * A shorthand for a failure response with no extra data.
      */
     protected function jsonError(string $message): never
     {
@@ -122,26 +127,28 @@ abstract class Controller
     }
 
     /**
-     * مقدّمة أي نقطة JSON تستقبل POST: تضبط رأس الاستجابة، وترفض غير
-     * POST، وتتحقق من توكن CSRF — بالرسائل نفسها التي كانت مكتوبة يدوياً
-     * في عشرات المواضع.
+     * The preamble for any JSON endpoint accepting a POST: it sets the response
+     * header, refuses anything that is not a POST, and verifies the CSRF token — with
+     * the same messages that used to be written by hand in dozens of places.
      *
-     * كانت هذه الأسطر الثلاثة تُكرَّر بنفس الصياغة حرفياً: 61 مرة لضبط
-     * الرأس، و40 مرة لفحص الطريقة، و24 مرة لفحص CSRF بنفس الرسالة.
+     * These three lines were repeated in exactly the same wording: 61 times to set the
+     * header, 40 times to check the method, and 24 times to check CSRF with the same
+     * message.
      *
-     * ترتيب الفحوص مقصود: الرأس أولاً كي تكون رسالة الرفض نفسها JSON،
-     * ثم الطريقة، ثم CSRF — لأن التحقق من التوكن بلا جلسة POST بلا معنى.
+     * The order of the checks is deliberate: the header first so the refusal message
+     * is itself JSON, then the method, then CSRF — because verifying a token outside a
+     * POST is meaningless.
      *
-     * ملاحظة: هذه للنقاط التي تُرجع JSON فقط. الصفحات التي تحوّل
-     * بـredirect عند الفشل (مثل AdminBrandingController::save) لها
-     * معالجتها الخاصة ولا تستعمل هذه.
+     * Note: this is for endpoints returning JSON only. Pages that redirect on failure
+     * (AdminBrandingController::save, for instance) have their own handling and do not
+     * use it.
      *
-     * فشل CSRF يحمل error_code صريحاً (ERR_CSRF_INVALID). js/core/csrf.js
-     * يكتشفه به ليجلب توكناً جديداً ويُعيد المحاولة مرة واحدة — والرسالة
-     * صارت للعرض وحدها.
+     * A CSRF failure carries an explicit error_code (ERR_CSRF_INVALID). js/core/csrf.js
+     * detects it by that, fetches a fresh token, and retries once — the message is now
+     * for display alone.
      *
-     * @param bool $requireCsrf مرّر false للنقاط العامة التي لا تملك
-     *                          توكناً بعد (مثل جلب التوكن نفسه).
+     * @param bool $requireCsrf Pass false for public endpoints that do not hold a token
+     *                          yet (fetching the token itself, for instance).
      */
     protected function beginJsonPost(bool $requireCsrf = true): void
     {
@@ -157,25 +164,25 @@ abstract class Controller
     }
 
     /**
-     * رمز فشل CSRF — عقد بين الخادم و js/core/csrf.js.
+     * The CSRF failure code — a contract between the server and js/core/csrf.js.
      *
-     * لماذا رمز لا نصّ؟ كان الغلاف يكتشف الفشل بـ
+     * Why a code rather than text? The wrapper used to detect the failure with
      *     message.startsWith('Invalid CSRF token')
-     * فكانت أي نقطة تصوغ رسالتها بشكل آخر تفقد إعادة المحاولة **بصمت**.
-     * حدث ذلك فعلاً ثلاث مرات: WishlistController::notify
-     * ('Invalid session…') و ContactController::send ('Invalid request…')
-     * وست نقاط نجت بالصدفة لأن صياغتها بدأت بالبادئة نفسها.
+     * so any endpoint wording its message differently lost the retry **silently**.
+     * That happened three times in fact: WishlistController::notify ('Invalid
+     * session…'), ContactController::send ('Invalid request…'), and six endpoints that
+     * survived by chance because their wording happened to start with the same prefix.
      *
-     * الرمز يفصل ما تقرأه الآلة عمّا يقرأه المستخدم: النصّ حرّ يتغيّر
-     * بحرية، والرمز ثابت.
+     * The code separates what the machine reads from what the user reads: the text is
+     * free to change, and the code is fixed.
      */
     public const ERR_CSRF_INVALID = 'csrf_invalid';
 
     /**
-     * استجابة فشل CSRF الموحّدة. تُستدعى من beginJsonPost ومن النقاط
-     * القليلة التي لا تمرّ بها لكنها تُرجع JSON.
+     * The unified CSRF failure response. Called from beginJsonPost and from the few
+     * endpoints that bypass it while still returning JSON.
      *
-     * @param array<string, mixed> $extra بيانات إضافية — reauth مثلاً تُعيد توكناً جديداً
+     * @param array<string, mixed> $extra Extra data — reauth, for instance, returns a fresh token
      */
     protected function respondCsrfFailure(array $extra = []): never
     {
@@ -187,9 +194,10 @@ abstract class Controller
     }
 
     /**
-     * يفحص مدخلات الطلب ويُرجع القيم المطبَّعة — أو يردّ بأول خطأ ويخرج.
+     * Validates the request input and returns the normalised values — or responds with
+     * the first error and exits.
      *
-     * سطران يربطان Validator بالطلب:
+     * Two lines binding Validator to the request:
      *
      *     $input = $this->validate([
      *         'full_address' => 'required|string|min:5|max:255',
@@ -197,21 +205,22 @@ abstract class Controller
      *         'city'         => 'nullable|string',
      *     ]);
      *
-     * ── لماذا يردّ ويخرج بدل أن يُرجع نتيجة ─────────────────
+     * ── Why it responds and exits rather than returning a result ──
      *
-     * لأن هذا **هو السلوك القائم حرفياً**. كل فعل اليوم يكتب:
+     * Because this **is the existing behaviour, to the letter**. Every action today writes:
      *
      *     if (!$full) { $this->respond(false, 'Full address is required.'); }
      *
-     * و respond تُنهي الطلب. فالتحويل لا يغيّر شيئاً في التدفّق — يوحّد
-     * صياغته فقط. ولو أُرجعت نتيجة لوجب على كل مستدعٍ أن يتذكّر فحصها،
-     * وهو بالضبط ما يُنسى.
+     * and respond ends the request. So the change alters nothing about the flow — it
+     * only unifies how it is written. Had a result been returned instead, every caller
+     * would have to remember to check it, and that is precisely what gets forgotten.
      *
-     * ⚠️ يجب أن تُستدعى **بعد** beginJsonPost: تلك تضبط رأس JSON، وبلا
-     * الرأس تصل رسالة الخطأ نصّاً خاماً لا يقرأه العميل.
+     * ⚠️ It must be called **after** beginJsonPost: that sets the JSON header, and
+     * without the header the error message arrives as raw text the client cannot read.
      *
-     * ومنطق التحقّق نفسه في App\Core\Validator وهو نقيّ تماماً — لا
-     * يقرأ الطلب ولا يطبع — فيُختبَر بلا خادم ولا جلسة.
+     * The validation logic itself lives in App\Core\Validator and is entirely pure —
+     * it neither reads the request nor prints — so it can be tested with no server and
+     * no session.
      *
      * @param array<string, string> $rules
      * @return array<string, mixed>
@@ -228,18 +237,19 @@ abstract class Controller
     }
 
     /**
-     * مدخلات الطلب موحّدة: $_POST مدموجاً بجسم JSON إن وُجد.
+     * Unified request input: $_POST merged with the JSON body, if there is one.
      *
-     * لماذا؟ جزء من نقاط المشروع يرسل FormData وجزء يرسل JSON
-     * (cart.js و account.js مثلاً يرسلان JSON عبر fetchWithCsrfRetry).
-     * النقاط التي تستقبل JSON كانت تبني `array_merge($_POST, $body)`
-     * بنفسها ثم تقرأ التوكن منه — تسع نقاط تكرّر السطرين نفسيهما.
+     * Why? Some of the project's endpoints receive FormData and some receive JSON
+     * (cart.js and account.js, for instance, send JSON through fetchWithCsrfRetry). The
+     * endpoints taking JSON used to build `array_merge($_POST, $body)` themselves and
+     * then read the token out of it — nine endpoints repeating the same two lines.
      *
-     * وهذا ما كان يمنع توحيدها: beginJsonPost كانت تقرأ من $_POST وحده،
-     * فتحويلها كان سيكسر كل نقطة يصل توكنها في جسم JSON.
+     * And that is what prevented unifying them: beginJsonPost read from $_POST alone,
+     * so converting them would have broken every endpoint whose token arrives in a JSON
+     * body.
      *
-     * النتيجة تُحسب مرة واحدة لكل طلب: php://input تيّار يُقرأ مرة، وقد
-     * تُستدعى هذه من beginJsonPost ثم من جسم الدالة.
+     * The result is computed once per request: php://input is a stream that can be
+     * read once, and this may be called from beginJsonPost and then from the action body.
      *
      * @return array<string,mixed>
      */

@@ -5,44 +5,46 @@ namespace App\Core;
 use PDO;
 
 /**
- * Model — الأساس المشترك لكل موديلات المشروع.
+ * Model — the shared base for every model in the project.
  *
- * لا يفعل شيئاً سوى شيء واحد: يمنح الموديلات مدخلاً واحداً إلى اتصال
- * قاعدة البيانات. وهذا وحده يزيل 156 استدعاءً مباشراً لـ
- * `Database::connect()` كانت موزّعة على ستة عشر ملفاً.
+ * It does exactly one thing: it gives the models a single way in to the database
+ * connection. That alone removes 156 direct calls to `Database::connect()` that
+ * were scattered across sixteen files.
  *
- * ── لماذا هذا الشكل، لا حقن كامل في الباني ──
+ * ── Why this shape, rather than full constructor injection ──
  *
- * الحقن الكامل — تحويل الموديلات إلى كائنات تستقبل PDO — كان الاقتراح
- * الأوّل، وقد **قيس ورُفض مرّتين**:
+ * Full injection — turning the models into objects that receive a PDO — was the
+ * first proposal, and it has been **measured and rejected twice**:
  *
- *   · مرّة سابقاً، وقرارها مكتوب في Database.php: نقطة الاختناق واحدة،
- *     وDatabase::setConnection() تكفي لتحويل مصدر البيانات كلّه.
- *   · ومرّة الآن بعد قياس النطاق فعلياً: 156 استدعاءً داخل الموديلات،
- *     و**302** استدعاءً لدوالها من الكنترولرز. أي 458 موضعاً تتغيّر،
- *     مقابل مكسب لا تحتاجه الشيفرة اليوم.
+ *   · once before, with the decision recorded in Database.php: there is a single
+ *     choke point, and Database::setConnection() is enough to swap the entire data
+ *     source.
+ *   · and once now, after actually measuring the scope: 156 calls inside the models
+ *     and **302** calls to their methods from the controllers. That is 458 sites to
+ *     change, against a gain the code does not need today.
  *
- * والدليل العملي أن الاستبدال يعمل أصلاً: كل اختبارات التكامل في هذا
- * المشروع تعمل على قاعدة `*_test` لا على قاعدة التطوير، عبر
- * Database::setConnection() وحدها، وبلا سطر واحد معدَّل في الموديلات.
+ * The practical proof that swapping already works: every integration test in this
+ * project runs against a `*_test` database rather than the development one,
+ * through Database::setConnection() alone, without a single line changed in the
+ * models.
  *
- * فما تبقّى من الشكوى لم يكن اقتراناً بل **تكراراً**: سطر
- * `$db = Database::connect();` مُعاد 156 مرّة. وهذا ما يعالجه هذا الملف.
+ * So what remained of the complaint was not coupling but **repetition**: the line
+ * `$db = Database::connect();` written 156 times. That is what this file addresses.
  *
- * ── ماذا يتغيّر إن أردنا الحقن الكامل لاحقاً ──
+ * ── What changes if we do want full injection later ──
  *
- * موضع واحد: self::db(). من أراد أن تحمل الموديلات اتصالها الخاص
- * يبدأ من هنا، لا من 156 موضعاً متفرّقاً. أي أن هذه الخطوة **تقرّب**
- * الحقن الكامل ولا تسدّ طريقه.
+ * One place: self::db(). Anyone wanting the models to carry their own connection
+ * starts here rather than at 156 scattered sites. Which is to say this step brings
+ * full injection **closer** rather than blocking the way to it.
  */
 abstract class Model
 {
     /**
-     * اتصال قاعدة البيانات لهذا الموديل.
+     * The database connection for this model.
      *
-     * `static` لا `self` في الاستدعاء ليس تفصيلاً: موديلٌ يحتاج اتصالاً
-     * آخر يوماً ما (نسخة قراءة مثلاً) يعيد تعريف هذه وحدها، فيتبعه كل
-     * ما في الملف بلا تعديل.
+     * `static` rather than `self` in the call is not incidental: a model that one
+     * day needs a different connection (a read replica, say) overrides this method
+     * alone, and everything else in the file follows with no change.
      */
     protected static function db(): PDO
     {

@@ -5,35 +5,38 @@ namespace App\Core;
 use PDO;
 
 /**
- * Throttle — عدّاد محاولات عامّ لنقاط الدخول الحسّاسة.
+ * Throttle — a general attempt counter for sensitive entry points.
  *
- * الفرق بينه وبين isRateLimited في UserModel/AdminModel ليس في الآلية بل
- * في السؤال. تلك تسأل: «كم مرّة فشل الدخول إلى هذا **الحساب**؟» — وهو
- * سؤال عن حساب بعينه، وجوابه يُعرَض للأدمن كـfailed_attempts. وهذه تسأل:
- * «كم طلباً أرسل هذا **المصدر** إلى هذه النقطة؟».
+ * What separates it from isRateLimited in UserModel/AdminModel is not the
+ * mechanism but the question. That one asks: "how many times has sign-in to this
+ * **account** failed?" — a question about one particular account, whose answer is
+ * shown to the admin as failed_attempts. This one asks: "how many requests has
+ * this **source** sent to this endpoint?"
  *
- * السؤال الثاني لم يكن أحد يسأله، وغيابه هو ما جعل خطوة الـ2FA قابلة
- * للكسر بالتخمين: الكود ست خانات، والنافذة ±30 ثانية تجعل ثلاثة أكواد
- * صالحة من مليون في أي لحظة — ولا شيء كان يمنع المليون محاولة.
+ * Nobody was asking the second question, and its absence is what left the 2FA step
+ * breakable by guessing: the code is six digits, and the ±30-second window leaves
+ * three valid codes out of a million at any instant — with nothing standing between
+ * an attacker and the million attempts.
  *
- * المعرِّف اليوم هو عنوان IP. هذا مقصود ومحدود: من يملك عناوين كثيرة
- * يتجاوزه. لكنه يرفع كلفة الهجوم من «حلقة while» إلى «شبكة وكلاء»،
- * ويبقى الخنق المرتبط بالحساب قائماً فوقه — الطبقتان تحرسان شيئين
- * مختلفين ولا تغني إحداهما عن الأخرى.
+ * The identifier today is the IP address. That is deliberate and limited: anyone
+ * with many addresses gets past it. But it raises the cost of the attack from "a
+ * while loop" to "a proxy network", and the account-bound throttle still stands
+ * above it — the two layers guard different things and neither replaces the other.
  */
 class Throttle
 {
-    /** كم يوماً يبقى الأثر قبل أن يُكنَس. */
+    /** How many days a trace survives before it is swept away. */
     private const RETENTION_DAYS = 1;
 
     /**
-     * هل تجاوز هذا المصدر الحدَّ المسموح على هذا الدلو خلال النافذة؟
+     * Has this source exceeded the allowance for this bucket within the window?
      *
-     * ⚠️ ترجع false عند فشل الاتصال بالقاعدة — أي تفتح الباب لا تغلقه.
-     * هذا مقصود ويطابق سلوك isRateLimited القائم: كل نقطة محروسة هنا
-     * تحتاج القاعدة لتعمل أصلاً (لا دخول بلا جدول admins)، فإغلاق الباب
-     * عند عطل القاعدة يمنع ما هو ممنوع أصلاً، ويحوّل عطلاً عابراً في
-     * القاعدة إلى قفل كامل للموقع.
+     * ⚠️ It returns false when the database connection fails — that is, it opens the
+     * door rather than closing it. This is deliberate and matches the existing
+     * isRateLimited behaviour: every endpoint guarded here needs the database to
+     * function at all (there is no sign-in without the admins table), so closing the
+     * door on a database fault blocks what is already blocked, and turns a passing
+     * database outage into a total lockout of the site.
      */
     public static function tooMany(string $bucket, string $identifier, int $max, int $windowMinutes): bool
     {
@@ -57,11 +60,12 @@ class Throttle
     }
 
     /**
-     * يسجّل محاولة، ويكنس أثر هذا المصدر القديم في الحركة نفسها.
+     * Records an attempt, and sweeps this source's old traces in the same round trip.
      *
-     * الكنس هنا لا في مهمّة مجدولة: الحذف محصور بـ(bucket, identifier)
-     * فيمشي على الفهرس نفسه ولا يمسّ صفوف غيره، وكلفته لا تُذكر مقابل
-     * ضمان أن الجدول لا ينمو بلا حدّ في مشروع بلا cron مضمون.
+     * Sweeping here rather than in a scheduled job: the delete is confined to
+     * (bucket, identifier), so it walks the same index and touches nobody else's
+     * rows, and its cost is negligible against the guarantee that the table does not
+     * grow without bound in a project with no dependable cron.
      */
     public static function record(string $bucket, string $identifier): void
     {
@@ -89,10 +93,11 @@ class Throttle
     }
 
     /**
-     * يمسح أثر هذا المصدر على هذا الدلو — يُستدعى بعد نجاح حقيقي.
+     * Clears this source's trace on this bucket — called after a genuine success.
      *
-     * بدونه يدفع المستخدم الذي نسي كلمته مرّتين ثم تذكّرها ثمنَ
-     * محاولتيه في المرّة التالية، وهو ليس من نحرس منه.
+     * Without it, a user who forgot their password twice and then remembered it pays
+     * for those two attempts on their next visit — and they are not who we are
+     * guarding against.
      */
     public static function clear(string $bucket, string $identifier): void
     {
@@ -106,12 +111,12 @@ class Throttle
     }
 
     /**
-     * عنوان المصدر كما يراه الخادم.
+     * The source address as the server sees it.
      *
-     * REMOTE_ADDR وحده عمداً: X-Forwarded-For ترويسة يرسلها العميل، فمن
-     * يقرأها بلا بروكسي موثوق أمامه يمنح المهاجم مفتاح تجاوز الخنق —
-     * يكفي أن يغيّرها في كل طلب. حين يوضع المشروع خلف بروكسي حقيقي،
-     * هذا هو الموضع الوحيد الذي يتغيّر.
+     * REMOTE_ADDR alone, deliberately: X-Forwarded-For is a header the client sends,
+     * so reading it without a trusted proxy in front hands the attacker the key to
+     * bypassing the throttle — they need only change it on every request. When the
+     * project is put behind a real proxy, this is the one place that changes.
      */
     public static function clientIp(): string
     {

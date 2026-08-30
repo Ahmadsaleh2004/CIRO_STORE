@@ -3,31 +3,32 @@
 namespace App\Core;
 
 /**
- * ErrorPage — المُصيّر الوحيد لصفحات الخطأ.
+ * ErrorPage — the single renderer for error pages.
  *
- * وُجد هذا الكلاس لأن المشروع كان يملك **ثلاث** طرق مختلفة للرد على
- * «الصفحة غير موجودة»، ولا واحدة منها صفحة حقيقية:
+ * This class exists because the project had **three** different ways of answering
+ * "page not found", and not one of them was an actual page:
  *
- *   1. Controller::view()  → die("View file [مسار الخادم الكامل] not found!")
+ *   1. Controller::view()  → die("View file [full server path] not found!")
  *   2. AdminAuthController → echo "View not found: {$viewPath}"
  *   3. Router::dispatch()  → echo "404 - Page Not Found"
  *
- * الأولى والثانية اختفتا في المرحلة 4، والثالثة هنا. الآن مسار واحد:
- * كود 404 صحيح · صفحة HTML كاملة بلغة المستخدم · وتفاصيل التشخيص إلى
- * سجل أخطاء PHP وحده.
+ * The first and second went away in phase 4, and the third here. Now there is one
+ * path: a correct 404 status · a complete HTML page · and the diagnostic details to
+ * the PHP error log and nowhere else.
  *
- * لماذا كلاس مستقل لا دالة في Controller؟ لأن Router لا يرث Controller
- * ولا يجب أن يرثه — وضع المُصيّر في الكلاس الأب كان سيجبر أحدهما على
- * تكرار النسخة، وهو بالضبط ما نحلّه.
+ * Why a class of its own rather than a method on Controller? Because Router does
+ * not extend Controller and should not — putting the renderer on the parent class
+ * would have forced one of them to keep its own copy, which is precisely what this
+ * solves.
  */
 final class ErrorPage
 {
     /**
-     * يرسل صفحة 404 كاملة ويوقف التنفيذ.
+     * Sends a complete 404 page and halts.
      *
-     * @param string|null $logDetail تفصيل تشخيصي للمطوّر — يذهب إلى
-     *        السجلّ وحده ولا يُطبع أبداً في المتصفح. تسريب مسارات
-     *        الخادم أو أسماء الملفات للزائر كشفٌ لبنية المشروع بلا فائدة.
+     * @param string|null $logDetail A diagnostic detail for the developer — it goes
+     *        to the log alone and is never printed in the browser. Leaking server paths
+     *        or file names to a visitor discloses the project's structure for nothing.
      */
     public static function notFound(?string $logDetail = null): never
     {
@@ -40,9 +41,9 @@ final class ErrorPage
             header('Content-Type: text/html; charset=utf-8');
         }
 
-        // احتياط: لو غاب ملف الـ404 نفسه نطبع صفحة صغيرة مضمّنة بدل
-        // استدعاء view() — استدعاؤها من داخل معالج «view مفقود» تكرار
-        // لا نهائي محتمل.
+        // Fallback: if the 404 file itself is missing, print a small inline page rather
+        // than calling view() — calling it from inside a "missing view" handler is a
+        // potential infinite loop.
         $page = APPROOT . '/views/errors/404.php';
         if (is_file($page)) {
             require $page;
@@ -57,20 +58,21 @@ final class ErrorPage
     }
 
     /**
-     * يرسل صفحة 403 كاملة ويوقف التنفيذ.
+     * Sends a complete 403 page and halts.
      *
-     * وُجدت لنفس سبب notFound(): كان الرد على الرفض في BackupController
-     * و AdminManageAdminsController هو
+     * It exists for the same reason as notFound(): the refusal response in
+     * BackupController and AdminManageAdminsController used to be
      * `http_response_code(403); die('Unauthorized — Root admin only (ID=1)')`
-     * — نصّاً خاماً بلا <head> ولا لايوت ولا طريق رجوع. وهو يكشف قاعدة
-     * الصلاحية للزائر بلا فائدة؛ الرسالة المعروضة الآن عامة والتفصيل
-     * إلى السجل.
+     * — raw text with no <head>, no layout and no way back. And it discloses the
+     * permission rule to the visitor for nothing; the message shown is now generic and
+     * the detail goes to the log.
      *
-     * @param string|null $logDetail تفصيل تشخيصي — إلى السجلّ وحده،
-     *        لا يُطبع في المتصفح أبداً.
-     * @param string|null $backUrl   وجهة زر الرجوع. الافتراضي جذر الموقع؛
-     *        تمرّره صفحات الأدمن كي لا تُلقي الأدمن في واجهة المتجر.
-     * @param string|null $backLabel نصّ زر الرجوع.
+     * @param string|null $logDetail A diagnostic detail — to the log alone, never
+     *        printed in the browser.
+     * @param string|null $backUrl   Where the back button leads. It defaults to the site
+     *        root; the admin pages pass their own so an admin is not dropped into the
+     *        store front.
+     * @param string|null $backLabel The back button's text.
      */
     public static function forbidden(
         ?string $logDetail = null,
@@ -86,12 +88,13 @@ final class ErrorPage
             header('Content-Type: text/html; charset=utf-8');
         }
 
-        // متاحان للـview.
+        // Both available to the view.
         //
-        // ⚠️ الوجهة تُقيَّد بجذر الموقع عمداً. كل المستدعين اليوم يمرّرون
-        // ثابتاً مبنياً على URLROOT، لكن التوقيع يقبل نصّاً — ومستدعٍ
-        // لاحق يمرّر مدخلاً من المستخدم كان سيزرع `javascript:` في href.
-        // htmlspecialchars في الـview يهرّب المحارف ولا يمنع مخطّطاً خبيثاً.
+        // ⚠️ The destination is confined to the site root deliberately. Every caller
+        // today passes a constant built on URLROOT, but the signature accepts a string —
+        // and a later caller passing user input would have planted a `javascript:` in
+        // the href. htmlspecialchars in the view escapes characters; it does not stop a
+        // hostile scheme.
         $backUrl   = $backUrl   ?? URLROOT . '/';
         if (!str_starts_with($backUrl, URLROOT)) {
             Log::warning('unsafe_back_url', ['back_url' => $backUrl]);
@@ -99,8 +102,9 @@ final class ErrorPage
         }
         $backLabel = $backLabel ?? 'Back to home';
 
-        // نفس احتياط notFound(): لو غاب ملف الصفحة نطبع بديلاً مضمّناً
-        // بدل استدعاء view() — وهو تكرار محتمل داخل معالج خطأ.
+        // The same fallback as notFound(): if the page file is missing, print an inline
+        // replacement rather than calling view() — a potential loop inside an error
+        // handler.
         $page = APPROOT . '/views/errors/403.php';
         if (is_file($page)) {
             require $page;
@@ -117,17 +121,17 @@ final class ErrorPage
     }
 
     /**
-     * يرسل 405 «الطريقة غير مسموحة» ويوقف التنفيذ.
+     * Sends a 405 "method not allowed" and halts.
      *
-     * وُجدت لأن الراوتر كان يردّ **404** على طلب POST إلى مسار مسجَّل
-     * لـGET وحده. وهي كذبة تُضلّل: الصفحة موجودة، والطريقة هي الخاطئة.
-     * 404 يقول للمطوّر «راجع تهجئة المسار» فيبحث في المكان الخطأ، بينما
-     * 405 يشير إلى العلّة مباشرة.
+     * It exists because the router used to answer **404** to a POST at a path
+     * registered for GET alone. That is a misleading lie: the page exists, and it is
+     * the method that is wrong. A 404 tells the developer "check the path spelling", so
+     * they look in the wrong place, while a 405 points straight at the cause.
      *
-     * ترويسة Allow ليست تزيّناً: المعيار (RFC 9110 §15.5.6) يوجبها مع
-     * كل 405، وأدوات الـAPI تقرأها لتعرف ما هو المسموح.
+     * The Allow header is not decoration: the standard (RFC 9110 §15.5.6) requires it
+     * with every 405, and API tools read it to learn what is permitted.
      *
-     * @param list<string> $allowed الطرق المسجَّلة فعلاً لهذا المسار.
+     * @param list<string> $allowed The methods actually registered for this path.
      */
     public static function methodNotAllowed(array $allowed, ?string $logDetail = null): never
     {
@@ -153,18 +157,20 @@ final class ErrorPage
     }
 
     /**
-     * يرسل 429 «محاولات كثيرة» ويوقف التنفيذ.
+     * Sends a 429 "too many requests" and halts.
      *
-     * تُستدعى من Middleware::throttle وحدها. الرسالة المعروضة لا تذكر
-     * الحدَّ ولا كم بقي من محاولات — من يعرف الرقم يضبط وتيرته تحته
-     * بالضبط، فيصير الخنق دليلاً للمهاجم بدل أن يكون حاجزاً أمامه.
+     * Called from Middleware::throttle alone. The message shown states neither the
+     * limit nor how many attempts remain — anyone who knows the number tunes their rate
+     * to sit just under it, and the throttle becomes a guide for the attacker rather
+     * than a barrier.
      *
-     * Retry-After ليست تزيّناً هنا أيضاً: RFC 9110 §15.5.28 توصي بها مع
-     * كل 429، وهي ما يقرؤه العميل الشريف ليعرف متى يعاود بدل أن يخمّن.
-     * تُرسَل بالثواني لأن الصيغة الرقمية هي ما تفهمه المكتبات.
+     * Retry-After is not decoration here either: RFC 9110 §15.5.28 recommends it with
+     * every 429, and it is what an honest client reads to learn when to come back
+     * instead of guessing. It is sent in seconds because the numeric form is what
+     * libraries understand.
      *
-     * @param int         $retryAfterSeconds كم ثانية قبل معاودة مجدية.
-     * @param string|null $logDetail تفصيل تشخيصي — إلى السجلّ وحده.
+     * @param int         $retryAfterSeconds How many seconds before a retry is worthwhile.
+     * @param string|null $logDetail A diagnostic detail — to the log alone.
      */
     public static function tooManyRequests(int $retryAfterSeconds, ?string $logDetail = null): never
     {
@@ -176,7 +182,8 @@ final class ErrorPage
             http_response_code(429);
             header('Retry-After: ' . max(1, $retryAfterSeconds));
             header('Content-Type: text/html; charset=utf-8');
-            // لا تُخزَّن استجابة خنق في أي وسيط — وإلا خُدم الرفض لغير صاحبه.
+            // A throttle response must not be cached anywhere — otherwise the refusal
+            // gets served to somebody it was not meant for.
             header('Cache-Control: no-store');
         }
 
@@ -192,33 +199,34 @@ final class ErrorPage
     }
 
     /**
-     * يرسل صفحة 500 كاملة ويوقف التنفيذ.
+     * Sends a complete 500 page and halts.
      *
-     * وُجدت لسبب notFound() نفسه. كان فشل الاتصال بقاعدة البيانات يُعالج
-     * في Database::__construct بـ
-     *     die("خطأ في الاتصال بقاعدة البيانات: " . $e->getMessage())
-     * ورسالة PDO تحمل **اسم المضيف واسم القاعدة واسم المستخدم** حرفياً.
-     * أي أن أول خطأ اتصال على الإنتاج كان يسلّم الزائرَ نصفَ بيانات
-     * الدخول، بلا صفحة ولا كود حالة صحيح (die تُرجع 200).
+     * It exists for the same reason as notFound(). A failed database connection used
+     * to be handled in Database::__construct with
+     *     die("Database connection error: " . $e->getMessage())
+     * and a PDO message carries **the host name, the database name and the user name**
+     * verbatim. Which means the first connection error in production handed the visitor
+     * half the credentials, with no page and no correct status code (die returns 200).
      *
-     * ثلاثة فروق عن أختيها:
+     * Three differences from its siblings:
      *
-     *   1. **الوضع CLI**: سكربتات scripts/ تعمل على الطرفية بلا composer
-     *      autoload — فطباعة صفحة HTML هناك بلا معنى، واستدعاء دوال
-     *      الـlayout خطأ قاتل. الفرع CLI يطبع نصّاً خاماً على STDERR
-     *      ويخرج بكود 1 كي يلتقطه أي سكربت مُشغِّل.
+     *   1. **CLI mode**: the scripts under scripts/ run in a terminal without
+     *      composer's autoload — so printing an HTML page there is meaningless, and
+     *      calling the layout functions is a fatal error. The CLI branch prints plain
+     *      text to STDERR and exits with code 1 so any calling script can detect it.
      *
-     *   2. **الاحتياط المضمّن أوسع**: هذه الصفحة قد تُستدعى وقاعدة
-     *      البيانات ساقطة، فلا تعتمد على أي شيء يقرأ منها. head-bare.php
-     *      لا يلمس القاعدة (مفحوص)، لكن الاحتياط يبقى مكتفياً بذاته
-     *      تماماً — بلا CSS خارجي ولا دوال هيلبرز.
+     *   2. **The inline fallback is wider**: this page may be called while the
+     *      database is down, so it depends on nothing that reads from it. head-bare.php
+     *      does not touch the database (verified), but the fallback stays entirely
+     *      self-contained — no external CSS and no helper functions.
      *
-     *   3. **503 لا 500 عند فشل الاتصال**: الخدمة غير متاحة مؤقتاً لا
-     *      «خطأ في الخادم». الفرق يهمّ محرّكات البحث وأدوات المراقبة.
+     *   3. **503 rather than 500 on a connection failure**: the service is
+     *      temporarily unavailable, not "a server error". The difference matters to
+     *      search engines and monitoring tools.
      *
-     * @param string|null $logDetail تفصيل تشخيصي — إلى السجلّ وحده،
-     *        لا يُطبع في المتصفح أبداً.
-     * @param int         $status    503 (غير متاح مؤقتاً) أو 500.
+     * @param string|null $logDetail A diagnostic detail — to the log alone, never
+     *        printed in the browser.
+     * @param int         $status    503 (temporarily unavailable) or 500.
      */
     public static function serverError(?string $logDetail = null, int $status = 500): never
     {
@@ -226,9 +234,9 @@ final class ErrorPage
             Log::error('http_' . $status, ['detail' => $logDetail]);
         }
 
-        // الطرفية: لا HTML ولا ترويسات. النصّ إلى STDERR وكود خروج غير صفري.
+        // Terminal: no HTML and no headers. Text to STDERR and a non-zero exit code.
         if (PHP_SAPI === 'cli') {
-            fwrite(STDERR, "خطأ: تعذّر إكمال العملية. التفاصيل في سجلّ الأخطاء.
+            fwrite(STDERR, "Error: the operation could not be completed. Details are in the error log.
 ");
             exit(1);
         }
@@ -236,7 +244,7 @@ final class ErrorPage
         if (!headers_sent()) {
             http_response_code($status);
             header('Content-Type: text/html; charset=utf-8');
-            // لا تُخزَّن صفحة خطأ مؤقت في أي وسيط.
+            // A temporary error page must not be cached anywhere.
             header('Cache-Control: no-store');
             if ($status === 503) {
                 header('Retry-After: 60');

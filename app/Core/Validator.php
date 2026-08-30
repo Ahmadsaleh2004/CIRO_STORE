@@ -3,39 +3,40 @@
 namespace App\Core;
 
 /**
- * Validator — استخراج المدخلات والتحقّق منها في موضع واحد.
+ * Validator — extracting and validating input in one place.
  *
- * ── ما كان قبله ─────────────────────────────────────────────
+ * ── What came before it ─────────────────────────────────────
  *
- * الاستخراج والتحقّق مكتوبان يدوياً في كل فعل، مقيساً:
+ * Extraction and validation written by hand in every action. Measured:
  *
- *     $_POST[...] ?? ...    88 موضعاً
+ *     $_POST[...] ?? ...    88 sites
  *     trim($_POST[...])     38
  *     (int)$_POST[...]      26
  *
- * ونتيجة التكرار ليست الطول بل **التفرّق**: حقل يُقصّ في موضع ولا
- * يُقصّ في آخر، ويُفحص طوله هنا ولا يُفحص هناك. والقاعدة الوحيدة التي
- * تُطبَّق في تسعة مواضع من عشرة ليست قاعدة.
+ * The consequence of that repetition is not length but **drift**: a field trimmed
+ * in one place and not in another, its length checked here and unchecked there.
+ * And a single rule applied in nine places out of ten is not a rule.
  *
- * ── التصميم ────────────────────────────────────────────────
+ * ── The design ─────────────────────────────────────────────
  *
- * هذا الكلاس **نقيّ**: لا يقرأ $_POST، ولا يطبع، ولا يوقف التنفيذ.
- * يأخذ مصفوفة ويُرجع نتيجة. ولهذا يُختبَر بلا خادم ولا جلسة ولا شبكة.
+ * This class is **pure**: it does not read $_POST, does not print, and does not
+ * halt execution. It takes an array and returns a result. Which is why it can be
+ * tested with no server, no session and no network.
  *
- * والربط بالطلب في Controller::validate() — سطران يمرّران requestData()
- * ويردّان بأول خطأ. الفصل مقصود: منطق التحقّق يجب أن يكون قابلاً
- * للاختبار وحده، وقد كان هذا بالضبط ما يمنع اختباره حين كان مبعثراً
- * في أجسام الأفعال.
+ * The binding to the request lives in Controller::validate() — two lines that pass
+ * requestData() through and respond with the first error. The separation is
+ * deliberate: validation logic must be testable on its own, and being scattered
+ * through action bodies was precisely what prevented that.
  */
 final class Validator
 {
     /** @var array<string, mixed> */
     private array $data;
 
-    /** @var array<string, string> اسم الحقل => أول خطأ فيه */
+    /** @var array<string, string> field name => its first error */
     private array $errors = [];
 
-    /** @var array<string, mixed> القيم بعد التطبيع */
+    /** @var array<string, mixed> the values after normalisation */
     private array $clean = [];
 
     /** @param array<string, mixed> $data */
@@ -45,23 +46,23 @@ final class Validator
     }
 
     /**
-     * يفحص المدخلات وفق القواعد.
+     * Validates the input against the rules.
      *
-     * صيغة القاعدة نصّ مفصول بـ| مثل: 'required|string|min:2|max:50'
+     * A rule is a |-separated string, such as: 'required|string|min:2|max:50'
      *
-     * القواعد المدعومة:
-     *   required      لا يقبل الغياب ولا النصّ الفارغ بعد القصّ
-     *   nullable      يقبل الغياب ويُرجع null
-     *   string        يُقصّ الطرفان
-     *   int           يُحوَّل إلى صحيح، ويُرفض ما ليس رقماً
-     *   numeric       رقم (يقبل العشري)
-     *   email         بريد صالح
-     *   bool          يُحوَّل: '1' 'true' 'on' 'yes' => true
-     *   array         مصفوفة
-     *   min:N         الطول الأدنى للنصّ، أو القيمة الدنيا للرقم
-     *   max:N         الطول الأقصى للنصّ، أو القيمة القصوى للرقم
-     *   in:a,b,c      من قائمة
-     *   default:X     قيمة عند الغياب (تُطبَّق قبل بقية القواعد)
+     * Supported rules:
+     *   required      rejects absence, and an empty string after trimming
+     *   nullable      accepts absence and yields null
+     *   string        trims both ends
+     *   int           cast to an integer; anything non-numeric is rejected
+     *   numeric       a number (decimals accepted)
+     *   email         a valid address
+     *   bool          cast: '1' 'true' 'on' 'yes' => true
+     *   array         an array
+     *   min:N         minimum length for a string, or minimum value for a number
+     *   max:N         maximum length for a string, or maximum value for a number
+     *   in:a,b,c      one of a list
+     *   default:X     a value when absent (applied before the other rules)
      *
      * @param array<string, string> $rules
      */
@@ -91,7 +92,7 @@ final class Validator
         return $this->errors;
     }
 
-    /** أول رسالة خطأ، أو null إن نجح الفحص. */
+    /** The first error message, or null if validation passed. */
     public function firstError(): ?string
     {
         foreach ($this->errors as $message) {
@@ -102,11 +103,11 @@ final class Validator
     }
 
     /**
-     * القيم بعد التطبيع — الحقول التي مرّت وحدها.
+     * The normalised values — the fields that passed, and only those.
      *
-     * ⚠️ تُرجع ما فُحص فقط، لا كل المدخلات. حقل لم يُذكر في القواعد لا
-     * يظهر هنا. وهذا مقصود: تمرير ما لم يُفحص إلى المودل هو بالضبط
-     * الباب الذي يدخل منه ما لم يُتوقّع.
+     * ⚠️ It returns only what was validated, not the whole input. A field not named
+     * in the rules does not appear here. That is deliberate: passing unvalidated
+     * input on to the model is precisely the door the unexpected comes through.
      *
      * @return array<string, mixed>
      */
@@ -128,7 +129,7 @@ final class Validator
 
         $value = $this->data[$field] ?? null;
 
-        // default قبل كل شيء: قيمة الغياب تُفحص كأي قيمة أخرى.
+        // default before everything: the absent-value default is validated like any other value.
         if (($value === null || $value === '') && isset($args['default'])) {
             $value = $args['default'];
         }
@@ -141,7 +142,7 @@ final class Validator
                 return;
             }
 
-            // nullable أو حقل اختياري بلا قيمة: يُسجَّل null ولا يُفحص.
+            // nullable, or an optional field with no value: recorded as null and not validated.
             $this->clean[$field] = null;
             return;
         }
@@ -163,9 +164,9 @@ final class Validator
                     break;
 
                 case 'int':
-                    // filter_var لا ctype_digit: الأخيرة ترفض السالب،
-                    // و(int) وحدها تحوّل 'abc' إلى 0 بصمت — وهو أسوأ ما
-                    // يمكن أن يفعله تحقّق.
+                    // filter_var rather than ctype_digit: the latter rejects negatives, and
+                    // a bare (int) turns 'abc' into 0 silently — which is the worst thing a
+                    // validator can do.
                     $asInt = filter_var($value, FILTER_VALIDATE_INT);
                     if ($asInt === false) {
                         $this->errors[$field] = $this->label($field) . ' must be a whole number.';
@@ -230,7 +231,7 @@ final class Validator
         $this->clean[$field] = $value;
     }
 
-    /** الحدّ يقارن الطول للنصوص والقيمة للأرقام — وهذا ما يتوقّعه القارئ. */
+    /** The bound compares length for strings and value for numbers — which is what a reader expects. */
     private function checkSize(string $field, mixed $value, float $limit, bool $isMin): bool
     {
         if (is_int($value) || is_float($value)) {
@@ -249,8 +250,8 @@ final class Validator
         if (is_array($value)) {
             $length = count($value);
         } else {
-            // mb_strlen لا strlen: الاسم العربي «أحمد» خمسة محارف
-            // وعشرة بايتات. الفحص بالبايت يرفض أسماء صالحة.
+            // mb_strlen rather than strlen: a five-character Arabic name is ten bytes
+            // in UTF-8. Measuring in bytes rejects valid names.
             $length = mb_strlen((string) $value);
         }
 
@@ -267,7 +268,7 @@ final class Validator
         return $ok;
     }
 
-    /** 'full_address' => 'Full address' — رسالة تُقرأ لا مفتاح خام. */
+    /** 'full_address' => 'Full address' — a message a person reads, not a raw key. */
     private function label(string $field): string
     {
         return ucfirst(str_replace('_', ' ', $field));

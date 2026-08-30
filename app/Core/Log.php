@@ -3,73 +3,75 @@
 namespace App\Core;
 
 /**
- * Log — سطر JSON واحد لكل حدث تشغيلي.
+ * Log — one JSON line per operational event.
  *
  * ══════════════════════════════════════════════════════════════
- * المشكلة التي يحلّها
+ * The problem it solves
  * ══════════════════════════════════════════════════════════════
  *
- * `storage/php-error.log` كان يخلط صنفين لا علاقة لأحدهما بالآخر:
+ * `storage/php-error.log` mixed two kinds of thing with nothing in common:
  *
  *     [27-Aug-2026 13:02:35] PHP Fatal error: Cannot override final …
  *     [27-Aug-2026 13:03:40] [Cairo Store] 405: POST /about — allowed: GET
  *     [27-Aug-2026 16:24:07] [Cairo Store] 404: GET /definitely-not-a-page
  *
- * الأوّل عطلٌ يستحقّ الاستيقاظ له. والثاني والثالث **سلوك صحيح
- * للراوتر**: أحدهم طلب صفحة غير موجودة، وهذا ما يجب أن يحدث.
+ * The first is a fault worth waking up for. The second and third are **the router
+ * behaving correctly**: somebody asked for a page that does not exist, and that is
+ * what ought to happen.
  *
- * وحين يتساوى الاثنان في الشكل، لا يمكن فرزهما إلا بالقراءة البشرية —
- * فلا يُقرأ الملف أصلاً. وهذا بالضبط ما حدث: صفحة الدفع كانت معطّلة
- * كلياً منذ كومِت الأساس، والسجلّ مفتوح أمام الجميع.
+ * And when the two look identical, sorting them apart takes a human reading — so
+ * the file goes unread entirely. Which is precisely what happened: the checkout
+ * page was completely broken from the baseline commit onward, with the log open in
+ * front of everybody.
  *
  * ══════════════════════════════════════════════════════════════
- * لماذا JSON على سطر واحد
+ * Why JSON on a single line
  * ══════════════════════════════════════════════════════════════
  *
- * سطرٌ واحد كي يبقى `grep` و`tail` عاملَين كما هما، وJSON كي يصير
- * الفرز آلياً لا بصرياً:
+ * One line so `grep` and `tail` keep working exactly as they are, and JSON so the
+ * sorting becomes mechanical rather than visual:
  *
  *     grep '"level":"error"' storage/php-error.log
  *     grep '"event":"http_404"' storage/php-error.log | wc -l
  *
- * وأي مجمِّع سجلّات (أو Sentry) يقرأ هذا الشكل بلا محلّل مخصّص.
+ * And any log aggregator (or Sentry) reads this shape without a custom parser.
  *
- * ── لماذا error_log لا ملفّ خاصّ ──────────────────────────────
+ * ── Why error_log rather than a file of its own ──────────────
  *
- * لأن `error_log` هي المكان الذي يذهب إليه كل شيء آخر بالفعل: أخطاء
- * PHP القاتلة، وتحذيرات المحرّك، وكل `error_log` قائمة في المودلز.
- * وسجلّ ثانٍ يعني ملفّين يجب قراءتهما معاً لفهم دقيقة واحدة — وهو
- * ما يجعل السجلّات لا تُقرأ.
+ * Because `error_log` is where everything else already goes: PHP fatals, engine
+ * warnings, and every existing `error_log` call in the models. A second log means
+ * two files that must be read together to understand a single minute — which is
+ * what makes logs go unread.
  *
- * الوجهة نفسها إذن، والشكل هو ما تغيّر.
+ * The destination is the same, then; the shape is what changed.
  *
  * ══════════════════════════════════════════════════════════════
- * ما لا يدخل السياق
+ * What must not go into the context
  * ══════════════════════════════════════════════════════════════
  *
- * ⚠️ لا تمرّر كلمات مرور ولا توكنات ولا أكواد 2FA في `$context`.
- * السجلّ يُقرأ ويُنسخ ويُرسَل في تذاكر الدعم — وهو أقلّ الأماكن حمايةً
- * في أي نظام. القاعدة هنا: يسجَّل **ما حدث**، لا **بماذا حدث**.
+ * ⚠️ Do not pass passwords, tokens or 2FA codes in `$context`. The log gets read,
+ * copied and pasted into support tickets — it is the least protected place in any
+ * system. The rule here: record **what happened**, not **what it happened with**.
  */
 final class Log
 {
-    /** حدث اعتيادي يستحقّ الأثر لا الانتباه. */
+    /** A routine event that deserves a trace, not attention. */
     public const INFO = 'info';
 
-    /** شيء غير متوقَّع لكن التطبيق تصرّف تصرّفاً صحيحاً. */
+    /** Something unexpected, but the application handled it correctly. */
     public const WARNING = 'warning';
 
-    /** عطل — هذا وحده ما يستحقّ تنبيهاً. */
+    /** A fault — this alone deserves an alert. */
     public const ERROR = 'error';
 
     /**
-     * يكتب سطر سجلّ واحد.
+     * Writes a single log line.
      *
-     * @param string               $level   من الثوابت أعلاه
-     * @param string               $event   معرّف قصير ثابت (`http_404`)
-     *                                      — يُفرَز به آلياً، فلا تُصَغ
-     *                                      كجملة تتغيّر صياغتها
-     * @param array<string,scalar|null> $context حقائق قابلة للفرز
+     * @param string               $level   One of the constants above
+     * @param string               $event   A short, stable identifier (`http_404`)
+     *                                      — it is what machines sort on, so do not
+     *                                      phrase it as a sentence that can be reworded
+     * @param array<string,scalar|null> $context Sortable facts
      */
     public static function write(string $level, string $event, array $context = []): void
     {
@@ -79,8 +81,8 @@ final class Log
             'event' => $event,
         ];
 
-        // المسار والطريقة يُضافان تلقائياً: كل حدث تقريباً يحتاجهما،
-        // وتركهما للمستدعي يعني نسيانهما في نصف المواضع.
+        // The path and method are added automatically: almost every event needs them,
+        // and leaving them to the caller means forgetting them in half the places.
         if (PHP_SAPI !== 'cli') {
             $line['method'] = $_SERVER['REQUEST_METHOD'] ?? '?';
             $line['path']   = strtok($_SERVER['REQUEST_URI'] ?? '?', '?') ?: '?';
@@ -93,7 +95,7 @@ final class Log
             JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES
         );
 
-        // فشل الترميز لا يجوز أن يبتلع الحدث: سجلٌّ ناقص أفضل من صمت.
+        // An encoding failure must not swallow the event: an incomplete log beats silence.
         error_log($encoded !== false ? $encoded : $level . ' ' . $event);
     }
 

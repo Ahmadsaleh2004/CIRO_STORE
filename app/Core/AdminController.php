@@ -3,12 +3,12 @@
 namespace App\Core;
 
 /**
- * AdminController — الكلاس الأب المشترك لكل كنترولرز لوحة الأدمن.
+ * AdminController — the shared parent class for every admin-panel controller.
  *
- * يتحقق من تسجيل دخول الأدمن في الـ constructor — أي كنترولر يرث منه
- * محمي تلقائياً بدون الحاجة لاستدعاء requireAdminLogin() يدوياً.
+ * It verifies the admin login in the constructor — so any controller extending it
+ * is protected automatically, with no need to call requireAdminLogin() by hand.
  *
- * يوفر adminView() لعرض صفحات الأدمن مع الـ layout المشترك
+ * It provides adminView() for rendering admin pages with the shared layout.
  * (head.php + navbar.php + [view] + footer.php).
  */
 abstract class AdminController extends Controller
@@ -23,27 +23,29 @@ abstract class AdminController extends Controller
     }
 
     /**
-     * عرض view خاص بالأدمن مع الـ layout المشترك.
+     * Render an admin view with the shared layout.
      *
-     * تجميع الـlayout نفسه صار في Controller::view() — هنا يبقى ما يخصّ
-     * لوحة التحكم وحدها: حقن متغيرات الأدمن، وبادئة المسار admin/.
+     * Assembling the layout itself now lives in Controller::view() — what remains
+     * here is what belongs to the admin panel alone: injecting the admin variables,
+     * and the admin/ path prefix.
      *
-     * يحقن تلقائياً: $adminName, $adminRole, $adminId, $csrf,
-     * $newOrders, $newMessages — بالإضافة لأي متغيرات ممرَّرة عبر $data.
+     * Injected automatically: $adminName, $adminRole, $adminId, $csrf,
+     * $newOrders, $newMessages — alongside anything passed through $data.
      *
-     * @param string $view  اسم الـ view بدون المسار أو الامتداد
-     *                      (يُبحث عنه بـ app/views/admin/<view>.php)
-     * @param array<string, mixed> $data متغيرات إضافية تُمرَّر للـ view
+     * @param string $view  The view name without path or extension
+     *                      (looked up as app/views/admin/<view>.php)
+     * @param array<string, mixed> $data Extra variables passed to the view
      */
     protected function adminView(string $view, array $data = []): void
     {
-        // عدّادات غير المقروء (طلبات/رسائل دعم) — تُحقن تلقائيًا بكل صفحات الأدمن
-        // حتى يظهر البادج في الـ navbar بدون استدعاء يدوي من كل Controller
+        // Unread counters (orders / support messages) — injected automatically into
+        // every admin page, so the navbar badge appears without each controller having
+        // to ask for it
         $counters = getAdminUnreadCounters();
 
-        // الكتابة فوق $data لا بعد extract: هذا هو السلوك القديم بالحرف —
-        // كان extract($data) يسبق هذه الإسنادات، فتغلب هي على أي مفتاح
-        // بنفس الاسم قادم من الكنترولر.
+        // Written over $data rather than after extract: this is the old behaviour to
+        // the letter — extract($data) used to precede these assignments, so they win
+        // over any key of the same name coming from the controller.
         $data['adminName']   = $_SESSION['admin_name'] ?? 'Admin';
         $data['adminRole']   = getAdminRole();
         $data['adminId']     = getCurrentAdminId();
@@ -55,12 +57,12 @@ abstract class AdminController extends Controller
     }
 
     /**
-     * إرسال ملف CSV للتحميل — مشتركة بين كل كنترولرز الأدمن
-     * (Admins/Users/Orders/Products...) لتفادي تكرار نفس الكود.
+     * Send a CSV file for download — shared across every admin controller
+     * (Admins/Users/Orders/Products…) to avoid repeating the same code.
      *
-     * @param string $filename اسم الملف عند التحميل (مع .csv)
-     * @param list<string> $headers أسماء الأعمدة (صف أول بالملف)
-     * @param array<array-key, array<array-key, mixed>> $rows كل صف بيانات كـ array مسطّح بنفس ترتيب $headers
+     * @param string $filename The download file name (including .csv)
+     * @param list<string> $headers Column names (the first row of the file)
+     * @param array<array-key, array<array-key, mixed>> $rows Each data row as a flat array in the same order as $headers
      */
     protected function sendCsv(string $filename, array $headers, array $rows): void
     {
@@ -75,7 +77,7 @@ abstract class AdminController extends Controller
             header('Expires: 0');
         }
         $out = fopen('php://output', 'w');
-        fwrite($out, "\xEF\xBB\xBF"); // BOM لدعم العربي بإكسل
+        fwrite($out, "\xEF\xBB\xBF"); // BOM so Excel reads UTF-8 correctly
         fputcsv($out, $headers);
         foreach ($rows as $row) {
             fputcsv($out, $row);

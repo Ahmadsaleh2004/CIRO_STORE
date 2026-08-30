@@ -7,28 +7,30 @@ use PHPMailer\PHPMailer\Exception as PHPMailerException;
 
 class Mailer
 {
-    /** أقصى عدد محاولات لرسالة واحدة قبل اعتبارها فاشلة نهائياً. */
+    /** The most attempts one message gets before it counts as permanently failed. */
     public const MAX_ATTEMPTS = 3;
 
-    /** سبب آخر فشل في send() — يخزّنه العامل في صفّ الطابور. */
+    /** The reason for the last send() failure — the worker stores it on the queue row. */
     private static ?string $lastError = null;
 
     /**
-     * يضع الرسالة في الطابور ويعود فوراً — الطريق الافتراضي للإرسال.
+     * Puts the message on the queue and returns immediately — the default way to send.
      *
-     * ⚠️ لماذا لا send() مباشرةً؟ لأنها تفتح اتصال Gmail SMTP **داخل
-     * الطلب**: تتصل وتصادق وترسل قبل أن يرى الزائر أي استجابة. أثر ذلك
-     * ثلاثي — دخول الأدمن ينتظر Gmail في كل مرّة، وتباطؤ SMTP يعلّق
-     * خيوط PHP لا يبطّئها فقط، وكل استدعاء لـ/auth/forgot يفتح اتصالاً
-     * جديداً فيصير الإغراق استنزافاً للخادم لا للحصّة وحدها.
+     * ⚠️ Why not send() directly? Because it opens a Gmail SMTP connection **inside
+     * the request**: it connects, authenticates and sends before the visitor sees any
+     * response at all. The effect is threefold — the admin sign-in waits on Gmail
+     * every time, a slow SMTP server hangs PHP threads rather than merely slowing
+     * them, and every call to /auth/forgot opens a fresh connection, so flooding it
+     * drains the server and not just the quota.
      *
-     * ترجع true إن قُبلت للإرسال لا إن وصلت. هذا فرق حقيقي في العقد:
-     * من يحتاج تأكيد الوصول يقرأ حالة الصفّ، ولا أحد في المشروع يحتاجه
-     * — كل المستدعين يرسلون تنبيهات لا يتوقّف منطقهم عليها.
+     * It returns true if the message was accepted for sending, not if it arrived.
+     * That is a genuine difference in the contract: anyone needing delivery
+     * confirmation reads the queue row's status, and nobody in the project needs it —
+     * every caller is sending a notification their logic does not depend on.
      *
-     * وعند تعذّر الكتابة في الطابور تُرسَل الرسالة مباشرةً بدل أن
-     * تضيع: رسالة إعادة تعيين كلمة المرور التي لا تصل تقفل الحساب على
-     * صاحبه، وهو ضرر أكبر من انتظار ثوانٍ.
+     * And when writing to the queue fails, the message is sent directly rather than
+     * lost: a password reset email that never arrives locks the owner out of their own
+     * account, which is worse harm than a few seconds of waiting.
      */
     public static function queue(string $toEmail, string $toName, string $subject, string $htmlBody): bool
     {
@@ -38,20 +40,20 @@ class Mailer
             );
             return $stmt->execute([$toEmail, $toName, $subject, $htmlBody]);
         } catch (\Throwable $e) {
-            error_log('Mailer::queue Error (يُرسَل مباشرةً بدلاً منه): ' . $e->getMessage());
+            error_log('Mailer::queue Error (sending directly instead): ' . $e->getMessage());
             reportException($e);
             return self::send($toEmail, $toName, $subject, $htmlBody);
         }
     }
 
     /**
-     * إرسال إيميل عبر Gmail SMTP باستخدام PHPMailer.
+     * Send an email over Gmail SMTP using PHPMailer.
      *
-     * ⚠️ تُستدعى من scripts/mail-worker.php وحده في الوضع الطبيعي —
-     * وهو يعمل خارج مسار الطلب. استدعاؤها من كنترولر يعيد المشكلة التي
-     * وُجد الطابور لحلّها. استعمل queue().
+     * ⚠️ Normally called from scripts/mail-worker.php alone, which runs outside the
+     * request path. Calling it from a controller reinstates the very problem the queue
+     * exists to solve. Use queue().
      *
-     * يرجع true عند النجاح، false عند الفشل (ويسجل الخطأ بـ error_log).
+     * Returns true on success and false on failure (logging the error with error_log).
      */
     public static function send(string $toEmail, string $toName, string $subject, string $htmlBody): bool
     {
@@ -94,11 +96,12 @@ class Mailer
     }
 
     /**
-     * سبب آخر فشل في send()، أو null إن نجحت.
+     * The reason for the last send() failure, or null if it succeeded.
      *
-     * موجودة كي يخزّن العامل السبب في الصفّ. كان الخطأ يذهب إلى
-     * error_log وحده — وهو موضع لا يربط الرسالة الفاشلة بسببها، فيبقى
-     * السؤال «لماذا لم تصل رسالة فلان؟» بلا جواب.
+     * It exists so the worker can store the reason on the queue row. The error used
+     * to go to error_log alone — a place that does not connect a failed message to its
+     * cause, leaving the question "why did so-and-so's email never arrive?"
+     * unanswerable.
      */
     public static function lastError(): ?string
     {
@@ -106,24 +109,25 @@ class Mailer
     }
 
     /**
-     * يُفرِغ دفعةً من الطابور — قلب scripts/mail-worker.php.
+     * Drains one batch from the queue — the heart of scripts/mail-worker.php.
      *
-     * المنطق هنا لا في السكربت كي يكون قابلاً للاختبار: سكربت طرفية
-     * لا يُستدعى من اختبار، ومنطق الإرسال والفشل وإعادة المحاولة هو
-     * بالضبط ما يحتاج اختباراً.
+     * The logic lives here rather than in the script so it can be tested: a terminal
+     * script is not called from a test, and the sending, failure and retry logic is
+     * exactly what needs testing.
      *
-     * **الحجز متفائل** عبر عمود attempts نفسه: تُحدَّث الصفّ بشرط أن
-     * تكون قيمة attempts هي التي قُرئت. عاملان يعملان معاً ينجح
-     * أحدهما فقط، ويتخطّى الآخر الصفّ بدل أن يرسل الرسالة مرّتين —
-     * وإرسال مكرّر لرابط إعادة تعيين كلمة المرور ليس إزعاجاً فقط، بل
-     * توكنان صالحان حيث يجب أن يكون واحد.
+     * **The claim is optimistic**, through the attempts column itself: the row is
+     * updated on the condition that attempts still holds the value that was read. Two
+     * workers running together means only one succeeds, and the other skips the row
+     * rather than sending the message twice — and a duplicated password reset link is
+     * not merely an annoyance but two valid tokens where there should be one.
      *
-     * @param  callable|null $sender بديل لـsend() — للاختبار وحده.
-     *         موجود لأن الاختبار بلا بديل يعني اتصالاً حقيقياً بـGmail
-     *         بحساب المشروع: أوّل تشغيل لاختبار «الرسالة الفاشلة» سلّم
-     *         رسالة فعلية إلى الخادم (قبلها Gmail ثم ارتدّت). حزمة
-     *         اختبارات ترسل بريداً من حساب حقيقي عطلٌ لا أداة.
-     *         التوقيع: fn(string $to, string $name, string $subject, string $body): bool
+     * @param  callable|null $sender A stand-in for send() — for tests only.
+     *         It exists because testing without one means a real Gmail connection on
+     *         the project's account: the first run of the "failed message" test
+     *         delivered an actual email to the server (Gmail accepted it, then it
+     *         bounced). A test suite that sends mail from a real account is a fault,
+     *         not a tool.
+     *         Signature: fn(string $to, string $name, string $subject, string $body): bool
      * @return array{sent:int, failed:int, skipped:int}
      */
     public static function processQueue(int $limit = 25, ?callable $sender = null): array
@@ -164,7 +168,7 @@ class Mailer
                 continue;
             }
 
-            // استُنفدت المحاولات؟ الحكم على القيمة بعد الزيادة.
+            // Attempts exhausted? Judged on the value after the increment.
             $exhausted = ((int) $row['attempts'] + 1) >= self::MAX_ATTEMPTS;
 
             $db->prepare(
@@ -182,23 +186,24 @@ class Mailer
     }
 
     /**
-     * قالب HTML موحّد لكل إيميلات الموقع.
+     * A single HTML template for every email the site sends.
      *
-     * ⚠️ القيم المتغيّرة تُمرَّر في $vars كنائبات `{اسم}` — **لا تُحقَن
-     * في النصّ**. الفرق ليس أسلوبياً:
+     * ⚠️ Variable values are passed in $vars as `{name}` placeholders — **not
+     * interpolated into the string**. The difference is not stylistic:
      *
-     * كان الجسم يُبنى بالحقن المباشر، ومن بين ما يُحقَن
-     * `$_SERVER['HTTP_USER_AGENT']` في إيميل تنبيه الدخول — وهي ترويسة
-     * يتحكّم بها المرسِل كلياً. أي أن مهاجماً يكتب HTML في اسم متصفّحه
-     * فيصل إلى صندوق بريد الأدمن كما هو.
+     * The body used to be built by direct interpolation, and among the things
+     * interpolated was `$_SERVER['HTTP_USER_AGENT']` in the sign-in alert email — a
+     * header entirely under the sender's control. Which means an attacker writes HTML
+     * into their browser name and it lands in the admin's inbox verbatim.
      *
-     * النائبات تجعل ذلك مستحيلاً بالبناء لا بالانضباط: كل قيمة تمرّ من
-     * htmlspecialchars قبل أن تُوضَع، ولا طريق آخر لإدخال قيمة. القالب
-     * الثابت يبقى HTML لأنه يُكتب في الكود لا يأتي من الشبكة.
+     * Placeholders make that impossible by construction rather than by discipline:
+     * every value passes through htmlspecialchars before it is placed, and there is no
+     * other way to introduce one. The fixed template stays HTML because it is written
+     * in the code and does not arrive over the network.
      *
-     * @param string                $title    عنوان الرسالة (يُهرَّب)
-     * @param string                $bodyHtml قالب ثابت، قد يحوي `{نائبات}`
-     * @param array<string, string> $vars     القيم — كلها تُهرَّب
+     * @param string                $title    The message title (escaped)
+     * @param string                $bodyHtml A fixed template, possibly containing `{placeholders}`
+     * @param array<string, string> $vars     The values — all of them escaped
      */
     public static function template(string $title, string $bodyHtml, array $vars = []): string
     {

@@ -12,28 +12,30 @@ class Database
     private PDO $connection;
 
     /**
-     * اتصال محقون يتقدّم على الاتصال الحقيقي — للاختبارات وحدها.
+     * An injected connection that takes precedence over the real one — for tests only.
      *
-     * هذا هو **كل** ما احتاجه المشروع ليصير قابلاً للاختبار. المودلز
-     * كلها static وتنادي Database::connect() — مئة وثمانية وخمسون
-     * موضعاً — فنقطة الاختناق واحدة، ويكفي أن تُرجع اتصالاً آخر لتصير
-     * 4,827 سطر مودل قابلة للاختبار بلا لمس سطر واحد فيها.
+     * This is **all** the project needed to become testable. The models are all
+     * static and call Database::connect() — one hundred and fifty-eight sites — so
+     * there is a single choke point, and having it return a different connection is
+     * enough to make 4,827 lines of model testable without touching one line of them.
      *
-     * وهذا مقصود: CLEANUP-PLAN قرّر «المودلز تبقى static»، والقرار
-     * صحيح ولم يُنقض. البديل — تحويل كل مودل إلى كائن يستقبل PDO في
-     * الباني — كان سيغيّر مئة وثمانية وخمسين نداءً وكل مستدعيها لمكسب
-     * لا يزيد على ما يعطيه هذان السطران.
+     * And that is deliberate: the cleanup plan decided "the models stay static", and
+     * the decision was right and has not been overturned. The alternative — turning
+     * every model into an object receiving a PDO in its constructor — would have
+     * changed one hundred and fifty-eight calls and all of their callers, for a gain
+     * no greater than what these two lines already give.
      */
     private static ?PDO $injected = null;
 
     private function __construct()
     {
-        // الثوابت مضمونة: config.php يعرّفها كلها من .env، وهو يُحمَّل
-        // قبل أي وصول لهذا الكلاس من كل نقطة دخول (public/index.php
-        // وسكربتات scripts/). كان هنا `defined(...) ? ... : $_ENV[...]`
-        // لكل مفتاح — احتياط لم يكن يعمل: الثوابت كانت **دائماً**
-        // معرَّفة بقيم مكتوبة صراحةً في config.php، فالفرع الثاني ميّت
-        // وملف .env يُقرأ ثم يُتجاهل.
+        // The constants are guaranteed: config.php defines all of them from .env, and
+        // it is loaded before any access to this class from every entry point
+        // (public/index.php and the scripts under scripts/). There used to be a
+        // `defined(...) ? ... : $_ENV[...]` here for each key — a fallback that never
+        // worked: the constants were **always** defined, from values written out in
+        // config.php, so the second branch was dead and the .env file was read and then
+        // ignored.
         $dsn = 'mysql:host=' . DB_HOST
              . ';port='     . DB_PORT
              . ';dbname='   . DB_NAME
@@ -48,15 +50,17 @@ class Database
         try {
             $this->connection = new PDO($dsn, DB_USER, DB_PASS, $options);
         } catch (PDOException $e) {
-            // ⚠️ لا تُمرَّر رسالة PDO إلى المتصفح أبداً. كانت هنا
-            //     die("خطأ في الاتصال بقاعدة البيانات: " . $e->getMessage())
-            // ورسالة PDO تحمل اسم المضيف واسم القاعدة واسم المستخدم
-            // حرفياً — أي أن أول خطأ اتصال على الإنتاج كان يسلّم الزائرَ
-            // نصفَ بيانات الدخول. وdie تُنهي الطلب بكود **200**، فتقرأ
-            // محرّكات البحث وأدوات المراقبة الصفحةَ المكسورة كصفحة سليمة.
+            // ⚠️ Never pass a PDO message to the browser. There used to be
+            //     die("Database connection error: " . $e->getMessage())
+            // here, and a PDO message carries the host name, the database name and the
+            // user name verbatim — meaning the first connection error in production
+            // handed the visitor half the credentials. And die ends the request with a
+            // **200**, so search engines and monitoring tools read the broken page as a
+            // healthy one.
             //
-            // 503 لا 500: القاعدة ساقطة يعني الخدمة غير متاحة مؤقتاً.
-            ErrorPage::serverError('فشل الاتصال بقاعدة البيانات: ' . $e->getMessage(), 503);
+            // 503 rather than 500: a downed database means the service is temporarily
+            // unavailable.
+            ErrorPage::serverError('Database connection failed: ' . $e->getMessage(), 503);
         }
     }
 
@@ -70,7 +74,7 @@ class Database
     }
 
     /**
-     * الحصول على النسخة الوحيدة من كلاس Database (Singleton Gateway)
+     * Get the single instance of the Database class (singleton gateway).
      */
     public static function getInstance(): Database
     {
@@ -81,7 +85,7 @@ class Database
     }
 
     /**
-     * الحصول على كائن الـ PDO
+     * Get the PDO object.
      */
     public function getConnection(): PDO
     {
@@ -89,10 +93,11 @@ class Database
     }
 
     /**
-     * اختصار استدعاء سريع للحصول على PDO مباشرة: Database::connect()
+     * A shorthand for getting a PDO directly: Database::connect().
      *
-     * يفحص الاتصال المحقون أولاً. في الإنتاج يكون null دائماً
-     * (setConnection ترفض العمل خارج CLI)، فالمسار كما كان تماماً.
+     * It checks the injected connection first. In production that is always null
+     * (setConnection refuses to work outside the CLI), so the path is exactly as it
+     * was.
      */
     public static function connect(): PDO
     {
@@ -100,14 +105,15 @@ class Database
     }
 
     /**
-     * يحقن اتصالاً بديلاً — **للاختبارات وحدها**.
+     * Injects a replacement connection — **for tests only**.
      *
-     * ⚠️ محصورة في CLI عمداً وترمي خارجها. الحصر ليس تزيّناً: بدونه
-     * يكفي أن يستدعيها مسار طلب واحد — عن سهو أو عبر ثغرة تنفيذ —
-     * ليُحوّل كل استعلامات التطبيق إلى قاعدة يسيطر عليها المهاجم.
-     * PHPUnit يعمل على CLI دائماً، فالحصر لا يكلّف الاختبارات شيئاً.
+     * ⚠️ Restricted to the CLI deliberately, and it throws outside it. The
+     * restriction is not decoration: without it, a single request path calling this —
+     * by oversight, or through an execution vulnerability — would redirect every
+     * query in the application to a database the attacker controls. PHPUnit always
+     * runs on the CLI, so the restriction costs the tests nothing.
      *
-     * @throws \LogicException إن استُدعيت من سياق ويب.
+     * @throws \LogicException If called from a web context.
      */
     public static function setConnection(PDO $pdo): void
     {
@@ -121,11 +127,11 @@ class Database
     }
 
     /**
-     * يمسح الاتصال المحقون ونسخة الـsingleton معاً.
+     * Clears the injected connection and the singleton instance together.
      *
-     * تُستدعى في tearDown كي لا يتسرّب اتصال اختبار إلى الاختبار التالي.
-     * مسح $instance أيضاً مقصود: اختبار يريد اتصالاً حقيقياً بعد اختبار
-     * حقن يجب أن يبنيه من جديد لا أن يرث نسخة قديمة.
+     * Called in tearDown so a test's connection does not leak into the next test.
+     * Clearing $instance as well is deliberate: a test wanting a real connection after
+     * an injecting test must build it afresh rather than inherit a stale one.
      */
     public static function reset(): void
     {

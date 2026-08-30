@@ -3,37 +3,41 @@
 namespace App\Core;
 
 /**
- * ImageUpload — استقبال صورة مرفوعة وحفظها باسم آمن.
+ * ImageUpload — accepting an uploaded image and saving it under a safe name.
  *
- * وُجد هذا الكلاس لأن المنطق كان مكتوباً مرّتين: في
- * AdminProductModel::uploadVariantImage و BrandingModel::uploadSliderImage.
- * والتعليق فوق الثانية كان يقول ذلك صراحةً — «نسخة مطابقة لمنطق
- * AdminProductModel». نسختان متطابقتان تعنيان أن أي تشديد أمني يُطبَّق
- * على واحدة وتبقى الأخرى كما كانت، وهو ما ظهر فعلاً عند إضافة حدّ
- * الحجم: كان سيُكتب مرّتين أو يُنسى في إحداهما.
+ * This class exists because the logic was written twice: in
+ * AdminProductModel::uploadVariantImage and BrandingModel::uploadSliderImage. The
+ * comment above the second said so outright — "an identical copy of
+ * AdminProductModel's logic". Two identical copies mean any security tightening
+ * gets applied to one while the other stays as it was, which is exactly what came
+ * up when the size limit was added: it would have been written twice, or forgotten
+ * in one of them.
  *
- * الفرق الوحيد بين النسختين كان بادئة اسم الملف، فصارت وسيطاً.
+ * The only difference between the two copies was the file-name prefix, so that
+ * became a parameter.
  */
 final class ImageUpload
 {
     /**
-     * أقصى حجم مقبول لصورة واحدة، بالبايت.
+     * The largest accepted size for a single image, in bytes.
      *
-     * ⚠️ لم يكن هناك حدّ إطلاقاً في كود التطبيق — الأمر كلّه متروك
-     * لـupload_max_filesize في php.ini، وهي إعداد خادم قد يختلف بين
-     * بيئة وأخرى ولا يعرفه من يقرأ الكود. خمسة ميغابايت أوسع بكثير من
-     * أي صورة منتج معقولة، وضيّق بما يكفي لئلّا يملأ رفعٌ متكرّر القرص.
+     * ⚠️ There was no limit at all in the application code — the whole matter was
+     * left to upload_max_filesize in php.ini, a server setting that differs between
+     * environments and is invisible to whoever reads the code. Five megabytes is far
+     * wider than any sensible product image, and narrow enough that repeated uploads
+     * do not fill the disk.
      */
     public const MAX_BYTES = 5 * 1024 * 1024;
 
     /**
-     * خريطة واحدة تحكم القبول والامتداد معاً.
+     * One map governing both acceptance and extension.
      *
-     * ⚠️ كانت قائمة المسموح منفصلة عن أذرع تحديد الامتداد، ولا شيء
-     * يربطهما: إضافة 'image/avif' إلى القائمة بلا ذراع مقابل كانت تحفظ
-     * الملف بامتداد .jpg الافتراضي **بصمت** — صورة avif باسم jpg يرفضها
-     * المتصفح. الخريطة تجعل النسيان مستحيلاً: ما ليس فيها مفتاحاً
-     * يُرفض قبل أن يُسأل عن امتداده.
+     * ⚠️ The allow-list used to be separate from the branches that chose the
+     * extension, with nothing tying them together: adding 'image/avif' to the list
+     * without a matching branch saved the file under the default .jpg extension
+     * **silently** — an avif image named jpg, which the browser refuses. The map
+     * makes forgetting impossible: whatever is not a key in it is rejected before
+     * anything asks about its extension.
      */
     private const EXT_BY_MIME = [
         'image/jpeg' => 'jpg',
@@ -43,16 +47,17 @@ final class ImageUpload
     ];
 
     /**
-     * يتحقق من الملف ويحفظه، ويُرجع المسار النسبي أو null.
+     * Validates the file and saves it, returning the relative path or null.
      *
-     * الامتداد يُشتقّ من **محتوى** الملف عبر mime_content_type لا من
-     * اسمه: الاسم يأتي من العميل، والمحتوى لا. والاسم المحفوظ عشوائي
-     * كلياً، فلا يتحكّم الرافع بمسار ما يُكتب على القرص.
+     * The extension is derived from the file's **contents** through
+     * mime_content_type rather than from its name: the name comes from the client,
+     * the contents do not. And the stored name is entirely random, so the uploader
+     * has no control over the path written to disk.
      *
-     * @param  array<string, mixed> $fileEntry مصفوفة ملف واحدة من $_FILES
-     * @param  string $uploadDir المجلد المطلق
-     * @param  string $prefix    بادئة اسم الملف (product_ / slider_)
-     * @return string|null       المسار النسبي (images/xxx.jpg) أو null
+     * @param  array<string, mixed> $fileEntry A single file entry from $_FILES
+     * @param  string $uploadDir The absolute directory
+     * @param  string $prefix    The file-name prefix (product_ / slider_)
+     * @return string|null       The relative path (images/xxx.jpg), or null
      */
     public static function store(array $fileEntry, string $uploadDir, string $prefix): ?string
     {
@@ -60,8 +65,9 @@ final class ImageUpload
             return null;
         }
 
-        // الحجم يُقرأ من القرص لا من $_FILES['size']: تلك قيمة يرسلها
-        // العميل في الطلب ويمكن أن تكذب، وfilesize تقيس ما وصل فعلاً.
+        // The size is read from disk rather than from $_FILES['size']: that value is
+        // sent by the client in the request and can lie, while filesize measures what
+        // actually arrived.
         $bytes = @filesize($fileEntry['tmp_name']);
         if ($bytes === false || $bytes > self::MAX_BYTES) {
             return null;

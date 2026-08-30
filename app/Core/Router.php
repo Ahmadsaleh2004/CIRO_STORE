@@ -8,7 +8,7 @@ class Router
     private array $routes = [];
 
     /**
-     * سياق المجموعة المفتوحة حالياً: بادئة المسار وحُرّاسها.
+     * The currently open group's context: the path prefix and its guards.
      *
      * @var list<array{prefix: string, middleware: list<string>}>
      */
@@ -31,11 +31,12 @@ class Router
     }
 
     /**
-     * PUT و PATCH و DELETE أُضيفت لأن غيابها كان يجبر كل عملية تعديل أو
-     * حذف على أن تكون POST — فيصير جدول المسارات غير قادر على التمييز
-     * بين «أنشئ» و«عدّل» و«احذف»، ويضيع نصف معنى الـHTTP.
+     * PUT, PATCH and DELETE were added because their absence forced every update or
+     * delete to be a POST — leaving the route table unable to distinguish "create" from
+     * "update" from "delete", and losing half the meaning of HTTP.
      *
-     * المشروع اليوم كله GET/POST، فالإضافة لا تغيّر سلوكاً قائماً.
+     * The project today is entirely GET/POST, so the addition changes no existing
+     * behaviour.
      *
      * @param callable|array{class-string, string} $handler A controller and its action, or a closure
      */
@@ -61,16 +62,17 @@ class Router
     }
 
     /**
-     * مجموعة مسارات تتشارك بادئةً وحُرّاساً.
+     * A group of routes sharing a prefix and guards.
      *
      *     $r->group(['prefix' => '/admin', 'middleware' => ['admin']], function ($r) {
      *         $r->get('/users', [AdminUsersController::class, 'index']);
      *     });
      *
-     * القيمة ليست الاختصار بل **أن السياسة تُعلَن مرّة**. كانت حراسة
-     * الأدمن معلّقة على أن يرث كل كنترولر AdminController — أي أن نسيان
-     * الوراثة في كنترولر جديد يفتح صفحاته للجميع بصمت. المجموعة تجعل
-     * الحراسة صفةَ المسار لا صفةَ شجرة الوراثة.
+     * The value is not the brevity but **that the policy is declared once**. Admin
+     * guarding used to hang on every controller extending AdminController — meaning
+     * forgetting that inheritance in a new controller opens its pages to everyone,
+     * silently. A group makes guarding a property of the route rather than of the
+     * inheritance tree.
      *
      * @param array{prefix?: string, middleware?: list<string>|string} $attributes
      */
@@ -89,18 +91,19 @@ class Router
     }
 
     /**
-     * يبني رابط مسار مسمّى.
+     * Builds the URL for a named route.
      *
-     * @param array<string, string|int> $params قيم معاملات المسار {id} وأخواتها
-     * @throws \InvalidArgumentException إن كان الاسم غير مسجَّل — وهو خطأ
-     *         برمجي لا حالة وقت تشغيل، فالفشل الصاخب أفضل من رابط مكسور.
+     * @param array<string, string|int> $params Values for the route parameters {id} and their like
+     * @throws \InvalidArgumentException If the name is not registered — a programming
+     *         error rather than a runtime condition, so failing loudly beats a broken link.
      */
     public function route(string $name, array $params = []): string
     {
-        // البحث في القائمة لا في خريطة أسماء منفصلة، **وهذا ليس تفضيلاً**:
-        // الاسم يُضبط بعد التسجيل عبر ->name()، فلا سبيل لأن يعرفه
-        // addRoute. كانت هنا خريطة $named لا يملؤها أحد، فكانت route()
-        // ترمي على كل اسم مهما كان صحيحاً — دالة لا تعمل أبداً.
+        // Searching the list rather than a separate name map, **and this is not a
+        // preference**: the name is set after registration through ->name(), so there is
+        // no way addRoute could know it. There used to be a $named map here that nobody
+        // filled, so route() threw on every name however correct — a function that never
+        // worked at all.
         $target = null;
         foreach ($this->routes as $route) {
             if ($route->getName() === $name) {
@@ -150,38 +153,39 @@ class Router
     }
 
     /**
-     * ينفّذ الطلب الحالي.
+     * Dispatches the current request.
      *
-     * الفرق الجوهري عن النسخة السابقة في **ترتيب المطابقة**. كانت
-     * الحلقة تفحص الطريقة والمسار معاً:
+     * The fundamental difference from the previous version is **the matching order**.
+     * The loop used to check the method and the path together:
      *
      *     if ($route['method'] === $requestMethod && matchPath(...))
      *
-     * فطلب POST إلى مسار مسجَّل لـGET وحده لا يطابق شيئاً، ويسقط إلى
-     * 404 — «الصفحة غير موجودة». وهي كذبة: الصفحة موجودة، والطريقة هي
-     * الخاطئة. والفرق ليس شكلياً؛ 404 يقول للمطوّر «راجع تهجئة المسار»
-     * وهو يبحث في المكان الخطأ، بينما 405 يشير إلى العلّة مباشرة
-     * ويحمل ترويسة Allow تقول ما هو المسموح.
+     * so a POST to a path registered for GET alone matched nothing and fell through to
+     * a 404 — "page not found". Which is a lie: the page exists, and it is the method
+     * that is wrong. The difference is not cosmetic; a 404 tells the developer "check
+     * the path spelling" and they look in the wrong place, while a 405 points straight
+     * at the cause and carries an Allow header saying what is permitted.
      *
-     * الآن المطابقة على مرحلتين: المسار أولاً، ثم الطريقة ضمن ما طابق.
+     * Matching now happens in two stages: the path first, then the method among what
+     * matched.
      */
     public function dispatch(string $uri, string $method): void
     {
         $path = $this->normalizePath($uri);
         $requestMethod = strtoupper($method);
 
-        // ── HEAD يُعامَل كـGET ────────────────────────────────
+        // ── HEAD is treated as GET ───────────────────────────
         //
-        // المعيار (RFC 9110 §9.3.2) يوجب أن كل مورد يدعم GET يدعم HEAD
-        // بالترويسات نفسها وبلا متن. وPHP وApache يتكفّلان بإسقاط المتن
-        // من تلقائهما، فلا حاجة لشيء سوى قبول الطريقة.
+        // The standard (RFC 9110 §9.3.2) requires that every resource supporting GET
+        // supports HEAD with the same headers and no body. PHP and Apache drop the body
+        // on their own, so nothing is needed beyond accepting the method.
         //
-        // وبلا هذا السطر كان **كل مسار في المشروع** يردّ على HEAD بـ404
-        // (والآن 405 بعد إصلاح المطابقة). والأثر ليس نظرياً: أدوات
-        // المراقبة وفاحصات الصحّة ودوّارات الحمل تستعمل HEAD لأنه أرخص،
-        // وكانت كلها ستقرأ الموقع ميّتاً وهو حيّ.
+        // Without this line **every route in the project** answered HEAD with a 404
+        // (and now a 405, after the matching fix). The effect is not theoretical:
+        // monitoring tools, health checkers and load balancers use HEAD because it is
+        // cheaper, and all of them would have read the site as dead while it was alive.
         //
-        // والدليل في سجلّ المشروع نفسه: «[Cairo Store] 404: HEAD /».
+        // The evidence is in the project's own log: "[Cairo Store] 404: HEAD /".
         if ($requestMethod === 'HEAD') {
             $requestMethod = 'GET';
         }
@@ -204,7 +208,7 @@ class Router
             }
         }
 
-        // المسار موجود لكن بطريقة أخرى → 405 لا 404.
+        // The path exists but under another method → 405, not 404.
         if ($pathMatches !== []) {
             $allowed = array_values(array_unique(array_map(
                 static fn (Route $r): string => $r->getMethod(),
@@ -214,14 +218,15 @@ class Router
             ErrorPage::methodNotAllowed($allowed, $requestMethod . ' ' . $path);
         }
 
-        // راوت غير مسجَّل — حالة مختلفة عن «الراوت مسجَّل لكن ملف الـview
-        // غائب» التي تعالجها Controller::view()، لكن ما يراه الزائر واحد.
+        // An unregistered route — a different case from "the route is registered but the
+        // view file is missing", which Controller::view() handles, though what the
+        // visitor sees is the same.
         ErrorPage::notFound($requestMethod . ' ' . $path);
     }
 
     /**
-     * يزيل بادئة المجلد الفرعي إن كان المشروع مستضافاً تحت مسار
-     * (مثل /STORE/public/) ويضمن أن الناتج يبدأ بشرطة مائلة.
+     * Strips the subdirectory prefix when the project is hosted under a path (such as
+     * /STORE/public/) and guarantees the result begins with a slash.
      */
     private function normalizePath(string $uri): string
     {
@@ -242,10 +247,10 @@ class Router
     }
 
     /**
-     * ينفّذ حُرّاس المسار قبل بناء الكنترولر.
+     * Runs the route's guards before the controller is constructed.
      *
-     * كلٌّ منها يوقف التنفيذ بنفسه عند الرفض (redirect أو JSON أو 403)،
-     * فلا حاجة لقيمة إرجاع: الوصول إلى السطر التالي يعني النجاح.
+     * Each of them halts execution itself on a refusal (a redirect, JSON, or a 403),
+     * so no return value is needed: reaching the next line means success.
      */
     private function runMiddleware(Route $route): void
     {
@@ -272,10 +277,11 @@ class Router
 
             // throttle:bucket,max,windowMinutes
             //
-            // الوسائط في اسم الحارس لا في إعداد منفصل، لأن الحدّ جزء من
-            // تعريف المسار لا من إعداد عامّ: «الدخول خمس محاولات في ربع
-            // ساعة» جملة تُقرأ عند المسار نفسه، ومن يضيف مساراً جديداً
-            // يرى الحدّ أمامه فيقرّره بدل أن ينساه.
+            // The arguments live in the guard's name rather than in separate
+            // configuration, because the limit is part of the route's definition and not
+            // of a global setting: "sign-in, five attempts per quarter hour" is a sentence
+            // read at the route itself, and whoever adds a new route sees the limit in
+            // front of them and decides it rather than forgetting it.
             if (str_starts_with($name, 'throttle:')) {
                 $args = explode(',', substr($name, 9));
                 if (count($args) !== 3) {
@@ -287,9 +293,9 @@ class Router
                 continue;
             }
 
-            // اسم حارس غير معروف خطأ برمجي لا حالة وقت تشغيل. الفشل
-            // الصاخب مقصود: حارس مكتوب خطأً يعني مساراً بلا حماية،
-            // وتجاهله بصمت هو أسوأ ما يمكن فعله هنا.
+            // An unknown guard name is a programming error, not a runtime condition.
+            // Failing loudly is deliberate: a misspelled guard means an unprotected route,
+            // and ignoring it silently is the worst thing that could be done here.
             throw new \InvalidArgumentException("Unknown route middleware [{$name}].");
         }
     }
@@ -307,20 +313,20 @@ class Router
         [$controllerClass, $action] = $handler;
 
         if (!class_exists($controllerClass)) {
-            ErrorPage::serverError("كلاس الكنترولر غير موجود: {$controllerClass}", 500);
+            ErrorPage::serverError("Controller class not found: {$controllerClass}", 500);
         }
 
         $controller = new $controllerClass();
 
         if (!method_exists($controller, $action)) {
-            ErrorPage::serverError("الفعل غير موجود: {$controllerClass}::{$action}", 500);
+            ErrorPage::serverError("Action not found: {$controllerClass}::{$action}", 500);
         }
 
         call_user_func_array([$controller, $action], $params);
     }
 
     /**
-     * يطابق نمط المسار بالمسار المطلوب ويستخرج معاملاته.
+     * Matches the route pattern against the requested path and extracts its parameters.
      *
      * @param list<string> $params
      */
@@ -328,14 +334,15 @@ class Router
     {
         $params = [];
 
-        // النصّ الثابت يُهرَّب كي لا تُفسَّر نقطة أو قوس فيه كرمز regex.
-        // النسخة السابقة كانت تبني النمط من المسار الخام، فمسار يحوي
-        // نقطة (مثل /handlers/notify_handler.php) كانت نقطته تطابق أي
-        // محرف — أي أن /handlers/notify_handlerXphp كان يُقبل أيضاً.
-        // المعامل يُطابَق أولاً، وكل ما بينها نصّ ثابت يُهرَّب. البناء
-        // بالتقسيم لا بـpreg_replace_callback عمداً: الأخيرة تسلّم
-        // مجموعات التقاط قد تكون فارغة أو غائبة حسب أي بديل طابق، وهو
-        // تمييز لا يستطيع أي محلّل ثابت تتبّعه — ولا القارئ.
+        // The literal text is escaped so a dot or bracket in it is not read as a regex
+        // metacharacter. The previous version built the pattern from the raw path, so a
+        // path containing a dot (/handlers/notify_handler.php, for instance) had that dot
+        // match any character — meaning /handlers/notify_handlerXphp was accepted too.
+        // Parameters are matched first, and everything between them is literal text that
+        // gets escaped. Building by splitting rather than with preg_replace_callback is
+        // deliberate: the latter hands over capture groups that may be empty or absent
+        // depending on which alternative matched, a distinction no static analyser can
+        // follow — nor can the reader.
         $pattern = '';
         $offset  = 0;
 

@@ -6,31 +6,35 @@ use PDO;
 use RuntimeException;
 
 /**
- * Migrator — تطبيق تغييرات المخطّط بترتيب وتتبّع وتراجع.
+ * Migrator — applying schema changes in order, with tracking and rollback.
  *
- * ما كان قبله: سبعة ملفات .sql في database/migrations تُشغَّل **يدوياً**،
- * وترتيبها مكتوب في تعليقاتها فقط («يعتمد على admin_auth.sql»). لا شيء
- * يعرف أيّها طُبِّق، ولا شيء يمنع تشغيل واحد مرّتين، ولا سبيل للتراجع.
+ * What came before it: seven .sql files under database/migrations run **by hand**,
+ * with their ordering written only in their comments ("depends on admin_auth.sql").
+ * Nothing knew which had been applied, nothing stopped one being run twice, and
+ * there was no way back.
  *
- * ── النموذج: خطّ أساس + تغييرات ────────────────────────────
+ * ── The model: a baseline plus changes ─────────────────────
  *
- * الهجرات السبع القائمة **لا تبني القاعدة من الصفر**: كلها تعتمد على
- * جداول (users, products, orders, categories) لا وجود لها في أي منها.
- * أي أن المخطّط الحقيقي وُلد قبلها ونما بها.
+ * The seven existing migrations **do not build the database from nothing**: every
+ * one of them depends on tables (users, products, orders, categories) that appear in
+ * none of them. Which is to say the real schema was born before them and grew
+ * through them.
  *
- * فبدل التظاهر بغير ذلك، النموذج هنا صريح:
+ * So rather than pretend otherwise, the model here is explicit:
  *
- *   tests/fixtures/schema.sql   → خطّ الأساس، المخطّط الكامل اليوم
- *   database/migrations/*.sql   → تغييرات، أغلبها **مطبوع في الأساس**
+ *   tests/fixtures/schema.sql   → the baseline, today's complete schema
+ *   database/migrations/*.sql   → changes, most of them **already in the baseline**
  *
- * ولذلك يوجد `baseline`: يسجّل الهجرات الموجودة كمطبَّقة بلا تنفيذها،
- * لأن خطّ الأساس يحويها فعلاً. تشغيلها عليه يفشل بـ«الجدول موجود».
+ * Which is why `baseline` exists: it records the existing migrations as applied
+ * without running them, because the baseline already contains them. Running them
+ * against it fails with "table already exists".
  *
- * ── البصمة ─────────────────────────────────────────────────
+ * ── The checksum ───────────────────────────────────────────
  *
- * يُخزَّن sha256 لكل هجرة مطبَّقة. تعديل ملف طُبِّق سلفاً عطلٌ صامت من
- * أسوأ نوع: قاعدة المطوّر تحمل النسخة القديمة وقاعدة الإنتاج الجديدة،
- * والاثنتان تقولان «مطبَّقة». المهاجر يكشف ذلك بدل أن ينتظر انفجاره.
+ * A sha256 is stored for every applied migration. Editing a file that has already
+ * been applied is a silent fault of the worst kind: the developer's database holds
+ * the old version and production holds the new one, and both report "applied". The
+ * migrator surfaces that rather than waiting for it to detonate.
  */
 final class Migrator
 {
@@ -43,10 +47,10 @@ final class Migrator
     }
 
     /**
-     * ينشئ جدول التتبّع إن غاب.
+     * Creates the tracking table if it is missing.
      *
-     * `IF NOT EXISTS` مقصود: المهاجر يُستدعى كثيراً وأول ما يفعله هو
-     * هذا، فيجب أن يكون بلا أثر عند التكرار.
+     * `IF NOT EXISTS` is deliberate: the migrator is called often and this is the
+     * first thing it does, so it must be a no-op when repeated.
      */
     public function ensureTable(): void
     {
@@ -62,11 +66,11 @@ final class Migrator
     }
 
     /**
-     * كل ملفات الهجرة على القرص، مرتّبة بالنسخة.
+     * Every migration file on disk, ordered by version.
      *
-     * الترتيب من اسم الملف (`0001_admin_auth.sql`) لا من تاريخ التعديل
-     * ولا من ترتيب نظام الملفات — الاثنان يختلفان بين جهاز وآخر، وترتيب
-     * الهجرات لا يحتمل ذلك.
+     * The ordering comes from the file name (`0001_admin_auth.sql`), not from the
+     * modification date and not from the file system's order — both of those differ
+     * between machines, and migration order cannot tolerate that.
      *
      * @return array<string, array{version: string, name: string, path: string}>
      */
@@ -80,12 +84,12 @@ final class Migrator
 
             if (!preg_match('/^(\d{4})_(.+)$/', $base, $m)) {
                 throw new RuntimeException(
-                    "ملف هجرة بلا رقم نسخة: {$base}.sql — الصيغة المطلوبة NNNN_name.sql"
+                    "Migration file with no version number: {$base}.sql — the required form is NNNN_name.sql"
                 );
             }
 
             if (isset($out[$m[1]])) {
-                throw new RuntimeException("رقم نسخة مكرّر: {$m[1]}");
+                throw new RuntimeException("Duplicate version number: {$m[1]}");
             }
 
             $out[$m[1]] = ['version' => $m[1], 'name' => $m[2], 'path' => $path];
@@ -97,7 +101,7 @@ final class Migrator
     }
 
     /**
-     * الهجرات المسجَّلة كمطبَّقة.
+     * The migrations recorded as applied.
      *
      * @return array<string, array{version: string, name: string, checksum: string, applied_at: string}>
      */
@@ -129,7 +133,7 @@ final class Migrator
     }
 
     /**
-     * هجرات طُبِّقت ثم تغيّر ملفها بعد ذلك.
+     * Migrations that were applied and whose file changed afterwards.
      *
      * @return list<string>
      */
@@ -140,13 +144,13 @@ final class Migrator
 
         foreach ($this->applied() as $version => $row) {
             if (!isset($available[$version])) {
-                $out[] = "{$version} — مسجَّلة كمطبَّقة ولا ملف لها على القرص.";
+                $out[] = "{$version} — recorded as applied, with no file on disk.";
                 continue;
             }
 
             $current = $this->checksum($available[$version]['path']);
             if ($current !== $row['checksum']) {
-                $out[] = "{$version}_{$row['name']} — الملف تغيّر بعد تطبيقه.";
+                $out[] = "{$version}_{$row['name']} — the file changed after it was applied.";
             }
         }
 
@@ -154,12 +158,13 @@ final class Migrator
     }
 
     /**
-     * يسجّل كل الهجرات الموجودة كمطبَّقة **بلا تنفيذها**.
+     * Records every existing migration as applied **without running it**.
      *
-     * يُستعمل مرّة واحدة على قاعدة بُنيت من خطّ الأساس: الأساس يحوي
-     * أثر هذه الهجرات فعلاً، وتنفيذها عليه يفشل بـ«الجدول موجود».
+     * Used once, on a database built from the baseline: the baseline already carries
+     * the effect of these migrations, and running them against it fails with "table
+     * already exists".
      *
-     * @return int عدد ما سُجِّل
+     * @return int How many were recorded
      */
     public function baseline(): int
     {
@@ -180,25 +185,26 @@ final class Migrator
     }
 
     /**
-     * ينفّذ الهجرات المعلّقة.
+     * Runs the pending migrations.
      *
-     * كل هجرة داخل معاملة خاصة بها: فشل السابعة لا يتراجع بالسادسة.
+     * Each migration inside its own transaction: a failure in the seventh does not
+     * roll back the sixth.
      *
-     * ⚠️ MySQL لا يدعم DDL داخل معاملة — `CREATE TABLE` تُنهي المعاملة
-     * القائمة ضمنياً ولا يمكن التراجع عنها. المعاملة هنا تحمي الـDML
-     * (نقل البيانات في categories_dynamic مثلاً) وتضمن أن صفّ التتبّع
-     * لا يُكتب إلا بعد نجاح السكربت كاملاً. أما التراجع عن DDL فمسؤولية
-     * قسم @DOWN وحده.
+     * ⚠️ MySQL does not support DDL inside a transaction — `CREATE TABLE` implicitly
+     * commits the open transaction and cannot be rolled back. The transaction here
+     * protects the DML (moving data in categories_dynamic, for instance) and
+     * guarantees the tracking row is written only after the whole script succeeds.
+     * Undoing DDL is the responsibility of the @DOWN section alone.
      *
-     * @param bool $pretend يطبع ما سيُنفَّذ بلا تنفيذه
-     * @return list<string> أسماء ما طُبِّق
+     * @param bool $pretend Prints what would run, without running it
+     * @return list<string> The names of what was applied
      */
     public function up(bool $pretend = false): array
     {
         $drift = $this->drifted();
         if ($drift !== []) {
             throw new RuntimeException(
-                "هجرات مطبَّقة تغيّرت ملفاتها — أوقف قبل أن تنحرف القواعد:\n  "
+                "Applied migrations whose files have changed — stop before the databases drift apart:\n  "
                 . implode("\n  ", $drift)
             );
         }
@@ -210,7 +216,7 @@ final class Migrator
 
             if ($sql === '') {
                 throw new RuntimeException(
-                    "الهجرة {$migration['version']}_{$migration['name']} بلا قسم @UP."
+                    "Migration {$migration['version']}_{$migration['name']} has no @UP section."
                 );
             }
 
@@ -229,9 +235,9 @@ final class Migrator
     }
 
     /**
-     * يتراجع عن آخر هجرة أو أكثر.
+     * Rolls back the last migration, or more.
      *
-     * @param int $steps عدد الهجرات المتراجَع عنها، من الأحدث
+     * @param int $steps How many migrations to roll back, newest first
      * @return list<string>
      */
     public function down(int $steps = 1, bool $pretend = false): array
@@ -248,14 +254,14 @@ final class Migrator
             }
 
             if (!isset($available[$version])) {
-                throw new RuntimeException("لا ملف للهجرة {$version} — التراجع مستحيل.");
+                throw new RuntimeException("No file for migration {$version} — rolling back is impossible.");
             }
 
             $sql = $this->section($available[$version]['path'], 'DOWN');
 
             if ($sql === '') {
                 throw new RuntimeException(
-                    "الهجرة {$version}_{$row['name']} بلا قسم @DOWN — لا يمكن التراجع عنها."
+                    "Migration {$version}_{$row['name']} has no @DOWN section — it cannot be rolled back."
                 );
             }
 
@@ -273,29 +279,32 @@ final class Migrator
     }
 
     /**
-     * يستخرج قسم @UP أو @DOWN من ملف هجرة.
+     * Extracts the @UP or @DOWN section from a migration file.
      *
-     * الصيغة سطر تعليق مفرد: `-- @UP` و `-- @DOWN`. اختير التعليق لأن
-     * الملف يبقى SQL صالحاً يمكن لصقه في أي عميل قاعدة بيانات كما هو —
-     * ولا يحتاج المهاجر ليُقرأ.
+     * The form is a single comment line: `-- @UP` and `-- @DOWN`. A comment was chosen
+     * because it keeps the file valid SQL that can be pasted into any database client
+     * as-is — and it does not need the migrator in order to be read.
      */
     public function section(string $path, string $name): string
     {
         $content = (string) file_get_contents($path);
 
-        // ⚠️ `\R` ممنوع هنا — والسبب مكتوب أصلاً في scripts/audit.php
-        // (splitLines)، لكن هذا الموضع فاته. بلا معدِّل /u يعمل `\R` على
-        // البايتات ويطابق `\x85`، وهو بايت استمرار شرعي داخل الحروف
-        // العربية بترميز UTF-8 — أشهرها «م» (D9 85).
+        // ⚠️ `\R` is forbidden here — the reason is already written out in
+        // scripts/audit.php (splitLines), but this site was missed. Without the /u
+        // modifier, `\R` operates on bytes and matches `\x85`, which is a legitimate
+        // continuation byte inside Arabic letters in UTF-8 — the commonest being the
+        // letter meem (D9 85).
         //
-        // الأثر هنا كان أخطر منه في عدّاد الأسطر: كل سطر تعليق عربي
-        // يُقطع في منتصف حرف، فتصير بقيّته أسطراً لا تبدأ بـ`--`، أي
-        // نصّاً عربياً خاماً يُسلَّم إلى PDO::exec كأنه SQL. النتيجة أن
-        // **كل** هجرة في هذا المشروع تفشل بخطأ صيغة — الثماني كلها
-        // (مقيس: 0001 يتضخّم من 112 سطراً إلى 149).
+        // The consequence here was graver than in the line counter: every Arabic
+        // comment line was cut in the middle of a letter, so its remainder became lines
+        // not starting with `--` — that is, raw Arabic text handed to PDO::exec as if it
+        // were SQL. The result was that **every** migration in this project failed with
+        // a syntax error, all eight of them (measured: 0001 swelled from 112 lines to
+        // 149).
         //
-        // بقي العطل مستتراً لأن الهجرات السبع الأولى سُجِّلت بـ`baseline`
-        // — وهي تسجّل بلا تنفيذ — فلم يمرّ أي ملف على up() قطّ قبل اليوم.
+        // The fault stayed hidden because the first seven migrations were recorded with
+        // `baseline` — which records without running — so no file had ever passed
+        // through up() until now.
         $lines = preg_split('/\r\n|\n|\r/', $content) ?: [];
 
         $collecting = false;
@@ -317,9 +326,9 @@ final class Migrator
 
     public function checksum(string $path): string
     {
-        // نهايات الأسطر تُوحَّد قبل الحساب: .gitattributes يُخرج CRLF على
-        // Windows وLF على غيره، فالبصمة الخام كانت ستختلف بين جهازين
-        // للملف نفسه بمحتوى واحد — إنذار انحراف كاذب في كل مرّة.
+        // Line endings are normalised before hashing: .gitattributes checks out CRLF on
+        // Windows and LF elsewhere, so a raw checksum would differ between two machines
+        // for the same file with identical content — a false drift alarm every time.
         $content = (string) file_get_contents($path);
 
         return hash('sha256', str_replace("\r\n", "\n", $content));

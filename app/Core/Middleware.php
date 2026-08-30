@@ -3,31 +3,32 @@
 namespace App\Core;
 
 /**
- * Middleware — حماية المسارات التي تتطلب تسجيل دخول
+ * Middleware — guarding the routes that require a sign-in.
  */
 class Middleware
 {
     /**
-     * يتحقق من أن المستخدم مسجّل دخوله.
+     * Verifies the user is signed in.
      *
-     * يرجع JSON لطلبات AJAX/POST، أو يحوّل لصفحة الدخول لطلبات الصفحات
-     * الكاملة — تماماً كما تفعل requireAdmin منذ البداية.
+     * It returns JSON for AJAX/POST requests, or redirects to the sign-in page for
+     * full page requests — exactly as requireAdmin has done from the start.
      *
-     * ⚠️ التفريق بين الشكلين لم يكن موجوداً، وكان عطلاً كامناً لا يظهر:
-     * الدالة كانت تُستدعى من **داخل** أجسام الأفعال، أي بعد أن تكون
-     * beginJsonPost قد ضبطت رأس JSON وردّت على فشل CSRF وأنهت الطلب.
-     * فلم يكن أحد يبلغ سطر التحويل من نقطة JSON أصلاً.
+     * ⚠️ That distinction did not exist, and it was a latent fault that never
+     * surfaced: the function was called from **inside** action bodies, that is, after
+     * beginJsonPost had already set the JSON header, answered a CSRF failure and ended
+     * the request. So nothing ever reached the redirect line from a JSON endpoint.
      *
-     * ولحظة نقل الحراسة إلى تعريف المسار ظهر العطل فوراً: صار الحارس
-     * يسبق الكنترولر، فبدأت خمس نقاط JSON (/checkout و/user/info
-     * وأخواتها) تردّ على مستخدم غير مسجّل بتحويل 302 إلى صفحة HTML —
-     * وfetch في المتصفح يتبعه ويحاول قراءة صفحة كاملة كـJSON.
+     * The moment the guarding moved to the route definition, the fault appeared at
+     * once: the guard now precedes the controller, so five JSON endpoints (/checkout,
+     * /user/info and their siblings) began answering a signed-out user with a 302
+     * redirect to an HTML page — and fetch in the browser follows it and tries to read
+     * a full page as JSON.
      *
-     * أمسك الانحدارَ اختبارُ عقد CSRF، وهو ما كُتب له.
+     * The CSRF contract test caught the regression, which is what it was written for.
      *
-     * والنتيجة أصحّ ممّا كان قبل النقل أيضاً: مستخدم غير مسجّل كان
-     * يتلقّى «توكن CSRF غير صالح» — رسالة تصف عرضاً لا سبباً. الآن
-     * يتلقّى 401 تقول له إن عليه تسجيل الدخول.
+     * And the outcome is more correct than before the move as well: a signed-out user
+     * used to receive "invalid CSRF token" — a message describing a symptom rather than
+     * a cause. Now they receive a 401 telling them they need to sign in.
      */
     public static function requireLogin(): void
     {
@@ -51,11 +52,11 @@ class Middleware
     }
 
     /**
-     * هل يتوقّع هذا الطلب استجابة JSON؟
+     * Does this request expect a JSON response?
      *
-     * كان هذا الفحص منسوخاً حرفياً في requireAdmin و denyAccess بصياغتين
-     * مختلفتين قليلاً — إحداهما تفحص Accept والأخرى لا. توحيده هنا يمنع
-     * أن يتصرّف حارسان بشكلين مختلفين أمام الطلب نفسه.
+     * This check was copied verbatim into requireAdmin and denyAccess in two slightly
+     * different wordings — one of them inspecting Accept and the other not. Unifying it
+     * here stops two guards behaving differently in front of the same request.
      */
     private static function expectsJson(): bool
     {
@@ -70,27 +71,27 @@ class Middleware
     }
 
     /**
-     * يتحقق من أن المستخدم هو أدمن.
-     * إذا لم يكن أدمن: يرجع JSON لطلبات AJAX، أو يعيد التوجيه للصفحة الرئيسية.
+     * Verifies the user is an admin.
+     * If not: returns JSON for AJAX requests, or redirects to the home page.
      */
     public static function requireAdmin(): void
     {
-        // ⚠️ بدء الجلسة هنا **لازم**، وليس احتياطاً.
+        // ⚠️ Starting the session here is **required**, not a precaution.
         //
-        // isAdmin() تُرجع false ما لم تكن جلسة admin_session نشطة
-        // بالاسم — لا يكفي وجود admin_id. وكانت هذه الدالة تفترض أن
-        // أحداً بدأها قبلها، والفاعل الوحيد هو
+        // isAdmin() returns false unless an admin_session is active under that name —
+        // the presence of an admin_id is not enough. And this function used to assume
+        // somebody had started it beforehand; the only thing that did was
         // AdminController::__construct.
         //
-        // ذلك كان يعمل ما دام الحارس يُستدعى من **داخل** جسم الفعل، أي
-        // بعد بناء الكنترولر. ولحظة نقل الحراسة إلى تعريف المسار — وهي
-        // النقلة الصحيحة، إذ يصير الحارس قبل الباني لا بعده — كان
-        // الترتيب سينقلب: يُسأل isAdmin() قبل أن توجد الجلسة، فتُرجع
-        // false دائماً، فتتحوّل **كل** صفحات لوحة التحكم إلى إعادة
-        // توجيه أبدية إلى صفحة الدخول.
+        // That worked as long as the guard was called from **inside** the action body,
+        // that is, after the controller was constructed. The moment guarding moved to
+        // the route definition — which is the correct move, since the guard then comes
+        // before the constructor rather than after — the order would have inverted:
+        // isAdmin() asked before the session exists, always returning false, turning
+        // **every** admin panel page into an endless redirect to the sign-in page.
         //
-        // startAdminSession() تحرس نفسها بـsession_status()، فاستدعاؤها
-        // هنا ثم في الباني لا يفعل شيئاً مرّتين.
+        // startAdminSession() guards itself with session_status(), so calling it here
+        // and then again in the constructor does not do anything twice.
         startAdminSession();
 
         if (!isAdmin()) {
@@ -116,67 +117,69 @@ class Middleware
     }
 
     /**
-     * يتحقق من أن الأدمن مسجّل دخوله أولاً، ثم يتحقق من صلاحية محددة.
-     * رتبة A (Super Admin) تتجاوز التحقق من الصلاحية دائماً.
-     * يُستخدم كأول سطر في أي Admin Controller يحتاج صلاحية محددة:
+     * Verifies the admin is signed in first, then checks a specific permission.
+     * Rank A (super admin) always bypasses the permission check.
+     * Used as the first line in any admin controller needing a specific permission:
      *   Middleware::requirePermission('can_manage_products');
      */
     public static function requirePermission(string $perm): void
     {
         self::requireAdmin();
 
-        // كان هنا require_once لـauth_helper.php — زائد: الهيلبرز تُحمَّل
-        // كلها من composer autoload.files قبل أن يبدأ أي راوت.
+        // There used to be a require_once for auth_helper.php here — redundant: the
+        // helpers are all loaded from composer's autoload.files before any route starts.
         if (!hasPermission($perm)) {
             self::denyAccess();
         }
     }
 
     /**
-     * يتحقق من أن الأدمن الحالي هو الروت — أي رتبة A.
+     * Verifies the current admin is root — that is, rank A.
      *
-     * وُجدت لأن المشروع كان يحمل **ثلاثة** تعريفات متنافسة لـ«الروت»:
+     * It exists because the project carried **three** competing definitions of "root":
      *
-     *   1. BackupController  → getCurrentAdminId() !== 1   (الروت = المعرّف 1)
-     *   2. AdminModel::getRootAdminId()  → WHERE role='A'  (الروت = أوّل صفّ A)
-     *   3. AdminModel::canManageTarget() → هرم الرتب        (A أعلى الجميع)
+     *   1. BackupController  → getCurrentAdminId() !== 1   (root = id 1)
+     *   2. AdminModel::getRootAdminId()  → WHERE role='A'  (root = the first A row)
+     *   3. AdminModel::canManageTarget() → the rank hierarchy (A above everyone)
      *
-     * وهي قد تتخالف. الأخطر أن الأول يربط حقّ تنزيل قاعدة البيانات
-     * كاملةً بـ**موضع** في طابور المعرّفات لا بشخص — بينما deleteAdmin
-     * كانت تزحف بالمعرّفات عند كل حذف. أي أن حذف صفّ كان كفيلاً بأن
-     * ينقل الحقّ إلى شخص آخر بصمت.
+     * And they can disagree. Most dangerously, the first ties the right to download
+     * the entire database to a **position** in the id sequence rather than to a person —
+     * while deleteAdmin renumbered ids on every delete. Which means deleting a row was
+     * enough to move that right to somebody else, silently.
      *
-     * التعريف هنا واحد ويطابق ما يسمّيه الكود نفسه في مواضعه:
-     * «root admin (role 'A')». والرتبة تُقرأ من الجلسة لا من القاعدة —
-     * loadAdminPermissions تضعها عند الدخول، فلا استعلام في كل طلب.
+     * The definition here is singular and matches what the code calls it elsewhere:
+     * "root admin (role 'A')". The rank is read from the session rather than the
+     * database — loadAdminPermissions puts it there at sign-in, so there is no query on
+     * every request.
      */
     public static function requireRoot(): void
     {
         self::requireAdmin();
 
-        // isRoleA() الموجودة في auth_helper لا نسخة جديدة منها: اسمان
-        // لمفهوم واحد هما بالضبط ما أنتج التعريفات الثلاثة المتنافسة
-        // التي تحلّها هذه المرحلة.
+        // The existing isRoleA() in auth_helper, not a new copy of it: two names for one
+        // concept is exactly what produced the three competing definitions this phase is
+        // resolving.
         if (!isRoleA()) {
             self::denyAccess();
         }
     }
 
     /**
-     * يخنق نقطة دخول: يرفض بـ429 حين يتجاوز المصدر الحدَّ خلال النافذة.
+     * Throttles an entry point: refuses with a 429 when the source exceeds the
+     * allowance within the window.
      *
-     * الحارس يسجّل المحاولة **قبل** أن ينفّذ الكنترولر، أي أنه يعدّ
-     * الطلبات لا الإخفاقات. هذا فرق جوهري عن isRateLimited القائمة:
-     * تلك تعدّ محاولات الدخول الفاشلة، فلا ترى أصلاً من يستدعي
-     * /auth/forgot ألف مرّة — كل استدعاء منها «ناجح» من زاويتها بينما
-     * هو ألف رسالة بريد.
+     * The guard records the attempt **before** the controller runs, meaning it counts
+     * requests rather than failures. That is a fundamental difference from the existing
+     * isRateLimited: that one counts failed sign-in attempts, so it does not see
+     * somebody calling /auth/forgot a thousand times at all — every one of those is
+     * "successful" from its point of view, while being a thousand emails.
      *
-     * والعدّ قبل التنفيذ يجعل الحارس يعمل حتى لو انتهى الفعل بـexit
-     * مبكّر، وهو ما تفعله معظم نقاط JSON هنا.
+     * Counting before execution also means the guard works even when the action ends
+     * in an early exit, which is what most JSON endpoints here do.
      *
-     * @param string $bucket        اسم الدلو — يفصل عدّاد نقطة عن أخرى
-     * @param int    $max           أقصى عدد طلبات مسموح خلال النافذة
-     * @param int    $windowMinutes طول النافذة بالدقائق
+     * @param string $bucket        The bucket name — it separates one endpoint's counter from another's
+     * @param int    $max           The most requests allowed within the window
+     * @param int    $windowMinutes The window length in minutes
      */
     public static function throttle(string $bucket, int $max, int $windowMinutes): void
     {
@@ -190,10 +193,11 @@ class Middleware
     }
 
     /**
-     * يرفض الطلب المخنوق: JSON لنقاط الـAJAX، وصفحة 429 كاملة للصفحات.
+     * Refuses a throttled request: JSON for AJAX endpoints, and a complete 429 page
+     * for page requests.
      *
-     * التفريق يتبع expectsJson() نفسها التي يستعملها requireLogin — لا
-     * فحصاً ثالثاً بصياغة رابعة، فقد كان ذلك بالضبط ما وحّدته تلك الدالة.
+     * The distinction follows the same expectsJson() that requireLogin uses — not a
+     * third check in a fourth wording, which is exactly what that function unified.
      */
     private static function denyThrottled(string $bucket, int $windowMinutes): void
     {
@@ -215,13 +219,13 @@ class Middleware
 
         ErrorPage::tooManyRequests(
             $retryAfter,
-            'خنق الدلو [' . $bucket . '] من ' . Throttle::clientIp()
+            'Throttled bucket [' . $bucket . '] from ' . Throttle::clientIp()
         );
     }
 
     /**
-     * يرجع JSON لو الطلب AJAX أو POST، أو صفحة HTML عادية لو طلب صفحة كامل.
-     * يُستدعى فقط عند رفض الصلاحية (403).
+     * Returns JSON if the request is AJAX or POST, or a normal HTML page for a full
+     * page request. Called only when a permission is refused (403).
      */
     private static function denyAccess(): void
     {
@@ -243,15 +247,15 @@ class Middleware
             exit;
         }
 
-        // كان هنا <div> خام بلا <!DOCTYPE> ولا <head> ولا لايوت — وهو
-        // بالضبط النمط الذي وُجد ErrorPage ليُنهيه («المُصيّر الوحيد
-        // لصفحات الخطأ»)، لكن هذا الموضع بقي خارجه.
+        // There used to be a bare <div> here with no <!DOCTYPE>, no <head> and no
+        // layout — precisely the pattern ErrorPage exists to end ("the single renderer
+        // for error pages"), but this site had stayed outside it.
         //
-        // وجهة الرجوع لوحة التحكم لا جذر الموقع: لا يصل هذا السطر إلا
-        // من عبر requireAdmin() أعلاه، أي أن الزائر أدمن بالتأكيد —
-        // وإلقاؤه في واجهة المتجر يضيّعه.
+        // The back destination is the admin panel rather than the site root: nothing
+        // reaches this line except through requireAdmin() above, so the visitor is
+        // certainly an admin — and dropping them into the store front loses them.
         ErrorPage::forbidden(
-            'تخويل مرفوض على ' . ($_SERVER['REQUEST_URI'] ?? '?') . ' لأدمن #' . (getCurrentAdminId() ?? 0),
+            'Authorisation refused at ' . ($_SERVER['REQUEST_URI'] ?? '?') . ' for admin #' . (getCurrentAdminId() ?? 0),
             URLROOT . '/admin/home',
             'Back to dashboard'
         );
