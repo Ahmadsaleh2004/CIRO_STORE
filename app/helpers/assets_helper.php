@@ -166,9 +166,40 @@ const VENDOR_ASSETS = [
     // يُنشر غداً، أياً كان محتواه، على صفحة الدفع ولوحة التحكّم معاً.
     // الرقم هنا هو ما كان النطاق يحلّه وقت التثبيت، فلا تغيير في
     // السلوك — التغيير أن السلوك صار **معروفاً**.
+    //
+    // ⚠️ وهي `sweetalert2.min.js` لا `sweetalert2.all.min.js`.
+    //
+    // الفرق ليس في الحجم: نسخة `all` تحمل أنماطها **داخل الجافاسكربت**
+    // وتحقنها وقت التشغيل في وسم <style> تنشئه بنفسها. وسياسة أمن
+    // المحتوى في public/.htaccess تمنع `style-src 'unsafe-inline'` —
+    // فكان المتصفّح يرفض ذلك الوسم، ويظهر كل حوار SweetAlert نصّاً
+    // عارياً أسفل الصفحة بلا تصميم ولا موضع.
+    //
+    // وأثر ذلك تجاوز الشكل إلى الوظيفة: `orders.js` ينتظر تأكيد
+    // `await Swal.fire(...)` قبل أن يأخذ الطلب، وزر التأكيد لم يكن
+    // يُرى أصلاً — فبدا أن «أخذ الطلب» معطّل وهو سليم.
+    //
+    // النسخة العارية لا تحقن شيئاً، وأنماطها تأتي من 'sweetalert2-css'
+    // أدناه كورقة خارجية يسمح بها `style-src`. **الاثنان يُدرَجان
+    // معاً دائماً** — أحدهما بلا الآخر يعيد العطل نفسه.
     'sweetalert2' => [
-        'url' => 'https://cdn.jsdelivr.net/npm/sweetalert2@11.26.25/dist/sweetalert2.all.min.js',
-        'sri' => 'sha384-nLoOnA/BDh8A/jxqtckg4DumuCGOBYUnNJLZdQz/zfYNp3wcjGSoWTAzgko06G/2',
+        'url' => 'https://cdn.jsdelivr.net/npm/sweetalert2@11.26.25/dist/sweetalert2.min.js',
+        'sri' => 'sha384-hW8ZCQHtRH+nVOAkHZ4amZvYsAtKn1ZOvMV6dNag1Rb1thWmLZMBKTRxFV0cOxiK',
+    ],
+    'sweetalert2-css' => [
+        'url' => 'https://cdn.jsdelivr.net/npm/sweetalert2@11.26.25/dist/sweetalert2.min.css',
+        'sri' => 'sha384-dCW5imOdApH6OwpFau8cZNKjqVbJYnCA5q+8YsMYP3XwXKsV6Jfz1u6MZLnXaBsS',
+    ],
+
+    // Chart.js — لوحة تحكّم الأدمن وحدها.
+    //
+    // كان الوسم مطبوعاً من AdminDashboardController نصّاً، بلا
+    // `integrity` ولا `crossorigin` — أي أن أي شيء يرسله المضيف كان
+    // يُنفَّذ على صفحة تعرض المبيعات وبيانات المستخدمين. ووجوده هنا
+    // يعيده إلى نفس العقد الذي تخضع له بقيّة المكتبات.
+    'chartjs' => [
+        'url' => 'https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js',
+        'sri' => 'sha384-e6nUZLBkQ86NJ6TVVKAeSaK8jWa3NhkYWZFomE39AvDbQWeie9PlQqM3pmYW5d1g',
     ],
 ];
 

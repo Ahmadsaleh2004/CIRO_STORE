@@ -183,4 +183,50 @@ final class SecurityHeadersTest extends TestCase
             );
         }
     }
+
+    /**
+     * بصمة سكربت تهيئة الثيم في CSP تطابق محتوى themeBootScript().
+     *
+     * ══════════════════════════════════════════════════════════
+     * لماذا هذا الاختبار موجود
+     * ══════════════════════════════════════════════════════════
+     *
+     * لأن التعليق التحذيري فوق البصمة في .htaccess لم يمنع انحرافها.
+     * كانت مكتوبة `sha256-n33GJ97…` بينما الدالة تُنتج
+     * `sha256-6TLKQaFc…` — أي أن السكربت كان محجوباً في **كل** تحميل
+     * صفحة في المتجر ولوحة التحكّم معاً.
+     *
+     * وهذا أسوأ أنواع الأعطال: لا صفحة بيضاء ولا استثناء ولا اختبار
+     * أحمر. فقط ومضة بيضاء عند كل تنقّل في الوضع الليلي، وسطر
+     * `Refused to execute inline script` في console لا يقرأه أحد.
+     *
+     * البصمة تُحسب على محتوى الوسم — ما بين <script> و</script> —
+     * حرفاً بحرف: كل مسافة وكل سطر جديد داخل. ولذلك يكفي أن يُعاد
+     * تنسيق الدالة ليُبطلها، وهو ما يجعل التعليق حارساً عاجزاً
+     * والاختبار حارساً حقيقياً.
+     */
+    public function testTheThemeBootScriptHashMatchesItsSource(): void
+    {
+        $this->assertTrue(
+            function_exists('themeBootScript'),
+            'themeBootScript() غير محمَّلة — راجع app/helpers/assets_helper.php.'
+        );
+
+        $this->assertSame(
+            1,
+            preg_match('#<script>(.*?)</script>#s', themeBootScript(), $m),
+            'themeBootScript() لم تعد تُنتج وسم <script> واحداً — البصمة تفقد معناها.'
+        );
+
+        $expected = 'sha256-' . base64_encode(hash('sha256', $m[1], true));
+
+        $this->assertStringContainsString(
+            "'{$expected}'",
+            $this->htaccess,
+            "بصمة سكربت الثيم في CSP لا تطابق محتوى themeBootScript().\n"
+            . "المتوقَّع: '{$expected}'\n"
+            . 'ضَعها في script-src داخل public/.htaccess. وحتى تفعل، '
+            . 'السكربت محجوب في كل صفحة ويومض الثيم عند كل تنقّل.'
+        );
+    }
 }
