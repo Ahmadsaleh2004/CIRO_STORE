@@ -1,22 +1,23 @@
 <?php
 
-// تحميل Autoloader الخاص بـ Composer.
+// Loading Composer's autoloader.
 //
-// هذا السطر يحمّل ثلاثة أشياء دفعةً واحدة:
-//   1. الحزم الخارجية (PHPMailer وغيرها)
-//   2. كلاسات المشروع عبر PSR-4 على "App\\" => app/
-//   3. ملفات الهيلبرز الستة عبر autoload.files في composer.json
+// This one line loads three things at once:
+//   1. the external packages (PHPMailer and the rest)
+//   2. the project's classes through PSR-4 on "App\\" => app/
+//   3. the six helper files through autoload.files in composer.json
 //
-// الهيلبرز كانت تُحمَّل هنا بـglob على مجلد helpers. نُقلت إلى composer
-// كي تصير قائمة التحميل معلنة في مكان واحد يراه dump-autoload -o، وكي
-// لا يعتمد ترتيب التحميل على ترتيب نظام الملفات.
+// The helpers used to be loaded here with a glob over the helpers directory. They were
+// moved into composer so the load list is declared in one place that dump-autoload -o can
+// see, and so the load order does not depend on the file system's ordering.
 //
-// كلها تعريفات دوال فقط ولا تنفّذ شيئاً عند التحميل، فتحميلها قبل
-// config.php آمن — الثوابت (URLROOT وأخواتها) تُقرأ داخل أجسام الدوال
-// وقت الاستدعاء لا وقت التعريف.
+// They are all function definitions and execute nothing on load, so loading them before
+// config.php is safe — the constants (URLROOT and its siblings) are read inside the
+// function bodies at call time rather than at definition time.
 require_once __DIR__ . '/../vendor/autoload.php';
 
-// تحميل ملف .env بأمان (قارئ سطر بسطر، بدون تفسير PHP لأي أقواس أو كلمات محجوزة)
+// Loading the .env file safely (a line-by-line reader, with no PHP interpretation of any
+// braces or reserved words)
 require_once __DIR__ . '/../app/config/env_loader.php';
 loadEnv(__DIR__ . '/../.env');
 
@@ -50,50 +51,51 @@ use App\Controllers\AdminBrandingController;
 use App\Controllers\BackupController;
 
 // ══════════════════════════════════════════════════════════════
-// الحراسة مُعلَنة في المسار
+// The guards are declared on the route
 // ══════════════════════════════════════════════════════════════
 //
-// كل مسار محمي يحمل ->middleware() يعلن ما يحتاجه:
+// Every protected route carries a ->middleware() declaring what it needs:
 //
-//     'auth'       → مستخدم مسجّل الدخول
-//     'admin'      → أدمن مسجّل الدخول
-//     'perm:<اسم>' → أدمن يملك الصلاحية (رتبة A تتجاوزها دائماً)
+//     'auth'        → a signed-in user
+//     'admin'       → a signed-in admin
+//     'perm:<name>' → an admin holding the permission (rank A always overrides it)
 //
-// لماذا هنا لا داخل الأفعال وحدها؟ لسببين:
+// Why here rather than inside the actions alone? For two reasons:
 //
-//   1. الحارس يعمل **قبل** بناء الكنترولر لا بعده. النداء من داخل جسم
-//      الفعل يعني أن الكنترولر بُني وربما نفّذ عملاً في بانيه قبل أن
-//      يُسأل عن الصلاحية.
+//   1. The guard runs **before** the controller is constructed, not after. Calling it from
+//      inside an action's body means the controller was built and may have done work in its
+//      constructor before the permission was ever asked about.
 //
-//   2. السياسة تصير مقروءة في مكان واحد. من يراجع أمان المشروع يقرأ
-//      هذا الجدول، لا 24 كنترولراً بحثاً عن سطر Middleware ضائع.
+//   2. The policy becomes readable in one place. Anyone reviewing the project's security
+//      reads this table, rather than 24 controllers looking for a stray Middleware line.
 //
-// ⚠️ الفحوص داخل أجسام الأفعال **لم تُحذف**، والازدواج مقصود ومؤقّت:
-// حذفها في الخطوة نفسها كان سيجعل أي خطأ في النقل ثغرةً صامتة. وبإبقاء
-// الاثنين لا يمكن للحارس الجديد أن يكون أضعف من القديم.
+// ⚠️ The checks inside the action bodies **were not removed**, and the duplication is
+// deliberate and temporary: removing them in the same step would have turned any mistake in
+// the move into a silent hole. With both in place, the new guard cannot be weaker than the
+// old one.
 //
-// و tests/Integration/RouteGuardParityTest.php يقارن الطرفين آلياً:
-// أي انحراف — مسار بلا حارس، أو صلاحية تغيّرت في جانب دون الآخر —
-// يُفشل البناء.
+// And tests/Integration/RouteGuardParityTest.php compares the two sides mechanically: any
+// divergence — a route without a guard, or a permission changed on one side and not the
+// other — fails the build.
 
 
 $app = new App();
 $r   = $app->getRouter();
 
-// ── الصفحة الرئيسية ──────────────────────────────────────────
-// فحص صحّة — يستدعيه HEALTHCHECK في Dockerfile ودوّار الحمل.
-// بلا حارس بالضرورة: الفاحص لا يملك جلسة.
+// ── The home page ────────────────────────────────────────────
+// A health check — called by HEALTHCHECK in the Dockerfile and by the load balancer.
+// Necessarily unguarded: the checker holds no session.
 $r->get('/health', [HealthController::class, 'index']);
 
 $r->get('/',     [HomeController::class, 'index']);
 $r->get('/home', [HomeController::class, 'index']);
 
-// ── المنتجات ─────────────────────────────────────────────────
+// ── The products ─────────────────────────────────────────────
 $r->get('/products', [ProductController::class, 'index']);
 $r->get('/product',  [ProductController::class, 'show']);
 $r->post('/product', [ProductController::class, 'show']);
 
-// ── الصفحات التعريفية ────────────────────────────────────────
+// ── The informational pages ──────────────────────────────────
 $r->get('/about',   [AboutController::class,   'about']);
 $r->get('/contact', [ContactController::class, 'contact']);
 $r->post('/contact',[ContactController::class, 'contact']);
@@ -107,20 +109,21 @@ $r->post('/handlers/notify_handler.php',       [WishlistController::class, 'noti
 
 // ── Auth ─────────────────────────────────────────────────────
 //
-// الخنق هنا يعدّ **الطلبات** من مصدر واحد، وهو غير الخنق القائم في
-// UserModel::isRateLimited الذي يعدّ إخفاقات الدخول إلى حساب واحد.
-// الطبقتان تحرسان شيئين مختلفين: تلك تحمي حساباً بعينه من التخمين،
-// وهذه تحمي النقطة نفسها من الاستنزاف — وأوضح مثال /auth/forgot، إذ
-// كل استدعاء لها «ناجح» من زاوية عدّاد الإخفاقات بينما هو رسالة بريد.
+// The throttle here counts **requests** from one source, which is a different thing from
+// the throttle in UserModel::isRateLimited that counts failed sign-ins to one account.
+// The two layers guard different things: that one protects a particular account from
+// guessing, and this one protects the endpoint itself from exhaustion — the clearest
+// example being /auth/forgot, where every call is "successful" from the failure counter's
+// point of view while being an email.
 //
-// ⚠️ الأرقام تحسب إعادة المحاولة. js/core/csrf.js يعيد إرسال الطلب
-// مرّة واحدة تلقائياً عند انتهاء التوكن، فكل فعل مستخدم قد يصل كطلبين.
-// أي أن الحدّ المعروض هنا يساوي **نصفه تقريباً** من أفعال المستخدم:
-// 12 على التسجيل ≈ ست محاولات حقيقية. كشف هذا اختبارُ عقد CSRF حين
-// استنفد حدوداً كانت مضبوطة على الطلبات لا على الأفعال.
+// ⚠️ The numbers count the retry. js/core/csrf.js resends the request once automatically
+// when the token expires, so every user action may arrive as two requests. Which is to say
+// the limit shown here is roughly **half** of it in user actions: 12 on registration ≈ six
+// real attempts. The CSRF contract test revealed this when it exhausted limits that had
+// been set against requests rather than against actions.
 //
-// والنقاط التي ترسل بريداً أضيق عمداً (6/ساعة ≈ ثلاث محاولات): هي
-// الوحيدة التي يكلّف كل استدعاء لها رسالةً فعلية.
+// And the endpoints that send email are deliberately tighter (6/hour ≈ three attempts):
+// they are the only ones where every call costs an actual message.
 $r->post('/auth/login',            [AuthController::class, 'login'])
     ->middleware('throttle:store-login,10,15');
 $r->post('/auth/register',         [AuthController::class, 'register'])
@@ -138,14 +141,15 @@ $r->get('/auth/csrf',              [AuthController::class, 'getCsrf']);
 
 // ── Cart ─────────────────────────────────────────────────────
 //
-// السلّة صارت على الخادم (هجرة 0011). وكل نقطة تحمل حارس `auth` لأن
-// **لا سلّة زائر أصلاً**: زرّ السلّة وزرّ «أضف للسلّة» محروسان بتسجيل
-// الدخول في القوالب الثلاثة (navbar · product · product_dit)، وغير
-// المسجَّل يُدفع إلى نافذة الدخول. فالحارس هنا يفرض ما تعرضه الواجهة
-// بدل أن يفترضه — والفرق أن الواجهة تُخفي الزرّ، والحارس يردّ الطلب.
+// The cart moved to the server (migration 0011). And every endpoint carries the `auth`
+// guard because **there is no guest cart at all**: the cart button and the "add to cart"
+// button are login-guarded in all three templates (navbar · product · product_dit), and a
+// signed-out visitor is pushed to the login modal. So the guard here enforces what the
+// interface shows rather than assuming it — the difference being that the interface hides
+// the button while the guard refuses the request.
 //
-// و`check-stock` تبقى بلا حارس: تُستدعى من صفحات المنتجات لتحديث
-// بطاقاتها، ولا تكشف إلا ما هو معروض أصلاً.
+// And `check-stock` stays unguarded: it is called from the product pages to refresh their
+// cards, and it discloses nothing that is not already on display.
 $r->post('/cart/check-stock', [CartController::class, 'checkStock']);
 $r->get('/cart',          [CartController::class, 'index'])->middleware('auth');
 $r->post('/cart/add',     [CartController::class, 'add'])->middleware('auth');
@@ -179,16 +183,17 @@ $r->post('/notifications/mark-all-read',[NotificationController::class, 'markAll
 $r->post('/notifications/dismiss',      [NotificationController::class, 'dismiss']);
 $r->post('/notifications/delete-all',   [NotificationController::class, 'deleteAll']);
 
-// ── Admin Auth (مستقل تماماً عن Auth العام) ──────────────────
-// ملاحظة: هذه المسارات تستخدم session_name('admin_session') منفصلة
-// عن جلسة المستخدم العادي (PHPSESSID) — لا تخلطهما أبداً
+// ── Admin Auth (entirely separate from the general Auth) ─────
+// Note: these routes use session_name('admin_session'), separate from the ordinary user's
+// session (PHPSESSID) — never mix the two
 $r->get('/admin/login',  [AdminAuthController::class, 'showLogin']);
 $r->post('/admin/login', [AdminAuthController::class, 'login'])
     ->middleware('throttle:admin-login,10,15');
-// ⚠️ أهمّ خنق في الجدول. خطوة الـ2FA كانت بلا أي عدّاد: كلمة المرور
-// عبرت أصلاً، والكود ست خانات بنافذة ±30 ثانية — أي ثلاثة أكواد صالحة
-// من مليون في كل لحظة. بلا حدّ، من يملك كلمة المرور يتجاوز الطبقة
-// الثانية بحلقة تخمين. الحدّ هنا أضيق من الدخول عمداً.
+// ⚠️ The most important throttle in the table. The 2FA step had no counter at all: the
+// password has already passed, and the code is six digits with a ±30-second window — that
+// is, three valid codes out of a million at any instant. Without a limit, whoever holds the
+// password gets past the second layer with a guessing loop. The limit here is deliberately
+// tighter than the sign-in's.
 $r->post('/admin/login/2fa', [AdminAuthController::class, 'verify2FALogin'])
     ->middleware('throttle:admin-2fa,8,15');
 $r->post('/admin/forgot',[AdminAuthController::class, 'forgotPassword'])
@@ -230,13 +235,13 @@ $r->get('/admin/admins/add',        [AdminManageAdminsController::class, 'showAd
 $r->post('/admin/admins/add',       [AdminManageAdminsController::class, 'storeAdd'])
     ->middleware('perm:can_manage_admins');
 $r->post('/admin/admins/edit',      [AdminManageAdminsController::class, 'storeEdit'])
-    ->middleware('perm:can_manage_admins');   // id بالـ body
+    ->middleware('perm:can_manage_admins');   // the id comes in the body
 $r->post('/admin/admins/delete',    [AdminManageAdminsController::class, 'delete'])
     ->middleware('perm:can_manage_admins');      // JSON — AJAX
 $r->get('/admin/admins/details',    [AdminManageAdminsController::class, 'details'])
     ->middleware('perm:can_manage_admins');     // ?id=123
 $r->get('/admin/admins/export-csv', [AdminManageAdminsController::class, 'exportCsv'])
-    ->middleware('perm:can_manage_admins');  // تحميل ملف — Role A فقط
+    ->middleware('perm:can_manage_admins');  // a file download — Role A only
 
 // ── Manage Users ────────────────────────────────────────────
 $r->get('/admin/users',                [AdminUsersController::class, 'index'])
@@ -272,7 +277,7 @@ $r->post('/admin/orders/report-issue',    [AdminOrdersController::class, 'report
 $r->get('/admin/orders/export-csv',       [AdminOrdersController::class, 'exportCsv'])
     ->middleware('perm:can_manage_orders');
 
-// ── Messaging مشترك (أدمن الآن، يوزرز لاحقًا بنفس الكنترولر) ──
+// ── Shared messaging (admins today, users later on the same controller) ──
 $r->post('/admin/messaging/notify',    [AdminMessagingController::class, 'notify'])
     ->middleware('perm:can_manage_admins');     // JSON — AJAX
 $r->post('/admin/messaging/broadcast', [AdminMessagingController::class, 'broadcast']); // JSON — AJAX
@@ -309,12 +314,12 @@ $r->post('/admin/branding/save',            [AdminBrandingController::class, 'sa
 $r->get('/admin/branding/products/search',  [AdminBrandingController::class, 'searchProducts'])
     ->middleware('perm:can_manage_branding');
 
-// ── Admin Backup (الروت وحده — رتبة A) ───────────────────────
+// ── Admin Backup (the root admin alone — rank A) ─────────────
 //
-// كانت هذه المسارات الأربعة بلا حارس مُعلَن إطلاقاً، والشرط مكتوباً
-// بيده أربع مرّات في الجسم كـ`getCurrentAdminId() !== 1` — أي أن حقّ
-// تنزيل قاعدة البيانات كاملةً كان معلَّقاً بموضعٍ في طابور المعرّفات لا
-// بشخص. الحارس `root` يعتمد رتبة A، وهي هوية لا موضع.
+// These four routes had no declared guard at all, with the condition written by hand four
+// times in the bodies as `getCurrentAdminId() !== 1` — that is, the right to download the
+// entire database hung on a position in the id sequence rather than on a person. The `root`
+// guard rests on rank A, which is an identity rather than a position.
 $r->get('/admin/backup',          [BackupController::class, 'index'])
     ->middleware('root');
 $r->post('/admin/backup/create',  [BackupController::class, 'create'])
@@ -331,5 +336,5 @@ $r->post('/admin/notifications/mark-all-read', [AdminNotificationController::cla
 $r->post('/admin/notifications/delete-all',    [AdminNotificationController::class, 'deleteAll']);
 $r->post('/admin/notifications/dismiss',       [AdminNotificationController::class, 'dismiss']);
 
-// ── تشغيل التطبيق ────────────────────────────────────────────
+// ── Running the application ──────────────────────────────────
 $app->run();

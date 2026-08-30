@@ -1,24 +1,24 @@
 # ══════════════════════════════════════════════════════════════
-# مجلد الصور المرفوعة — لا تنفيذ هنا، بأي حال
+# The uploaded images directory — nothing executes here, under any circumstances
 # ══════════════════════════════════════════════════════════════
 #
-# دفاع بالعمق لا خطّ الدفاع الأوّل. الرفع محروس أصلاً بثلاثة أشياء:
-# الامتداد يُشتقّ من محتوى الملف عبر mime_content_type لا من اسمه،
-# والاسم المحفوظ عشوائي كلياً، وX-Content-Type-Options: nosniff تمنع
-# المتصفح من تخمين النوع.
+# Defence in depth, not the first line of defence. Uploads are already guarded by three
+# things: the extension is derived from the file's content through mime_content_type rather
+# than from its name, the stored name is entirely random, and X-Content-Type-Options:
+# nosniff stops the browser guessing the type.
 #
-# لكن الثلاثة كلها في طبقة التطبيق أو المتصفح. هذا الملف يقول للخادم
-# نفسه: مهما وصل إلى هنا، لا يُنفَّذ. الحالة التي يغطّيها هي إعداد
-# خاطئ في مكان آخر — AddHandler موروث، أو مُعالِج PHP مربوط بامتداد
-# غير متوقَّع — وهي حالات لا يراها من يقرأ كود الرفع.
+# But all three live in the application layer or the browser. This file tells the server
+# itself: whatever reaches here does not run. The case it covers is a misconfiguration
+# somewhere else — an inherited AddHandler, or a PHP handler bound to an unexpected
+# extension — and those are cases invisible to anyone reading the upload code.
 
-# ── منع تنفيذ PHP بكل صيغه ────────────────────────────────────
+# ── Prevent PHP execution in all its forms ───────────────────
 <FilesMatch "\.(?i:php|php[0-9]?|phtml|phps|phar|inc|hh)$">
     Require all denied
 </FilesMatch>
 
-# مُعالِجات PHP تُنزَع صراحةً: Require all denied تمنع الطلب، وهذه
-# تمنع التنفيذ حتى لو وصل الملف عبر include من مكان آخر.
+# The PHP handlers are removed explicitly: Require all denied blocks the request, and this
+# blocks execution even if the file is reached through an include from somewhere else.
 <IfModule mod_php.c>
     php_flag engine off
 </IfModule>
@@ -32,5 +32,5 @@
 RemoveHandler .php .php3 .php4 .php5 .php7 .php8 .phtml .phar
 RemoveType .php .php3 .php4 .php5 .php7 .php8 .phtml .phar
 
-# ── ولا CGI ولا SSI ───────────────────────────────────────────
+# ── And no CGI, and no SSI ───────────────────────────────────
 Options -ExecCGI -Includes -Indexes

@@ -1,8 +1,8 @@
 # ══════════════════════════════════════════════════════════════
-# جذر الويب — Cairo Store
+# The web root — Cairo Store
 # ══════════════════════════════════════════════════════════════
 
-# ── توجيه كل ما ليس ملفاً أو مجلداً إلى الراوتر ──────────────
+# ── Route everything that is not a file or a directory to the router ──
 <IfModule mod_rewrite.c>
     RewriteEngine On
     RewriteCond %{REQUEST_FILENAME} !-f
@@ -10,136 +10,137 @@
     RewriteRule ^ index.php [QSA,L]
 </IfModule>
 
-# ── تخزين مؤقّت للأصول المبصومة ──────────────────────────────
+# ── Caching for the fingerprinted assets ─────────────────────
 #
-# ملفات public/css/dist/ تحمل بصمة محتواها في أسمائها
-# (store.f7069eb70046.css)، فتغيّر المحتوى يغيّر الرابط. ولذلك يصحّ
-# تخزينها سنة كاملة بـimmutable: المتصفح لا يسأل عنها إطلاقاً، ولا
-# خطر من قِدَمها لأن النسخة الجديدة تحمل اسماً آخر.
+# The files in public/css/dist/ carry their content's fingerprint in their names
+# (store.f7069eb70046.css), so a change in content changes the URL. Which is why caching
+# them for a full year as immutable is correct: the browser never asks about them again, and
+# their age is no danger because the new version carries a different name.
 #
-# ⚠️ محصورة في dist/ عمداً. تطبيقها على css/ أو js/ العاديين — وهي
-# بلا بصمة — يعني أن تعديلاً لن يصل الزائر لسنة.
+# ⚠️ Confined to dist/ deliberately. Applying it to the ordinary css/ or js/ — which carry
+# no fingerprint — would mean an edit never reaching a visitor for a year.
 <IfModule mod_headers.c>
     <FilesMatch "\.[0-9a-f]{12}\.(css|js)$">
         Header set Cache-Control "public, max-age=31536000, immutable"
     </FilesMatch>
 </IfModule>
 
-# ── ترويسات أمنية ────────────────────────────────────────────
+# ── Security headers ─────────────────────────────────────────
 #
-# لم تكن هنا أي ترويسة أمنية إطلاقاً (مفحوص: صفر موضع في المشروع كله).
-# `always` مقصود: بدونه لا تُضاف الترويسة إلى استجابات الخطأ — وصفحة
-# 404 أو 500 تحتاج الحماية كما تحتاجها الصفحة الناجحة.
+# There was no security header here at all (verified: zero sites in the whole project).
+# `always` is deliberate: without it the header is not added to error responses — and a 404
+# or 500 page needs the protection just as a successful page does.
 <IfModule mod_headers.c>
 
-    # المتصفح لا يخمّن نوع المحتوى. يقطع هجمات رفع ملف يُقدَّم كـHTML.
+    # The browser does not guess the content type. It cuts off attacks that upload a file
+    # served as HTML.
     Header always set X-Content-Type-Options "nosniff"
 
-    # لا يُدرَج الموقع في إطار من نطاق آخر — حماية من clickjacking.
-    # (frame-ancestors في CSP أدناه هو البديل الحديث؛ يبقى هذا
-    #  للمتصفحات التي لا تقرأه.)
+    # The site is not embedded in a frame from another origin — clickjacking protection.
+    # (frame-ancestors in the CSP below is the modern replacement; this stays for browsers
+    #  that do not read it.)
     Header always set X-Frame-Options "SAMEORIGIN"
 
-    # لا يُسرَّب المسار الكامل للمواقع الخارجية — النطاق وحده، وفقط
-    # عند البقاء على https.
+    # The full path is not leaked to external sites — the origin alone, and only while
+    # staying on https.
     Header always set Referrer-Policy "strict-origin-when-cross-origin"
 
-    # صلاحيات المتصفح التي لا يستعملها المتجر — تُغلق صراحةً.
+    # The browser capabilities the store does not use — closed explicitly.
     Header always set Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=(), usb=()"
 
-    # HSTS مشروط بـHTTPS عمداً. إرساله على http بلا معنى، وإرساله من
-    # بيئة تطوير محلية يثبّت المتصفح على https للـlocalhost كله —
-    # فيكسر كل مشروع آخر على الجهاز نفسه ويصعب التراجع عنه.
+    # HSTS is conditioned on HTTPS deliberately. Sending it over http is meaningless, and
+    # sending it from a local development environment pins the browser to https for the whole
+    # of localhost — breaking every other project on the same machine, and hard to undo.
     Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains" env=HTTPS
 
-    # إخفاء نسخة PHP من الترويسات.
+    # Hide PHP's version from the headers.
     Header always unset X-Powered-By
 
-    # ── CSP: مفروضة بالكامل ───────────────────────────────────
+    # ── CSP: fully enforced ───────────────────────────────────
     #
-    # **بلا 'unsafe-inline' في script-src.** لم تكن هذه ممكنة قبل
-    # اليوم: كانت الـviews تحوي أربع عشرة كتلة <script> مضمّنة وثلاثة
-    # وثلاثين معالج onclick/onchange — وكلّها كتل تنفيذ تحجبها أي
-    # سياسة جادّة.
+    # **With no 'unsafe-inline' in script-src.** This was not possible before: the views
+    # carried fourteen embedded <script> blocks and thirty-three onclick/onchange handlers —
+    # all of them execution blocks that any serious policy blocks.
     #
-    # ما تغيّر ليصير هذا ممكناً:
-    #   · البيانات → جزر <script type="application/json"> (pageData)
-    #     وهي ليست كتل تنفيذ فلا يعنيها script-src أصلاً.
-    #   · المعالجات → data-action وسمات data-*، يفوّضها مستمع واحد
-    #     في js/core/inline-actions.js.
-    #   · سكربت تهيئة الثيم → مسموح **ببصمته وحدها**. لا يمكن نقله إلى
-    #     ملف: يجب أن يعمل قبل الرسم وإلا ومض المستخدم بالثيم الخطأ.
+    # What changed to make it possible:
+    #   · the data → <script type="application/json"> islands (pageData), which are not
+    #     execution blocks, so script-src does not concern them at all.
+    #   · the handlers → data-action and data-* attributes, delegated by a single listener
+    #     in js/core/inline-actions.js.
+    #   · the theme boot script → allowed **by its digest alone**. It cannot be moved into a
+    #     file: it has to run before paint, or the user sees a flash of the wrong theme.
     #
-    # ⚠️ البصمة مرتبطة بمحتوى themeBootScript() حرفاً بحرف. أي تعديل
-    # عليه — ولو مسافة — يُبطلها فيتوقّف السكربت ويومض الثيم. أعد
-    # حسابها عند أي تغيير:
+    # ⚠️ The digest is tied to themeBootScript()'s content letter for letter. Any edit to it
+    # — even a space — invalidates the digest, so the script stops and the theme flashes.
+    # Recompute it on any change:
     #     php -r "require 'app/helpers/assets_helper.php';
     #             preg_match('#<script>(.*?)</script>#s', themeBootScript(), \$m);
     #             echo 'sha256-'.base64_encode(hash('sha256', \$m[1], true));"
     #
-    # ⚠️ وهذا التحذير لم يكن كافياً، والسبب أعمق من سهو: البصمة تُحسب
-    # على المحتوى بما فيه **نهايات الأسطر**، و.gitattributes يُخرج هذا
-    # الملف بـCRLF على ويندوز وبـLF على غيره. فالمصدر الواحد كان يُنتج
-    # بصمتين، مقيستين:
+    # ⚠️ And that warning was not enough, for a reason deeper than an oversight: the digest
+    # is computed over the content **including the line endings**, and .gitattributes checks
+    # this file out as CRLF on Windows and LF elsewhere. So one source produced two digests,
+    # both measured:
     #
-    #     CRLF (ويندوز/XAMPP)   sha256-6TLKQaFcqhxCDjTk0QjqyBctIHNhyj10R3cAU65yIvQ=
-    #     LF   (لينكس/Docker)   sha256-n33GJ973YEUTpbG1xOj611JYTc5wI4V+8xmEtfPaLjk=
+    #     CRLF (Windows/XAMPP)  sha256-6TLKQaFcqhxCDjTk0QjqyBctIHNhyj10R3cAU65yIvQ=
+    #     LF   (Linux/Docker)   sha256-n33GJ973YEUTpbG1xOj611JYTc5wI4V+8xmEtfPaLjk=
     #
-    # أياً كانت المكتوبة هنا، يبقى السكربت **محجوباً على المنصّة الأخرى**
-    # — بلا عطل ظاهر سوى ومضة بيضاء وسطر رفض في الـconsole. وهذا يعني
-    # أن إصلاح البصمة محلياً على ويندوز كان يكسرها على خادم النشر.
+    # Whichever is written here, the script stays **blocked on the other platform** — with no
+    # visible fault beyond a white flash and one refusal line in the console. Which means
+    # fixing the digest locally on Windows was breaking it on the deployment server.
     #
-    # العلاج في المصدر لا هنا: themeBootScript() تُوحّد نهايات الأسطر
-    # إلى LF قبل أن يغادر النصّ الدالة، فتصير البصمة واحدة في كل مكان
-    # وتصحّ القيمة أدناه على المنصّتين. وهو نفس ما تفعله
-    # Migrator::checksum للسبب نفسه.
+    # The cure belongs at the source rather than here: themeBootScript() normalises the line
+    # endings to LF before the text leaves the function, so the digest is the same
+    # everywhere and the value below is correct on both platforms. It is the same thing
+    # Migrator::checksum does, for the same reason.
     #
-    # والحارس اختبار لا تعليق:
-    # tests/Unit/SecurityHeadersTest.php يحسب البصمة من الدالة نفسها
-    # ويقارنها بهذا السطر، فيسقط البناء عند أول انحراف.
+    # And the guard is a test rather than a comment:
+    # tests/Unit/SecurityHeadersTest.php computes the digest from the function itself and
+    # compares it with this line, failing the build at the first divergence.
     #
-    # img-src بلا `https:` المفتوحة.
+    # img-src without the open `https:`.
     #
-    # كانت مفتوحة لسبب واحد: صورة QR للمصادقة الثنائية كانت تُجلَب من
-    # api.qrserver.com — برابط يحمل **السرّ نفسه** في الـquery string.
-    # الصورة تُولَّد محلياً الآن (bacon/bacon-qr-code) وتُسلَّم كـdata:
-    # URI، فلم يبقَ ما يبرّر السماح بأي مضيف صور على الإنترنت.
+    # It was open for one reason: the two-factor QR image was fetched from api.qrserver.com
+    # — through a URL carrying **the secret itself** in the query string. The image is now
+    # generated locally (bacon/bacon-qr-code) and delivered as a data: URI, so nothing
+    # remains to justify allowing any image host on the internet.
     #
-    # مفحوص قبل التشديد: لا صورة خارجية في أي view، ولا في البيانات
-    # (منتجات · variants · شرائح السلايدر — صفر مسار يبدأ بـhttp).
-    # `data:` تبقى: هي ما تحمل الـQR الآن.
+    # Verified before tightening: no external image in any view, and none in the data
+    # (products · variants · slider slides — zero paths beginning with http).
+    # `data:` stays: it is what carries the QR now.
     #
-    # **وبلا 'unsafe-inline' في style-src أيضاً** — وهي آخر خطوة كانت
-    # مؤجّلة. كانت الـviews تحمل 234 سمة `style="…"`، وسياسة تسمح
-    # بالأنماط المضمّنة لا تستطيع أن تمنع نمطاً محقوناً.
+    # **And with no 'unsafe-inline' in style-src either** — the last step that had been
+    # deferred. The views carried 234 `style="…"` attributes, and a policy that permits
+    # inline styles cannot prevent an injected one.
     #
-    # ما تغيّر ليصير هذا ممكناً:
-    #   · 217 سمة ثابتة → أدوات في base/utilities.css (وBootstrap حيث
-    #     كان له مقابل تامّ: d-none · text-nowrap · align-middle).
-    #   · السمات الشرطية → أصناف شرطية: `class="<?= $x ? 'd-none' : '' ?>"`
-    #     بدل `style="<?= $x ? 'display:none;' : '' ?>"`.
-    #   · بلاطات لوحة الأدمن → نغمات مسمّاة (u-tone-*): اللوحة مغلقة
-    #     ومعرَّفة في الـview نفسه، فصارت المصفوفة تحمل 'tone' => 'amber'
-    #     بدل 'color' => '#f59e0b'.
-    #   · لون الـvariant وحده مجموعة **مفتوحة** (من القاعدة) — يخرج في
-    #     data-swatch، وjs/store/variant-swatches.js يكتبه في خاصية CSS
-    #     مخصّصة عبر الـCSSOM. وCSP يحكم ما في الترميز لا ما يكتبه
-    #     سكربت مسموح به.
+    # What changed to make it possible:
+    #   · 217 static attributes → utilities in base/utilities.css (and Bootstrap where it
+    #     had an exact equivalent: d-none · text-nowrap · align-middle).
+    #   · the conditional attributes → conditional classes:
+    #     `class="<?= $x ? 'd-none' : '' ?>"` instead of
+    #     `style="<?= $x ? 'display:none;' : '' ?>"`.
+    #   · the admin dashboard tiles → named tones (u-tone-*): the palette is closed and
+    #     defined in the view itself, so the array now carries 'tone' => 'amber' instead of
+    #     'color' => '#f59e0b'.
+    #   · the variant colour alone is an **open** set (it comes from the database) — it is
+    #     emitted in data-swatch, and js/store/variant-swatches.js writes it into a custom
+    #     CSS property through the CSSOM. And a CSP governs what is in the markup, not what
+    #     an allowed script writes.
     #
-    # ⚠️ لا تُعِد أي `style="…"` إلى view. اختبار
-    # tests/Unit/InlineStyleTest.php يرفض ذلك عند البناء لا عند النشر.
+    # ⚠️ Do not return any `style="…"` to a view. The tests/Unit/InlineStyleTest.php test
+    # refuses that at build time rather than at deployment time.
     #
-    # ⚠️ `code.jquery.com` أُسقط من script-src. كان مسموحاً به لأن كل
-    # صفحة تُحمّل jQuery — وقد حُذف الوسم بعد أن ثبت أنه **غير مستعمَل
-    # إطلاقاً**: صفر `$(` وصفر `jQuery` في public/js وapp/views.
+    # ⚠️ `code.jquery.com` was dropped from script-src. It was allowed because every page
+    # loaded jQuery — and the tag was removed once it was established that it is **not used
+    # at all**: zero `$(` and zero `jQuery` across public/js and app/views.
     #
-    # والإسقاط ليس تنظيفاً تجميلياً: كل مضيف في هذه اللائحة نطاقٌ
-    # يستطيع تنفيذ جافاسكربت على كل صفحة في المتجر ولوحة التحكّم،
-    # بما فيها صفحة الدفع. مضيفٌ لا يخدم شيئاً يجب ألّا يملك ذلك.
+    # And dropping it is not cosmetic tidying: every host on this list is an origin that can
+    # execute JavaScript on every page of the store and the control panel, the checkout page
+    # included. A host that serves nothing should not hold that.
     #
-    # وما بقي من مضيفات صار مقيّداً بـintegrity في الوسوم نفسها —
-    # راجع app/views/inc/footer.php. فالسماح بالمضيف لم يعد يعني
-    # الثقة بأي ملف يرسله.
+    # And the hosts that remain are now constrained by integrity on the tags themselves —
+    # see app/views/inc/footer.php. So allowing a host no longer means trusting any file it
+    # sends.
     Header always set Content-Security-Policy "default-src 'self'; script-src 'self' 'sha256-n33GJ973YEUTpbG1xOj611JYTc5wI4V+8xmEtfPaLjk=' https://cdn.jsdelivr.net https://js.hcaptcha.com https://*.hcaptcha.com; style-src 'self' https://cdn.jsdelivr.net https://*.hcaptcha.com; img-src 'self' data:; font-src 'self' data: https://cdn.jsdelivr.net; connect-src 'self' https://*.hcaptcha.com; frame-src https://*.hcaptcha.com; form-action 'self'; frame-ancestors 'self'; base-uri 'self'; object-src 'none'"
 
 

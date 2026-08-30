@@ -1,2 +1,2 @@
-# منع أي وصول مباشر من الويب لهذا المجلد (طبقة حماية إضافية — المجلد نفسه خارج public/)
+# Deny any direct web access to this directory (an extra layer — the directory itself is outside public/)
 Require all denied

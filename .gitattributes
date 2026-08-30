@@ -1,7 +1,7 @@
-# سطور موحّدة عبر الأنظمة — يمنع ضجيج الـdiff بين Windows وغيره
+# Uniform line endings across systems — it prevents diff noise between Windows and the rest
 * text=auto
 
-# ملفات ثنائية — لا تُعالَج
+# Binary files — left untouched
 *.png binary
 *.jpg binary
 *.jpeg binary

@@ -11,12 +11,12 @@
          displayDetailsOnTestsThatTriggerErrors="true">
 
     <testsuites>
-        <!-- وحدة: بلا قاعدة بيانات إطلاقاً. تعمل في أي مكان وفي أجزاء من الثانية. -->
+        <!-- Unit: no database at all. They run anywhere, in fractions of a second. -->
         <testsuite name="Unit">
             <directory>tests/Unit</directory>
         </testsuite>
 
-        <!-- تكامل: تحتاج قاعدة الاختبار. تُتخطّى بذاتها إن غابت. -->
+        <!-- Integration: they need the test database. They skip themselves if it is absent. -->
         <testsuite name="Integration">
             <directory>tests/Integration</directory>
         </testsuite>
@@ -27,14 +27,14 @@
             <directory>app</directory>
         </include>
         <exclude>
-            <!-- الـviews قوالب إخراج، وتغطيتها بلا معنى. -->
+            <!-- The views are output templates, and covering them is meaningless. -->
             <directory>app/views</directory>
         </exclude>
     </source>
 
     <php>
-        <!-- ⚠️ لا تُوضع أسرار هنا. القيم الحقيقية تأتي من .env.testing
-             أو من متغيّرات البيئة، وهذا الملف متتبَّع في git. -->
+        <!-- ⚠️ No secrets go here. The real values come from .env.testing or from
+             environment variables, and this file is tracked in git. -->
         <env name="APP_ENV" value="testing"/>
         <env name="APP_DEBUG" value="true"/>
     </php>

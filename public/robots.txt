@@ -1,18 +1,18 @@
 User-agent: *
 
-# ── حجب لوحة التحكم بالكامل ──────────────────────────────────
+# ── Block the whole control panel ────────────────────────────
 Disallow: /STORE/public/admin/
 Disallow: /admin/
 
-# ── حجب صفحة تسجيل دخول الأدمن تحديداً ──────────────────────
+# ── Block the admin sign-in page specifically ────────────────
 Disallow: /STORE/public/admin/login
 Disallow: /admin/login
 
-# ── حجب مسارات API الداخلية ──────────────────────────────────
+# ── Block the internal API paths ─────────────────────────────
 Disallow: /STORE/public/auth/
 Disallow: /auth/
 
-# ── السماح بباقي الصفحات العامة ──────────────────────────────
+# ── Allow the rest of the public pages ───────────────────────
 Allow: /STORE/public/
 Allow: /
 

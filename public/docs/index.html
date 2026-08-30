@@ -5,20 +5,21 @@
     <title>Cairo Store — API Docs</title>
 
     <!--
-        Swagger UI من jsDelivr، **بنسخة مثبَّتة وببصمة SRI**.
+        Swagger UI from jsDelivr, **at a pinned version and with an SRI digest**.
 
-        كان هنا `swagger-ui-dist@5` بلا integrity — أي نسخة متحرّكة من
-        طرف ثالث تُنفَّذ بثقة كاملة في هذه الصفحة. لو اختُرق الـCDN أو
-        نُشرت نسخة 5.x خبيثة، لنُفِّذ سكربت غريب على نطاق الموقع نفسه
-        وفي جلسة الأدمن المفتوحة.
+        This used to be `swagger-ui-dist@5` with no integrity — that is, a moving version
+        from a third party, executed with complete trust on this page. Had the CDN been
+        compromised or a malicious 5.x published, a foreign script would have run on the
+        site's own origin and inside the admin's open session.
 
-        `integrity` يجعل المتصفح يرفض الملف إن لم تطابق بصمته، و
-        `crossorigin="anonymous"` شرط لازم لعمل الفحص على مورد من نطاق
-        آخر (بدونه يتجاهل المتصفح السمة بصمت).
+        `integrity` makes the browser reject the file if its digest does not match, and
+        `crossorigin="anonymous"` is required for that check to run at all on a
+        cross-origin resource (without it the browser ignores the attribute silently).
 
-        ⚠️ النسخة مثبَّتة على 5.32.14 عن قصد لا سهواً: البصمة تُحسب على
-        محتوى ملف بعينه، و`@5` المتحرك كان سيكسر الصفحة عند أول تحديث.
-        لترقيتها: بدّل رقم النسخة في الرابطين ثم أعد حساب البصمتين بـ
+        ⚠️ The version is pinned to 5.32.14 on purpose, not by oversight: the digest is
+        computed over one particular file's content, and a moving `@5` would have broken the
+        page at the first update. To upgrade it: change the version number in both links,
+        then recompute both digests with
             curl -s <URL> | openssl dgst -sha384 -binary | openssl base64 -A
     -->
     <link rel="stylesheet"

@@ -1,70 +1,72 @@
-# ── أسرار ──────────────────────────────────────────────
-# .env فيه كلمة مرور قاعدة البيانات ومفاتيح Google OAuth و hCaptcha
-# وكلمة مرور SMTP. لا يُرفع أبداً. النسخة القابلة للمشاركة هي .env.example
+# ── Secrets ────────────────────────────────────────────
+# .env holds the database password, the Google OAuth and hCaptcha keys and the SMTP
+# password. It is never committed. The shareable copy is .env.example
 .env
 
-# ── تبعيات مُولَّدة ──────────────────────────────────────
-# composer.lock مُتتبَّع، فـ`composer install` يعيد بناء المجلد بالضبط
+# ── Generated dependencies ─────────────────────────────
+# composer.lock is tracked, so `composer install` rebuilds the directory exactly
 /vendor/
 
-# ملاحظة: /public/docs/ متتبَّع عن قصد رغم كونه مُولَّداً — الملفان
-# openapi.yaml و index.html مخدومان فعلاً من الخادم (Swagger UI)،
-# وفقدانهما عند أي استرجاع يعني ضياع توثيق الـAPI حتى يُعاد التوليد.
+# Note: /public/docs/ is tracked deliberately despite being generated — openapi.yaml and
+# index.html are actually served by the server (Swagger UI), and losing them on any restore
+# means losing the API documentation until it is regenerated.
 
-# ── بيانات وقت التشغيل ─────────────────────────────────
-# نُبقي المجلد و .htaccess فقط، لا النسخ الاحتياطية نفسها
+# ── Run-time data ──────────────────────────────────────
+# The directory and its .htaccess are kept, not the backups themselves
 /storage/backups/*
 !/storage/backups/.htaccess
 
 
-# ── متفرقات ────────────────────────────────────────────
+# ── Miscellaneous ──────────────────────────────────────
 *.log
 Thumbs.db
 desktop.ini
 .DS_Store
 
-# ملاحظة: /public/images/ متتبَّع عن قصد — قاعدة البيانات تشير لهذه
-# الملفات بالمسار، وفقدانها يكسر المتجر عند أي استرجاع. أعِد النظر
-# في ذلك لو كبر حجم الصور المرفوعة كثيراً.
+# Note: /public/images/ is tracked deliberately — the database points at these files by
+# path, and losing them breaks the store on any restore. Revisit this if the uploaded
+# images grow much larger.
 
-# ── مخرجات graphify ──────────────────────────────────
-# رسم المعرفة مُولَّد بالكامل من الكود والوثائق، ويُعاد بناؤه
-# بـ/graphify. حجمه ~2MB ولا قيمة لتتبّع نسخه.
+# ── graphify output ──────────────────────────────────
+# The knowledge graph is generated entirely from the code and the documentation, and is
+# rebuilt with /graphify. It is around 2MB and there is no value in tracking its versions.
 /graphify-out/
 
-# ── إعدادات محلية لأدوات المطوّر ──────────────────────
-# خاصة بالجهاز لا بالمشروع، ولا معنى لمشاركتها.
+# ── Local developer tool settings ────────────────────
+# They belong to the machine rather than the project, and sharing them is meaningless.
 /.claude/
 
-# ── توثيق داخلي ───────────────────────────────────────
-# سجلّ القرارات مؤرشف خارج المستودع، لا يُرفع مع الكود.
+# ── Internal documentation ────────────────────────────
+# The decision log is archived outside the repository and is not committed with the code.
 /docs/
 
-# ── مخرجات الاختبارات ─────────────────────────────────
-# ذاكرة PHPUnit المؤقتة وتقارير التغطية — تُولَّد ولا تُتتبَّع.
+# ── Test output ───────────────────────────────────────
+# PHPUnit's cache and the coverage reports — generated, and not tracked.
 /.phpunit.cache/
 /coverage/
 .phpunit.result.cache
 
-# ── نسخة CIRO_STORE المحلية ───────────────────────────
-# مجلد STORE/ داخل المشروع مستودع git مستقل يشير إلى
-# github.com/Ahmadsaleh2004/CIRO_STORE — نسخة أُخذت يدوياً للرفع.
-# استثناؤه يمنع التزامه بالخطأ كمستودع مضمّن (50 ميغابايت).
+# ── The local CIRO_STORE copy ─────────────────────────
+# The STORE/ directory inside the project is an independent git repository pointing at
+# github.com/Ahmadsaleh2004/CIRO_STORE — a copy taken by hand for publishing.
+# Excluding it prevents committing it by accident as an embedded repository (50 MB).
 /STORE/
 
-# وأرشيف STORE.zip بجانبه — نسخة محفوظة عمداً، حجمها ٧٥ ميغابايت.
-# كان غير متتبَّع بالصدفة لا بقاعدة: أوّل `git add .` كان سيبتلعه
-# ويضخّم المستودع بلا رجعة. الملف يبقى مكانه، والقاعدة تمنع التزامه.
+# And the STORE.zip archive beside it — a copy kept deliberately, 75 MB in size.
+# It was untracked by chance rather than by rule: the first `git add .` would have swallowed
+# it and bloated the repository irreversibly. The file stays where it is, and this rule
+# stops it being committed.
 /STORE.zip
 
-# ── اعتماديات الواجهة ─────────────────────────────────────
-# تُثبَّت بـ`npm ci` من package-lock.json.
+# ── Front-end dependencies ────────────────────────────────
+# Installed with `npm ci` from package-lock.json.
 /node_modules/
 
-# ملاحظة: public/css/dist/ **متتبَّع عن قصد**. النشر هنا نسخ ملفات لا
-# خطوة بناء على الخادم، فالحزم المبنيّة يجب أن تصل معه. وخطوة في CI
-# تعيد البناء وتقارن البصمة، فلا يمرّ dist متخلّف عن مصدره.
+# Note: public/css/dist/ is **tracked deliberately**. Deploying here means copying files
+# rather than a build step on the server, so the built bundles have to arrive with it. And a
+# step in CI rebuilds them and compares the fingerprint, so a dist lagging behind its source
+# never passes.
 
 
-# ── مخرجات Lighthouse ─────────────────────────────────
+# ── Lighthouse output ─────────────────────────────────
 /.lighthouseci/

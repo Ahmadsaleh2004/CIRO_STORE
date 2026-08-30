@@ -1,42 +1,41 @@
 # ══════════════════════════════════════════════════════════════
-# Cairo Store — صورة التطبيق
+# Cairo Store — the application image
 # ══════════════════════════════════════════════════════════════
 #
-# php:apache لا php-fpm+nginx عمداً. المشروع يعتمد على .htaccess في
-# موضعين حمّالَي معنى: قاعدة إعادة الكتابة التي توجّه كل شيء إلى
-# الراوتر، وكتلة mod_headers التي تحمل CSP والترويسات الأمنية
-# وCache-Control للأصول المبصومة.
+# php:apache rather than php-fpm+nginx, deliberately. The project relies on .htaccess in two
+# places that carry meaning: the rewrite rule directing everything to the router, and the
+# mod_headers block carrying the CSP, the security headers and Cache-Control for the
+# fingerprinted assets.
 #
-# نقلها إلى nginx يعني إعادة كتابتها بلغة أخرى ومزامنة نسختين — وهو
-# بالضبط صنف التفرّق الذي يقضي عليه هذا المشروع في كل مرحلة. صورة
-# apache تشغّل الملف نفسه الذي يعمل اليوم.
+# Moving those to nginx means rewriting them in another language and keeping two copies in
+# step — exactly the kind of divergence this project eliminates at every phase. The apache
+# image runs the very file that works today.
 
 FROM php:8.3-apache
 
-# ── امتدادات PHP ─────────────────────────────────────────────
-# pdo_mysql هو الوحيد الذي يحتاج تركيباً؛ mbstring وjson مبنيّان في
-# الصورة الرسمية. القائمة تطابق "require" في composer.json حرفاً بحرف.
+# ── The PHP extensions ───────────────────────────────────────
+# pdo_mysql is the only one needing installation; mbstring and json are built into the
+# official image. The list matches "require" in composer.json letter for letter.
 RUN docker-php-ext-install pdo_mysql \
  && a2enmod rewrite headers
 
-# ── إعدادات PHP للإنتاج ──────────────────────────────────────
-# expose_php هنا لا في التطبيق: header_remove في config.php يغطّي
-# المسار العادي، لكن استجابة يولّدها Apache قبل PHP لا تمرّ به.
+# ── The PHP settings for production ──────────────────────────
+# expose_php belongs here rather than in the application: header_remove in config.php covers
+# the normal path, but a response Apache generates before PHP never passes through it.
 #
-# zend.exception_ignore_args = 0 يخصّ Sentry تحديداً. القيمة
-# الافتراضية في PHP 7.4+ هي 1، أي أن آثار الاستدعاء (stack traces)
-# تخرج بلا وسائط: كل إطار يقول `*args omitted*`. فيصل التقرير عارفاً
-# **أين** وقع الخطأ وجاهلاً **بأي مدخلات** — وهو نصف تقرير في أعطال
-# لا تتكرّر إلا بقيمة بعينها.
+# zend.exception_ignore_args = 0 is specifically for Sentry. The default in PHP 7.4+ is 1,
+# which means stack traces come out without arguments: every frame says `*args omitted*`. So
+# the report arrives knowing **where** the error happened and not knowing **with what
+# inputs** — half a report for faults that only reproduce with one particular value.
 #
-# ⚠️ وله ثمن خصوصية: الوسائط قد تحمل بيانات المستخدم. وما يوازنه أن
-# `before_send` في app/config/monitoring.php يُعقّم الحقول الحسّاسة
-# قبل الإرسال، و`send_default_pii` مضبوطة على false. فلا تُفعّل هذه
-# القيمة في تركيبٍ عطّل ذلك التعقيم.
+# ⚠️ And it has a privacy cost: the arguments may carry user data. What balances it is that
+# `before_send` in app/config/monitoring.php scrubs the sensitive fields before sending, and
+# `send_default_pii` is set to false. So do not switch this value on in an installation that
+# has disabled that scrubbing.
 #
-# ⚠️ وهذا الملف يخصّ صورة Docker وحدها. من يشغّل المشروع على XAMPP
-# محلياً يضيف السطر نفسه في php.ini يدوياً — وإلا رأى `*args omitted*`
-# في تقاريره وحده.
+# ⚠️ And this file concerns the Docker image alone. Anyone running the project on XAMPP
+# locally adds the same line to php.ini by hand — otherwise they alone see `*args omitted*`
+# in their reports.
 RUN { \
       echo 'expose_php = Off'; \
       echo 'display_errors = Off'; \
@@ -47,9 +46,9 @@ RUN { \
       echo 'zend.exception_ignore_args = 0'; \
     } > /usr/local/etc/php/conf.d/cairo-store.ini
 
-# ── جذر الويب هو public/ وحده ────────────────────────────────
-# ⚠️ هذا ليس تفضيلاً: app/ و.env وvendor/ فوقه، ووضع الجذر على
-# /var/www/html يجعل .env قابلاً للتنزيل بـHTTP.
+# ── The web root is public/ alone ────────────────────────────
+# ⚠️ This is not a preference: app/, .env and vendor/ sit above it, and putting the root at
+# /var/www/html makes .env downloadable over HTTP.
 ENV APACHE_DOCUMENT_ROOT=/var/www/html/public
 RUN sed -ri 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' \
       /etc/apache2/sites-available/*.conf \
@@ -60,9 +59,9 @@ RUN sed -ri 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' \
 
 WORKDIR /var/www/html
 
-# ── الاعتماديات أولاً، ثم الشيفرة ────────────────────────────
-# طبقة منفصلة لملفَي composer: تغيير سطر في كنترولر لا يُبطل ذاكرة
-# التثبيت، فيبقى البناء بثوانٍ بدل دقائق.
+# ── The dependencies first, then the code ────────────────────
+# A separate layer for the two composer files: changing a line in a controller does not
+# invalidate the install cache, so the build stays seconds rather than minutes.
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 COPY composer.json composer.lock ./
 RUN composer install --no-dev --no-scripts --no-autoloader --prefer-dist --no-interaction
@@ -74,7 +73,8 @@ RUN composer dump-autoload --optimize --no-dev \
 
 EXPOSE 80
 
-# فحص صحّة حقيقي: يطلب /health التي تتحقّق من القاعدة فعلاً، لا مجرّد
-# «هل يستجيب Apache». حاوية تردّ 200 وقاعدتها ساقطة ليست سليمة.
+# A real health check: it requests /health, which actually verifies the database, rather
+# than merely "is Apache responding". A container answering 200 with its database down is
+# not healthy.
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
   CMD curl -fsS http://127.0.0.1/health || exit 1

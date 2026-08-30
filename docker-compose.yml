@@ -1,15 +1,16 @@
 # ══════════════════════════════════════════════════════════════
-# Cairo Store — بيئة قابلة للتكرار
+# Cairo Store — a reproducible environment
 # ══════════════════════════════════════════════════════════════
 #
-# قبل هذا الملف كان تشغيل المشروع يتطلّب XAMPP بنسخة بعينها، ومساراً
-# بعينه (/STORE/public كان مكتوباً صراحةً في config.php)، وقاعدة
-# تُبنى يدوياً. أي أن «شغّله عندك» كانت تعليمات لا أمراً.
+# Before this file, running the project required a particular version of XAMPP, at a
+# particular path (/STORE/public was written explicitly in config.php), with a database
+# built by hand. Which is to say "run it on your machine" was a set of instructions rather
+# than a command.
 #
 #     docker compose up -d
 #     docker compose exec app php scripts/migrate.php baseline
 #
-# ولا شيء آخر.
+# And nothing else.
 
 services:
   app:
@@ -27,8 +28,8 @@ services:
       DB_USERNAME: "${DB_USERNAME:-cairo}"
       DB_PASSWORD: "${DB_PASSWORD:-cairo}"
     volumes:
-      # الصور المرفوعة والنسخ الاحتياطية تعيش خارج الحاوية: إعادة
-      # البناء تمحو نظام ملفاتها، ومنتجات الأدمن ليست جزءاً من الصورة.
+      # The uploaded images and the backups live outside the container: a rebuild wipes its
+      # file system, and the admin's products are not part of the image.
       - uploads:/var/www/html/public/images
       - backups:/var/www/html/storage/backups
     depends_on:
@@ -46,13 +47,13 @@ services:
       MYSQL_ROOT_PASSWORD: "${DB_ROOT_PASSWORD:-root}"
     volumes:
       - dbdata:/var/lib/mysql
-      # المخطّط المرجعي يُحمَّل تلقائياً عند أول تشغيل وحده. المجلد
-      # docker-entrypoint-initdb.d يُتجاهَل إن كانت القاعدة مبنيّة —
-      # فلا خطر على بيانات قائمة.
+      # The reference schema is loaded automatically on the first run alone. The
+      # docker-entrypoint-initdb.d directory is ignored once the database is built — so
+      # there is no risk to existing data.
       - ./tests/fixtures/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
     healthcheck:
-      # الفحص بالمستخدم العادي لا بـroot: نجاحه يعني أن الصلاحيات
-      # جاهزة فعلاً، لا أن الخادم يستجيب وحسب.
+      # The check runs as the ordinary user rather than root: its success means the
+      # permissions really are ready, not merely that the server responds.
       test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-u", "${DB_USERNAME:-cairo}", "-p${DB_PASSWORD:-cairo}"]
       interval: 5s
       timeout: 5s

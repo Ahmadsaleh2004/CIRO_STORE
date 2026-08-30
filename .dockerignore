@@ -1,4 +1,4 @@
-# ما لا يدخل الصورة — يصغّر سياق البناء ويمنع تسريب أسرار.
+# What does not go into the image — it shrinks the build context and prevents leaking secrets.
 
 .git/
 .github/
@@ -7,9 +7,9 @@ vendor/
 graphify-out/
 STORE/
 
-# ⚠️ .env لا يدخل الصورة إطلاقاً. الإعدادات تصل من environment في
-# docker-compose، ونسخ ملف أسرار جهاز التطوير داخل صورة قابلة للنشر
-# هو أشيع طرق تسريبها.
+# ⚠️ .env never enters the image. The settings arrive through environment in
+# docker-compose, and copying a development machine's secrets file into a publishable image
+# is the most common way of leaking them.
 .env
 
 storage/backups/*
