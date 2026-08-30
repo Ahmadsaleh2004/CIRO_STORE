@@ -41,12 +41,14 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('confirmCategorySelectionBtn')?.addEventListener('click', () => {
         if (selectedCategoryIds.size === 0) {
             const errEl = document.getElementById('categoryRequiredError');
-            if (errEl) errEl.style.display = 'block';
+            // `d-none` في الترميز = display:none !important، فالإظهار
+            // والإخفاء كلاهما عبر classList لا عبر style.display.
+            if (errEl) errEl.classList.remove('d-none');
             return;
         }
         renderSelectedChips();
         const errEl = document.getElementById('categoryRequiredError');
-        if (errEl) errEl.style.display = 'none';
+        if (errEl) errEl.classList.add('d-none');
         bootstrap.Modal.getInstance(modalEl)?.hide();
     });
 
@@ -96,11 +98,10 @@ function renderCategoryPickerList() {
                     : ''}
                 <span class="badge bg-light text-dark ms-1 u-fs-60">${c.product_count}</span>
                 ${!c.is_core
-                    ? `<span class="cat-delete-icon ms-1"
+                    ? `<span class="cat-delete-icon ms-1 u-clickable u-fs-85"
                               data-id="${c.id}"
                               data-name="${escAttr(c.name)}"
-                              title="Delete category"
-                              class="u-clickable u-fs-85">🗑️</span>`
+                              title="Delete category">🗑️</span>`
                     : ''}
             </span>
         </label>
@@ -144,7 +145,7 @@ function renderSelectedChips() {
         .join('');
 
     const errEl = document.getElementById('categoryRequiredError');
-    if (errEl) errEl.style.display = selected.length ? 'none' : 'block';
+    if (errEl) errEl.classList.toggle('d-none', selected.length > 0);
 }
 
 // ════════════════════════════════════════════════════════════

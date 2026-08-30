@@ -338,3 +338,74 @@ document.addEventListener('submit', (e) => {
         showLoading();
     }
 });
+
+// ══════════════════════════════════════════════════════════════
+// بديل احتياطي لـSweetAlert2 حين لا يُحمَّل
+// ══════════════════════════════════════════════════════════════
+//
+// أكثر من أربعين موضعاً في المشروع تنادي `Swal.fire` مباشرة، وكثير
+// منها **ينتظر ردّها** قبل أن يفعل شيئاً:
+//
+//     const result = await Swal.fire({ ... });
+//     if (!result.isConfirmed) return;
+//
+// فإن غاب `Swal` — بصمة SRI خاطئة، أو CDN محجوب، أو انقطاع شبكة —
+// رُمي ReferenceError داخل دالة async، فصار وعداً مرفوضاً لا يلتقطه
+// أحد. والنتيجة أن الزر يبدو **معطّلاً بلا سبب**: لا حوار ولا رسالة
+// ولا خطأ مرئي، وضغطة المستخدم تذهب إلى العدم.
+//
+// وهذا ليس افتراضاً: زرّ «Take It» في لوحة الطلبات بدا معطّلاً لهذا
+// السبب بالضبط، وذهب التشخيص إلى سباق تزامن في قاعدة البيانات.
+//
+// البديل هنا يستعمل `confirm`/`alert` الأصليين — قبيحان لكنهما
+// يعملان دائماً — ويعيد كائناً بنفس شكل نتيجة SweetAlert
+// ({ isConfirmed, isDismissed, value }) كي يمرّ الكود المنتظِر بلا
+// تعديل. الهدف ألّا يصمت شيء أبداً، لا أن يبدو جميلاً.
+(function installSwalFallback() {
+    function ensure() {
+        if (typeof window.Swal !== 'undefined') return;
+
+        console.error(
+            '[ui] SweetAlert2 لم يُحمَّل — تحقّق من بصمة SRI في assets_helper.php '
+            + 'ومن سياسة CSP في public/.htaccess. يعمل الآن بديل احتياطي.'
+        );
+
+        const text = (o) => [o && o.title, o && o.text].filter(Boolean).join('\n\n')
+            || 'Are you sure?';
+
+        window.Swal = {
+            fire(options) {
+                const opts = typeof options === 'string'
+                    ? { title: options, text: arguments[1] }
+                    : (options || {});
+
+                // toast بلا زرّ تأكيد إشعارٌ لا سؤال — لا يوقف
+                // المستخدم بـalert، ولا يُسجَّل سطراً لكل ظهور: رسالة
+                // التركيب أعلاه قيلت مرّة وتكفي.
+                if (opts.toast || opts.showConfirmButton === false) {
+                    return Promise.resolve({ isConfirmed: true, isDismissed: false, value: true });
+                }
+
+                const confirmed = opts.showCancelButton
+                    ? window.confirm(text(opts))
+                    : (window.alert(text(opts)), true);
+
+                return Promise.resolve({
+                    isConfirmed: confirmed,
+                    isDismissed: !confirmed,
+                    value: confirmed,
+                });
+            },
+            showValidationMessage(msg) { window.alert(msg); },
+            close() {},
+        };
+    }
+
+    // بعد التحميل الكامل لا عند DOMContentLoaded: وسم SweetAlert
+    // يحمل `defer` في فوتر المتجر، فقد لا يكون نُفّذ بعد.
+    if (document.readyState === 'complete') {
+        ensure();
+    } else {
+        window.addEventListener('load', ensure);
+    }
+})();

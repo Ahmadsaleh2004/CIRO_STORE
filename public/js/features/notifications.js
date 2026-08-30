@@ -17,6 +17,19 @@
  */
 
 (function () {
+    // ⚠️ 'use strict' أوّل عبارة في الدالة — قبل أي `let`.
+    //
+    // كانت مكتوبة **بعد** تعريف notifCountdownInterval أدناه، وهذا
+    // يُبطلها تماماً: التوجيه لا يُفعّل الوضع الصارم إلا وهو في
+    // «مقدّمة التوجيهات» (Directive Prologue) — أي سلسلةٌ حرفية تسبقها
+    // سلاسل حرفية وحدها. فأي عبارة قبلها تحوّلها إلى تعبير نصّي لا
+    // أثر له، يُقيَّم ويُهمَل.
+    //
+    // والفارق ليس نظرياً في ملف كهذا: بلا الوضع الصارم يصير الإسناد
+    // إلى متغيّر غير معرَّف إنشاءً لمتغيّر عام صامت — وهو بالضبط العطل
+    // الموثَّق في رأس js/admin/admin-notifications.js، حيث نشأت
+    // `allNotifs` عامّةً ضمنيةً وانهار الجرس عند أول فشل شبكة.
+    'use strict';
 
     // مؤقّت العدّ التنازلي. **التعريف هنا لا بعد أول استعمال.**
     //
@@ -28,7 +41,6 @@
     //
     // النقل إلى الأعلى يزيل صنف الخطر كله بلا تغيير سلوك.
     let notifCountdownInterval = null;
-    'use strict';
 
     const userBell = document.getElementById('notifBell');
 
@@ -47,19 +59,59 @@
 
     let allNotifs = [];
 
+    // ── الشارة: موضع واحد يكتبها ──────────────────────────────
+    //
+    // ⚠️ `classList` لا `style.display`.
+    //
+    // الشارة تحمل `d-none` في الترميز (inc/navbar.php)، وهي في
+    // Bootstrap ‏`display:none !important` — فلا يزيلها إسناد
+    // `style.display = ''` مهما تكرّر. أي أن **عدّاد الإشعارات لم يظهر
+    // ولا مرّة**: الرقم يُكتب في العنصر بأمانة، والعنصر مخفيّ.
+    //
+    // وكان الإسناد مكرّراً في خمسة مواضع بنفس السطرين. التكرار هو ما
+    // جعل العطل واحداً في خمسة أماكن بدل واحد — فصار هنا موضعاً واحداً
+    // تقرؤه بقيّة الملف.
+    function setBadge(unread) {
+        if (!cfg.badge) return;
+
+        const n = Math.max(0, Number(unread) || 0);
+        cfg.badge.textContent = n > 99 ? '99+' : String(n);
+        cfg.badge.classList.toggle('d-none', n === 0);
+    }
+
+    // يُضبط عند 401 كي يتوقّف الاستطلاع: جلسة منتهية لا تتعافى بإعادة
+    // المحاولة، والاستمرار يعني طلباً مرفوضاً كل ثلاثين ثانية إلى ما
+    // لا نهاية — وكلّه صامت.
+    let pollTimer = null;
+    let sessionExpired = false;
+
     async function fetchNotifications() {
+        if (sessionExpired) return;
+
         try {
             const res  = await fetch(window.BASE_URL + '/notifications/list');
+
+            // ⚠️ 401 تُعالَج قبل قراءة الجسم.
+            //
+            // كان السطر `if (!data.success) return;` يبتلع انتهاء
+            // الجلسة كما يبتلع أي فشل آخر: الجرس يتجمّد على آخر رقم
+            // رآه، والمستخدم يظنّ أنه لا إشعارات لديه بينما هو مخرَج
+            // من جلسته أصلاً.
+            if (res.status === 401) {
+                sessionExpired = true;
+                if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+                setBadge(0);
+                if (typeof showToast === 'function') {
+                    showToast('Your session has expired. Please log in again.', 'warning');
+                }
+                return;
+            }
+
             const data = await res.json();
             if (!data.success) return;
 
             allNotifs = data.notifications || [];
-            const unread = data.unread_count || 0;
-
-            if (cfg.badge) {
-                cfg.badge.textContent = unread > 99 ? '99+' : unread;
-                cfg.badge.style.display = unread > 0 ? '' : 'none';
-            }
+            setBadge(data.unread_count || 0);
 
             renderSidebar();
         } catch (e) {
@@ -78,11 +130,22 @@
         // المتغيّر المحلي dismissFn كان **يُظلّل** الدالة dismissFn المعرَّفة
         // في نطاق الـIIFE — تظليل بلا ضرر هنا، لكنه من نفس عائلة العطل
         // الذي عطّل «إضافة عنوان» في features/account.js.
+        // ⚠️ لا `onclick=` هنا.
+        //
+        // كان السطران يحملان onclick نصّاً داخل innerHTML، وسياسة CSP
+        // في public/.htaccess تمنع script-src 'unsafe-inline'. والمنع
+        // يشمل المعالجات المضمّنة أياً كان طريق وصولها إلى المستند —
+        // فحقنها من جافاسكربت لا يعفيها. فكان كل عنصر إشعار لا يُفتح،
+        // وكل زرّ ✕ لا يحذف، بلا أي أثر سوى سطر رفض في الـconsole.
+        //
+        // البديل: البيانات في سمات data-*، والنقر يفوَّض إلى مستمع
+        // واحد على القائمة نفسها (أسفل هذه الدالة) — وهو نفس النمط
+        // الذي تتبعه بقيّة الواجهة عبر js/core/inline-actions.js.
         cfg.sidebarList.innerHTML = allNotifs.map(n => `
             <li class="notif-item ${n.is_read == 1 ? 'read' : 'unread'}"
-                data-id="${n.id}" onclick="openNotifDetail(${n.id})">
-                <button class="notif-dismiss-btn"
-                        onclick="dismissNotif(event, ${n.id})"
+                data-id="${n.id}" data-notif-open="${n.id}">
+                <button class="notif-dismiss-btn" type="button"
+                        data-notif-dismiss="${n.id}"
                         title="Dismiss">✕</button>
                 <div class="notif-title">${escHtml(n.title)}</div>
                 <div class="notif-msg">${escHtml(n.message.length > 80 ? n.message.slice(0,80) + '…' : n.message)}</div>
@@ -163,9 +226,9 @@
         });
     };
 
-    // الماركب المُولَّد يستدعي هذا الاسم نصّاً في onclick، فيجب أن يبقى
-    // على window. وحُذف معه توأمه openAdminNotifDetail — لم يكن يشير إليه
-    // شيء في المشروع كله (لا ماركب ولا admin-notifications.js).
+    // لم يعد شيء يستدعي هذا الاسم: الماركب كان يذكره نصّاً في onclick
+    // وقد صار التفويض عبر data-notif-open. والتصدير باقٍ لأنه واجهة
+    // عامة قد تنفع في التنقيح من الـconsole — لا لأن أحداً يعتمد عليه.
     window.openNotifDetail = openDetail;
 
     async function markAsRead(id) {
@@ -183,10 +246,7 @@
             const unread = data.unread_count !== undefined
                 ? data.unread_count
                 : allNotifs.filter(n => n.is_read == 0).length;
-            if (cfg.badge) {
-                cfg.badge.textContent = unread > 99 ? '99+' : unread;
-                cfg.badge.style.display = unread > 0 ? '' : 'none';
-            }
+            setBadge(unread);
             renderSidebar();
         } catch {}
     }
@@ -202,18 +262,45 @@
             const unread = data.unread_count !== undefined
                 ? data.unread_count
                 : allNotifs.filter(n => n.is_read == 0).length;
-            if (cfg.badge) {
-                cfg.badge.textContent = unread > 99 ? '99+' : unread;
-                cfg.badge.style.display = unread > 0 ? '' : 'none';
-            }
+            setBadge(unread);
             renderSidebar();
         }
     };
 
-    // كسابقه: الاسم مطلوب على window لأن الماركب يستدعيه نصّاً. وحُذف
-    // توأمه dismissAdminNotif — كان يشير إليه سطر واحد في هذا الملف
-    // نفسه، وهو السطر المحذوف في renderSidebar.
+    // كسابقه: لم يعد الماركب يستدعيه نصّاً بعد نقل الحذف إلى
+    // data-notif-dismiss. يبقى مصدَّراً للتنقيح لا للاعتماد.
     window.dismissNotif = dismissFn;
+
+    // ── تفويض النقر على قائمة الإشعارات ────────────────────────
+    //
+    // مستمع واحد على القائمة لا معالج على كل عنصر: القائمة تُعاد
+    // بناؤها بالكامل عند كل جلب (innerHTML)، فربط مستمع بكل عنصر
+    // يعني إعادة الربط بعد كل رسم — ونسيانها مرّة واحدة يعيد العطل.
+    // التفويض من الأب يبقى صالحاً مهما تغيّر ما بداخله.
+    //
+    // وموضعه هنا — **بعد** تعريف openDetail وdismissFn لا قبلهما —
+    // مقصود. الاستدعاء لا يقع إلا عند نقرة المستخدم، فالسبق لا يضرّ
+    // وقت التشغيل؛ لكن هذا الملف يحمل في ترويسته تحذيراً من عائلة
+    // أعطال TDZ التي عطّلت features/account.js، ومخالفة الشكل الآمن
+    // هنا تناقض ذلك التحذير نصّاً.
+    //
+    // الترتيب داخل المستمع مقصود أيضاً: زرّ الحذف يُفحص أوّلاً، فنقرة
+    // عليه تحذف ولا تفتح التفاصيل معه.
+    if (cfg.sidebarList) {
+        cfg.sidebarList.addEventListener('click', function (event) {
+            const dismissBtn = event.target.closest('[data-notif-dismiss]');
+            if (dismissBtn) {
+                event.stopPropagation();
+                dismissFn(event, dismissBtn.getAttribute('data-notif-dismiss'));
+                return;
+            }
+
+            const item = event.target.closest('[data-notif-open]');
+            if (item) {
+                openDetail(item.getAttribute('data-notif-open'));
+            }
+        });
+    }
 
     if (cfg.deleteAllBtn) {
         cfg.deleteAllBtn.addEventListener('click', async () => {
@@ -222,7 +309,7 @@
             const data = await fetchWithCsrfRetry(window.BASE_URL + '/notifications/delete-all', { method: 'POST', body: fd });
             if (data.success) {
                 allNotifs = [];
-                if (cfg.badge) cfg.badge.style.display = 'none';
+                setBadge(0);
                 renderSidebar();
             }
         });
@@ -238,7 +325,7 @@
             );
             if (data.csrf_token && typeof updateCsrfToken === 'function') updateCsrfToken(data.csrf_token);
             allNotifs.forEach(n => n.is_read = 1);
-            if (cfg.badge) cfg.badge.style.display = 'none';
+            setBadge(0);
             renderSidebar();
         });
     }
@@ -267,6 +354,6 @@
     backdropEl.addEventListener('click', () => toggleSidebar(false));
 
     fetchNotifications();
-    setInterval(fetchNotifications, 30_000);
+    pollTimer = setInterval(fetchNotifications, 30_000);
 
 })();

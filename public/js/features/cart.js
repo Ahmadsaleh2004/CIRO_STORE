@@ -177,6 +177,21 @@ window.setCartMirror = setCartMirror;
 function refreshCartUI() {
     if (typeof updateCounters === 'function') updateCounters();
     renderCart();
+
+    // ── إشعار بقيّة الصفحة أن المرآة تغيّرت ───────────────────────
+    //
+    // هذه الدالة هي المعبر الوحيد لكل تغيّر في السلّة: يمرّ بها
+    // loadCart بعد الجلب الأوّلي، وsetCartMirror بعد كل إضافة أو
+    // تعديل أو حذف يردّ به الخادم. فبثّ الحدث هنا يعني موضعاً واحداً
+    // يستحيل أن يُنسى، لا سطراً يُضاف عند كل عملية.
+    //
+    // ولماذا حدث لا استدعاء مباشر: صفحة تفاصيل المنتج تحتاج أن تعيد
+    // حساب سقف عدّاد الكمية بعد كل تغيّر (المتاح = المخزون ناقص ما في
+    // السلّة)، وcart.js لا يعرف بوجودها ولا يجب أن يعرف. الحدث يقلب
+    // الاتجاه: المهتمّ يستمع، والمصدر لا يحمل قائمة بمن يهمّه الأمر.
+    document.dispatchEvent(new CustomEvent('cart:updated', {
+        detail: { items: cartCache },
+    }));
 }
 window.refreshCartUI = refreshCartUI;
 

@@ -74,8 +74,13 @@ document.addEventListener('DOMContentLoaded', () => {
             btn.classList.toggle('active', parseInt(btn.dataset.variantId) === variant.id);
         });
 
+        // ⚠️ لا `qtyInput.max = variant.stock` هنا.
+        //
+        // المخزون المطلق ليس السقف الصحيح: ما في سلّة المستخدم من هذه
+        // النسخة محجوزٌ منه. الحساب كلّه في applyQtyLimits أدناه، ويُستدعى
+        // بعد ضبط currentVariantId في آخر هذه الدالة.
         const qtyInput = document.getElementById('productQty');
-        if (qtyInput) { qtyInput.max = variant.stock; qtyInput.value = variant.stock > 0 ? 1 : 0; }
+        if (qtyInput) qtyInput.value = variant.stock > 0 ? 1 : 0;
 
         const qtyCartBlock = document.getElementById('qtyCartBlock');
         const notifyBlock  = document.getElementById('notifyBlock');
@@ -109,6 +114,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         currentVariantId = variant.id;
+
+        // بعد تثبيت النسخة المختارة: يُعاد حساب المتاح لها هي، لا لسابقتها.
+        applyQtyLimits();
     }
 
     document.querySelectorAll('.color-swatch-btn').forEach(btn => {
@@ -122,8 +130,14 @@ document.addEventListener('DOMContentLoaded', () => {
         const panel = document.getElementById('allColorsPanel');
         const icon  = document.getElementById('toggleArrowIcon');
         if (!panel || !icon) return;
-        const expanded = panel.style.display !== 'none';
-        panel.style.display = expanded ? 'none' : 'block';
+        // ⚠️ الحالة تُقرأ من `d-none` لا من style.display.
+        //
+        // اللوحة تبدأ بـ`d-none` في الترميز، وstyle.display يبدأ سلسلة
+        // فارغة — فكان `expanded` يساوي true عند أول نقرة، فتُخفي
+        // مخفياً ولا يظهر شيء. ولو ظهر لما نفع: `d-none` تحمل
+        // !important فتغلب أي نمط مضمّن.
+        const expanded = !panel.classList.contains('d-none');
+        panel.classList.toggle('d-none', expanded);
         icon.textContent = expanded ? '▾' : '▴';
         this.setAttribute('aria-expanded', String(!expanded));
     });
@@ -133,10 +147,118 @@ document.addEventListener('DOMContentLoaded', () => {
     const plus  = document.getElementById('plusBtn');
     const minus = document.getElementById('minusBtn');
 
-    if (plus && qty)  plus.onclick  = () => { const v=parseInt(qty.value); const max=parseInt(qty.max)||Infinity; if(v<max) qty.value=v+1; };
-    if (minus && qty) minus.onclick = () => { const v=parseInt(qty.value); if(v>1) qty.value=v-1; };
+    // ══════════════════════════════════════════════════════════
+    // سقف العدّاد = المخزون **ناقص ما في السلّة**
+    // ══════════════════════════════════════════════════════════
+    //
+    // كان السقف هو المخزون المطلق: `max="<?= $stock ?>"` في الـview،
+    // و`qtyInput.max = variant.stock` عند تبديل اللون. فمن عنده خمس
+    // قطع في المخزون واثنتان في سلّته كان العدّاد يسمح له بخمس، ثم
+    // يرفض عند الضغط على «Add To Cart» بتوست «Only 3 more available».
+    //
+    // أي أن المستخدم يُمنَع **بعد** أن يختار لا **قبله** — وهو أسوأ
+    // ترتيب: يبدو أن الرقم مقبول ثم يُرفض بلا سبب ظاهر على الشاشة.
+    //
+    // ── ولماذا الحساب هنا لا في الخادم ────────────────────────
+    //
+    // لأن السلّة تتغيّر بعد رسم الصفحة: يفتح المستخدم السلّة الجانبية
+    // ويحذف سطراً، أو يضيف من تبويب آخر. قيمة يحسبها PHP مرّة واحدة
+    // عند التحميل تشيخ فوراً وتعيد العطل من الجهة الأخرى — تسمح بأقلّ
+    // مما يجوز.
+    //
+    // والبيانات كلّها موجودة في المتصفّح أصلاً: مخزون كل نسخة في
+    // PRODUCT_VARIANTS، والسلّة في مرآة cart.js. فيبقى السقف صحيحاً
+    // بعد كل تغيّر بلا إعادة تحميل، ما دمنا نستمع لـ`cart:updated`.
+    function cartQtyFor(variantId) {
+        const cart = window.getCartData ? window.getCartData() : [];
+        // `Number()` على الطرفين ثم `===`: كلا الجانبين رقمٌ فعلاً —
+        // CartModel::getForUser تُحوّل id وvariant_id بـ(int)، وpageData
+        // تكتبهما أرقاماً — لكن التحويل الصريح يجعل ذلك عقداً مقروءاً
+        // لا افتراضاً عن شكل JSON قادم من الخادم.
+        const productId = Number(window.PRODUCT_ID);
+        const vId       = Number(variantId);
+        const line = cart.find(
+            i => Number(i.id) === productId && Number(i.variant_id) === vId
+        );
 
-    document.getElementById('addCartBtn')?.addEventListener('click', async () => {
+        return line ? Number(line.quantity) || 0 : 0;
+    }
+
+    function remainingFor(variant) {
+        if (!variant) return 0;
+
+        return Math.max(0, (Number(variant.stock) || 0) - cartQtyFor(variant.id));
+    }
+
+    const addCartBtn = document.getElementById('addCartBtn');
+
+    /** يضبط سقف العدّاد وحالة زرَّي (+) و«Add To Cart» على المتاح. */
+    function applyQtyLimits() {
+        if (!qty) return;
+
+        const variant   = productVariants.find(v => v.id === currentVariantId);
+        const remaining = remainingFor(variant);
+
+        qty.max = String(remaining);
+        qty.dataset.remaining = String(remaining);
+
+        // صفر متاح: العدّاد يعرض صفراً ولا يقبل رفعاً، والزرّان معطّلان.
+        // (المخزون قد يكون موجوداً كلّه في السلّة — وهي حالة مختلفة عن
+        // نفاد المخزون، فلا نُخفي الكتلة ولا نُظهر «أبلغني عند التوفّر».)
+        const value = Math.min(Math.max(1, Number(qty.value) || 1), Math.max(remaining, 1));
+        qty.value = remaining === 0 ? 0 : value;
+
+        if (plus) plus.disabled = remaining === 0 || Number(qty.value) >= remaining;
+
+        // ⚠️ لا نلمس زرّ الإضافة إن كان معطّلاً لسبب آخر: الزائر غير
+        // المسجَّل يراه معطّلاً بـdata-action="self-enable" ليفتح مودال
+        // الدخول. تفعيله هنا يكسر ذلك المسار.
+        if (addCartBtn && !addCartBtn.hasAttribute('data-action')) {
+            addCartBtn.disabled = remaining === 0;
+        }
+
+        const hint = document.getElementById('qtyRemainingHint');
+        if (hint) {
+            const inCart = cartQtyFor(currentVariantId);
+            if (remaining === 0 && inCart > 0) {
+                hint.textContent = `All ${inCart} available in your cart.`;
+                hint.classList.remove('d-none');
+            } else if (inCart > 0) {
+                hint.textContent = `${inCart} already in your cart — ${remaining} more available.`;
+                hint.classList.remove('d-none');
+            } else {
+                hint.classList.add('d-none');
+            }
+        }
+    }
+
+    if (plus && qty) {
+        plus.onclick = () => {
+            const v   = parseInt(qty.value, 10) || 0;
+            const max = parseInt(qty.max, 10);
+            if (v < (Number.isNaN(max) ? Infinity : max)) qty.value = v + 1;
+            applyQtyLimits();
+        };
+    }
+    if (minus && qty) {
+        minus.onclick = () => {
+            const v = parseInt(qty.value, 10) || 0;
+            if (v > 1) qty.value = v - 1;
+            applyQtyLimits();
+        };
+    }
+
+    // الكتابة اليدوية تُقيَّد كذلك — وإلا التفّ المستخدم على الزرّين
+    // بكتابة الرقم مباشرةً في الحقل.
+    if (qty) qty.addEventListener('input', applyQtyLimits);
+
+    // كل تغيّر في السلّة يعيد الحساب: حذف سطر من السلّة الجانبية يجب
+    // أن يُعيد المتاح فوراً، لا بعد إعادة تحميل الصفحة.
+    document.addEventListener('cart:updated', applyQtyLimits);
+
+    applyQtyLimits();
+
+    addCartBtn?.addEventListener('click', async () => {
         if (!qty) return;
         const q = parseInt(qty.value);
         const variant = productVariants.find(v => v.id === currentVariantId);

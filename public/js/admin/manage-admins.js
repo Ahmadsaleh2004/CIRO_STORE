@@ -9,8 +9,28 @@
 document.addEventListener('DOMContentLoaded', () => {
 
     // ── صفوف الجدول القابلة للنقر → صفحة التفاصيل ──────────────
+    //
+    // ⚠️ الحارس `closest(...)` ليس زينة: بدونه كان النقر على زرّ
+    // «تعديل الصلاحيات» أو «الإشعارات» أو «Delete» **يفتح صفحة
+    // التفاصيل** بدل تنفيذ الزرّ.
+    //
+    // والسبب دقيق: الـview يضع `data-action="stop-propagation"` على
+    // الـ<td> الحاوي، لكن معالج ذلك الفعل مسجَّل على `document` في
+    // js/core/inline-actions.js — أي في نهاية مسار الفقاعة. بينما
+    // مستمع الصف هذا مسجَّل على الـ<tr> نفسه، فيسبقه. حين تصل النقرة
+    // إلى document ليوقف `stopPropagation` الفقاعة، يكون التنقّل قد
+    // وقع أصلاً — و`stopPropagation` عند آخر عقدة لا توقف شيئاً.
+    //
+    // فالسمة على الـ<td> كانت **بلا أثر** هنا. (وهي تعمل في
+    // orders/index.php لأن الصفّ هناك يستعمل data-action كذلك، فيتنافس
+    // الاثنان داخل نفس المستمع المفوَّض، و`closest` يختار الأقرب —
+    // وهو الـ<td>.)
+    //
+    // والحلّ نفسه المستعمل في users.js منذ البداية: يفحص الصفّ هدف
+    // النقرة قبل أن يتحرّك.
     document.querySelectorAll('.clickable-row').forEach(row => {
-        row.addEventListener('click', () => {
+        row.addEventListener('click', (e) => {
+            if (e.target.closest('button, a, form, input, [data-action]')) return;
             window.location.href = row.dataset.href;
         });
     });

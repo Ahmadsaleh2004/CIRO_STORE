@@ -103,8 +103,23 @@
             const qty  = Number(item.quantity) || 0;
             const line = Number(item.price) * qty;
             total += line;
+            // ⚠️ `escHtml` على الاسم واللون.
+            //
+            // كانا يُحقنان خامّين في innerHTML. والقيمتان تأتيان من
+            // القاعدة — يكتبهما أدمن في Manage Products — فاسم منتج
+            // فيه <img src=x onerror=...> كان ينفّذ على **شاشة
+            // المراجعة الأخيرة قبل الدفع**، وهي أسوأ صفحة يقع فيها
+            // ذلك.
+            //
+            // ولا يكفي أن CSP تحجب المعالجات المضمّنة: الحجب طبقةٌ
+            // ثانية، والهروب هو الطبقة الأولى. وبقيّة الملفات تهرّب
+            // بالفعل (cart.js وwishlist.js وnotifications.js)، فكان
+            // هذا الموضع الاستثناء لا القاعدة.
+            const label = escHtml(item.name)
+                + (item.color_name ? ' — ' + escHtml(item.color_name) : '');
+
             return `<li class="d-flex justify-content-between mb-2 small">
-            <span>${item.name}${item.color_name ? ' — ' + item.color_name : ''} × ${qty}</span>
+            <span>${label} × ${qty}</span>
             <span>$${line.toFixed(2)}</span>
         </li>`;
         }).join('') || '<li class="text-muted">Cart is empty.</li>';

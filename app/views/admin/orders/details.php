@@ -229,7 +229,7 @@ if ($order['status'] === 'completed' && !empty($order['handler_admin_name'])) {
 </div>
 
 <?php
-// بيانات الصفحة للـ JS (يُخرجها footer.php عبر $extraScripts).
+// بيانات الصفحة للـ JS.
 //
 // ⚠️ كانت تُبنى بضمّ نصوص داخل <script>:
 //     'orderId: ' . (int)$order['order_id'] . ','
@@ -237,7 +237,24 @@ if ($order['status'] === 'completed' && !empty($order['handler_admin_name'])) {
 // لكنه شكلٌ يكفي فيه سهوٌ واحد (قيمة نصّية تُضمّ بلا json_encode)
 // ليصير حقن سكربت. والآن البيانات بيانات، وjson_encode في pageData
 // يتولّى الترميز كلّه — بما فيه </script> عبر JSON_HEX_TAG.
-$extraScripts = pageData([
+//
+// ⚠️⚠️ وتُطبع **هنا في جسم الـview**، لا عبر $extraScripts.
+//
+// كانت مُسنَدة إلى $extraScripts، وهو ما يجعل الجزيرة تُطبع في
+// admin/inc/footer.php **بعد** وسم js/core/page-data.js. وذلك الملف
+// متزامن لا مؤجَّل — ينفَّذ لحظة يبلغه المحلّل — فكان يمسح المستند
+// وقتها ولا يجد سوى جزيرتَي head وnavbar. جزيرة هذه الصفحة لم تكن
+// قد وُلدت بعد، فلم تصل window أبداً.
+//
+// والنتيجة عطلٌ كامل صامت: orders.js يستدعي initOrderDetails بشرط
+// `typeof window.ADMIN_ORDER_DETAILS !== 'undefined'` — وهو شرط لم
+// يتحقّق قط. وداخل تلك الدالة تُعرَّف window.handleTakeIt. فكان زرّ
+// «Take It» يُنقر، ويفوّض inline-actions.js الفعل، فلا يجد الدالة،
+// فيكتب سطراً في console وينتهي. لا حوار، لا طلب، لا رسالة — بدا
+// أن أخذ الطلبات معطّل في الخادم وهو سليم تماماً.
+//
+// الجزيرة تسبق الفوتر هنا، فيلتقطها page-data.js كما يلتقط البقيّة.
+echo pageData([
     'ADMIN_ORDER_DETAILS' => [
         'orderId'      => (int) $order['order_id'],
         'productNames' => $productNames,
