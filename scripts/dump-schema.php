@@ -2,30 +2,30 @@
 
 /**
  * scripts/dump-schema.php
- * يعيد توليد tests/fixtures/schema.sql — بنية القاعدة بلا بيانات.
+ * Regenerates tests/fixtures/schema.sql — the database's structure with no data.
  *
- * ── لماذا سكربت بدل سطر واحد ────────────────────────────────
+ * ── Why a script rather than a one-liner ────────────────────
  *
- * كان الأمر معرَّفاً في composer.json هكذا:
+ * The command used to be defined in composer.json like this:
  *
  *     mysqldump --no-data ... > tests/fixtures/schema.sql
  *
- * وفيه عطلان، وقعا فعلاً:
+ * And it carried two faults, both of which actually happened:
  *
- *   1. `mysqldump` ليس على PATH في تثبيت XAMPP الافتراضي (هو في
- *      C:\xampp\mysql\bin)، فالأمر يفشل.
+ *   1. `mysqldump` is not on the PATH in a default XAMPP install (it lives in
+ *      C:\xampp\mysql\bin), so the command fails.
  *
- *   2. **وإعادة التوجيه `>` تُفرِغ الملف قبل أن يبدأ الأمر.** فحين
- *      يفشل، لا يكون قد كُتب شيء — لكن الملف الأصلي قد أُتلف سلفاً.
- *      أي أن الأمر المصمَّم لتحديث المخطّط المرجعي كان **يمحوه** عند
- *      أول فشل.
+ *   2. **And the `>` redirection empties the file before the command even starts.** So when
+ *      it fails, nothing has been written — but the original file has already been
+ *      destroyed. Which is to say the command designed to update the reference schema was
+ *      **erasing** it on the first failure.
  *
- * ولهذا يكتب هذا السكربت إلى ملف مؤقّت، ويتحقّق أن الناتج يشبه مخطّطاً
- * فعلاً، ثم — وعندها فقط — ينقله فوق الملف الحقيقي. الفشل يترك
- * المخطّط القائم كما هو.
+ * Which is why this script writes to a temporary file, checks that the output actually
+ * looks like a schema, and then — and only then — moves it over the real file. A failure
+ * leaves the existing schema as it was.
  *
- * الاستعمال:  composer test:schema
- * مسار mysqldump غير المعتاد:  MYSQLDUMP=/path/to/mysqldump composer test:schema
+ * Usage:  composer test:schema
+ * An unusual mysqldump path:  MYSQLDUMP=/path/to/mysqldump composer test:schema
  */
 
 require_once __DIR__ . '/../vendor/autoload.php';
@@ -37,7 +37,7 @@ if (PHP_SAPI !== 'cli') {
 }
 
 /**
- * يبحث عن mysqldump: متغيّر البيئة أولاً، ثم PATH، ثم المواضع المعتادة.
+ * Locates mysqldump: the environment variable first, then the PATH, then the usual places.
  */
 function locateMysqldump(): ?string
 {
@@ -72,19 +72,20 @@ function locateMysqldump(): ?string
 $binary = locateMysqldump();
 
 if ($binary === null) {
-    fwrite(STDERR, PHP_EOL . "  ✗ لم يُعثر على mysqldump." . PHP_EOL);
-    fwrite(STDERR, "    مرّر مساره صراحةً: MYSQLDUMP=/path/to/mysqldump composer test:schema" . PHP_EOL . PHP_EOL);
+    fwrite(STDERR, PHP_EOL . "  ✗ mysqldump was not found." . PHP_EOL);
+    fwrite(STDERR, "    Pass its path explicitly: MYSQLDUMP=/path/to/mysqldump composer test:schema" . PHP_EOL . PHP_EOL);
     exit(1);
 }
 
 $target = ROOTPATH . '/tests/fixtures/schema.sql';
 $temp   = $target . '.tmp';
 
-// كلمة السر عبر ملف خيارات لا سطر أوامر: سطر الأوامر مقروء لأي مستخدم
-// على النظام عبر قائمة العمليات. (القرار نفسه المتّخذ في BackupModel.)
+// The password goes through an options file rather than the command line: the command
+// line is readable by any user on the system through the process list. (The same decision
+// taken in BackupModel.)
 $optionsFile = tempnam(sys_get_temp_dir(), 'cairo-dump-');
 if ($optionsFile === false) {
-    fwrite(STDERR, "  ✗ تعذّر إنشاء ملف خيارات مؤقّت." . PHP_EOL);
+    fwrite(STDERR, "  ✗ A temporary options file could not be created." . PHP_EOL);
     exit(1);
 }
 
@@ -107,37 +108,39 @@ $command = escapeshellarg($binary)
     . ' > ' . escapeshellarg($temp);
 
 $status = 0;
-// ⚠️ إنذار كاذب موثَّق. الأمر مبنيّ بالكامل من ثوابت الإعداد، وكل جزء
-// متغيّر فيه يمرّ من escapeshellarg — بما فيها مسار الثنائي واسم
-// القاعدة والملفان المؤقتان (انظر البناء أعلاه سطراً سطراً). ولا مدخل
-// من الشبكة يصل إلى هنا أصلاً: هذا سكربت طرفية يرفض العمل خارج CLI.
+// ⚠️ A documented false positive. The command is built entirely from configuration
+// constants, and every variable part of it passes through escapeshellarg — including the
+// binary's path, the database's name and both temporary files (see the construction above,
+// line by line). And no input from the network reaches here at all: this is a terminal
+// script that refuses to run outside the CLI.
 // nosemgrep: php.lang.security.exec-use.exec-use
 @exec($command, $ignored, $status);
 
-// ملف الخيارات يحمل كلمة مرور القاعدة، فحذفه فوراً بعد الاستعمال
-// مقصود — وهو سبب وجوده أصلاً (بدلاً من تمرير كلمة السر في سطر الأوامر
-// حيث يراها أي `ps`). المسار من tempnam() لا من مدخل، فلا شيء يوجّهه.
+// The options file holds the database password, so deleting it immediately after use is
+// deliberate — and it is the reason the file exists at all (rather than passing the
+// password on the command line where any `ps` can see it). The path comes from tempnam(),
+// not from input, so nothing can steer it.
 // nosemgrep: php.lang.security.unlink-use.unlink-use
 unlink($optionsFile);
 
-// ── التحقّق قبل أي كتابة فوق الملف الحقيقي ───────────────────
+// ── Verification before writing over the real file ──────────
 $dump = is_file($temp) ? (string) file_get_contents($temp) : '';
 
 if ($status !== 0 || $dump === '' || !str_contains($dump, 'CREATE TABLE')) {
-    // $temp من tempnam() لا من مدخل — كسابقتها.
+    // $temp comes from tempnam(), not from input — as above.
     // nosemgrep: php.lang.security.unlink-use.unlink-use
     @unlink($temp);
-    fwrite(STDERR, PHP_EOL . "  ✗ فشل التوليد (كود {$status}) — المخطّط القائم لم يُمسّ." . PHP_EOL . PHP_EOL);
+    fwrite(STDERR, PHP_EOL . "  ✗ Generation failed (code {$status}) — the existing schema was left untouched." . PHP_EOL . PHP_EOL);
     exit(1);
 }
 
-// نهايات الأسطر تُوحَّد على LF: .gitattributes يخزّن كذلك، فترك CRLF
-// هنا يجعل كل توليد على Windows يبدو تغييراً كاملاً في الـdiff.
+// Line endings are normalised to LF: .gitattributes stores them that way too, so leaving
+// CRLF here would make every run on Windows look like a wholesale change in the diff.
 $dump = str_replace("\r\n", "\n", $dump);
 file_put_contents($target, $dump);
 // nosemgrep: php.lang.security.unlink-use.unlink-use
 @unlink($temp);
 
 $tables = substr_count($dump, 'CREATE TABLE');
-echo PHP_EOL . '  ✓ ' . $tables . ' جدولاً → tests/fixtures/schema.sql' . PHP_EOL . PHP_EOL;
+echo PHP_EOL . '  ✓ ' . $tables . ' tables → tests/fixtures/schema.sql' . PHP_EOL . PHP_EOL;
 exit(0);

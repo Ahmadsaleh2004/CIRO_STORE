@@ -2,17 +2,17 @@
 
 /**
  * scripts/migrate.php
- * واجهة الطرفية للمهاجر.
+ * The migrator's terminal interface.
  *
- *   php scripts/migrate.php status              الحالة
- *   php scripts/migrate.php up [--pretend]      تطبيق المعلّق
- *   php scripts/migrate.php down [n] [--pretend] تراجع عن آخر n
- *   php scripts/migrate.php baseline            تسجيل الموجود كمطبَّق
- *   php scripts/migrate.php make <name>         ملف هجرة جديد
+ *   php scripts/migrate.php status              the status
+ *   php scripts/migrate.php up [--pretend]      apply what is pending
+ *   php scripts/migrate.php down [n] [--pretend] roll back the last n
+ *   php scripts/migrate.php baseline            record what exists as applied
+ *   php scripts/migrate.php make <name>         a new migration file
  *
- * ⚠️ `baseline` تُستدعى مرّة واحدة على قاعدة بُنيت من
- * tests/fixtures/schema.sql: خطّ الأساس يحوي أثر الهجرات السبع فعلاً،
- * وتنفيذها عليه يفشل بـ«الجدول موجود».
+ * ⚠️ `baseline` is called once, on a database built from
+ * tests/fixtures/schema.sql: the baseline already carries the effect of the seven
+ * migrations, and running them over it fails with "table already exists".
  */
 
 require_once __DIR__ . '/../vendor/autoload.php';
@@ -31,17 +31,17 @@ $argvList  = $argv ?? [];
 $command   = $argvList[1] ?? 'status';
 $pretend   = in_array('--pretend', $argvList, true);
 
-/** يطبع سطراً ملوّناً حسب الحالة. */
+/** Prints one line, its symbol carrying the status. */
 function line(string $symbol, string $text): void
 {
     echo '  ' . $symbol . ' ' . $text . PHP_EOL;
 }
 
-// ── make لا تحتاج اتصالاً بالقاعدة ────────────────────────────
+// ── make needs no database connection ────────────────────────
 if ($command === 'make') {
     $name = $argvList[2] ?? '';
     if ($name === '') {
-        fwrite(STDERR, "الاستعمال: php scripts/migrate.php make <name>\n");
+        fwrite(STDERR, "Usage: php scripts/migrate.php make <name>\n");
         exit(1);
     }
 
@@ -63,26 +63,27 @@ if ($command === 'make') {
         '-- ' . $version . '_' . $name,
         '-- ══════════════════════════════════════════════════════════════',
         '--',
-        '-- اشرح هنا **لماذا** هذا التغيير، لا ماذا يفعل — الـSQL أدناه',
-        '-- يقول ماذا. وبعد تطبيقه شغّل `composer test:schema` كي يلحق',
-        '-- المخطّط المرجعي بالتغيير.',
+        '-- Explain **why** this change exists here, not what it does — the SQL below',
+        '-- says what. And once it is applied, run `composer test:schema` so the',
+        '-- reference schema catches up with the change.',
         '',
         '-- @UP',
         '',
         '',
         '-- @DOWN',
-        '-- إن كان التراجع مستحيلاً فاكتب سببه هنا صراحةً بدل ترك القسم',
-        '-- فارغاً — الفراغ يُقرأ سهواً، والسبب يُقرأ قراراً.',
+        '-- If rolling back is impossible, write the reason here plainly rather than',
+        '-- leaving the section empty — emptiness reads as an oversight, a reason reads',
+        '-- as a decision.',
         '',
     ]) . "\n");
 
-    line('✓', 'أُنشئت: ' . str_replace(ROOTPATH . DIRECTORY_SEPARATOR, '', $path));
+    line('✓', 'Created: ' . str_replace(ROOTPATH . DIRECTORY_SEPARATOR, '', $path));
     exit(0);
 }
 
 $migrator = new Migrator(Database::connect(), $directory);
 
-echo PHP_EOL . '  الهجرات — ' . DB_NAME . PHP_EOL . PHP_EOL;
+echo PHP_EOL . '  Migrations — ' . DB_NAME . PHP_EOL . PHP_EOL;
 
 try {
     switch ($command) {
@@ -94,18 +95,18 @@ try {
             foreach ($migrator->available() as $migration) {
                 $key = $migration['version'];
                 if (isset($applied[$key])) {
-                    line('✓', $key . '_' . $migration['name'] . '  — طُبِّقت ' . $applied[$key]['applied_at']);
+                    line('✓', $key . '_' . $migration['name'] . '  — applied ' . $applied[$key]['applied_at']);
                 } else {
-                    line('·', $key . '_' . $migration['name'] . '  — معلّقة');
+                    line('·', $key . '_' . $migration['name'] . '  — pending');
                 }
             }
 
             echo PHP_EOL;
-            line('', 'مطبَّقة: ' . count($applied) . '   معلّقة: ' . count($pending));
+            line('', 'Applied: ' . count($applied) . '   Pending: ' . count($pending));
 
             if ($drift !== []) {
                 echo PHP_EOL;
-                line('⚠', 'انحراف — ملفات تغيّرت بعد تطبيقها:');
+                line('⚠', 'Drift — files changed after they were applied:');
                 foreach ($drift as $item) {
                     line(' ', $item);
                 }
@@ -116,11 +117,11 @@ try {
         case 'up':
             $done = $migrator->up($pretend);
             if ($done === []) {
-                line('✓', 'لا شيء معلّق.');
+                line('✓', 'Nothing pending.');
                 break;
             }
             foreach ($done as $name) {
-                line($pretend ? '·' : '✓', ($pretend ? 'ستُطبَّق: ' : 'طُبِّقت: ') . $name);
+                line($pretend ? '·' : '✓', ($pretend ? 'Would apply: ' : 'Applied: ') . $name);
             }
             break;
 
@@ -130,25 +131,25 @@ try {
             $done  = $migrator->down($steps, $pretend);
 
             if ($done === []) {
-                line('·', 'لا شيء للتراجع عنه.');
+                line('·', 'Nothing to roll back.');
                 break;
             }
             foreach ($done as $name) {
-                line($pretend ? '·' : '✓', ($pretend ? 'سيُتراجَع: ' : 'تُراجِع عن: ') . $name);
+                line($pretend ? '·' : '✓', ($pretend ? 'Would roll back: ' : 'Rolled back: ') . $name);
             }
             break;
 
         case 'baseline':
             $count = $migrator->baseline();
-            line('✓', 'سُجِّلت ' . $count . ' هجرة كمطبَّقة (بلا تنفيذ).');
+            line('✓', $count . ' migrations recorded as applied (without running them).');
             if ($count > 0) {
-                line('', 'خطّ الأساس يحويها فعلاً — راجع تعليق Migrator::baseline.');
+                line('', 'The baseline already carries them — see the comment on Migrator::baseline.');
             }
             break;
 
         default:
-            fwrite(STDERR, "أمر غير معروف: {$command}\n");
-            fwrite(STDERR, "المتاح: status | up | down [n] | baseline | make <name>\n");
+            fwrite(STDERR, "Unknown command: {$command}\n");
+            fwrite(STDERR, "Available: status | up | down [n] | baseline | make <name>\n");
             exit(1);
     }
 } catch (Throwable $e) {

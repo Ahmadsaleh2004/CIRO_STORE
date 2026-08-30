@@ -2,35 +2,35 @@
 
 /**
  * scripts/audit-escaping.php
- * يستخرج كل `<?= ... ?>` من ملفات الـviews ويصنّفها حسب سياق الإخراج
- * وحاجتها للهروب (escaping).
+ * Extracts every `<?= ... ?>` from the view files and classifies them by their output
+ * context and their need for escaping.
  *
- * الاستخدام:
- *     php scripts/audit-escaping.php                ← ملخّص + أكثر الملفات
+ * Usage:
+ *     php scripts/audit-escaping.php                ← a summary plus the worst files
  *     php scripts/audit-escaping.php app/views --list NEEDS
  *     php scripts/audit-escaping.php app/views --list ATTR
  *
- * الفئات:
- *   SAFE   — مُهرَّبة أصلاً، أو عدد/ثابت/نص حرفي لا يحتمل HTML
- *   NEEDS  — نص عادي في جسم الصفحة قد يحمل مدخلاً من قاعدة البيانات
- *   ATTR   — داخل سمة HTML (الخطر: كسر الاقتباس والخروج منها)
- *   URL    — داخل href/src/action
- *   JS     — داخل كتلة <script>
+ * The categories:
+ *   SAFE   — already escaped, or a number/constant/literal that cannot carry HTML
+ *   NEEDS  — plain text in the page's body that may carry input from the database
+ *   ATTR   — inside an HTML attribute (the danger: breaking the quote and escaping it)
+ *   URL    — inside href/src/action
+ *   JS     — inside a <script> block
  *
- * ⚠️ الأداة مساعِدة لا حَكَم: تصنيفها تقريبي ويحتاج مراجعة بشرية.
- * الفئات غير الـSAFE المتبقية في هذا المشروع رُوجعت يدوياً وثبت أنها
- * مصفوفات حرفية داخل الـview نفسه، أو كلاسات CSS محسوبة من match/ternary،
- * أو أعداد، أو HTML مقصود — راجع تقرير الهروب الأمني.
+ * ⚠️ The tool assists, it does not rule: its classification is approximate and needs a
+ * human review. The non-SAFE categories remaining in this project were reviewed by hand and
+ * shown to be literal arrays inside the view itself, or CSS classes computed from a
+ * match/ternary, or numbers, or deliberate HTML.
  */
 
 declare(strict_types=1);
 
-// المسار هو أوّل وسيط **ليس علماً**.
+// The path is the first argument that is **not a flag**.
 //
-// كان `$argv[1]` مباشرةً، فكان `php audit-escaping.php --gate` يحاول
-// فتح مجلد اسمه "--gate" وينهار برسالة لا علاقة لها بالسبب. والاستعمال
-// الموثَّق في رأس هذا الملف يفرض كتابة المسار قبل كل علم — شرطٌ لا
-// يذكره أحد ولا يخطر لمن يكتب العلم وحده.
+// It used to be `$argv[1]` directly, so `php audit-escaping.php --gate` tried to open a
+// directory named "--gate" and fell over with a message unrelated to the cause. And the
+// usage documented at the top of this file requires writing the path before every flag —
+// a condition nobody states and nobody thinks of when they type the flag alone.
 $root = dirname(__DIR__) . '/app/views';
 foreach (array_slice($argv, 1) as $arg) {
     if (!str_starts_with($arg, '--')) {
@@ -47,7 +47,7 @@ foreach ($it as $f) {
 }
 sort($files);
 
-/** دوال/أنماط تجعل المخرَج آمناً بذاته. */
+/** Functions and patterns that make the output safe in itself. */
 function isSafeExpr(string $e): bool
 {
     $e = trim($e);
@@ -61,7 +61,7 @@ function isSafeExpr(string $e): bool
         }
     }
 
-    // صبّ صريح لعدد، أو ثابت رقمي
+    // An explicit numeric cast, or a numeric literal
     if (preg_match('/^\(\s*(int|float|bool)\s*\)/', $e)) {
         return true;
     }
@@ -69,35 +69,35 @@ function isSafeExpr(string $e): bool
         return true;
     }
 
-    // ثوابت المشروع ودوال توليد الوسوم الخاصة بنا
+    // The project's constants and our own tag-generating functions
     if (preg_match('/^(URLROOT|SITENAME|BASE_URL)$/', $e)) {
         return true;
     }
-    // ── دوال المشروع التي تُصدر HTML بطبعها ──────────────────────
+    // ── The project's functions that emit HTML by nature ─────────
     //
-    // هذه لا «تحتاج هروباً» بل **يفسدها** الهروب: تهريب ناتج
-    // vendorJs() يطبع `&lt;script ...&gt;` نصّاً على الصفحة بدل أن
-    // يحمّل المكتبة. فتصنيفها SAFE ليس تساهلاً بل تصحيح تصنيف.
+    // These do not "need escaping" — escaping **breaks** them: escaping the output of
+    // vendorJs() prints `&lt;script ...&gt;` as text on the page instead of loading the
+    // library. So classifying them SAFE is not leniency but a corrected classification.
     //
-    // والقائمة تُحدَّث عند إضافة أي مولّد وسوم جديد — وإلا امتلأ
-    // التقرير بإيجابيات كاذبة حتى يصير عديم القيمة، وهو ما يقتل أي
-    // أداة تدقيق: ضجيجٌ يُدرَّب القارئ على تجاهله.
+    // And the list is updated whenever a new tag generator is added — otherwise the report
+    // fills with false positives until it is worthless, which is what kills any audit tool:
+    // noise that trains its reader to ignore it.
     //
-    // ⚠️ ما يدخل هنا يجب أن يكون مولِّدَ وسمٍ يبنيه المشروع من قيم
-    // يملكها هو — لا دالةً تمرّر مدخلاً خارجياً.
+    // ⚠️ What goes in here must be a tag generator the project builds from values it owns
+    // — not a function that passes external input through.
     $htmlEmitters = 'themeBootScript|cssBundle|pageCss|jsBundle|jsTag'
                   . '|vendorJs|vendorCss|pageData';
     if (preg_match('/^(' . $htmlEmitters . ')\(/', $e)) {
         return true;
     }
 
-    // تعبير شرطي لا يُنتج إلا نصوصاً حرفية على الطرفين — لا مدخل مستخدم فيه.
-    // مثال: $x === 'y' ? 'selected' : ''
+    // A conditional whose two branches are both literals — no user input in it.
+    // For example: $x === 'y' ? 'selected' : ''
     if (preg_match("/\?\s*('(?:[^'\\\\]|\\\\.)*'|\"(?:[^\"\\\\]|\\\\.)*\")\s*:\s*('(?:[^'\\\\]|\\\\.)*'|\"(?:[^\"\\\\]|\\\\.)*\")\s*$/", $e)) {
         return true;
     }
 
-    // تعبير شرطي طرفاه مُهرَّبان أو نصّان حرفيان (نمط "القيمة أو شرطة")
+    // A conditional whose branches are escaped or literal (the "value or dash" pattern)
     if (
         str_contains($e, '?')
         && preg_match_all('/htmlspecialchars\(/', $e) >= 1
@@ -106,21 +106,21 @@ function isSafeExpr(string $e): bool
         return true;
     }
 
-    // نصّ مُهرَّب ثم مُحوَّل أسطرُه إلى <br>. الترتيب هو ما يجعله آمناً:
-    // htmlspecialchars أولاً على المدخل، ثم nl2br تضيف وسومها هي فوق
-    // نصٍّ لم يعد يحمل وسوماً. (العكس — nl2br ثم تهريب — يطبع <br>
-    // نصّاً، وهو خطأ شائع.)
+    // Text escaped and then line-broken into <br>. The order is what makes it safe:
+    // htmlspecialchars first over the input, then nl2br adds its own tags over text that no
+    // longer carries any. (The reverse — nl2br then escaping — prints <br> as text, a
+    // common mistake.)
     if (str_starts_with($e, 'nl2br(htmlspecialchars(')) {
         return true;
     }
 
-    // دوال المشروع التي تُرجع رمزاً حرفياً من خريطة داخلية.
+    // The project's functions that return a literal symbol from an internal map.
     if (preg_match('/^(categoryEmoji|stockBadge|productTag)\(/', $e)) {
         return true;
     }
 
-    // تعبير شرطي طرفاه: صبٌّ صريح لعدد، ونصّ حرفي.
-    // مثال: $log['target_id'] ? '#' . (int)$log['target_id'] : '—'
+    // A conditional whose branches are an explicit numeric cast and a literal.
+    // For example: $log['target_id'] ? '#' . (int)$log['target_id'] : '—'
     if (
         str_contains($e, '?')
         && preg_match('/\(int\)/', $e)
@@ -129,20 +129,20 @@ function isSafeExpr(string $e): bool
         return true;
     }
 
-    // ── فتحات HTML التي يملؤها الكنترولر ────────────────────────
+    // ── The HTML slots the controller fills ─────────────────────
     //
-    // هذه **HTML مقصود** لا نصّ: الكنترولر يمرّر وسم <link> أو <script>
-    // كاملاً. تهريبها يطبع الوسم نصّاً على الصفحة.
+    // These are **deliberate HTML**, not text: the controller passes a complete <link> or
+    // <script> tag. Escaping them prints the tag as text on the page.
     //
-    // ⚠️ وهي أيضاً آخر مكان يبقى فيه حقن HTML ممكناً في الـviews. أمانها
-    // مشروط بشرط واحد: **ألّا يبني كنترولر قيمتها من مدخل مستخدم**.
-    // اليوم كلها سلاسل حرفية مبنية حول URLROOT (مفحوص). من يضيف قيمة
-    // جديدة هنا مسؤول عن التحقّق من ذلك.
+    // ⚠️ They are also the last place where HTML injection remains possible in the views.
+    // Their safety rests on one condition: **that no controller builds their value from
+    // user input**. Today they are all literal strings built around URLROOT (verified).
+    // Whoever adds a new value here is responsible for checking that.
     if (preg_match('/^\$(extraHead|extraScripts|bareHead|bareScripts)\s*\?\?\s*\x27\x27$/', $e)) {
         return true;
     }
 
-    // متغيّرات عدّاد معروفة في هذا المشروع (كلها ints من الكنترولر)
+    // Counter variables known in this project (all of them ints from the controller)
     $intVars = 'i|p|p2|sc|stock|totalPages|currentPage|activeCount|strikesCount'
              . '|pendingOrders|newMessages|newOrders|newUsersWeek|totalStrikes'
              . '|activeUsersCount|notActiveUsersCount|blockedUsersCount|totalMessages|total';
@@ -161,7 +161,7 @@ foreach ($files as $file) {
     $src   = file_get_contents($file);
     $lines = explode("\n", $src);
 
-    // مواضع كتل <script>
+    // Where the <script> blocks are
     $inScript = [];
     $depth = 0;
     foreach ($lines as $i => $l) {
@@ -184,23 +184,23 @@ foreach ($files as $file) {
             $offset = $m[0][$k][1];
             $before = substr($line, 0, $offset);
 
-            // ── إعفاء صريح مع سببه ──────────────────────────────
+            // ── An explicit exemption, with its reason ──────────
             //
-            // بعض الحالات لا يستطيع أي تحليل ثابت أن يحكم عليها: متغيّر
-            // حلقة مربوط بمصفوفة نصوص حرفية معرَّفة في الـview نفسه
-            // مثلاً. المحلّل يرى `$label` ولا يرى من أين جاء.
+            // Some cases no static analysis can rule on: a loop variable bound to an array
+            // of literals defined in the view itself, for instance. The analyser sees
+            // `$label` and cannot see where it came from.
             //
-            // الحلّ نفس ما يفعله المشروع مع semgrep: إعفاء **مكتوب في
-            // موضعه ومعه سببه**، لا استثناء في ملف إعداد بعيد لا يقرأه
-            // من يعدّل السطر.
+            // The answer is what the project does with semgrep: an exemption **written
+            // where it applies, carrying its reason** — not an exclusion in a distant
+            // configuration file that whoever edits the line never reads.
             //
-            //     ضع في الـview تعليق PHP يحمل:
-            //         @escaping-safe: نصوص حرفية معرَّفة في هذا الملف
-            //     على السطر نفسه أو السطر الذي قبله.
+            //     Put a PHP comment in the view carrying:
+            //         @escaping-safe: literals defined in this file
+            //     on the same line or the line before it.
             //
-            // ⚠️ السبب إلزامي. الإعفاء بلا سبب يُعامَل كأنه غير موجود —
-            // فمن يريد إسكات الأداة عليه أن يكتب لماذا، ومن يقرأ بعده
-            // يستطيع أن يحكم على ما كُتب.
+            // ⚠️ The reason is mandatory. An exemption without one is treated as absent —
+            // anyone wanting to silence the tool has to write why, and whoever reads it
+            // afterwards can judge what was written.
             $previous = $lines[$i - 1] ?? '';
             $exempt   = preg_match('/@escaping-safe:\s*\S/u', $line)
                      || preg_match('/@escaping-safe:\s*\S/u', $previous);
@@ -242,29 +242,30 @@ if (in_array('--list', $argv, true)) {
 }
 
 // ══════════════════════════════════════════════════════════════
-// بوّابة: --gate
+// The gate: --gate
 // ══════════════════════════════════════════════════════════════
 //
-// ── لماذا بوّابة أصلاً ─────────────────────────────────────────
+// ── Why a gate at all ─────────────────────────────────────────
 //
-// كانت هذه الأداة **تقريراً**: تطبع أرقاماً ويقرؤها من يتذكّر
-// تشغيلها. وتقرير لا يُفشل شيئاً يتحوّل مع الوقت إلى رقم يكبر بهدوء —
-// كان 36 موضعاً غير مُهرَّب حين بدأت هذه المرحلة، ولم يكن أحد يعرف
-// أيّها جديد وأيّها مراجَع سلفاً. وهذا هو الفرق الذي يقيمه هذا المشروع
-// في كل مرحلة: «مفروض آلياً لا بالانضباط الشخصي».
+// This tool used to be **a report**: it printed numbers that were read by whoever
+// remembered to run it. And a report that fails nothing turns, over time, into a number
+// that grows quietly — there were 36 unescaped sites when this phase began, and nobody knew
+// which were new and which had already been reviewed. That is the distinction this project
+// draws at every phase: "enforced automatically, not by personal discipline".
 //
-// ── لماذا NEEDS عند صفر وATTR/URL بسقف ────────────────────────
+// ── Why NEEDS at zero and ATTR/URL under a ceiling ────────────
 //
-// NEEDS هو الإخراج في **جسم** الصفحة — حيث `<script>` محقون ينفَّذ
-// مباشرة. صُفِّرت كلها (مُهرَّبة، أو مُعفاة بسبب مكتوب في موضعها).
-// فالصفر هنا حالة قائمة يُحرَس بقاؤها، لا هدف بعيد.
+// NEEDS is output in the page's **body** — where an injected `<script>` runs immediately.
+// All of them were driven to zero (escaped, or exempted with a reason written in place).
+// So the zero here is a standing state to be guarded, not a distant goal.
 //
-// وATTR وURL أضيق خطراً (تحتاج كسر اقتباس أو مخطّط javascript:)
-// وأكثر عدداً، وتصفيرها عمل مرحلة مستقلّة. فالسقف يمنع نموّها اليوم
-// ريثما تُعالَج — وهو أصدق من ادّعاء تغطية لا توجد.
+// ATTR and URL are narrower dangers (they need a broken quote or a javascript: scheme) and
+// more numerous, and zeroing them is a phase of its own. So the ceiling stops them growing
+// today until they are dealt with — which is more honest than claiming coverage that does
+// not exist.
 //
-// ⚠️ السقف يُخفَّض عند كل إصلاح، ولا يُرفع أبداً. رفعه يعني أن البوّابة
-// تتبع الكود بدل أن يتبعها.
+// ⚠️ The ceiling is lowered with every fix and never raised. Raising it means the gate
+// follows the code rather than the code following the gate.
 const GATE_LIMITS = [
     'NEEDS' => 0,
     'ATTR'  => 27,
@@ -279,7 +280,7 @@ if (in_array('--gate', $argv, true)) {
 
         if ($actual > $limit) {
             fwrite(STDERR, sprintf(
-                "  ✗ %s: %d موضعاً — السقف %d\n",
+                "  ✗ %s: %d sites — the ceiling is %d\n",
                 $kind,
                 $actual,
                 $limit
@@ -289,11 +290,11 @@ if (in_array('--gate', $argv, true)) {
         }
 
         if ($actual < $limit) {
-            // نقصٌ عن السقف خبر جيّد، لكنه يعني أن السقف صار قديماً.
-            // التذكير هنا لا في المستقبل: من يُصلح موضعاً اليوم هو من
-            // يعرف أنه أصلحه.
+            // Falling under the ceiling is good news, but it means the ceiling has gone
+            // stale. The reminder belongs here and not in the future: whoever fixes a site
+            // today is the one who knows they fixed it.
             fwrite(STDOUT, sprintf(
-                "  ↓ %s: %d — أنقص من السقف (%d). خفّض GATE_LIMITS.\n",
+                "  ↓ %s: %d — under the ceiling (%d). Lower GATE_LIMITS.\n",
                 $kind,
                 $actual,
                 $limit
@@ -302,21 +303,21 @@ if (in_array('--gate', $argv, true)) {
     }
 
     if ($failed) {
-        fwrite(STDERR, "\n  شغّل: composer audit:escaping -- app/views --list NEEDS\n\n");
+        fwrite(STDERR, "\n  Run: composer audit:escaping -- app/views --list NEEDS\n\n");
         exit(1);
     }
 
-    echo "  ✓ الهروب ضمن الحدود (NEEDS = 0)\n";
+    echo "  ✓ Escaping is within its limits (NEEDS = 0)\n";
     exit(0);
 }
 
-echo "\n  تصنيف مخرجات <?= ?> في الـviews\n  " . str_repeat('-', 56) . "\n";
+echo "\n  Classification of the <?= ?> outputs in the views\n  " . str_repeat('-', 56) . "\n";
 foreach ($counts as $k => $v) {
     printf("  %-8s %5d\n", $k, $v);
 }
-printf("  %s\n  %-8s %5d\n\n", str_repeat('-', 56), 'المجموع', count($rows));
+printf("  %s\n  %-8s %5d\n\n", str_repeat('-', 56), 'Total', count($rows));
 
-// أكثر الملفات احتياجاً
+// The files needing the most attention
 $byFile = [];
 foreach ($rows as $r) {
     if ($r['kind'] === 'SAFE') {
@@ -325,7 +326,7 @@ foreach ($rows as $r) {
     $byFile[$r['file']] = ($byFile[$r['file']] ?? 0) + 1;
 }
 arsort($byFile);
-echo "  الملفات الأكثر احتياجاً للمراجعة\n  " . str_repeat('-', 56) . "\n";
+echo "  The files most in need of review\n  " . str_repeat('-', 56) . "\n";
 foreach (array_slice($byFile, 0, 15, true) as $f => $n) {
     printf("  %-50s %4d\n", str_replace('app/views/', '', $f), $n);
 }

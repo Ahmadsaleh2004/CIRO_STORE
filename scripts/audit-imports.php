@@ -2,23 +2,24 @@
 
 /**
  * scripts/audit-imports.php
- * يبحث عن كلاسات مستعملة داخل ملف ذي namespace بلا استيراد وبلا تأهيل.
+ * Looks for classes used inside a namespaced file with neither an import nor a
+ * qualification.
  *
- * الاستخدام:
+ * Usage:
  *     php scripts/audit-imports.php
  *
- * لماذا؟
- * داخل namespace App\Controllers، الاسم غير المؤهَّل Database يُحلّ إلى
- * App\Controllers\Database — لا إلى App\Core\Database. النتيجة خطأ Fatal
- * لا يظهر إلا لحظة تنفيذ ذلك السطر بالذات، فقد يبقى كامناً شهوراً في
- * مسار نادر. هذا ما حدث فعلاً في AdminSupportController::deleteMessage:
- * "حذف رسالة دعم" كان يفشل دائماً بـFatal error.
+ * Why?
+ * Inside namespace App\Controllers, the unqualified name Database resolves to
+ * App\Controllers\Database — not to App\Core\Database. The result is a fatal error that
+ * appears only the moment that particular line runs, so it can lie dormant for months on a
+ * rare path. That is exactly what happened in AdminSupportController::deleteMessage:
+ * "delete a support message" always failed with a fatal error.
  *
- * التحليل يمرّ عبر token_get_all لا عبر regex، فلا يُبلَّغ عن أسماء واردة
- * داخل التعليقات أو النصوص (مثل new Chart(...) في سكربت Chart.js
- * المضمّن، أو ذكر AdminOrdersController في docblock).
+ * The analysis goes through token_get_all rather than a regex, so names appearing inside
+ * comments or strings are not reported (such as new Chart(...) in the embedded Chart.js
+ * script, or a mention of AdminOrdersController in a docblock).
  *
- * يُرجِع exit code 1 عند وجود أي حالة.
+ * It returns exit code 1 when any case is found.
  */
 
 declare(strict_types=1);
@@ -26,7 +27,7 @@ declare(strict_types=1);
 $root = dirname(__DIR__);
 $dirs = ['app/Controllers', 'app/Models', 'app/Core'];
 
-/** كلاسات PHP المدمجة — تُحلّ عالمياً كـfallback فلا تحتاج استيراداً. */
+/** PHP's built-in classes — they resolve globally as a fallback, so they need no import. */
 const BUILTIN = [
     'PDO', 'PDOException', 'PDOStatement', 'Exception', 'Throwable', 'Error',
     'TypeError', 'ValueError', 'ArgumentCountError', 'JsonException',
@@ -38,8 +39,8 @@ const BUILTIN = [
 ];
 
 /**
- * يستخرج من ملف: النيسبيس، الأسماء المستوردة، والكلاسات المستعملة
- * استعمالاً حقيقياً (خارج التعليقات والنصوص).
+ * Extracts from a file: its namespace, the imported names, and the classes genuinely used
+ * (outside comments and strings).
  *
  * @return array{ns: string, imported: array<string, true>, declared: array<string, true>, used: array<string, int>}
  */
@@ -113,13 +114,13 @@ function analyse(string $file): array
             continue;
         }
 
-        // أي ذكر لاسم يبدأ بحرف كبير: Foo:: | new Foo( | extends Foo |
+        // Any mention of a name starting with a capital: Foo:: | new Foo( | extends Foo |
         // implements Foo | Foo $x | : Foo | #[Foo(...)] | @var Foo
         if ($t[0] === T_STRING && preg_match('/^[A-Z]/', $t[1])) {
             $prev = $tokens[$i - 1] ?? null;
             $next = $tokens[$i + 1] ?? null;
 
-            // مؤهَّل بالفعل (\App\Core\X أو App\Core\X)
+            // Already qualified (\App\Core\X or App\Core\X)
             $qualified = is_array($prev)
                 && in_array($prev[0], [T_NS_SEPARATOR, T_NAME_QUALIFIED, T_NAME_FULLY_QUALIFIED], true);
             if ($qualified) {
@@ -138,8 +139,9 @@ function analyse(string $file): array
             }
         }
 
-        // الأسماء داخل التعليقات لا تُعدّ استعمالاً، لكن @var/@param فيها
-        // قد تكون السبب الوحيد لوجود use — نعدّها ذِكراً كي لا نقترح حذفها.
+        // Names inside comments do not count as use, but an @var/@param among them may be
+        // the only reason a use exists — they count as a mention so we do not suggest
+        // removing it.
         if (in_array($t[0], [T_DOC_COMMENT, T_COMMENT], true)) {
             if (preg_match_all('/\b([A-Z]\w+)\b/', $t[1], $cm)) {
                 foreach ($cm[1] as $name) {
@@ -168,8 +170,8 @@ foreach ($dirs as $d) {
 }
 sort($files);
 
-$problems = [];   // كلاس مستعمل بلا استيراد — خطأ Fatal كامن
-$unused   = [];   // استيراد لا يشير إليه شيء — فوضى فقط، لا عطل
+$problems = [];   // A class used without an import — a latent fatal error
+$unused   = [];   // An import nothing refers to — untidiness only, not a fault
 
 foreach ($files as $file) {
     $a = analyse($file);
@@ -186,7 +188,7 @@ foreach ($files as $file) {
             continue;
         }
 
-        // اسم غير مؤهَّل يُحلّ داخل النيسبيس الحالي — سليم إن كان الملف موجوداً
+        // An unqualified name resolves inside the current namespace — fine if the file exists
         $sameNsPath = $root . '/' . str_replace('\\', '/', $a['ns']) . '/' . $cls . '.php';
         if (is_file($sameNsPath)) {
             continue;
@@ -203,16 +205,16 @@ foreach ($files as $file) {
 }
 
 if ($problems) {
-    echo "\n  كلاسات غير مستوردة — تُحلّ إلى النيسبيس الحالي فتُسبّب Fatal عند التنفيذ:\n\n";
+    echo "\n  Unimported classes — they resolve into the current namespace and cause a fatal error when run:\n\n";
     foreach ($problems as $p) {
-        printf("  ✗ %s:%d\n      %s  →  يبحث عنه PHP في %s\\%s\n\n", $p['file'], $p['line'], $p['class'], $p['ns'], $p['class']);
+        printf("  ✗ %s:%d\n      %s  →  PHP looks for it in %s\\%s\n\n", $p['file'], $p['line'], $p['class'], $p['ns'], $p['class']);
     }
 } else {
-    echo "\n  ✓ كل الكلاسات المستعملة مستوردة أو مؤهَّلة أو في نفس النيسبيس\n";
+    echo "\n  ✓ Every class used is imported, qualified, or in the same namespace\n";
 }
 
 if ($unused) {
-    echo "\n  استيرادات غير مستعملة (فوضى لا عطل):\n";
+    echo "\n  Unused imports (untidiness, not a fault):\n";
     foreach ($unused as $u) {
         printf("  · %-46s use ...\\%s;\n", $u['file'], $u['class']);
     }

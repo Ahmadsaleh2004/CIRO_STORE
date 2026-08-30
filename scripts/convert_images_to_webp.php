@@ -2,26 +2,26 @@
 
 /**
  * scripts/convert_images_to_webp.php
- * سكربت تحويل صور المنتجات (jpg/jpeg/png) إلى WebP مع تصغير أي صورة > 1200px
- * التشغيل: php scripts/convert_images_to_webp.php
- * التشغيل مع تجاوز الملفات الموجودة: php scripts/convert_images_to_webp.php --force
+ * Converts the product images (jpg/jpeg/png) to WebP, shrinking anything over 1200px.
+ * Run with: php scripts/convert_images_to_webp.php
+ * Run overwriting existing files: php scripts/convert_images_to_webp.php --force
  *
- * ملاحظة: الصور الأصلية لا تُمس — فقط نسخ .webp جديدة تُنشأ.
+ * Note: the originals are never touched — only new .webp copies are created.
  */
 
-// ── إعدادات ────────────────────────────────────────────
+// ── Settings ───────────────────────────────────────────
 $imagesDir  = __DIR__ . '/../public/images';
-$maxSide    = 1200;   // أقصى بُعد بالبيكسل (أطول ضلع)
-$quality    = 82;     // جودة WebP (0-100)
+$maxSide    = 1200;   // The largest dimension in pixels (the longer side)
+$quality    = 82;     // WebP quality (0-100)
 $force      = in_array('--force', $argv ?? [], true);
 
-// ── تحقق من دعم GD لـ WebP ──────────────────────────
+// ── Check that GD supports WebP ─────────────────────
 if (!function_exists('imagewebp')) {
     echo "[ERROR] GD extension does not support WebP. Please enable it in php.ini.\n";
     exit(1);
 }
 
-// ── جمع الملفات المؤهلة ─────────────────────────────
+// ── Collect the eligible files ──────────────────────
 $pattern = $imagesDir . '/*.{jpg,jpeg,png,JPG,JPEG,PNG}';
 $files   = glob($pattern, GLOB_BRACE);
 
@@ -39,21 +39,21 @@ foreach ($files as $srcPath) {
     $ext      = strtolower(pathinfo($srcPath, PATHINFO_EXTENSION));
     $destPath = preg_replace('/\.(jpe?g|png)$/i', '.webp', $srcPath);
 
-    // تجاوز إذا موجود مسبقاً ولم يُمرَّر --force
+    // Skip if it already exists and --force was not passed
     if (!$force && file_exists($destPath)) {
         $skipped++;
         $report[] = "[SKIP]    " . basename($srcPath) . " (WebP already exists)";
         continue;
     }
 
-    // قراءة الصورة الأصلية بحسب نوعها
+    // Read the original image according to its type
     $img = null;
     if ($ext === 'jpg' || $ext === 'jpeg') {
         $img = @imagecreatefromjpeg($srcPath);
     } elseif ($ext === 'png') {
         $img = @imagecreatefrompng($srcPath);
         if ($img) {
-            // الحفاظ على الشفافية عند التحويل لـ WebP
+            // Preserve transparency through the conversion to WebP
             imagealphablending($img, true);
             imagesavealpha($img, true);
         }
@@ -69,7 +69,7 @@ foreach ($files as $srcPath) {
     $origH = imagesy($img);
     $origSize = @filesize($srcPath);
 
-    // تصغير إذا كان أطول ضلع > 1200px
+    // Shrink if the longer side is over 1200px
     if ($origW > $maxSide || $origH > $maxSide) {
         if ($origW >= $origH) {
             $newW = $maxSide;
@@ -81,7 +81,7 @@ foreach ($files as $srcPath) {
 
         $resized = imagecreatetruecolor($newW, $newH);
 
-        // دعم الشفافية في الصور المصغّرة
+        // Transparency support in the shrunk images
         imagealphablending($resized, false);
         imagesavealpha($resized, true);
         $transparent = imagecolorallocatealpha($resized, 0, 0, 0, 127);
@@ -95,7 +95,7 @@ foreach ($files as $srcPath) {
         $resizeNote = " (no resize needed, {$origW}×{$origH})";
     }
 
-    // تصدير WebP
+    // Export the WebP
     $ok = imagewebp($img, $destPath, $quality);
     imagedestroy($img);
 
@@ -118,7 +118,7 @@ foreach ($files as $srcPath) {
     );
 }
 
-// ── طباعة التقرير ────────────────────────────────────
+// ── Print the report ─────────────────────────────────
 echo "\n======================================================\n";
 echo "  WebP Conversion Report — Cairo Store\n";
 echo "======================================================\n";

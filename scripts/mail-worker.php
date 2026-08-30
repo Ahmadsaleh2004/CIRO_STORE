@@ -2,29 +2,29 @@
 
 /**
  * scripts/mail-worker.php
- * يُفرِغ طابور البريد — يُشغَّل خارج مسار الطلب.
+ * Drains the mail queue — run outside the request path.
  *
- * الاستخدام:
- *     php scripts/mail-worker.php                 دفعة واحدة (25 رسالة)
- *     php scripts/mail-worker.php --limit=100     دفعة أكبر
- *     php scripts/mail-worker.php --status        حالة الطابور بلا إرسال
- *     php scripts/mail-worker.php --retry-failed  يعيد الفاشلة إلى المعلّقة
+ * Usage:
+ *     php scripts/mail-worker.php                 one batch (25 messages)
+ *     php scripts/mail-worker.php --limit=100     a larger batch
+ *     php scripts/mail-worker.php --status        the queue's state, sending nothing
+ *     php scripts/mail-worker.php --retry-failed  returns the failed ones to pending
  *
- * الجدولة على ويندوز (Task Scheduler) كل دقيقة:
+ * Scheduling on Windows (Task Scheduler) every minute:
  *     schtasks /create /tn "CairoStoreMail" /tr ^
  *       "C:\xampp\php\php.exe C:\xampp\htdocs\STORE\scripts\mail-worker.php" ^
  *       /sc minute /mo 1
  *
- * وعلى لينكس (cron):
+ * And on Linux (cron):
  *     * * * * * php /var/www/STORE/scripts/mail-worker.php >/dev/null 2>&1
  *
- * لماذا دفعة واحدة تنتهي بدل حلقة دائمة؟ لأن العملية الدائمة تحتاج
- * إشرافاً (إعادة تشغيل عند السقوط، حدّ ذاكرة، إغلاق نظيف) — وهو ما لا
- * يوفّره XAMPP. دفعة قصيرة تنتهي بنفسها يجدولها النظام: إن سقطت مرّة
- * عملت في الدقيقة التالية، ولا حالة تتسرّب بين التشغيلات.
+ * Why one batch that ends rather than a permanent loop? Because a long-running process
+ * needs supervision (a restart when it falls over, a memory limit, a clean shutdown) — and
+ * XAMPP provides none of that. A short batch that ends by itself is scheduled by the
+ * system: if it fails once it runs again the next minute, and no state leaks between runs.
  *
- * ⚠️ إن لم يُجدوَل هذا السكربت فالرسائل تتراكم في mail_queue بلا إرسال.
- * `--status` هو ما يكشف ذلك بسرعة.
+ * ⚠️ If this script is never scheduled, messages pile up in mail_queue unsent.
+ * `--status` is what reveals that quickly.
  */
 
 require_once __DIR__ . '/../vendor/autoload.php';
@@ -40,7 +40,7 @@ if (PHP_SAPI !== 'cli') {
 
 $argvList = $argv ?? [];
 
-/** يقرأ قيمة خيار على شكل --key=value. */
+/** Reads an option's value in the --key=value form. */
 /**
  * @param list<string> $args
  */
@@ -54,7 +54,7 @@ function optionValue(array $args, string $name, ?string $default = null): ?strin
     return $default;
 }
 
-/** ملخّص الطابور حسب الحالة. */
+/** A summary of the queue by status. */
 /**
  * @return array<string, int>
  */
@@ -71,22 +71,22 @@ function queueSummary(): array
     ];
 }
 
-echo PHP_EOL . '  طابور البريد — ' . DB_NAME . PHP_EOL . PHP_EOL;
+echo PHP_EOL . '  Mail queue — ' . DB_NAME . PHP_EOL . PHP_EOL;
 
-// ── الحالة فقط ────────────────────────────────────────────────
+// ── The status alone ──────────────────────────────────────────
 if (in_array('--status', $argvList, true)) {
     $s = queueSummary();
-    echo '  معلّقة: ' . $s['pending'] . '   مُرسَلة: ' . $s['sent'] . '   فاشلة: ' . $s['failed'] . PHP_EOL;
+    echo '  Pending: ' . $s['pending'] . '   Sent: ' . $s['sent'] . '   Failed: ' . $s['failed'] . PHP_EOL;
 
     if ($s['failed'] > 0) {
-        echo PHP_EOL . '  آخر الأخطاء:' . PHP_EOL;
+        echo PHP_EOL . '  The latest errors:' . PHP_EOL;
         $failed = Database::connect()->query(
             "SELECT id, to_email, last_error FROM mail_queue
               WHERE status = 'failed' ORDER BY id DESC LIMIT 5"
         )->fetchAll(PDO::FETCH_ASSOC);
 
         foreach ($failed as $row) {
-            echo '    #' . $row['id'] . '  ' . $row['to_email'] . '  — ' . ($row['last_error'] ?? '؟') . PHP_EOL;
+            echo '    #' . $row['id'] . '  ' . $row['to_email'] . '  — ' . ($row['last_error'] ?? '?') . PHP_EOL;
         }
     }
 
@@ -94,37 +94,37 @@ if (in_array('--status', $argvList, true)) {
     exit(0);
 }
 
-// ── إعادة الفاشلة إلى الطابور ─────────────────────────────────
+// ── Returning the failed ones to the queue ────────────────────
 if (in_array('--retry-failed', $argvList, true)) {
-    // attempts تُصفَّر أيضاً وإلا رفضها processQueue فوراً بشرط
-    // `attempts < MAX_ATTEMPTS` — فتبدو معلّقة ولا تُرسَل أبداً.
+    // attempts is reset too, otherwise processQueue rejects them straight away on its
+    // `attempts < MAX_ATTEMPTS` condition — so they would look pending and never be sent.
     $n = Database::connect()->exec(
         "UPDATE mail_queue SET status = 'pending', attempts = 0, last_error = NULL WHERE status = 'failed'"
     );
-    echo '  ✓ أُعيدت ' . (int) $n . ' رسالة إلى الطابور.' . PHP_EOL . PHP_EOL;
+    echo '  ✓ ' . (int) $n . ' messages returned to the queue.' . PHP_EOL . PHP_EOL;
     exit(0);
 }
 
-// ── الإفراغ ───────────────────────────────────────────────────
+// ── The drain ─────────────────────────────────────────────────
 $limit  = max(1, (int) optionValue($argvList, 'limit', '25'));
 $result = Mailer::processQueue($limit);
 $after  = queueSummary();
 
 if ($result['sent'] === 0 && $result['failed'] === 0) {
-    echo '  · لا رسائل معلّقة.' . PHP_EOL . PHP_EOL;
+    echo '  · No pending messages.' . PHP_EOL . PHP_EOL;
     exit(0);
 }
 
-echo '  ✓ أُرسلت: ' . $result['sent'] . PHP_EOL;
+echo '  ✓ Sent:    ' . $result['sent'] . PHP_EOL;
 
 if ($result['failed'] > 0) {
-    echo '  ✗ فشلت:  ' . $result['failed'] . PHP_EOL;
+    echo '  ✗ Failed:  ' . $result['failed'] . PHP_EOL;
 }
 if ($result['skipped'] > 0) {
-    echo '  · تخطّى:  ' . $result['skipped'] . ' (عامل آخر حجزها)' . PHP_EOL;
+    echo '  · Skipped: ' . $result['skipped'] . ' (another worker claimed them)' . PHP_EOL;
 }
 
-echo '  المتبقّي معلّقاً: ' . $after['pending'] . PHP_EOL . PHP_EOL;
+echo '  Still pending: ' . $after['pending'] . PHP_EOL . PHP_EOL;
 
-// كود خروج غير صفري عند وجود فشل نهائي — كي تلتقطه المراقبة.
+// A non-zero exit code when a final failure exists — so monitoring picks it up.
 exit($after['failed'] > 0 ? 1 : 0);

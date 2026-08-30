@@ -2,36 +2,37 @@
 
 /**
  * scripts/smoke-test.php
- * فحص دخان (smoke test) لكل راوتات GET في المشروع.
+ * A smoke test over every GET route in the project.
  *
- * الاستخدام:
- *     php scripts/smoke-test.php               ← الفحص المعتاد بعد أي تعديل
- *     php scripts/smoke-test.php --lint-all    ← مسح شامل (أبطأ، للتحقق النهائي)
- *     php scripts/smoke-test.php --verbose     ← اطبع كل راوت لا الفاشل فقط
- *     php scripts/smoke-test.php --skip-http   ← الصياغة فقط (بلا حاجة لـApache)
+ * Usage:
+ *     php scripts/smoke-test.php               ← the usual check after any edit
+ *     php scripts/smoke-test.php --lint-all    ← a full sweep (slower, for a final check)
+ *     php scripts/smoke-test.php --verbose     ← print every route, not only the failures
+ *     php scripts/smoke-test.php --skip-http   ← syntax only (no Apache needed)
  *     php scripts/smoke-test.php --base=http://localhost/STORE/public
  *
- * ماذا يفعل؟
- *   1. يقرأ راوتات GET من public/index.php مباشرة، فلا يصير قديماً
- *      عند إضافة راوت جديد.
- *   2. يضرب كل راوت ويتحقق من:
- *        - كود HTTP ضمن المتوقّع (200 أو 302 لصفحات تتطلب جلسة)
- *        - لا يوجد Fatal error / Warning / Notice / Deprecated في المخرجات
- *        - لا يوجد "View file ... not found" أو "Model class ... not found"
- *        - الصفحة ليست فارغة عند كود 200، والـHTML مكتمل
- *   3. يفحص صياغة ملفات PHP بـ php -l — هذا يغطي مسارات POST التي لا
- *      يستطيع الفحص عبر HTTP الوصول إليها. افتراضياً يفحص المعدَّل منذ
- *      آخر commit فقط (سريع)؛ --lint-all يفحص المشروع كاملاً.
+ * What does it do?
+ *   1. It reads the GET routes straight out of public/index.php, so it does not go stale
+ *      when a new route is added.
+ *   2. It hits every route and checks that:
+ *        - the HTTP code is among those expected (200, or 302 for pages needing a session)
+ *        - there is no Fatal error / Warning / Notice / Deprecated in the output
+ *        - there is no "View file ... not found" or "Model class ... not found"
+ *        - the page is not empty on a 200, and the HTML is complete
+ *   3. It checks the PHP files' syntax with php -l — which covers the POST paths the HTTP
+ *      check cannot reach. By default it checks only what changed since the last commit
+ *      (fast); --lint-all checks the whole project.
  *
- * يُرجِع exit code 1 عند أي فشل، فيصلح للربط بـ git hook أو CI.
+ * It returns exit code 1 on any failure, so it suits a git hook or CI.
  *
- * لماذا لا phpunit؟ المشروع بلا أي بنية اختبار، والهدف هنا شبكة أمان
- * تعمل بأمر واحد بدون إضافة تبعيات — لا بديل عن اختبارات حقيقية لاحقاً.
+ * Why not phpunit? The project had no test infrastructure at all when this was written, and
+ * the goal here was a safety net that runs with one command and adds no dependencies — not
+ * a substitute for real tests later.
  */
 
 declare(strict_types=1);
 
-// ── إعدادات ────────────────────────────────────────────────────────
+// ── Settings ───────────────────────────────────────────────────────
 $ROOT = dirname(__DIR__);
 $opts = getopt('', ['base::', 'verbose', 'skip-lint', 'skip-http', 'lint-all']);
 
@@ -44,8 +45,8 @@ $TIMEOUT  = 15;
 
 
 /**
- * راوتات تعتمد على خدمة خارجية (OAuth) أو على توكن في الرابط.
- * التحويل (302) أو الخطأ المتوقّع منها ليس عطلاً.
+ * Routes that depend on an external service (OAuth) or on a token in the link.
+ * A redirect (302) or the error expected from them is not a fault.
  */
 const EXTERNAL_ROUTES = [
     '/auth/google',
@@ -54,7 +55,7 @@ const EXTERNAL_ROUTES = [
     '/auth/reset',
 ];
 
-/** بارامترات نموذجية لراوتات تحتاجها كي تعرض شيئاً حقيقياً. */
+/** Sample parameters for the routes that need them to display anything real. */
 const ROUTE_PARAMS = [
     '/product'               => '?id=20',
     '/admin/users/details'   => '?id=1',
@@ -63,7 +64,7 @@ const ROUTE_PARAMS = [
     '/admin/products/edit'   => '?id=20',
 ];
 
-// ── ألوان الطرفية ──────────────────────────────────────────────────
+// ── Terminal colours ───────────────────────────────────────────────
 $isTty = function_exists('stream_isatty') && @stream_isatty(STDOUT);
 function paint(string $s, string $color): string
 {
@@ -75,7 +76,7 @@ function paint(string $s, string $color): string
     return "\033[" . ($codes[$color] ?? 0) . "m{$s}\033[0m";
 }
 
-// ── 1. استخراج راوتات GET من index.php ─────────────────────────────
+// ── 1. Extracting the GET routes from index.php ────────────────────
 /**
  * @return list<string>
  */
@@ -83,16 +84,16 @@ function extractGetRoutes(string $indexFile): array
 {
     $src = file_get_contents($indexFile);
     if ($src === false) {
-        fwrite(STDERR, "تعذّرت قراءة {$indexFile}\n");
+        fwrite(STDERR, "{$indexFile} could not be read\n");
         exit(1);
     }
     preg_match_all("/\\\$r->get\(\s*'([^']+)'/", $src, $m);
-    // preg_match_all تملأ $m[1] دائماً (ولو مصفوفة فارغة)، فـ?? هنا
-    // كانت تعد بحماية لا تحتاجها.
+    // preg_match_all always fills $m[1] (with an empty array at worst), so a ?? here was
+    // promising a protection nothing needed.
     return array_values(array_unique($m[1]));
 }
 
-// ── 2. طلب HTTP واحد ───────────────────────────────────────────────
+// ── 2. A single HTTP request ───────────────────────────────────────
 /**
  * @return array{body: string, code: int, type: string, error: string}
  */
@@ -101,7 +102,7 @@ function fetch(string $url, int $timeout): array
     $ch = curl_init($url);
     curl_setopt_array($ch, [
         CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_FOLLOWLOCATION => false,   // نريد رؤية الـ302 نفسه
+        CURLOPT_FOLLOWLOCATION => false,   // We want to see the 302 itself
         CURLOPT_TIMEOUT        => $timeout,
         CURLOPT_USERAGENT      => 'STORE-smoke-test/1.0',
         CURLOPT_HEADER         => false,
@@ -120,8 +121,8 @@ function fetch(string $url, int $timeout): array
     ];
 }
 
-// ── 3. فحص جسم الاستجابة ───────────────────────────────────────────
-/** @return string[] قائمة المشاكل المكتشفة (فارغة = سليم) */
+// ── 3. Inspecting the response body ────────────────────────────────
+/** @return string[] the problems found (empty = sound) */
 function inspectBody(string $body, string $route, int $code, string $contentType = ''): array
 {
     $problems = [];
@@ -132,10 +133,10 @@ function inspectBody(string $body, string $route, int $code, string $contentType
         'Warning:'           => 'Warning',
         'Notice:'            => 'Notice',
         'Deprecated:'        => 'Deprecated',
-        'Uncaught'           => 'استثناء غير مُلتقَط',
-        'View file ['        => 'view مفقود',
-        'Model class ['      => 'موديل مفقود',
-        'SQLSTATE'           => 'خطأ SQL ظاهر للمستخدم',
+        'Uncaught'           => 'an uncaught exception',
+        'View file ['        => 'a missing view',
+        'Model class ['      => 'a missing model',
+        'SQLSTATE'           => 'an SQL error visible to the user',
     ];
 
     foreach ($phpErrors as $needle => $label) {
@@ -145,40 +146,40 @@ function inspectBody(string $body, string $route, int $code, string $contentType
     }
 
     if ($code === 200 && trim($body) === '') {
-        $problems[] = 'صفحة فارغة';
+        $problems[] = 'an empty page';
     }
 
-    // فحص اكتمال HTML يُطبَّق على استجابات HTML وحدها.
+    // The HTML-completeness check applies to HTML responses alone.
     //
-    // ⚠️ التمييز من ترويسة Content-Type لا من قائمة يدوية.
+    // ⚠️ The distinction comes from the Content-Type header, not from a hand-written list.
     //
-    // كانت هنا NON_HTML_ROUTES: قائمة مكتوبة بأسماء ثمانية مسارات
-    // تُرجع JSON أو ملفاً. وهي تتقادم بالضرورة — أول نقطة JSON تُضاف
-    // بعدها تفشل بـ«HTML غير مكتمل»، وهي رسالة تصف الفاحص لا المفحوص.
-    // وقع ذلك فعلاً عند إضافة /health.
+    // There used to be a NON_HTML_ROUTES here: a list naming eight paths that return JSON
+    // or a file. And such a list necessarily goes stale — the first JSON endpoint added
+    // after it fails with "incomplete HTML", a message describing the checker rather than
+    // the thing checked. That actually happened when /health was added.
     //
-    // والاشتقاق من الترويسة يجعل القائمة غير لازمة: النقطة تعلن نوعها
-    // بنفسها، والفاحص يقرأ ما أعلنته.
+    // Deriving it from the header makes the list unnecessary: the endpoint declares its own
+    // type, and the checker reads what it declared.
     $looksHtml = $contentType === ''
         || str_contains(strtolower($contentType), 'text/html');
 
     if ($code === 200 && $looksHtml && !str_contains($body, '</html>')) {
-        $problems[] = 'HTML غير مكتمل (لا </html>)';
+        $problems[] = 'incomplete HTML (no </html>)';
     }
 
     return $problems;
 }
 
-// ── 3ب. الترويسات الأمنية على استجابة حيّة ─────────────────────────
+// ── 3b. The security headers on a live response ────────────────────
 /**
- * الترويسات التي يجب أن تحملها **كل** استجابة.
+ * The headers that **every** response must carry.
  *
- * لا تكفي مطابقة الاسم: `Content-Security-Policy: default-src *` ترويسة
- * موجودة وبلا قيمة. فلكلٍّ نصٌّ يجب أن يظهر داخلها.
+ * Matching the name is not enough: `Content-Security-Policy: default-src *` is a header
+ * that exists and is worth nothing. So each one carries a string that must appear inside it.
  *
- * HSTS ليست هنا عمداً: `.htaccess` يشترطها بـ`env=HTTPS`، وفحص الدخان
- * يعمل على http محلياً. إرسالها على http بلا معنى، وغيابها هناك سلامة
- * لا عطل.
+ * HSTS is deliberately absent: `.htaccess` conditions it on `env=HTTPS`, and the smoke test
+ * runs over http locally. Sending it over http is meaningless, and its absence there is
+ * correctness rather than a fault.
  */
 const REQUIRED_HEADERS = [
     'x-content-type-options'    => 'nosniff',
@@ -189,24 +190,25 @@ const REQUIRED_HEADERS = [
 ];
 
 /**
- * يتحقّق أن الخادم الحيّ يرسل الترويسات الأمنية فعلاً.
+ * Verifies that the live server really does send the security headers.
  *
- * ── لماذا فحصٌ حيّ لا قراءةُ ملف ──────────────────────────────
+ * ── Why a live check rather than reading a file ──────────────
  *
- * لأن الترويسات كلّها معلَّقة على `.htaccess`، وهو ملف **قد لا يُقرأ
- * إطلاقاً**: على nginx أو Caddy لا وجود له، وعلى Apache بلا
- * `AllowOverride All` يُتجاهَل، وبلا `mod_headers` تُتجاهَل كتلته.
- * وفي الحالات الثلاث يعمل الموقع تماماً — بلا CSP ولا nosniff ولا
- * حماية من التأطير، وبلا رسالة خطأ واحدة تدلّ على ذلك.
+ * Because the headers all hang off `.htaccess`, and that is a file that **may never be
+ * read at all**: on nginx or Caddy it does not exist, on Apache without `AllowOverride All`
+ * it is ignored, and without `mod_headers` its block is ignored. And in all three cases the
+ * site works perfectly — with no CSP, no nosniff and no framing protection, and without a
+ * single error message to say so.
  *
- * صنف العطل هذا لا يُمسك بقراءة الكود: الكود سليم. يُمسك بسؤال
- * الخادم نفسه.
+ * This class of fault is not caught by reading the code: the code is fine. It is caught by
+ * asking the server itself.
  *
- * (وهناك اختبار مرافق — tests/Unit/SecurityHeadersTest.php — يحرس
- * محتوى `.htaccess` نفسه فيمسك الحذف العرضي بلا حاجة إلى خادم. الاثنان
- * يغطّيان عطلين مختلفين: هذا يفحص ما يصل الزائر، وذاك ما نعِد به.)
+ * (And there is a companion test — tests/Unit/SecurityHeadersTest.php — that guards the
+ * content of `.htaccess` itself, catching an accidental deletion with no server needed. The
+ * two cover different faults: this one checks what reaches the visitor, that one checks
+ * what we promise.)
  *
- * @return string[] قائمة المشاكل (فارغة = سليم)
+ * @return string[] the problems (empty = sound)
  */
 function checkSecurityHeaders(string $base, int $timeout): array
 {
@@ -225,7 +227,7 @@ function checkSecurityHeaders(string $base, int $timeout): array
     curl_close($ch);
 
     if ($raw === false || $err !== '') {
-        return ['curl: ' . ($err !== '' ? $err : 'لا استجابة')];
+        return ['curl: ' . ($err !== '' ? $err : 'no response')];
     }
 
     $headerBlob = strtolower(substr((string) $raw, 0, $headerSize));
@@ -233,18 +235,18 @@ function checkSecurityHeaders(string $base, int $timeout): array
     $problems = [];
     foreach (REQUIRED_HEADERS as $name => $needle) {
         if (!str_contains($headerBlob, $name . ':')) {
-            $problems[] = "ترويسة غائبة: {$name}";
+            $problems[] = "missing header: {$name}";
             continue;
         }
         if (!str_contains($headerBlob, strtolower($needle))) {
-            $problems[] = "ترويسة {$name} موجودة لكن بلا «{$needle}»";
+            $problems[] = "the {$name} header is present but without \"{$needle}\"";
         }
     }
 
     return $problems;
 }
 
-// ── 4. تشغيل فحص HTTP ──────────────────────────────────────────────
+// ── 4. Running the HTTP check ──────────────────────────────────────
 /**
  * @param list<string> $routes
  * @return list<array<string, mixed>>
@@ -262,19 +264,20 @@ function runHttpChecks(array $routes, string $base, int $timeout, bool $verbose)
         if ($r['error'] !== '') {
             $problems[] = 'curl: ' . $r['error'];
         } elseif (!in_array($r['code'], [200, 302, 301, 401], true)) {
-            // 302 مقبول: **صفحة** تحوّل لتسجيل الدخول بدون جلسة.
+            // 302 is acceptable: a **page** redirecting to sign-in without a session.
             //
-            // و401 مقبول لسبب مختلف: نقطة **JSON** بلا جلسة لا تحوّل —
-            // التحويل يجعل fetch يتبع الوجهة ويحاول قراءة صفحة HTML
-            // كاملة كـJSON. الرفض الصحيح هناك رمزُ حالة، لا وجهة.
-            // ظهرت الحاجة حين صحّحت /notifications/* ردّها من 200 إلى
-            // 401؛ قبلها كانت تجيب «مرفوض» بجسمٍ فوق حالةِ «تمّ».
+            // And 401 is acceptable for a different reason: a **JSON** endpoint without a
+            // session does not redirect — a redirect makes fetch follow the destination and
+            // try to read a whole HTML page as JSON. The correct refusal there is a status
+            // code, not a destination. The need appeared when /notifications/* had its
+            // reply corrected from 200 to 401; before that it answered "denied" in a body
+            // on top of a "done" status.
             $problems[] = 'HTTP ' . $r['code'];
         } else {
             $problems = inspectBody($r['body'], $route, $r['code'], $r['type'] ?? '');
         }
 
-        // الراوتات الخارجية: التحويل متوقّع، لا نعدّه عطلاً
+        // The external routes: a redirect is expected, so it is not counted as a fault
         if (in_array($route, EXTERNAL_ROUTES, true) && $r['code'] === 302) {
             $problems = [];
         }
@@ -290,9 +293,9 @@ function runHttpChecks(array $routes, string $base, int $timeout, bool $verbose)
     return $results;
 }
 
-// ── 5. فحص الصياغة (يغطي مسارات POST) ──────────────────────────────
+// ── 5. The syntax check (it covers the POST paths) ─────────────────
 /**
- * كل ملفات PHP في المشروع، باستثناء التبعيات والنسخ الاحتياطية.
+ * Every PHP file in the project, excluding the dependencies and the backups.
  *
  * @return string[]
  */
@@ -321,19 +324,20 @@ function allPhpFiles(string $root): array
 }
 
 /**
- * ملفات PHP المعدَّلة منذ آخر commit (بما فيها غير المتتبَّعة).
- * هذا هو الوضع الافتراضي: `php -l` عملية منفصلة لكل ملف، وعلى Windows
- * فحص المشروع كاملاً يستغرق دقائق — بينما ما عدّلته للتو يُفحص فوراً.
- * استخدم --lint-all للمسح الشامل.
+ * The PHP files changed since the last commit (untracked ones included).
+ * This is the default: `php -l` is a separate process per file, and on Windows checking the
+ * whole project takes minutes — while what you just edited is checked instantly.
+ * Use --lint-all for the full sweep.
  *
- * @return string[]|null null إذا لم يكن المجلد مستودع git
+ * @return string[]|null null if the directory is not a git repository
  */
 function changedPhpFiles(string $root): ?array
 {
     $out = [];
     $rc  = 0;
-    // سكربت تطوير لا يُخدَّم عبر الويب. $root ثابت يمرّ بـescapeshellarg،
-    // وبقية الأمر حرفية في هذا الملف — لا مدخل مستخدم في أي موضع.
+    // A development script, never served over the web. $root is a constant passing through
+    // escapeshellarg, and the rest of the command is literal in this file — no user input
+    // anywhere.
     // nosemgrep: php.lang.security.exec-use.exec-use
     exec('git -C ' . escapeshellarg($root) . ' rev-parse --is-inside-work-tree 2>&1', $out, $rc);
     if ($rc !== 0) {
@@ -343,7 +347,7 @@ function changedPhpFiles(string $root): ?array
     $files = [];
     foreach (['diff --name-only HEAD', 'ls-files --others --exclude-standard'] as $cmd) {
         $lines = [];
-        // $cmd يأتي من مصفوفة حرفية في السطر أعلاه، لا من أي مدخل.
+        // $cmd comes from the literal array on the line above, not from any input.
         // nosemgrep: php.lang.security.exec-use.exec-use
         exec('git -C ' . escapeshellarg($root) . ' ' . $cmd . ' 2>&1', $lines);
         foreach ($lines as $line) {
@@ -372,7 +376,7 @@ function runLintChecks(array $files): array
     foreach ($files as $path) {
         $out = [];
         $rc  = 0;
-        // $path من مخرَج git داخل هذا السكربت، ويمرّ بـescapeshellarg.
+        // $path comes from git's output inside this script, and passes through escapeshellarg.
         // nosemgrep: php.lang.security.exec-use.exec-use
         exec('php -l ' . escapeshellarg($path) . ' 2>&1', $out, $rc);
         if ($rc !== 0) {
@@ -383,15 +387,15 @@ function runLintChecks(array $files): array
     return ['checked' => count($files), 'failures' => $failures];
 }
 
-// ── تشغيل ──────────────────────────────────────────────────────────
+// ── The run ────────────────────────────────────────────────────────
 $exitCode = 0;
 
-echo paint("\n  فحص الدخان — Cairo Store\n", 'bold');
-echo paint("  الأساس: {$BASE}\n\n", 'grey');
+echo paint("\n  Smoke test — Cairo Store\n", 'bold');
+echo paint("  Base: {$BASE}\n\n", 'grey');
 
 if (!$SKIPHTTP) {
     $routes = extractGetRoutes($ROOT . '/public/index.php');
-    echo paint(sprintf("  ── HTTP: %d راوت GET ──\n", count($routes)), 'bold');
+    echo paint(sprintf("  ── HTTP: %d GET routes ──\n", count($routes)), 'bold');
 
     $results = runHttpChecks($routes, $BASE, $TIMEOUT, $VERBOSE);
     $failed  = 0;
@@ -416,15 +420,15 @@ if (!$SKIPHTTP) {
 
     $passed = count($results) - $failed;
     echo $failed === 0
-        ? paint("  ✓ نجح {$passed}/" . count($results) . "\n\n", 'green')
-        : paint("  ✗ فشل {$failed} من " . count($results) . "\n\n", 'red');
+        ? paint("  ✓ {$passed}/" . count($results) . " passed\n\n", 'green')
+        : paint("  ✗ {$failed} of " . count($results) . " failed\n\n", 'red');
 
     if ($failed > 0) {
         $exitCode = 1;
     }
 
-    // ── الترويسات الأمنية ──────────────────────────────────────
-    echo paint("  ── الترويسات الأمنية ──\n", 'bold');
+    // ── The security headers ───────────────────────────────────
+    echo paint("  ── Security headers ──\n", 'bold');
 
     $headerProblems = checkSecurityHeaders($BASE, $TIMEOUT);
 
@@ -433,9 +437,9 @@ if (!$SKIPHTTP) {
     }
 
     if ($headerProblems === []) {
-        echo paint('  ✓ ' . count(REQUIRED_HEADERS) . " ترويسة حاضرة على استجابة حيّة\n\n", 'green');
+        echo paint('  ✓ ' . count(REQUIRED_HEADERS) . " headers present on a live response\n\n", 'green');
     } else {
-        echo paint("  ✗ الخادم لا يرسل الحماية التي يَعِد بها .htaccess\n\n", 'red');
+        echo paint("  ✗ The server is not sending the protection .htaccess promises\n\n", 'red');
         $exitCode = 1;
     }
 }
@@ -443,21 +447,21 @@ if (!$SKIPHTTP) {
 if (!$SKIPLINT) {
     if ($LINTALL) {
         $files = allPhpFiles($ROOT);
-        $scope = 'المشروع كاملاً';
+        $scope = 'the whole project';
     } else {
         $files = changedPhpFiles($ROOT);
         if ($files === null) {
             $files = allPhpFiles($ROOT);
-            $scope = 'المشروع كاملاً (لا يوجد git)';
+            $scope = 'the whole project (no git)';
         } else {
-            $scope = 'المعدَّل منذ آخر commit';
+            $scope = 'changed since the last commit';
         }
     }
 
-    echo paint("  ── صياغة PHP ({$scope}) ──\n", 'bold');
+    echo paint("  ── PHP syntax ({$scope}) ──\n", 'bold');
 
     if ($files === []) {
-        echo paint("  ✓ لا ملفات معدَّلة\n\n", 'green');
+        echo paint("  ✓ No changed files\n\n", 'green');
     } else {
         $lint = runLintChecks($files);
 
@@ -467,8 +471,8 @@ if (!$SKIPLINT) {
         }
 
         echo empty($lint['failures'])
-            ? paint("  ✓ {$lint['checked']} ملف سليم\n\n", 'green')
-            : paint('  ✗ ' . count($lint['failures']) . " ملف فيه خطأ صياغة\n\n", 'red');
+            ? paint("  ✓ {$lint['checked']} files sound\n\n", 'green')
+            : paint('  ✗ ' . count($lint['failures']) . " files with a syntax error\n\n", 'red');
 
         if (!empty($lint['failures'])) {
             $exitCode = 1;
@@ -477,7 +481,7 @@ if (!$SKIPLINT) {
 }
 
 echo $exitCode === 0
-    ? paint("  النتيجة: أخضر\n\n", 'green')
-    : paint("  النتيجة: فشل\n\n", 'red');
+    ? paint("  Result: green\n\n", 'green')
+    : paint("  Result: failed\n\n", 'red');
 
 exit($exitCode);

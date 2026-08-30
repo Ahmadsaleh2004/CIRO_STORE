@@ -2,18 +2,18 @@
 
 /**
  * scripts/backfill_blocked_users_cancel_orders.php
- * سكربت one-time يُشغَّل يدويًا من CLI:
+ * A one-time script, run by hand from the CLI:
  *   php scripts/backfill_blocked_users_cancel_orders.php
  *
- * يلغي الطلبات المعلّقة (not_taken / taken) لكل المستخدمين المبلوكين
- * (عدد الإضرابات >= 3) الذين لم تُلغَ طلباتهم تلقائيًا — بسبب بيانات
- * قديمة أُدخلت قبل تفعيل auto-cancel، أو طلبات أُنشئت بعد البلوك.
+ * It cancels the pending orders (not_taken / taken) of every blocked user
+ * (three strikes or more) whose orders were not cancelled automatically — because of old
+ * data entered before auto-cancel was switched on, or orders created after the block.
  *
- * يعتمد على OrderModel::cancelAllPendingForUser() (transaction آمنة،
- * تحترم stock_restored لمنع الإرجاع المضاعف للمخزون).
+ * It leans on OrderModel::cancelAllPendingForUser() (a safe transaction that respects
+ * stock_restored, so stock is never returned twice).
  */
 
-// ── التحميل — نفس تسلسل public/index.php بالحرف ──────────────
+// ── Bootstrapping — the exact sequence public/index.php uses ─
 require_once __DIR__ . '/../app/config/env_loader.php';
 loadEnv(__DIR__ . '/../.env');
 
