@@ -2,13 +2,13 @@
 
 /**
  * tests/phpstan-bootstrap.php
- * ثوابت وقت التشغيل — لأجل التحليل الثابت وحده.
+ * The run-time constants — for the static analysis alone.
  *
- * config.php يعرّف هذه الثوابت من .env، لكن PHPStan لا ينفّذ الملف
- * (وتنفيذه سيفتح اتصالاً بقاعدة البيانات أثناء التحليل). فتُعلَن هنا
- * بقيم وهمية كي يعرف المحلّل أنها موجودة وما أنواعها.
+ * config.php defines these constants from .env, but PHPStan does not execute that file
+ * (and executing it would open a database connection during analysis). So they are declared
+ * here with dummy values, to tell the analyser they exist and what their types are.
  *
- * ⚠️ القيم هنا **لا تصل إلى أي كود يعمل**. لا تضع فيها شيئاً حقيقياً.
+ * ⚠️ The values here **never reach any running code**. Put nothing real in them.
  */
 
 define('APPROOT', __DIR__ . '/../app');

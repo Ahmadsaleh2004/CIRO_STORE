@@ -1,13 +1,13 @@
 /**
  * tests/js/helpers/load.mjs
- * يحمّل ملف JS من المشروع في النطاق العام — كما يفعل المتصفح.
+ * Loads one of the project's JS files into the global scope — as the browser does.
  *
- * ملفات public/js ليست وحدات ES: تُحمَّل بوسوم <script> وتُصدِّر بالإسناد
- * إلى window. فلا يمكن `import` شيء منها، ومحاولة تحويلها لأجل الاختبار
- * كانت ستعني اختبار نسخة غير التي تعمل.
+ * The public/js files are not ES modules: they are loaded by <script> tags and export by
+ * assigning to window. So nothing can be `import`ed from them, and converting them for the
+ * sake of testing would have meant testing a copy other than the one that runs.
  *
- * التنفيذ بـFunction على globalThis يعيد إنتاج البيئة نفسها: `window`
- * موجودة (jsdom)، والتصريحات في المستوى الأعلى تصير عامّة.
+ * Executing through Function on globalThis reproduces the same environment: `window` exists
+ * (jsdom), and the top-level declarations become global.
  */
 
 import { readFileSync } from 'node:fs';
@@ -17,13 +17,13 @@ import { fileURLToPath } from 'node:url';
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
 
 /**
- * @param {string} relative مسار تحت public/ مثل 'js/core/utils.js'
+ * @param {string} relative a path under public/, such as 'js/core/utils.js'
  */
 export function loadScript(relative) {
     const source = readFileSync(join(root, 'public', relative), 'utf8');
 
-    // indirect eval: ينفّذ في النطاق العام لا في نطاق هذه الدالة، فتصير
-    // `function foo()` في المستوى الأعلى متاحةً كما في المتصفح.
+    // An indirect eval: it runs in the global scope rather than in this function's, so a
+    // top-level `function foo()` becomes available exactly as it is in the browser.
     // eslint-disable-next-line no-eval
     (0, eval)(source);
 }

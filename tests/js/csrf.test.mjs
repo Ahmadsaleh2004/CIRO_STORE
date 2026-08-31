@@ -3,144 +3,144 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import { loadScript } from './helpers/load.mjs';
 
 /**
- * js/core/csrf.js — شبكة أمان CSRF في المتصفح.
+ * js/core/csrf.js — the CSRF safety net in the browser.
  *
- * هذا الملف له **تاريخ أعطال حقيقي**، وكلّها من صنف واحد: الفشل
- * الصامت. الشبكة تبدو عاملة لأن الطلب الأول ينجح عادةً، ولا يظهر
- * العطل إلا حين تُطلب إعادة المحاولة فعلاً — أي عند انتهاء التوكن،
- * وهو ما لا يحدث في أي اختبار يدوي قصير.
+ * This file has **a real history of faults**, all of them of one kind: silent failure. The
+ * net looks like it works because the first request usually succeeds, and the fault appears
+ * only when a retry is actually needed — that is, when the token expires, which never
+ * happens in a short manual test.
  *
- * موثّق في الملف نفسه: «النسخة السابقة لم تكن **تتجاهله** بل
- * **تفسده**: كل جسم نصّي كان يمرّ على URLSearchParams، فيتحوّل
- * {"csrf_token":"…"} إلى مفتاح واحد مُرمَّز لا يستطيع json_decode
- * قراءته. أي أن إعادة المحاولة كانت تفشل حتماً لكل نقطة ترسل JSON —
- * وهي صفحة الدفع و admin/my-info وغيرها».
+ * Documented in the file itself: "the previous version did not **ignore** it, it
+ * **corrupted** it: every text body went through URLSearchParams, turning
+ * {"csrf_token":"…"} into a single encoded key that json_decode cannot read. Which means
+ * the retry failed without exception for every endpoint that sends JSON — the checkout page
+ * and admin/my-info among them."
  *
- * rebuildBodyWithToken دالة داخلية لا تُصدَّر إلى window، فتُستخرج
- * بتنفيذ الملف ثم قراءتها من النطاق العام — وهو ما يجعل هذا الاختبار
- * ممكناً أصلاً في بنية بلا وحدات.
+ * rebuildBodyWithToken is an internal function never exported to window, so it is obtained
+ * by executing the file and reading it off the global scope — which is what makes this test
+ * possible at all in a structure without modules.
  */
 describe('csrf.js — rebuildBodyWithToken', () => {
     let rebuild;
 
     beforeAll(() => {
         loadScript('js/core/csrf.js');
-        // الدالة معرَّفة في المستوى الأعلى، فتصير عامّة بعد التنفيذ.
+        // The function is declared at the top level, so it becomes global after execution.
         rebuild = globalThis.rebuildBodyWithToken;
     });
 
-    it('الدالة متاحة للاختبار', () => {
+    it('the function is reachable for testing', () => {
         expect(typeof rebuild).toBe('function');
     });
 
-    describe('FormData — الشكل الأكثر شيوعاً في نماذج المشروع', () => {
-        it('يستبدل التوكن ويُبقي بقية الحقول', () => {
+    describe('FormData — the commonest shape in the project’s forms', () => {
+        it('replaces the token and keeps the other fields', () => {
             const body = new FormData();
-            body.append('csrf_token', 'قديم');
-            body.append('name', 'أحمد');
+            body.append('csrf_token', 'old');
+            body.append('name', 'Ahmad');
             body.append('qty', '3');
 
-            const out = rebuild({ body }, 'جديد');
+            const out = rebuild({ body }, 'new');
 
             expect(out.ok).toBe(true);
-            expect(out.body.get('csrf_token')).toBe('جديد');
-            expect(out.body.get('name')).toBe('أحمد');
+            expect(out.body.get('csrf_token')).toBe('new');
+            expect(out.body.get('name')).toBe('Ahmad');
             expect(out.body.get('qty')).toBe('3');
         });
 
-        it('يضيف التوكن إن لم يكن موجوداً', () => {
+        it('adds the token when it is absent', () => {
             const body = new FormData();
             body.append('name', 'x');
 
-            const out = rebuild({ body }, 'جديد');
+            const out = rebuild({ body }, 'new');
 
             expect(out.ok).toBe(true);
-            expect(out.body.get('csrf_token')).toBe('جديد');
+            expect(out.body.get('csrf_token')).toBe('new');
         });
     });
 
     describe('URLSearchParams', () => {
-        it('يستبدل التوكن ويُبقي الباقي', () => {
-            const body = new URLSearchParams({ csrf_token: 'قديم', id: '9' });
+        it('replaces the token and keeps the rest', () => {
+            const body = new URLSearchParams({ csrf_token: 'old', id: '9' });
 
-            const out = rebuild({ body }, 'جديد');
+            const out = rebuild({ body }, 'new');
 
             expect(out.ok).toBe(true);
-            expect(new URLSearchParams(out.body.toString()).get('csrf_token')).toBe('جديد');
+            expect(new URLSearchParams(out.body.toString()).get('csrf_token')).toBe('new');
             expect(new URLSearchParams(out.body.toString()).get('id')).toBe('9');
         });
     });
 
-    describe('جسم JSON — الشكل الذي كان يُفسَد', () => {
+    describe('A JSON body — the shape that used to be corrupted', () => {
         /**
-         * الاختبار الذي يحرس العطل الأصلي.
+         * The test that guards the original fault.
          *
-         * لو عاد الجسم النصّي يمرّ على URLSearchParams، لصار الناتج
-         * مفتاحاً واحداً مُرمَّزاً بـ%7B%22csrf_token%22… ولفشل
-         * json_decode على الخادم — فتفشل إعادة المحاولة حتماً لكل نقطة
-         * ترسل JSON.
+         * Were the text body to go through URLSearchParams again, the result would be a
+         * single key encoded as %7B%22csrf_token%22… and json_decode would fail on the
+         * server — so the retry would fail without exception for every endpoint that sends
+         * JSON.
          */
-        it('يُبقي الجسم JSON صالحاً ويستبدل التوكن داخله', () => {
-            const body = JSON.stringify({ csrf_token: 'قديم', items: [1, 2, 3] });
+        it('keeps a JSON body valid and replaces the token inside it', () => {
+            const body = JSON.stringify({ csrf_token: 'old', items: [1, 2, 3] });
 
-            const out = rebuild({ body, headers: { 'Content-Type': 'application/json' } }, 'جديد');
+            const out = rebuild({ body, headers: { 'Content-Type': 'application/json' } }, 'new');
 
             expect(out.ok).toBe(true);
 
-            // الناتج يجب أن يبقى JSON قابلاً للتحليل — لا نصّاً مُرمَّزاً.
+            // The result must remain parseable JSON — not encoded text.
             const parsed = JSON.parse(out.body);
-            expect(parsed.csrf_token).toBe('جديد');
+            expect(parsed.csrf_token).toBe('new');
             expect(parsed.items).toEqual([1, 2, 3]);
         });
 
-        it('يضيف التوكن إلى جسم JSON لا يحمله', () => {
+        it('adds the token to a JSON body that lacks it', () => {
             const body = JSON.stringify({ items: [] });
 
-            const out = rebuild({ body, headers: { 'Content-Type': 'application/json' } }, 'جديد');
+            const out = rebuild({ body, headers: { 'Content-Type': 'application/json' } }, 'new');
 
             expect(out.ok).toBe(true);
-            expect(JSON.parse(out.body).csrf_token).toBe('جديد');
+            expect(JSON.parse(out.body).csrf_token).toBe('new');
         });
 
-        it('يقرأ ترويسة النوع مهما كانت حالة أحرفها', () => {
+        it('reads the content-type header whatever its letter case', () => {
             const body = JSON.stringify({ a: 1 });
 
-            const out = rebuild({ body, headers: { 'content-type': 'application/json; charset=utf-8' } }, 'ج');
+            const out = rebuild({ body, headers: { 'content-type': 'application/json; charset=utf-8' } }, 't');
 
             expect(out.ok).toBe(true);
-            expect(JSON.parse(out.body).csrf_token).toBe('ج');
+            expect(JSON.parse(out.body).csrf_token).toBe('t');
         });
 
-        it('يقبل الترويسات ككائن Headers', () => {
+        it('accepts the headers as a Headers object', () => {
             const headers = new Headers({ 'Content-Type': 'application/json' });
-            const out = rebuild({ body: JSON.stringify({ a: 1 }), headers }, 'ج');
+            const out = rebuild({ body: JSON.stringify({ a: 1 }), headers }, 't');
 
             expect(out.ok).toBe(true);
-            expect(JSON.parse(out.body).csrf_token).toBe('ج');
+            expect(JSON.parse(out.body).csrf_token).toBe('t');
         });
 
-        it('يقبل الترويسات كمصفوفة أزواج', () => {
+        it('accepts the headers as an array of pairs', () => {
             const headers = [['Content-Type', 'application/json']];
-            const out = rebuild({ body: JSON.stringify({ a: 1 }), headers }, 'ج');
+            const out = rebuild({ body: JSON.stringify({ a: 1 }), headers }, 't');
 
             expect(out.ok).toBe(true);
-            expect(JSON.parse(out.body).csrf_token).toBe('ج');
+            expect(JSON.parse(out.body).csrf_token).toBe('t');
         });
     });
 
-    describe('ما لا يُعرف كيف يُعاد بناؤه', () => {
+    describe('What cannot be rebuilt', () => {
         /**
-         * ok=false تعني «لا تُعِد المحاولة». وهذا أصحّ من محاولة عمياء:
-         * إعادة إرسال جسم أُفسد في الطريق تُنتج طلباً خاطئاً بصمت بدل
-         * خطأ واضح.
+         * ok=false means "do not retry". Which is more correct than a blind attempt:
+         * resending a body corrupted along the way produces a wrong request silently instead
+         * of a clear error.
          */
-        it('يرفض إعادة بناء ما لا يفهمه بدل تخريبه', () => {
-            const out = rebuild({ body: new Blob(['x']) }, 'ج');
+        it('refuses to rebuild what it does not understand, rather than mangling it', () => {
+            const out = rebuild({ body: new Blob(['x']) }, 't');
             expect(out.ok).toBe(false);
         });
 
-        it('يرفض الجسم الغائب', () => {
-            const out = rebuild({}, 'ج');
+        it('refuses an absent body', () => {
+            const out = rebuild({}, 't');
             expect(out.ok).toBe(false);
         });
     });

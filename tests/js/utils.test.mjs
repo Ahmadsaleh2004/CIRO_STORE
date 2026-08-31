@@ -3,55 +3,55 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import { loadScript } from './helpers/load.mjs';
 
 /**
- * js/core/utils.js — الدوال المشتركة لكل صفحات المتجر.
+ * js/core/utils.js — the functions shared by every store page.
  *
- * أهمّ ما هنا `stockBadge`: **مرآة لـgetStockBadge() في PHP** موثَّقة
- * صراحةً في الملفين. الاثنتان تخدمان الشاشة نفسها — الـPHP للبطاقات
- * المبنيّة على الخادم، والـJS للبطاقات التي يبنيها المتصفح (المفضّلة
- * وتفاصيل المنتج). واختلافهما يعني منتجاً واحداً بشارتين مختلفتين
- * حسب الطريق الذي وصل منه.
+ * The most important thing here is `stockBadge`: **a mirror of getStockBadge() in PHP**,
+ * documented explicitly in both files. The two serve the same screen — the PHP for the cards
+ * built on the server, and the JS for the cards the browser builds (the wishlist and the
+ * product details). And a difference between them means one product with two different
+ * badges depending on which route it arrived by.
  *
- * الطرف الـPHP مختبَر في tests/Unit/StockBadgeHelperTest.php بالقيم
- * نفسها. الاختباران معاً هما ما يجعل «يجب أن تبقى مطابقة» جملةً
- * مفروضة لا أمنية مكتوبة في تعليق.
+ * The PHP side is tested in tests/Unit/StockBadgeHelperTest.php with the same values. The
+ * two tests together are what make "they must stay identical" an enforced statement rather
+ * than a wish written in a comment.
  */
 describe('utils.js', () => {
     beforeAll(() => {
         loadScript('js/core/utils.js');
     });
 
-    describe('stockBadge — مرآة getStockBadge في PHP', () => {
-        it('صفر يعني نفاد المخزون', () => {
+    describe('stockBadge — a mirror of getStockBadge in PHP', () => {
+        it('zero means out of stock', () => {
             expect(window.stockBadge(0)).toEqual({ label: 'Out of Stock', class: 'bg-danger' });
         });
 
-        it('النفاد يسبق كل شيء ولا يقلبه وسيط العرض', () => {
+        it('being out of stock outranks everything, and the display flag does not override it', () => {
             expect(window.stockBadge(0, true).label).toBe('Out of Stock');
         });
 
-        it('المخزون المنخفض يعرض العدد المتبقّي', () => {
+        it('low stock shows the number remaining', () => {
             expect(window.stockBadge(7)).toEqual({
                 label: 'Limited (7 left)',
                 class: 'bg-warning text-dark',
             });
         });
 
-        // حدّا العتبة تحديداً — نفس ما يحرسه الاختبار في PHP.
-        it('العتبة عند 50 بالضبط', () => {
+        // The two sides of the threshold precisely — the same thing the PHP test guards.
+        it('the threshold sits at exactly 50', () => {
             expect(window.stockBadge(50).label).toBe('Limited (50 left)');
             expect(window.stockBadge(51)).toBeNull();
             expect(window.stockBadge(51, true).label).toBe('In Stock (51)');
         });
 
-        it('واحد ما زال محدوداً', () => {
+        it('one is still limited', () => {
             expect(window.stockBadge(1).label).toBe('Limited (1 left)');
         });
 
-        it('المخزون الوفير بلا شارة افتراضياً', () => {
+        it('plentiful stock carries no badge by default', () => {
             expect(window.stockBadge(500)).toBeNull();
         });
 
-        it('والمخزون الوفير بشارة خضراء عند الطلب', () => {
+        it('and plentiful stock carries a green badge when asked for', () => {
             expect(window.stockBadge(500, true)).toEqual({
                 label: 'In Stock (500)',
                 class: 'bg-success',
@@ -61,79 +61,79 @@ describe('utils.js', () => {
 
     describe('encodeImagePath', () => {
         /**
-         * العطل الذي وُجدت له: المسافة في srcset **فاصل بين مرشّحين**
-         * لا محرفاً عادياً. أسماء صور المشروع تحوي مسافات، فكان
-         * المتصفح يقرأ «…/images/apple watch.webp» مرشّحَين ويرفض
-         * الاثنين — عشر مرّات في تحميل واحد.
+         * The fault it exists for: a space in a srcset is **a separator between candidates**
+         * rather than an ordinary character. The project's image names contain spaces, so the
+         * browser read "…/images/apple watch.webp" as two candidates and rejected both — ten
+         * times in one page load.
          */
-        it('يُرمّز المسافات في اسم الملف', () => {
+        it('encodes the spaces in a file name', () => {
             expect(window.encodeImagePath('images/apple watch.webp'))
                 .toBe('images/apple%20watch.webp');
         });
 
-        it('يُبقي الشرطات المائلة كما هي', () => {
+        it('leaves the slashes as they are', () => {
             expect(window.encodeImagePath('a/b c/d.jpg')).toBe('a/b%20c/d.jpg');
         });
 
         /**
-         * عطل وقع في أول نسخة من الدالة: ترميز المقاطع بلا فصل المخطّط
-         * يحوّل «http:» إلى «http%3A» فيتحطّم الرابط المطلق. أمسكه فحص
-         * مباشر قبل أن يصل المتصفح.
+         * A fault in the function's first version: encoding the segments without separating
+         * the scheme turns "http:" into "http%3A" and destroys an absolute URL. A direct
+         * check caught it before it reached the browser.
          */
-        it('لا يُفسد المخطّط في الرابط المطلق', () => {
+        it('does not corrupt the scheme in an absolute URL', () => {
             expect(window.encodeImagePath('http://localhost/STORE/public/images/a b.webp'))
                 .toBe('http://localhost/STORE/public/images/a%20b.webp');
             expect(window.encodeImagePath('https://cdn.example.com/x y/z.png'))
                 .toBe('https://cdn.example.com/x%20y/z.png');
         });
 
-        it('لا يُرمّز ما هو مرمَّز سلفاً', () => {
+        it('does not re-encode what is already encoded', () => {
             expect(window.encodeImagePath('images/apple%20watch.webp'))
                 .toBe('images/apple%20watch.webp');
         });
 
-        it('يترك المسار السليم كما هو', () => {
+        it('leaves a sound path untouched', () => {
             expect(window.encodeImagePath('images/macbook.jpg')).toBe('images/macbook.jpg');
         });
 
-        it('يحفظ سلسلة الاستعلام', () => {
+        it('preserves the query string', () => {
             expect(window.encodeImagePath('images/a b.jpg?v=1')).toBe('images/a%20b.jpg?v=1');
         });
 
-        it('يمرّر الفارغ بلا انفجار', () => {
+        it('passes empty values through without blowing up', () => {
             expect(window.encodeImagePath('')).toBe('');
             expect(window.encodeImagePath(null)).toBeNull();
         });
     });
 
     describe('escHtml', () => {
-        it('يهرّب المحارف التي تفتح باب الحقن', () => {
+        it('escapes the characters that open the door to injection', () => {
             const out = window.escHtml('<script>alert(1)</script>');
             expect(out).not.toContain('<script>');
             expect(out).toContain('&lt;');
         });
 
-        it('يهرّب علامات الاقتباس', () => {
+        it('escapes the quote marks', () => {
             const out = window.escHtml(`" '`);
             expect(out).not.toContain('"');
         });
 
-        it('لا يفسد النصّ العربي', () => {
-            expect(window.escHtml('أحمد صالح')).toBe('أحمد صالح');
+        it('leaves non-ASCII text intact', () => {
+            expect(window.escHtml('Ahmad Şaleh — café · أحمد')).toBe('Ahmad Şaleh — café · أحمد');
         });
     });
 
     describe('buildProductPicture', () => {
-        it('يُرمّز مساري srcset و src معاً', () => {
-            const html = window.buildProductPicture('images/apple watch.jpg', 'ساعة');
+        it('encodes both the srcset and the src paths', () => {
+            const html = window.buildProductPicture('images/apple watch.jpg', 'a watch');
 
             expect(html).toContain('srcset="images/apple%20watch.webp"');
             expect(html).toContain('src="images/apple%20watch.jpg"');
-            // لا مسافة خام داخل قيمة srcset — وهي علّة العطل الأصلية.
+            // No raw space inside the srcset value — the cause of the original fault.
             expect(/srcset="[^"]*\s[^"]*"/.test(html)).toBe(false);
         });
 
-        it('يحوّل الامتداد إلى webp في المصدر البديل وحده', () => {
+        it('switches the extension to webp on the alternative source alone', () => {
             const html = window.buildProductPicture('images/x.png', 'x');
             expect(html).toContain('srcset="images/x.webp"');
             expect(html).toContain('src="images/x.png"');

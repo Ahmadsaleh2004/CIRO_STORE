@@ -2,33 +2,33 @@
 
 /**
  * tests/bootstrap.php
- * تهيئة بيئة الاختبار.
+ * Setting up the test environment.
  *
- * مسؤوليتان فقط:
- *   1. تحميل الـautoloader وثوابت المشروع (APPROOT، URLROOT، DB_*).
- *   2. بناء قاعدة اختبار **منفصلة** وتجهيز اتصال إليها.
+ * Two responsibilities only:
+ *   1. loading the autoloader and the project's constants (APPROOT, URLROOT, DB_*).
+ *   2. building a **separate** test database and preparing a connection to it.
  *
- * ⚠️ القاعدة المستعملة هي `<DB_NAME>_test` لا قاعدة التطوير. الفصل
- * ليس احتياطاً: اختبارات التكامل تُفرّغ الجداول بين كل اختبار
- * (TRUNCATE)، فتشغيلها على قاعدة التطوير يمحو بياناتها كلها في أول
- * تشغيل. الاسم يُشتقّ لا يُكتب، كي لا ينفصل عن .env إن تغيّر.
+ * ⚠️ The database used is `<DB_NAME>_test`, not the development one. The separation is not
+ * a precaution: the integration tests empty the tables between every test, so running them
+ * against the development database would erase all of its data on the first run. The name is
+ * derived rather than written, so it cannot drift from .env if that changes.
  */
 
 require_once __DIR__ . '/../vendor/autoload.php';
 require_once __DIR__ . '/../app/config/config.php';
 
 if (PHP_SAPI !== 'cli') {
-    fwrite(STDERR, "الاختبارات تعمل على CLI فقط.\n");
+    fwrite(STDERR, "The tests run on the CLI only.\n");
     exit(1);
 }
 
-/** اسم قاعدة الاختبار — مشتقّ من قاعدة المشروع بلاحقة _test. */
+/** The test database's name — derived from the project's database with a _test suffix. */
 define('TEST_DB_NAME', DB_NAME . '_test');
 
 /**
- * يبني اتصالاً بخادم MySQL بلا اختيار قاعدة.
- * يُرجع null إن تعذّر الاتصال — فتتخطّى اختبارات التكامل نفسها بدل
- * أن يفشل التشغيل كله. اختبارات الوحدة لا تحتاج قاعدة أصلاً.
+ * Builds a connection to the MySQL server without selecting a database.
+ * It returns null if the connection fails — so the integration tests skip themselves rather
+ * than the whole run failing. The unit tests need no database in the first place.
  */
 function testServerConnection(): ?PDO
 {
@@ -55,12 +55,12 @@ function testServerConnection(): ?PDO
 }
 
 /**
- * ينشئ قاعدة الاختبار ويحمّل مخطّطها مرّة واحدة لكل تشغيل.
+ * Creates the test database and loads its schema once per run.
  *
- * المخطّط من tests/fixtures/schema.sql — نسخة بنيوية بلا بيانات من
- * القاعدة الحقيقية. يُعاد توليدها بـ`composer test:schema` كلما تغيّر
- * المخطّط؛ وإن نسي أحد ذلك تفشل اختبارات التكامل بوضوح بدل أن تمرّ
- * على بنية قديمة.
+ * The schema comes from tests/fixtures/schema.sql — a structural copy of the real database
+ * with no data. It is regenerated with `composer test:schema` whenever the schema changes;
+ * and if somebody forgets, the integration tests fail plainly rather than passing against an
+ * old structure.
  */
 function prepareTestDatabase(): ?PDO
 {
@@ -84,8 +84,8 @@ function prepareTestDatabase(): ?PDO
 
     $name = TEST_DB_NAME;
 
-    // اسم القاعدة مشتقّ من .env لا من مدخل مستخدم، لكن الاقتباس
-    // بالعلامات الخلفية يبقى صحيحاً لأسماء تحوي محارف خاصة.
+    // The database name is derived from .env rather than from user input, but backtick
+    // quoting remains correct for names containing special characters.
     $quoted = '`' . str_replace('`', '``', $name) . '`';
 
     $server->exec("DROP DATABASE IF EXISTS {$quoted}");
@@ -102,8 +102,8 @@ function prepareTestDatabase(): ?PDO
         ]
     );
 
-    // تُنفَّذ عبارات المخطّط دفعة واحدة. mysqldump يفصلها بفواصل منقوطة
-    // في نهايات أسطر، وexec يقبل عبارات متعددة على اتصال MySQL.
+    // The schema's statements are executed in one go. mysqldump separates them with
+    // semicolons at line ends, and exec accepts multiple statements over a MySQL connection.
     $pdo->exec(file_get_contents($schemaFile));
 
     return $pdo;

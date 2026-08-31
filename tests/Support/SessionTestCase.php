@@ -5,16 +5,16 @@ namespace Tests\Support;
 use PHPUnit\Framework\TestCase;
 
 /**
- * أساس الاختبارات التي تلمس $_SESSION.
+ * The base for tests that touch $_SESSION.
  *
- * الجلسة تُبدأ **مرّة واحدة** لكل تشغيل، ثم يُفرَّغ محتواها بين
- * الاختبارات. السبب: session_start() لا يمكن استدعاؤها مرّتين في
- * العملية نفسها، وsession_destroy() تجعل الاستدعاء التالي يفشل —
- * فالنمط الوحيد الصالح هو جلسة واحدة ومحتوى نظيف.
+ * The session is started **once** per run, and its contents are cleared between tests. The
+ * reason: session_start() cannot be called twice in the same process, and session_destroy()
+ * makes the next call fail — so the one workable pattern is a single session with clean
+ * contents.
  *
- * ويهمّ هذا تحديداً لأن csrf_helper و auth_helper يستدعيان
- * session_start() بأنفسهما عند غياب الجلسة، فترك الحالة متسخة بين
- * اختبارين يجعل النتيجة تعتمد على الترتيب.
+ * And this matters specifically because csrf_helper and auth_helper call session_start()
+ * themselves when no session exists, so leaving the state dirty between two tests makes the
+ * outcome depend on the order.
  */
 abstract class SessionTestCase extends TestCase
 {
@@ -23,7 +23,7 @@ abstract class SessionTestCase extends TestCase
         parent::setUp();
 
         if (session_status() === PHP_SESSION_NONE) {
-            // معالج ملفات في مجلد مؤقت — لا نلوّث جلسات الخادم الحقيقية.
+            // A file handler in a temporary directory — the real server's sessions stay clean.
             session_start();
         }
 
