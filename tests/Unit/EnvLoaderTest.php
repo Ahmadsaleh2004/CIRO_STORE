@@ -5,15 +5,15 @@ namespace Tests\Unit;
 use PHPUnit\Framework\TestCase;
 
 /**
- * env() و envBool() — تحرسان القرار الذي يقرّر هل تُعرض أخطاء PHP
- * للزائر أم لا. عطل هنا يعني تسريب مسارات خادم وأسماء قواعد.
+ * env() and envBool() — they guard the decision of whether PHP's errors are shown to the
+ * visitor. A fault here means leaking the server's paths and the database names.
  *
- * الدالتان كانتا موضع عطلين حقيقيين أُصلحا في المرحلة 1، وهذه
- * الاختبارات هي ما يمنع عودتهما.
+ * The two functions were the site of two real faults fixed in phase 1, and these tests are
+ * what stops them coming back.
  */
 final class EnvLoaderTest extends TestCase
 {
-    /** @var array<string, mixed> نسخة $_ENV قبل الاختبار، تُعاد في tearDown */
+    /** @var array<string, mixed> a copy of $_ENV before the test, restored in tearDown */
     private array $backup;
 
     protected function setUp(): void
@@ -41,13 +41,13 @@ final class EnvLoaderTest extends TestCase
     }
 
     /**
-     * العطل الأصلي: `$_ENV[$k] ?? getenv($k) ?: $default` تُقرأ
-     * `$_ENV[$k] ?? (getenv($k) ?: $default)` — فمفتاح موجود بقيمة
-     * فارغة يُرجع "" ويتخطّى الافتراضي تماماً.
+     * The original fault: `$_ENV[$k] ?? getenv($k) ?: $default` parses as
+     * `$_ENV[$k] ?? (getenv($k) ?: $default)` — so a key that exists with an empty value
+     * returns "" and bypasses the default entirely.
      *
-     * الأثر العملي: سطر `APP_ENV=` في .env (نسخة من .env.example لم
-     * تُملأ) كان يعطي "" لا 'production'، فيُفتح وضع التنقيح على خادم
-     * إنتاج بصمت.
+     * The practical effect: an `APP_ENV=` line in .env (a copy of .env.example left unfilled)
+     * gave "" rather than 'production', so debug mode opened on a production server
+     * silently.
      */
     public function testEnvTreatsAnEmptyValueAsAbsent(): void
     {
@@ -56,7 +56,7 @@ final class EnvLoaderTest extends TestCase
         $this->assertSame(
             'production',
             env('BLANK_KEY', 'production'),
-            'مفتاح فارغ تخطّى القيمة الافتراضية — عودة عطل الأسبقية.'
+            'An empty key bypassed the default value — the precedence fault has returned.'
         );
     }
 
@@ -67,9 +67,9 @@ final class EnvLoaderTest extends TestCase
     }
 
     /**
-     * العطل الثاني: كل قيم .env نصوص، و(bool)"false" تساوي **true**
-     * في PHP. فـ`APP_DEBUG=false` كان سيفتح وضع التنقيح لا يغلقه —
-     * أخطر نوع من الأعطال لأنه يعمل عكس ما يقرأه القارئ.
+     * The second fault: every .env value is a string, and (bool)"false" is **true** in PHP.
+     * So `APP_DEBUG=false` would have opened debug mode rather than closing it — the most
+     * dangerous kind of fault, because it does the opposite of what its reader reads.
      */
     public function testEnvBoolReadsTheStringFalseAsFalse(): void
     {
@@ -77,7 +77,7 @@ final class EnvLoaderTest extends TestCase
             $_ENV['FLAG'] = $value;
             $this->assertFalse(
                 envBool('FLAG', true),
-                "القيمة [{$value}] قُرئت true — عودة فخّ (bool)\"false\"."
+                "The value [{$value}] was read as true — the (bool)\"false\" trap has returned."
             );
         }
     }
@@ -86,7 +86,7 @@ final class EnvLoaderTest extends TestCase
     {
         foreach (['1', 'true', 'TRUE', 'yes', 'on', '  true  '] as $value) {
             $_ENV['FLAG'] = $value;
-            $this->assertTrue(envBool('FLAG', false), "القيمة [{$value}] لم تُقرأ true.");
+            $this->assertTrue(envBool('FLAG', false), "The value [{$value}] was not read as true.");
         }
     }
 

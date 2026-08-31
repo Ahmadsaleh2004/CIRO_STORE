@@ -5,22 +5,22 @@ namespace Tests\Unit;
 use PHPUnit\Framework\TestCase;
 
 /**
- * تنظيف بيانات الرصد قبل مغادرتها الخادم.
+ * Scrubbing the monitoring data before it leaves the server.
  *
  * ══════════════════════════════════════════════════════════════
- * لماذا اختبار على هذه الدالة تحديداً
+ * Why a test on this function in particular
  * ══════════════════════════════════════════════════════════════
  *
- * `monitoringScrub` هي آخر ما يقف بين `$_POST` وطرفٍ ثالث. وسياق
- * الطلب الذي يرسله Sentry مع كل خطأ يشمل جسم الطلب كاملاً — أي كلمات
- * المرور وتوكنات CSRF وأكواد 2FA ومفاتيح الاستعادة.
+ * `monitoringScrub` is the last thing standing between `$_POST` and a third party. And the
+ * request context Sentry sends with every error includes the whole request body — that is,
+ * the passwords, the CSRF tokens, the 2FA codes and the recovery keys.
  *
- * وفشلها لا يظهر في أي شاشة ولا يُفشل أي طلب: كل ما يحدث أن سرّاً
- * يغادر إلى خادم آخر. لا سبيل لاكتشافه إلا باختبار يسأل الدالة
- * مباشرةً — وهذا هو.
+ * And its failure appears on no screen and fails no request: all that happens is that a
+ * secret leaves for another server. There is no way to discover it except a test that asks
+ * the function directly — and this is it.
  *
- * ⚠️ من يضيف حقلاً حسّاساً في أي نموذج مسؤول عن إضافته إلى
- * MONITORING_SCRUB_KEYS، وعن سطر هنا يثبت أنه يُنظَّف.
+ * ⚠️ Whoever adds a sensitive field to any form is responsible for adding it to
+ * MONITORING_SCRUB_KEYS, and for a line here proving it is scrubbed.
  */
 final class MonitoringTest extends TestCase
 {
@@ -28,8 +28,8 @@ final class MonitoringTest extends TestCase
     {
         parent::setUp();
 
-        // الملف يُحمَّل من config.php في التشغيل العادي؛ الاختبار يحمّله
-        // وحده كي يبقى وحدةً لا تحتاج بيئة.
+        // The file is loaded from config.php in a normal run; the test loads it on its own
+        // so it stays a unit that needs no environment.
         require_once dirname(__DIR__, 2) . '/app/config/monitoring.php';
     }
 
@@ -60,9 +60,9 @@ final class MonitoringTest extends TestCase
     }
 
     /**
-     * التعاود ليس تفصيلاً: جسم JSON يصل الكنترولرز كمصفوفة متشعّبة
-     * (checkout يرسل `items` مثلاً)، وتنظيف المستوى الأوّل وحده يعطي
-     * إحساساً بالأمان بلا أمان.
+     * The recursion is not a detail: a JSON body reaches the controllers as a nested array
+     * (checkout sends `items`, for instance), and scrubbing the first level alone gives a
+     * feeling of safety without the safety.
      */
     public function testNestedSecretsAreScrubbedToo(): void
     {
@@ -77,13 +77,13 @@ final class MonitoringTest extends TestCase
 
         $this->assertStringNotContainsString('LEAK-1', $encoded);
         $this->assertStringNotContainsString('LEAK-2', $encoded);
-        $this->assertSame(2, $out['order']['items'][0]['qty'], 'البيانات غير الحسّاسة تغيّرت.');
+        $this->assertSame(2, $out['order']['items'][0]['qty'], 'The non-sensitive data changed.');
     }
 
     public function testTheKeyMatchIsCaseInsensitive(): void
     {
-        // أسماء الحقول تأتي من نماذج كتبها بشر. `CSRF_Token` و
-        // `Password` واردان، وحساسية حالة الأحرف هنا تعني ثغرة صامتة.
+        // The field names come from forms written by people. `CSRF_Token` and `Password`
+        // are both likely, and case sensitivity here would mean a silent hole.
         $out = monitoringScrub(['Password' => 'X', 'CSRF_TOKEN' => 'Y']);
 
         $this->assertSame('[scrubbed]', $out['Password']);
@@ -92,8 +92,8 @@ final class MonitoringTest extends TestCase
 
     public function testOrdinaryFieldsSurviveUntouched(): void
     {
-        // تنظيفٌ يمحو كل شيء يجعل التقرير عديم الفائدة. الغرض إخفاء
-        // الأسرار لا إخفاء العطل.
+        // A scrub that erases everything makes the report useless. The purpose is hiding the
+        // secrets, not hiding the fault.
         $in  = ['email' => 'a@b.c', 'qty' => 3, 'note' => 'hello', 'items' => [1, 2]];
         $out = monitoringScrub($in);
 
@@ -101,11 +101,11 @@ final class MonitoringTest extends TestCase
     }
 
     /**
-     * كل مفتاح في القائمة يجب أن يكون بأحرف صغيرة.
+     * Every key in the list must be lower case.
      *
-     * المقارنة تُصغّر **المفتاح الوارد** لا مفتاح القائمة، فمدخلٌ
-     * بأحرف كبيرة في القائمة لا يطابق شيئاً أبداً — ويبدو مع ذلك
-     * كأنه يحمي.
+     * The comparison lower-cases **the incoming key** rather than the list's key, so an entry
+     * in the list written in capitals never matches anything — while still looking as though
+     * it protects.
      */
     public function testEveryConfiguredKeyIsLowercase(): void
     {
@@ -113,7 +113,7 @@ final class MonitoringTest extends TestCase
             $this->assertSame(
                 strtolower($key),
                 $key,
-                "المفتاح [{$key}] بأحرف كبيرة — لن يطابق شيئاً."
+                "The key [{$key}] is in capitals — it will never match anything."
             );
         }
     }

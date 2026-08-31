@@ -8,16 +8,17 @@ use PHPUnit\Framework\TestCase;
 use ReflectionMethod;
 
 /**
- * Totp — المصادقة الثنائية لحسابات الأدمن.
+ * Totp — two-factor authentication for the admin accounts.
  *
- * تُختبر مقابل **متجهات RFC 6238 المرجعية** لا مقابل نفسها. الفرق
- * جوهري: تنفيذ TOTP معطوب يبقى متّسقاً مع ذاته تماماً (يولّد رمزاً
- * ويقبله)، فاختبار «ولّد ثم تحقّق» يمرّ على كود لا يعمل مع Google
- * Authenticator إطلاقاً. المتجهات المرجعية وحدها تكشف ذلك.
+ * It is tested against **the reference vectors of RFC 6238** rather than against itself. The
+ * difference is fundamental: a broken TOTP implementation stays perfectly consistent with
+ * itself (it generates a code and accepts it), so a "generate then verify" test passes over
+ * code that does not work with Google Authenticator at all. The reference vectors alone
+ * reveal that.
  */
 final class TotpTest extends TestCase
 {
-    /** السرّ المرجعي في RFC 6238: "12345678901234567890" بترميز Base32. */
+    /** The reference secret in RFC 6238: "12345678901234567890" in Base32. */
     private const RFC_SECRET = 'GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ';
 
     private function generateCodeAt(string $secret, int $timeSlice): string
@@ -28,8 +29,8 @@ final class TotpTest extends TestCase
     }
 
     /**
-     * متجهات RFC 6238 (SHA-1). القيم في المعيار من ثماني خانات؛
-     * المشروع يستعمل ستّاً، فتُؤخذ الخانات الستّ الأخيرة.
+     * The RFC 6238 vectors (SHA-1). The values in the standard are eight digits; the
+     * project uses six, so the last six digits are taken.
      *
      * @return array<string, array{int, string}>
      */
@@ -52,7 +53,7 @@ final class TotpTest extends TestCase
         $this->assertSame(
             $expected,
             $this->generateCodeAt(self::RFC_SECRET, $timeSlice),
-            "الرمز عند T={$unixTime} لا يطابق متجه RFC 6238 — التطبيق لن يعمل مع Google Authenticator."
+            "The code at T={$unixTime} does not match the RFC 6238 vector — the implementation will not work with Google Authenticator."
         );
     }
 
@@ -71,7 +72,7 @@ final class TotpTest extends TestCase
             $secrets[] = Totp::generateSecret();
         }
 
-        // سرّ ثابت يعني أن كل حسابات الأدمن تتشارك المصادقة الثنائية نفسها.
+        // A fixed secret means every admin account shares the same second factor.
         $this->assertCount(20, array_unique($secrets));
     }
 
@@ -84,10 +85,11 @@ final class TotpTest extends TestCase
     }
 
     /**
-     * نافذة التسامح ±30 ثانية — لا أكثر.
+     * The tolerance window is ±30 seconds — no more.
      *
-     * توسيعها يسهّل الاستعمال ويوسّع نافذة إعادة اللعب بالقدر نفسه.
-     * هذا الاختبار يثبّت الحدّ: ما داخل النافذة يُقبل، وما خارجها يُرفض.
+     * Widening it eases use and widens the replay window by exactly as much.
+     * This test pins the limit: what is inside the window is accepted, and what is outside
+     * it is refused.
      */
     public function testVerifyAcceptsOneStepBeforeAndAfter(): void
     {
@@ -114,15 +116,15 @@ final class TotpTest extends TestCase
         foreach (['', '12345', '1234567', 'abcdef', '12 34 56', '<script>'] as $bad) {
             $this->assertFalse(
                 Totp::verifyCode($secret, $bad),
-                "قُبل مدخل غير صالح: [{$bad}]"
+                "An invalid input was accepted: [{$bad}]"
             );
         }
     }
 
     public function testVerifyIgnoresSurroundingWhitespace(): void
     {
-        // المستخدم ينسخ الرمز من التطبيق فتأتي معه مسافة — رفضه هنا
-        // عطل استعمال لا حماية.
+        // The user copies the code from the app and a space comes with it — refusing that
+        // is a usability fault rather than protection.
         $secret = Totp::generateSecret();
         $code   = $this->generateCodeAt($secret, (int) floor(time() / 30));
 
@@ -139,16 +141,16 @@ final class TotpTest extends TestCase
     }
 
     // ════════════════════════════════════════════════════════
-    // صورة QR — تُولَّد محلياً، والسرّ لا يغادر الخادم
+    // The QR image — generated locally, and the secret never leaves the server
     // ════════════════════════════════════════════════════════
 
     /**
-     * الـQR صورة مضمّنة لا رابط إلى مضيف خارجي.
+     * The QR is an embedded image rather than a URL to an external host.
      *
-     * كان المولّد يُرجع رابطاً إلى api.qrserver.com يحمل السرّ في
-     * الـquery string — أي أن سرّ المصادقة الثنائية لكل أدمن كان يُسلَّم
-     * إلى طرف ثالث ويمرّ في سجلّاته وسجلّات أي وسيط. هذا الاختبار يمنع
-     * عودة ذلك مهما تغيّر التنفيذ.
+     * The generator used to return a URL to api.qrserver.com carrying the secret in the
+     * query string — which is to say every admin's second-factor secret was handed to a
+     * third party and passed through its logs and those of any intermediary. This test
+     * prevents that returning, however the implementation changes.
      */
     public function testTheQrCodeIsAnInlineImageNotARemoteUrl(): void
     {
@@ -159,15 +161,15 @@ final class TotpTest extends TestCase
         $this->assertDoesNotMatchRegularExpression(
             '#https?://#i',
             $src,
-            'صورة الـQR تشير إلى مضيف خارجي — السرّ يغادر الخادم.'
+            'The QR image points at an external host — the secret leaves the server.'
         );
     }
 
     /**
-     * والأهمّ: السرّ نفسه ليس في أي موضع يمكن أن يُرسَل.
+     * And more importantly: the secret itself is nowhere it could be transmitted from.
      *
-     * الفحص على القيمة المفكوكة لا على النصّ المُرمَّز: base64 يخفي
-     * السرّ عن القراءة السريعة ولا يخفيه عن الشبكة.
+     * The check runs on the decoded value rather than the encoded text: base64 hides the
+     * secret from a quick read and does not hide it from the network.
      */
     public function testTheSecretDoesNotAppearInAnyRequestableForm(): void
     {
@@ -175,18 +177,19 @@ final class TotpTest extends TestCase
         $src    = Totp::getQrCodeUrl($secret, 'admin@example.com');
         $svg    = base64_decode(substr($src, strlen('data:image/svg+xml;base64,')));
 
-        $this->assertStringContainsString('<svg', $svg, 'الناتج ليس SVG صالحاً.');
+        $this->assertStringContainsString('<svg', $svg, 'The output is not valid SVG.');
 
-        // السرّ مُرمَّز داخل وحدات الـQR نفسها (مربّعات)، لا كنصّ.
+        // The secret is encoded in the QR's own modules (squares), not as text.
         $this->assertStringNotContainsString($secret, $svg);
         $this->assertStringNotContainsString('otpauth://', $svg);
     }
 
     /**
-     * رابط otpauth يحمل ما تحتاجه تطبيقات المصادقة.
+     * The otpauth URL carries what the authenticator apps need.
      *
-     * يُعرض نصّاً للأدمن حين يتعذّر المسح — فلو نقصه المُصدِر أو السرّ
-     * لأضاف الأدمن حساباً لا يعمل، ولا يكتشف ذلك إلا عند أوّل دخول.
+     * It is shown as text to the admin when scanning is not possible — so were the issuer or
+     * the secret missing from it, the admin would add an account that does not work, and
+     * would only discover that at their first sign-in.
      */
     public function testTheProvisioningUriCarriesIssuerAndSecret(): void
     {
@@ -199,11 +202,11 @@ final class TotpTest extends TestCase
     }
 
     /**
-     * لا مصدر في المشروع يذكر خدمة QR خارجية.
+     * No source in the project mentions an external QR service.
      *
-     * الاختباران أعلاه يحرسان المولّد الحالي؛ هذا يحرس المشروع من
-     * «حلّ سريع» في موضع آخر — سطر في view أو في JS يبني الرابط بنفسه.
-     * السرّ في الـquery string لا يصير آمناً بتغيير من يكتبه.
+     * The two tests above guard the current generator; this one guards the project against a
+     * "quick fix" somewhere else — a line in a view or in JS building the URL itself. A
+     * secret in a query string does not become safe by changing who writes it.
      */
     public function testNoSourceReferencesAnExternalQrService(): void
     {
@@ -227,8 +230,9 @@ final class TotpTest extends TestCase
                 $src = (string) file_get_contents($file->getPathname());
 
                 foreach (['qrserver.com', 'chart.googleapis.com', 'quickchart.io'] as $host) {
-                    // الذكر داخل تعليق يشرح الإصلاح مسموح؛ الممنوع بناء
-                    // رابط فعلي — أي المضيف مسبوقاً بمخطّط.
+                    // A mention inside a comment explaining the fix is allowed; what is
+                    // forbidden is building an actual URL — that is, the host preceded by a
+                    // scheme.
                     if (preg_match('#https?://[^\s\'"]*' . preg_quote($host, '#') . '#i', $src)) {
                         $offenders[] = $file->getFilename() . " → {$host}";
                     }
@@ -239,20 +243,20 @@ final class TotpTest extends TestCase
         $this->assertSame(
             [],
             $offenders,
-            "خدمة QR خارجية — السرّ يغادر الخادم:\n  " . implode("\n  ", $offenders)
+            "An external QR service — the secret leaves the server:\n  " . implode("\n  ", $offenders)
         );
     }
 
     // ════════════════════════════════════════════════════════
-    // منع إعادة استخدام الكود — verifyAndGetSlice
+    // Preventing code reuse — verifyAndGetSlice
     // ════════════════════════════════════════════════════════
 
     /**
-     * النجاح يُرجع الشريحة لا مجرّد true.
+     * Success returns the slice rather than merely true.
      *
-     * القيمة المُعادة هي ما يخزّنه المستدعي ليمنع إعادة الاستخدام، فلو
-     * أُعيدت شريحة خاطئة لصار المنع إمّا واسعاً (يرفض أكواداً صالحة)
-     * وإمّا فارغاً (لا يمنع شيئاً).
+     * The returned value is what the caller stores to prevent reuse, so were the wrong slice
+     * returned, the prevention would be either too wide (refusing valid codes) or empty
+     * (preventing nothing).
      */
     public function testVerifyAndGetSliceReturnsTheMatchingSlice(): void
     {
@@ -273,10 +277,10 @@ final class TotpTest extends TestCase
     }
 
     /**
-     * الكود المستهلَك يُرفض داخل نافذته.
+     * A consumed code is refused within its own window.
      *
-     * بدون هذا يبقى الكود صالحاً تسعين ثانية كاملة، فمن يلتقطه — فوق
-     * كتف، أو من سجلّ، أو من شاشة مشارَكة — يعيد إرساله ويدخل.
+     * Without this the code stays valid for a full ninety seconds, so whoever catches it —
+     * over a shoulder, from a log, or from a shared screen — resends it and gets in.
      */
     public function testAConsumedSliceIsRejected(): void
     {
@@ -289,11 +293,11 @@ final class TotpTest extends TestCase
     }
 
     /**
-     * والأقدم من المستهلَك يُرفض أيضاً، لا المساواة وحدها.
+     * And anything older than the consumed slice is refused too, not equality alone.
      *
-     * النافذة تحوي ثلاث شرائح. لو مُنعت المطابِقة وحدها لبقي كود
-     * الشريحة السابقة صالحاً بعد استعمال اللاحقة — أي ثغرة بحجم ثلاثين
-     * ثانية تُفتح بالضبط في اللحظة التي يُفترض أن يكون الباب فيها مغلقاً.
+     * The window holds three slices. Were only the matching one blocked, the previous
+     * slice's code would stay valid after the later one was used — a thirty-second hole
+     * opening at exactly the moment the door is supposed to be shut.
      */
     public function testASliceOlderThanTheConsumedOneIsRejected(): void
     {
@@ -304,10 +308,11 @@ final class TotpTest extends TestCase
     }
 
     /**
-     * لكن الشريحة الأحدث من المستهلَكة تبقى مقبولة.
+     * But a slice newer than the consumed one stays acceptable.
      *
-     * الحدّ الأعلى للمنع مهمّ كالحدّ الأدنى: لو رُفض ما بعد المستهلَكة
-     * لَقُفل الحساب بعد أوّل دخول ناجح.
+     * The upper bound of the prevention matters as much as the lower: were anything after
+     * the consumed slice refused, the account would lock itself after the first successful
+     * sign-in.
      */
     public function testANewerSliceIsStillAccepted(): void
     {
@@ -321,10 +326,10 @@ final class TotpTest extends TestCase
     }
 
     /**
-     * verifyCode القديمة تبقى غلافاً صادقاً فوق verifyAndGetSlice.
+     * The older verifyCode remains an honest wrapper over verifyAndGetSlice.
      *
-     * ما زالت مستعملة في مسار تفعيل الـ2FA، فانحرافها عن الدالة التي
-     * تفوّض إليها كان سيعني قاعدتَي تحقّق مختلفتين في المشروع نفسه.
+     * It is still used on the 2FA enrolment path, so its diverging from the function it
+     * delegates to would have meant two different verification rules in the same project.
      */
     public function testVerifyCodeStaysConsistentWithVerifyAndGetSlice(): void
     {
@@ -335,7 +340,7 @@ final class TotpTest extends TestCase
             $this->assertSame(
                 Totp::verifyAndGetSlice($secret, $code) !== null,
                 Totp::verifyCode($secret, $code),
-                "انحراف بين الدالتين على المدخل [{$code}]"
+                "The two functions diverge on the input [{$code}]"
             );
         }
     }

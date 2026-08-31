@@ -6,22 +6,22 @@ use App\Services\SliderFormParser;
 use PHPUnit\Framework\TestCase;
 
 /**
- * SliderFormParser — التحقق الذي لم يكن قابلاً للاختبار.
+ * SliderFormParser — the validation that could not be tested.
  *
- * هذه الفحوص هي المبرِّر الأوّل لاستخراج الخدمة. كان المنطق نفسه داخل
- * AdminBrandingController::save، وكل مسار خطأ فيه ينتهي بـheader()
- * وexit — أي أن اختباره من PHPUnit يعني إنهاء العملية. النتيجة أن
- * ثمانية مسارات رفض لم يكن أيٌّ منها مغطّى.
+ * These checks are the first justification for extracting the service. The same logic used
+ * to live inside AdminBrandingController::save, and every error path in it ended with a
+ * header() and an exit — which is to say testing it from PHPUnit meant ending the process.
+ * The result was eight rejection paths, none of them covered.
  *
- * ⚠️ لا يُختبَر الرفع هنا: move_uploaded_file ترفض أي ملف لم يصل عبر
- * رفع HTTP حقيقي، فمسار الرفع مغطّى في ImageUploadTest. المُختبَر هو
- * القرار: ما يُقبل، وما يُرفض، وبأي رسالة.
+ * ⚠️ Uploading is not tested here: move_uploaded_file rejects any file that did not arrive
+ * through a real HTTP upload, so the upload path is covered in ImageUploadTest. What is
+ * tested here is the decision: what is accepted, what is rejected, and with which message.
  */
 final class SliderFormParserTest extends TestCase
 {
     private const DIR = '/tmp/does-not-matter';
 
-    /** شريحة صالحة واحدة بصورة موجودة مسبقاً. */
+    /** One valid slide with an already-existing image. */
     /**
      * @return list<array<string, mixed>>
      */
@@ -51,7 +51,7 @@ final class SliderFormParserTest extends TestCase
     }
 
     // ════════════════════════════════════════════════════════
-    // سطر العنوان
+    // The title line
     // ════════════════════════════════════════════════════════
 
     public function testTitlesArePassedThroughTrimmed(): void
@@ -88,16 +88,16 @@ final class SliderFormParserTest extends TestCase
             ],
         ], [], self::DIR);
 
-        // الفرق ليس تجميلياً: القراءة في BrandingModel تستعمل
-        // COALESCE(NULLIF(product_title,''), p.name) — و`''` تمرّ من
-        // COALESCE لكن NULLIF تحوّلها، بينما null تمرّ مباشرةً. توحيد
-        // الفارغ على null يُبقي عمود القاعدة يعني شيئاً واحداً:
-        // «لم يكتب الأدمن عنواناً».
+        // The difference is not cosmetic: the read in BrandingModel uses
+        // COALESCE(NULLIF(product_title,''), p.name) — and `''` passes COALESCE but NULLIF
+        // converts it, while null passes straight through. Normalising empty to null keeps
+        // the database column meaning exactly one thing: "the admin wrote no title".
         $this->assertNull($r['slides'][0]['items'][0]['manual_title']);
     }
 
     /**
-     * العنوان غير مطلوب — عنصر بلا عنوان يمرّ ويُرسم بوصفه وحده.
+     * The title is not required — an item without one passes and is drawn with its
+     * description alone.
      */
     public function testAnItemWithoutATitleIsStillValid(): void
     {
@@ -136,10 +136,10 @@ final class SliderFormParserTest extends TestCase
     }
 
     /**
-     * شريحة بلا صور تُتجاهَل بصمت — لا تُرفض.
+     * A slide with no images is ignored silently — not rejected.
      *
-     * الواجهة تضيف شريحة فارغة عند الضغط على «أضف»، فرفضها يمنع الحفظ
-     * على من أضاف واحدة ثم عدل عنها.
+     * The interface adds an empty slide when "add" is pressed, so rejecting it would block
+     * saving for anyone who added one and then changed their mind.
      */
     public function testAnEmptySlideIsSkippedNotRejected(): void
     {
@@ -183,10 +183,10 @@ final class SliderFormParserTest extends TestCase
     }
 
     /**
-     * أي وضع غير 'product' يُعامَل كـ'manual'.
+     * Any mode other than 'product' is treated as 'manual'.
      *
-     * القيمة تأتي من الفورم فقد تكون أي شيء. الافتراضي الآمن مهمّ: وضع
-     * غير معروف يجب ألّا يتخطّى شرطَي الإلزام كليهما.
+     * The value comes from the form so it can be anything. The safe default matters: an
+     * unknown mode must not bypass both required-field conditions.
      */
     public function testAnUnknownModeFallsBackToManualAndIsStillValidated(): void
     {
@@ -199,7 +199,7 @@ final class SliderFormParserTest extends TestCase
         $this->assertStringContainsString('must have a product selected', (string) $r['error']);
     }
 
-    // ── الروابط الخطرة ───────────────────────────────────────
+    // ── The dangerous links ──────────────────────────────────
 
     /**
      * @return list<array{string}>
@@ -230,23 +230,23 @@ final class SliderFormParserTest extends TestCase
             self::DIR
         );
 
-        $this->assertStringContainsString('Unsafe link URL', (string) $r['error'], "قُبل رابط خطر: {$url}");
+        $this->assertStringContainsString('Unsafe link URL', (string) $r['error'], "A dangerous link was accepted: {$url}");
     }
 
     public function testOrdinaryLinksPass(): void
     {
         foreach (['https://example.test/x', '/products?id=3', 'mailto:a@b.test', ''] as $url) {
-            $this->assertFalse(SliderFormParser::isUnsafeUrl($url), "رُفض رابط سليم: {$url}");
+            $this->assertFalse(SliderFormParser::isUnsafeUrl($url), "A sound link was rejected: {$url}");
         }
 
         $this->assertFalse(SliderFormParser::isUnsafeUrl(null));
     }
 
     /**
-     * قارئ $_FILES يفهم البنية المقلوبة التي ينتجها PHP.
+     * The $_FILES reader understands the inverted structure PHP produces.
      *
-     * الخصائص الخمس تُقرأ من خمسة مسارات متوازية لا من مصفوفة واحدة —
-     * وهذا أكثر ما يُخطئ فيه من يلمس هذا الكود.
+     * The five properties are read from five parallel paths rather than from one array —
+     * and that is what whoever touches this code gets wrong most often.
      */
     public function testTheFileReaderUnderstandsPhpsInvertedStructure(): void
     {

@@ -6,28 +6,28 @@ use App\Core\Mailer;
 use PHPUnit\Framework\TestCase;
 
 /**
- * Mailer::template — القيم المتغيّرة تُهرَّب، ولا مستدعي يحقنها.
+ * Mailer::template — the variable values are escaped, and no caller injects them.
  *
- * كان جسم الإيميل يُبنى بالحقن المباشر، ومن بين ما يُحقَن
- * `$_SERVER['HTTP_USER_AGENT']` في إيميل تنبيه الدخول — وهي ترويسة
- * يتحكّم بها المرسِل كلياً. أي أن مهاجماً يكتب HTML في اسم متصفّحه
- * فيصل إلى صندوق بريد الأدمن كما هو.
+ * The email's body used to be built by direct interpolation, and among what was interpolated
+ * was `$_SERVER['HTTP_USER_AGENT']` in the sign-in alert email — a header entirely under the
+ * sender's control. Which is to say an attacker writes HTML into their browser's name and it
+ * arrives in the admin's inbox as it is.
  *
- * الاختبارات هنا على مستويين: أن الدالة تهرّب ما يُمرَّر إليها، وأن
- * **لا مستدعي** يلتفّ حولها بالحقن. الأول وحده لا يكفي — الحقن يبقى
- * ممكناً في السطر التالي الذي يكتبه أحدهم.
+ * The tests here work at two levels: that the function escapes what is passed to it, and
+ * that **no caller** works around it by interpolating. The first alone is not enough — the
+ * interpolation stays possible in the next line somebody writes.
  */
 final class MailerTemplateTest extends TestCase
 {
     public function testPlaceholderValuesAreEscaped(): void
     {
-        $html = Mailer::template('عنوان', 'المتصفح: {ua}', [
+        $html = Mailer::template('A title', 'Browser: {ua}', [
             'ua' => '<img src=x onerror="alert(1)">',
         ]);
 
-        // الفحص على الوسم لا على السلسلة: نصّ «onerror=» يبقى موجوداً
-        // داخل القيمة المهرَّبة وهو خامل تماماً هناك. الخطر أن يوجد
-        // وسمٌ حقيقي — أي `<` غير مهرَّبة يفتحه.
+        // The check is on the tag rather than the string: the text "onerror=" is still
+        // present inside the escaped value and is entirely inert there. The danger is a real
+        // tag — that is, an unescaped `<` opening one.
         $this->assertStringNotContainsString('<img', $html);
         $this->assertStringNotContainsString('onerror="alert(1)">', $html);
         $this->assertStringContainsString('&lt;img', $html);
@@ -36,21 +36,22 @@ final class MailerTemplateTest extends TestCase
 
     public function testTheTitleIsEscapedToo(): void
     {
-        $html = Mailer::template('<script>alert(1)</script>', 'نصّ');
+        $html = Mailer::template('<script>alert(1)</script>', 'Some text');
 
         $this->assertStringNotContainsString('<script>', $html);
         $this->assertStringContainsString('&lt;script&gt;', $html);
     }
 
     /**
-     * القالب الثابت يبقى HTML — وهذا هو المقصود.
+     * The static template stays HTML — and that is the intent.
      *
-     * لولا ذلك لما أمكن وضع رابط في إيميل إعادة تعيين كلمة المرور.
-     * القالب يُكتب في الكود ولا يأتي من الشبكة، والخطر كان في القيم لا فيه.
+     * Without it, no link could be put in a password reset email. The template is written in
+     * the code and does not come from the network, and the danger was in the values rather
+     * than in it.
      */
     public function testTheStaticTemplateKeepsItsMarkup(): void
     {
-        $html = Mailer::template('عنوان', '<a href="{link}">اضغط</a>', [
+        $html = Mailer::template('A title', '<a href="{link}">Click</a>', [
             'link' => 'https://example.test/reset?token=abc',
         ]);
 
@@ -58,14 +59,15 @@ final class MailerTemplateTest extends TestCase
     }
 
     /**
-     * قيمة تحمل علامة اقتباس لا تكسر السمة التي توضع فيها.
+     * A value carrying a quote mark does not break the attribute it is placed in.
      *
-     * ENT_QUOTES لا الافتراضي: بدونها تمرّ `"` سليمةً فيُغلق المهاجم
-     * سمة href ويفتح سمة أخرى — حقن داخل الوسم لا حوله.
+     * ENT_QUOTES rather than the default: without it a `"` passes through intact, so the
+     * attacker closes the href attribute and opens another — an injection inside the tag
+     * rather than around it.
      */
     public function testAQuoteInAValueCannotBreakOutOfAnAttribute(): void
     {
-        $html = Mailer::template('عنوان', '<a href="{link}">x</a>', [
+        $html = Mailer::template('A title', '<a href="{link}">x</a>', [
             'link' => '" onmouseover="alert(1)',
         ]);
 
@@ -75,17 +77,18 @@ final class MailerTemplateTest extends TestCase
 
     public function testAnUnknownPlaceholderIsLeftAloneNotFilledWithSomethingElse(): void
     {
-        $html = Mailer::template('عنوان', 'أ {one} ب {two}', ['one' => 'X']);
+        $html = Mailer::template('A title', 'a {one} b {two}', ['one' => 'X']);
 
-        $this->assertStringContainsString('أ X ب {two}', $html);
+        $this->assertStringContainsString('a X b {two}', $html);
     }
 
     /**
-     * لا مستدعي يحقن متغيّراً في جسم الإيميل.
+     * No caller interpolates a variable into an email's body.
      *
-     * هذا هو الاختبار الذي يمنع عودة العطل. تهريب الدالة يحمي من يمرّ
-     * بها؛ وهذا يمنع الالتفاف حولها — أي `"... {$var} ..."` في وسيط
-     * الجسم، وهو بالضبط ما كان مكتوباً في سبعة مواضع.
+     * This is the test that prevents the fault returning. The function's escaping protects
+     * whoever passes through it; this prevents working around it — that is, a
+     * `"... {$var} ..."` in the body argument, which is exactly what was written at seven
+     * sites.
      */
     public function testNoCallerInterpolatesVariablesIntoAnEmailBody(): void
     {
@@ -94,15 +97,15 @@ final class MailerTemplateTest extends TestCase
         foreach (glob(dirname(__DIR__, 2) . '/app/Controllers/*.php') ?: [] as $file) {
             $src = (string) file_get_contents($file);
 
-            // نلتقط وسيط الجسم: ما بين `Mailer::template(` وبداية
-            // المصفوفة أو نهاية الاستدعاء.
+            // Capturing the body argument: what lies between `Mailer::template(` and the
+            // start of the array or the end of the call.
             if (!preg_match_all('/Mailer::template\((.*?)\n\s*\)/s', $src, $matches)) {
                 continue;
             }
 
             foreach ($matches[1] as $args) {
                 if (preg_match('/\{\$\w+/', $args)) {
-                    $offenders[] = basename($file) . ' — يحقن متغيّراً في جسم الإيميل بدل نائبة.';
+                    $offenders[] = basename($file) . ' — it interpolates a variable into the email body instead of using a placeholder.';
                 }
             }
         }
@@ -110,7 +113,7 @@ final class MailerTemplateTest extends TestCase
         $this->assertSame(
             [],
             array_unique($offenders),
-            "حقن مباشر في جسم الإيميل:\n  " . implode("\n  ", array_unique($offenders))
+            "Direct interpolation into an email body:\n  " . implode("\n  ", array_unique($offenders))
         );
     }
 }

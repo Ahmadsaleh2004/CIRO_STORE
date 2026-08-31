@@ -5,36 +5,37 @@ namespace Tests\Unit;
 use PHPUnit\Framework\TestCase;
 
 /**
- * جزر بيانات الصفحة تُطبع قبل الفوتر لا داخله.
+ * The page data islands are printed before the footer, not inside it.
  *
  * ══════════════════════════════════════════════════════════════
- * العطل الذي وُجد هذا الاختبار له
+ * The fault this test was written for
  * ══════════════════════════════════════════════════════════════
  *
- * `js/core/page-data.js` يُحمَّل **متزامناً** أعلى الفوتر عمداً: أي
- * ملف بعده يقرأ `window`، فوجب أن يسبقهم جميعاً. وثمن ذلك أنه ينفَّذ
- * لحظة يبلغه محلّل HTML — فلا يرى من المستند إلا ما حُلِّل قبله.
+ * `js/core/page-data.js` is loaded **synchronously** at the top of the footer, deliberately:
+ * every file after it reads `window`, so it has to come before all of them. And the price of
+ * that is that it runs the moment the HTML parser reaches it — so it sees nothing of the
+ * document beyond what was parsed before it.
  *
- * وكانت `app/views/admin/orders/details.php` تكتب:
+ * And `app/views/admin/orders/details.php` used to write:
  *
  *     $extraScripts = pageData([ 'ADMIN_ORDER_DETAILS' => [...] ]);
  *
- * و`$extraScripts` يطبعه الفوتر **بعد** وسم page-data.js. فالجزيرة
- * تولد بعد أن مسح الملفُّ المستندَ، ولا تصل `window` أبداً.
+ * And the footer prints `$extraScripts` **after** the page-data.js tag. So the island is
+ * born after the file has already scanned the document, and it never reaches `window`.
  *
- * ولأن `orders.js` يحرس نفسه بـ
- * `if (typeof window.ADMIN_ORDER_DETAILS !== 'undefined')`، لم يُرمَ
- * أي خطأ: الشرط يفشل بهدوء، فلا تُعرَّف `window.handleTakeIt`، فينقر
- * الأدمن «Take It» فلا يحدث شيء إطلاقاً. عطلٌ بلا أثر في الشاشة ولا
- * في الـconsole سوى سطر تفويض واحد — وقد شُخِّص خطأً على أنه سباق
- * تزامن في قاعدة البيانات.
+ * And because `orders.js` guards itself with
+ * `if (typeof window.ADMIN_ORDER_DETAILS !== 'undefined')`, no error was thrown: the
+ * condition failed quietly, so `window.handleTakeIt` was never defined, so the admin clicked
+ * "Take It" and nothing happened at all. A fault with no trace on the screen and none in the
+ * console beyond a single delegation line — and it was misdiagnosed as a race condition in
+ * the database.
  *
- * الحارس هنا نصّي لأن العطل نصّي: الموضع في المستند هو كل الفرق،
- * ولا يظهر في أي اختبار وحدة أو تكامل.
+ * The guard here is textual because the fault is textual: the position in the document is
+ * the whole difference, and it shows up in no unit or integration test.
  */
 final class PageDataIslandTest extends TestCase
 {
-    /** @return list<string> كل ملفات الـviews */
+    /** @return list<string> every view file */
     private function viewFiles(): array
     {
         $root  = dirname(__DIR__, 2) . '/app/views';
@@ -53,11 +54,11 @@ final class PageDataIslandTest extends TestCase
     }
 
     /**
-     * `$extraScripts = pageData(...)` هو الشكل المعطوب بعينه: إسناد
-     * جزيرة إلى متغيّر يطبعه الفوتر بعد قارئها.
+     * `$extraScripts = pageData(...)` is the broken shape exactly: assigning an island to a
+     * variable the footer prints after its reader.
      *
-     * الجزيرة تُطبع في جسم الـview (`<?= pageData([...]) ?>` أو
-     * `echo pageData([...])`)، فتسبق الفوتر بحكم الترتيب.
+     * The island is printed in the view's body (`<?= pageData([...]) ?>` or
+     * `echo pageData([...])`), so it precedes the footer by ordering alone.
      */
     public function testNoViewPutsAPageDataIslandIntoExtraScripts(): void
     {
@@ -66,8 +67,9 @@ final class PageDataIslandTest extends TestCase
         foreach ($this->viewFiles() as $path) {
             $src = (string) file_get_contents($path);
 
-            // تعليقات المشروع تشرح العطل وتذكر الشكل نفسه، فتُنزع أوّلاً
-            // كي لا يمسك الاختبارُ التوثيقَ بدل الكود.
+            // The project's comments explain the fault and name the broken shape itself, so
+            // they are stripped first, or the test catches the documentation instead of the
+            // code.
             $src = preg_replace('#/\*.*?\*/#s', '', $src) ?? '';
             $src = preg_replace('#^\s*//.*$#m', '', $src) ?? '';
 
@@ -79,18 +81,18 @@ final class PageDataIslandTest extends TestCase
         $this->assertSame(
             [],
             $offenders,
-            "جزيرة pageData مُسنَدة إلى \$extraScripts في:\n  - "
+            "A pageData island assigned to \$extraScripts in:\n  - "
             . implode("\n  - ", $offenders)
-            . "\n\nالفوتر يطبع \$extraScripts بعد js/core/page-data.js المتزامن، "
-            . "فلا تصل البيانات إلى window وتفشل الميزة بصمت.\n"
-            . 'اطبع الجزيرة في جسم الـview بدلاً من ذلك.'
+            . "\n\nThe footer prints \$extraScripts after the synchronous js/core/page-data.js, "
+            . "so the data never reaches window and the feature fails silently.\n"
+            . 'Print the island in the view\'s body instead.'
         );
     }
 
     /**
-     * وسم page-data.js يجب أن يبقى متزامناً وأعلى قائمة السكربتات في
-     * كلا الفوترين. `defer` عليه يجعل أسبقيته رهينةَ ترتيب الوسوم بدل
-     * أن تكون صفةً لا تُنقض.
+     * The page-data.js tag must stay synchronous and at the top of the script list in both
+     * footers. A `defer` on it makes its precedence hostage to tag ordering rather than an
+     * inviolable property.
      */
     public function testPageDataScriptIsLoadedFirstAndNotDeferred(): void
     {
@@ -106,11 +108,11 @@ final class PageDataIslandTest extends TestCase
             $this->assertMatchesRegularExpression(
                 "/jsTag\(\s*'js\/core\/page-data\.js'\s*,\s*false\s*\)/",
                 $src,
-                "{$relative}: page-data.js يجب أن يُحمَّل بـ jsTag(..., false) — متزامناً."
+                "{$relative}: page-data.js must be loaded with jsTag(..., false) — synchronously."
             );
 
             $pageDataPos = strpos($src, 'js/core/page-data.js');
-            $this->assertNotFalse($pageDataPos, "{$relative}: page-data.js غير مُدرَج.");
+            $this->assertNotFalse($pageDataPos, "{$relative}: page-data.js is not included.");
 
             foreach (['vendorJs(', 'jsBundle('] as $later) {
                 $laterPos = strpos($src, $later);
@@ -121,7 +123,7 @@ final class PageDataIslandTest extends TestCase
                 $this->assertLessThan(
                     $laterPos,
                     $pageDataPos,
-                    "{$relative}: {$later} يسبق page-data.js — كل ما بعده يقرأ window."
+                    "{$relative}: {$later} comes before page-data.js — everything after it reads window."
                 );
             }
         }

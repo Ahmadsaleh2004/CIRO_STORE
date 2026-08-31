@@ -5,17 +5,17 @@ namespace Tests\Unit;
 use PHPUnit\Framework\TestCase;
 
 /**
- * جداول الأدمن — الهوية المعروضة، وسلامة عدد الأعمدة.
+ * The admin tables — the identity on display, and the column count's integrity.
  *
- * قاعدة المشروع: المفتاح الأساسي هوية تبقى مع الصفّ مدى حياته، ولا
- * يُعاد ترقيمه. الوجه الآخر لها في العرض: الجدول الذي يُظهر «رقماً»
- * لكيان يجب أن يُظهر معرّفه الحقيقي لا ترتيب صفّه.
+ * The project's rule: a primary key is an identity that stays with its row for its whole
+ * life and is never renumbered. Its other face in the interface: a table showing a "number"
+ * for an entity must show that entity's real id rather than its row's position.
  *
- * كان جدول اليوزر يطبع `$startNum + $i` — عدّاد صفحات يزحف عند كل حذف،
- * فيتغيّر «رقم» المستخدم بلا أن يتغيّر هو. وجدول المنتجات لم يكن يُظهر
- * الهوية إطلاقاً: موجودة في id="product-row-N" فيراها الـJS ولا يراها
- * الأدمن. أمّا جدولا الأدمنية والطلبات فكانا يطبعان المعرّف الحقيقي
- * أصلاً — أي أن أربعة جداول متشابهة كانت تتصرّف بثلاث طرق.
+ * The users table printed `$startNum + $i` — a pagination counter that shifts on every
+ * deletion, so a user's "number" changed without the user changing. And the products table
+ * did not show the identity at all: it lived in id="product-row-N", so the JavaScript saw it
+ * and the admin did not. The admins and orders tables, meanwhile, printed the real id
+ * already — that is, four similar tables behaved in three different ways.
  */
 final class AdminTableIdentityTest extends TestCase
 {
@@ -25,7 +25,7 @@ final class AdminTableIdentityTest extends TestCase
     }
 
     /**
-     * جداول الكيانات تعرض المعرّف الحقيقي.
+     * The entity tables display the real id.
      *
      * @return array<string, array{string, string}>
      */
@@ -40,32 +40,33 @@ final class AdminTableIdentityTest extends TestCase
     }
 
     /**
-     * @param string $file    مسار الـview نسبةً إلى app/views/admin
-     * @param string $idExpr  تعبير المعرّف المتوقّع داخل خلية
+     * @param string $file    the view's path relative to app/views/admin
+     * @param string $idExpr  the expected id expression inside a cell
      */
     #[\PHPUnit\Framework\Attributes\DataProvider('entityTables')]
     public function testTheTablePrintsTheRealIdInACell(string $file, string $idExpr): void
     {
         $src = (string) file_get_contents(self::viewsDir() . '/' . $file);
 
-        // بين <td> والمعرّف قد يقع تعليق شرح، أو بادئة قصيرة مثل «#»
-        // (جدول الطلبات يكتب `#<?= …`) — كلاهما تنسيق لا يغيّر أن
-        // المطبوع هو المعرّف الحقيقي.
+        // An explanatory comment may sit between the <td> and the id, or a short prefix
+        // such as "#" (the orders table writes `#<?= …`) — both are formatting and neither
+        // changes the fact that what is printed is the real id.
         $pattern = '/<td[^>]*>\s*(?:<\?php.*?\?>\s*)?[^<]{0,4}<\?=\s*\(int\)'
                  . preg_quote($idExpr, '/') . '/s';
 
         $this->assertMatchesRegularExpression(
             $pattern,
             $src,
-            "{$file} لا يطبع المعرّف الحقيقي في خلية — الهوية المعروضة يجب ألّا تكون ترتيب صفّ."
+            "{$file} does not print the real id in a cell — the identity on display must not be a row's position."
         );
     }
 
     /**
-     * لا عدّاد صفوف يتظاهر بأنه هوية.
+     * No row counter posing as an identity.
      *
-     * `$startNum + $i` وأمثاله تنتج رقماً يتغيّر عند حذف أي صفّ قبله —
-     * فيظنّ الأدمن أنه يشير إلى كيان بينما يشير إلى موضع.
+     * `$startNum + $i` and its like produce a number that changes when any row before it is
+     * deleted — so the admin believes they are pointing at an entity while pointing at a
+     * position.
      */
     public function testNoAdminTableUsesARowCounterAsIdentity(): void
     {
@@ -82,26 +83,26 @@ final class AdminTableIdentityTest extends TestCase
 
             $src = (string) file_get_contents($file->getPathname());
 
-            // عدّاد ترقيم صفحات يُطبع كما هو داخل خلية.
+            // A pagination counter printed as it is inside a cell.
             if (preg_match('/<td[^>]*>\s*<\?=\s*\$startNum\s*\+/', $src)) {
-                $offenders[] = $file->getFilename() . ' — يطبع $startNum + $i كهوية.';
+                $offenders[] = $file->getFilename() . ' — it prints $startNum + $i as an identity.';
             }
         }
 
         $this->assertSame(
             [],
             $offenders,
-            "عدّاد صفوف يتظاهر بأنه هوية:\n  " . implode("\n  ", $offenders)
+            "A row counter posing as an identity:\n  " . implode("\n  ", $offenders)
         );
     }
 
     /**
-     * $emptyColspan يطابق عدد أعمدة الجدول فعلاً.
+     * $emptyColspan really does match the table's column count.
      *
-     * صفّ «لا نتائج» يمتدّ على الجدول بـcolspan مكتوب بيده. وإضافة عمود
-     * بلا تحديثه — وهي ما فعلته إضافة عمود المعرّف للمنتجات — تترك الصفّ
-     * أقصر من الجدول، فينكسر شكله بصمت في الحالة التي لا يفتحها أحد
-     * أثناء التطوير: حين لا توجد بيانات أصلاً.
+     * The "no results" row spans the table with a hand-written colspan. And adding a column
+     * without updating it — which is what adding the id column to the products table did —
+     * leaves the row shorter than the table, so its shape breaks silently in the one state
+     * nobody opens during development: when there is no data at all.
      */
     #[\PHPUnit\Framework\Attributes\DataProvider('entityTables')]
     public function testEmptyRowColspanMatchesTheHeaderCount(string $file): void
@@ -109,7 +110,7 @@ final class AdminTableIdentityTest extends TestCase
         $src = (string) file_get_contents(self::viewsDir() . '/' . $file);
 
         if (!preg_match('/\$emptyColspan\s*=\s*(\d+)/', $src, $m)) {
-            $this->markTestSkipped("{$file} لا يستعمل صفّ الجدول الفارغ المشترك.");
+            $this->markTestSkipped("{$file} does not use the shared empty-table row.");
         }
 
         $declared = (int) $m[1];
@@ -118,7 +119,7 @@ final class AdminTableIdentityTest extends TestCase
         $this->assertSame(
             $headers,
             $declared,
-            "{$file}: الجدول فيه {$headers} عموداً و\$emptyColspan = {$declared}."
+            "{$file}: the table has {$headers} columns and \$emptyColspan = {$declared}."
         );
     }
 }

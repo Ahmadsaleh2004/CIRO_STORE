@@ -7,16 +7,17 @@ use PHPUnit\Framework\TestCase;
 use ReflectionClass;
 
 /**
- * ImageUpload — الحارس الوحيد لما يُكتب على القرص من المرفوعات.
+ * ImageUpload — the only guard over what uploads write to disk.
  *
- * كان المنطق مكتوباً مرّتين (AdminProductModel و BrandingModel) بنسختين
- * متطابقتين لا يفصلهما إلا بادئة الاسم، ولم يكن فيهما **أي حدّ للحجم**:
- * الأمر كلّه متروك لـupload_max_filesize في php.ini — إعداد خادم يختلف
- * بين بيئة وأخرى ولا يعرفه من يقرأ الكود.
+ * The logic used to be written twice (AdminProductModel and BrandingModel) in two identical
+ * copies separated only by the filename prefix, and neither carried **any size limit**: the
+ * whole matter was left to upload_max_filesize in php.ini — a server setting that differs
+ * between environments and is unknown to whoever reads the code.
  *
- * ⚠️ move_uploaded_file ترفض أي ملف لم يصل عبر رفع HTTP حقيقي، فلا
- * يمكن اختبار مسار الحفظ الكامل من CLI. المُختبَر هنا هو ما **يسبق**
- * الحفظ — وهو موضع كل قرارات الأمان: الحجم، والنوع، واشتقاق الامتداد.
+ * ⚠️ move_uploaded_file rejects any file that did not arrive through a real HTTP upload, so
+ * the complete save path cannot be tested from the CLI. What is tested here is what comes
+ * **before** the save — and that is where every security decision lives: the size, the type,
+ * and deriving the extension.
  */
 final class ImageUploadTest extends TestCase
 {
@@ -33,7 +34,7 @@ final class ImageUploadTest extends TestCase
         parent::tearDown();
     }
 
-    /** ينشئ ملفاً مؤقتاً بمحتوى معطى ويُرجع مساره. */
+    /** Creates a temporary file with the given content and returns its path. */
     private function tempFile(string $contents): string
     {
         $path = sys_get_temp_dir() . '/cairo-upload-' . bin2hex(random_bytes(6));
@@ -42,7 +43,7 @@ final class ImageUploadTest extends TestCase
         return $path;
     }
 
-    /** أصغر GIF صالح — بايتاته الحقيقية، فيتعرّف عليه mime_content_type. */
+    /** The smallest valid GIF — its real bytes, so mime_content_type recognises it. */
     private function tinyGif(): string
     {
         return base64_decode('R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7');
@@ -58,31 +59,33 @@ final class ImageUploadTest extends TestCase
 
     public function testTheLimitIsFiveMegabytes(): void
     {
-        // الرقم مثبَّت عمداً: تغييره قرار لا تفصيل، ويجب أن يُرى في diff.
+        // The number is pinned deliberately: changing it is a decision rather than a detail,
+        // and it must be visible in a diff.
         $this->assertSame(5 * 1024 * 1024, ImageUpload::MAX_BYTES);
     }
 
     /**
-     * ملف أكبر من الحدّ يُرفض قبل أن يُسأل عن نوعه.
+     * A file over the limit is rejected before its type is asked about.
      *
-     * الترتيب مقصود: mime_content_type تقرأ الملف، وقراءة ملف ضخم
-     * لترفضه بعدها هدرٌ يمكن للمهاجم تكراره.
+     * The order is deliberate: mime_content_type reads the file, and reading a huge file only
+     * to reject it afterwards is waste an attacker can repeat.
      */
     public function testAFileOverTheLimitIsRejected(): void
     {
         $path = $this->tempFile(str_repeat('A', ImageUpload::MAX_BYTES + 1));
 
         $this->assertNull(ImageUpload::store($this->entry($path), sys_get_temp_dir(), 'x_'));
-        $this->assertFileExists($path, 'الملف المرفوض يجب ألّا يُنقَل.');
+        $this->assertFileExists($path, 'A rejected file must not be moved.');
     }
 
     public function testAFileAtTheLimitIsNotRejectedForItsSize(): void
     {
-        // بالضبط عند الحدّ: الشرط `>` لا `>=` — الخطأ بواحد هنا يرفض
-        // ملفاً مسموحاً به تماماً.
+        // Exactly at the limit: the condition is `>` and not `>=` — an off-by-one here
+        // rejects a file that is perfectly allowed.
         $path = $this->tempFile(str_repeat('A', ImageUpload::MAX_BYTES));
 
-        // يُرفض لأنه ليس صورة، لا لأن حجمه تجاوز — والتمييز مهمّ.
+        // It is rejected for not being an image rather than for exceeding the size — and the
+        // distinction matters.
         $this->assertNull(ImageUpload::store($this->entry($path), sys_get_temp_dir(), 'x_'));
         $this->assertLessThanOrEqual(ImageUpload::MAX_BYTES, filesize($path));
     }
@@ -101,17 +104,18 @@ final class ImageUploadTest extends TestCase
         foreach ([UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_PARTIAL, UPLOAD_ERR_NO_FILE] as $code) {
             $this->assertNull(
                 ImageUpload::store(['tmp_name' => $path, 'error' => $code], sys_get_temp_dir(), 'x_'),
-                "قُبل رفع فاشل برمز {$code}."
+                "A failed upload with code {$code} was accepted."
             );
         }
     }
 
     /**
-     * الامتداد يُشتقّ من المحتوى، وكل نوع مقبول له امتداد مقابل.
+     * The extension is derived from the content, and every accepted type has a matching
+     * extension.
      *
-     * القائمة والأذرع كانتا منفصلتين في الكود القديم: إضافة نوع إلى
-     * القائمة بلا امتداد مقابل كانت تحفظ الملف بامتداد خاطئ **بصمت**.
-     * الخريطة الواحدة تمنع ذلك، وهذا الاختبار يمنع فصلها مجدداً.
+     * The list and the branches were separate in the old code: adding a type to the list
+     * without a matching extension saved the file with the wrong extension **silently**. The
+     * single map prevents that, and this test prevents them being separated again.
      */
     public function testEveryAcceptedMimeHasAnExtension(): void
     {
@@ -121,42 +125,42 @@ final class ImageUploadTest extends TestCase
 
         foreach ($map as $mime => $ext) {
             $this->assertMatchesRegularExpression('#^image/[a-z0-9+.-]+$#', (string) $mime);
-            $this->assertMatchesRegularExpression('/^[a-z0-9]{2,5}$/', (string) $ext, "امتداد غير صالح لـ{$mime}");
+            $this->assertMatchesRegularExpression('/^[a-z0-9]{2,5}$/', (string) $ext, "An invalid extension for {$mime}");
         }
     }
 
     /**
-     * لا يُقبل نوع خطر ولو أُضيف إلى الخريطة سهواً.
+     * No dangerous type is accepted, even if it is added to the map by oversight.
      *
-     * SVG صورة، لكنها مستند XML ينفّذ سكربتاً عند فتحه مباشرةً — فهي
-     * ناقل XSS لا صورة عرض. وجودها في الخريطة يوماً ما خطأ يجب أن
-     * يُوقفه البناء لا المراجعة.
+     * An SVG is an image, but it is an XML document that runs script when opened directly —
+     * so it is an XSS vector rather than a display image. Its appearing in the map one day is
+     * a mistake the build should stop, not a review.
      */
     public function testDangerousImageTypesAreNotAccepted(): void
     {
         $map = (new ReflectionClass(ImageUpload::class))->getConstant('EXT_BY_MIME');
 
         foreach (['image/svg+xml', 'image/svg', 'text/html', 'application/xml'] as $dangerous) {
-            $this->assertArrayNotHasKey($dangerous, $map, "نوع خطر مقبول: {$dangerous}");
+            $this->assertArrayNotHasKey($dangerous, $map, "A dangerous type is accepted: {$dangerous}");
         }
     }
 
     /**
-     * كلا الموديلين يفوّضان إلى المنطق الواحد.
+     * Both models delegate to the single implementation.
      *
-     * هذا ما يمنع عودة النسختين المتطابقتين — ومعهما احتمال أن يُشدَّد
-     * أحدهما ويبقى الآخر.
+     * This is what prevents the two identical copies coming back — and with them the chance
+     * that one is tightened while the other is left.
      */
     public function testBothModelsDelegateInsteadOfDuplicating(): void
     {
         foreach (['AdminProductModel', 'BrandingModel'] as $model) {
             $src = (string) file_get_contents(dirname(__DIR__, 2) . "/app/Models/{$model}.php");
 
-            $this->assertStringContainsString('ImageUpload::store(', $src, "{$model} لا يفوّض.");
+            $this->assertStringContainsString('ImageUpload::store(', $src, "{$model} does not delegate.");
             $this->assertStringNotContainsString(
                 'move_uploaded_file(',
                 $src,
-                "{$model} ما زال يحفظ بنفسه — نسختان تعنيان تشديداً على واحدة فقط."
+                "{$model} still saves on its own — two copies mean only one of them gets tightened."
             );
         }
     }

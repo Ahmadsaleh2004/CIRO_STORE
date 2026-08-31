@@ -5,48 +5,50 @@ namespace Tests\Unit;
 use PHPUnit\Framework\TestCase;
 
 /**
- * لا وسم يحمل السمة نفسها مرّتين.
+ * No tag carries the same attribute twice.
  *
  * ══════════════════════════════════════════════════════════════
- * لماذا هذا الاختبار موجود
+ * Why this test exists
  * ══════════════════════════════════════════════════════════════
  *
- * لأن HTML لا يعتبر السمة المكرّرة خطأً. المحلّل يأخذ **الأولى**
- * ويتجاهل الثانية بصمت — لا رسالة في الـconsole، ولا شيء في أدوات
- * المطوّر يقول إن سمةً أُسقطت. الصفحة تبدو سليمة والنمط غائب.
+ * Because HTML does not treat a duplicated attribute as an error. The parser takes **the
+ * first** and ignores the second silently — no message in the console, and nothing in the
+ * developer tools saying an attribute was dropped. The page looks sound and the style is
+ * missing.
  *
- * وقد وقع ذلك في تسعة وعشرين موضعاً دفعةً واحدة، كلّها من ترحيل واحد:
- * نقل 234 سمة `style="…"` إلى أصناف `u-*` في base/utilities.css. أُضيف
- * الصنف الجديد في سمة `class` **ثانية** بدل دمجه في الموجودة، فذهب
- * كلّه هدراً.
+ * And that happened at twenty-nine sites in one go, all of them from a single migration:
+ * moving 234 `style="…"` attributes into `u-*` classes in base/utilities.css. The new class
+ * was added in a **second** `class` attribute rather than merged into the existing one, so
+ * all of it went to waste.
  *
- * وثمن ذلك تجاوز الشكل. الفائز يتبع ترتيب الكتابة لا القصد:
+ * And the cost of that went beyond appearance. The winner follows the writing order rather
+ * than the intent:
  *
- *   · admin/login.php — `class="form-group" … class="d-none"`
- *     فبقي حقل رمز المصادقة الثنائية **ظاهراً دائماً**، وهو حقل لا
- *     يُفترض أن يُرى إلّا حين يطلبه الخادم.
- *   · product/add.php وedit.php — نفس الشكل على رسالة الخطأ الحمراء،
- *     فكانت «Please select at least one category» معروضة منذ فتح
- *     الصفحة قبل أن يخطئ أحد.
- *   · branding/_templates.php — سقط `u-thumb-preview` عن صور
- *     السلايدر، فلم يبقَ لها تحديد أبعاد إطلاقاً وصارت تمطّ حاويتها.
- *   · product_dit.php — هنا فازت `d-none` وسقطت `mt-2 p-3 rounded
- *     border`، فاللوحة مخفيّة كما يجب لكن بلا حشو ولا إطار.
+ *   · admin/login.php — `class="form-group" … class="d-none"`,
+ *     so the two-factor code field stayed **permanently visible**, a field that should be
+ *     seen only when the server asks for it.
+ *   · product/add.php and edit.php — the same shape on the red error message, so
+ *     "Please select at least one category" was on display from the moment the page opened,
+ *     before anybody had made a mistake.
+ *   · branding/_templates.php — `u-thumb-preview` was dropped from the slider images, so
+ *     they had no dimensions at all and started stretching their container.
+ *   · product_dit.php — here `d-none` won and `mt-2 p-3 rounded border` was dropped, so the
+ *     panel is hidden as it should be but with no padding and no border.
  *
- * الفحص يشمل كل السمات لا `class` وحدها: `id` أو `href` أو `data-*`
- * مكرّرة تسقط بنفس الصمت.
+ * The check covers every attribute rather than `class` alone: a duplicated `id`, `href` or
+ * `data-*` is dropped with the same silence.
  */
 final class DuplicateAttributeTest extends TestCase
 {
-    // ملاحظة: لا قائمة استثناءات هنا عمداً. لا سمة في HTML يصحّ تكرارها
-    // في وسم واحد، فقائمةٌ فارغة تنتظر أول استثناء ليست تصميماً بل باباً
-    // مفتوحاً — ويرفضها PHPStan أصلاً كشرطٍ لا يتحقّق. أوّل حاجة حقيقية
-    // إلى استثناء تُضيفه مع سببه المكتوب.
+    // Note: there is deliberately no exception list here. No attribute in HTML may validly
+    // be repeated in one tag, so an empty list waiting for its first exception is not a
+    // design but an open door — and PHPStan rejects it anyway as a condition that never
+    // holds. The first real need for an exception adds it along with its written reason.
 
     /**
-     * @param  string       $root      مجلد البحث
-     * @param  string       $extension الامتداد المطلوب
-     * @param  list<string> $skip      أجزاء مسار تُستبعَد
+     * @param  string       $root      the directory to search
+     * @param  string       $extension the extension wanted
+     * @param  list<string> $skip      path fragments to exclude
      * @return list<string>
      */
     private function filesIn(string $root, string $extension, array $skip = []): array
@@ -82,8 +84,8 @@ final class DuplicateAttributeTest extends TestCase
     }
 
     /**
-     * ملفات المصدر وحدها — `public/js/dist` ناتج بناء، وأي عطل فيه
-     * انعكاسٌ لعطل في المصدر. الإبلاغ عنه مرّتين يشوّش لا أكثر.
+     * The source files alone — `public/js/dist` is build output, and any fault in it is a
+     * reflection of a fault in the source. Reporting it twice only adds confusion.
      *
      * @return list<string>
      */
@@ -93,12 +95,12 @@ final class DuplicateAttributeTest extends TestCase
     }
 
     /**
-     * كتل PHP تُستبدل بمسافات بنفس الطول قبل التحليل.
+     * PHP blocks are replaced with spaces of the same length before parsing.
      *
-     * سببان: `<?= $x ? 'a' : 'b' ?>` قد يحوي `>` فيقطع الوسم على
-     * المحلّل النصّي البسيط، و`class="<?= … ?>"` قيمة لا شكل فلا يعني
-     * الاختبارَ محتواها. والاستبدال يحافظ على الأسطر فتبقى أرقامها
-     * صحيحة في رسالة الفشل.
+     * Two reasons: `<?= $x ? 'a' : 'b' ?>` may contain a `>` that cuts the tag short for a
+     * simple textual parser, and `class="<?= … ?>"` is a value rather than a shape, so its
+     * content does not concern this test. And the replacement preserves the lines, so their
+     * numbers stay correct in the failure message.
      */
     private function maskPhp(string $src): string
     {
@@ -114,7 +116,7 @@ final class DuplicateAttributeTest extends TestCase
     }
 
     /**
-     * يفحص نصّاً واحداً ويُرجع مواضع السمات المكرّرة فيه.
+     * Examines one piece of text and returns the duplicated attribute sites in it.
      *
      * @return list<string>
      */
@@ -124,8 +126,8 @@ final class DuplicateAttributeTest extends TestCase
 
         if (preg_match_all('/<[a-zA-Z][^<>]*>/s', $src, $tags, PREG_OFFSET_CAPTURE)) {
             foreach ($tags[0] as [$tag, $offset]) {
-                // اسم السمة: يسبقه فراغ، ويتلوه `=`. النفي الخلفي يمنع
-                // التقاط جزء من اسم مركّب مثل data-class.
+                // The attribute's name: preceded by whitespace and followed by `=`. The
+                // lookbehind prevents capturing part of a compound name such as data-class.
                 if (!preg_match_all('/(?<=\s)([a-zA-Z_:][-a-zA-Z0-9_:.]*)\s*=/', $tag, $attrs)) {
                     continue;
                 }
@@ -137,16 +139,17 @@ final class DuplicateAttributeTest extends TestCase
                     if (isset($seen[$name])) {
                         $line = substr_count(substr($src, 0, $offset), "\n") + 1;
 
-                        // ⚠️ التوحيد قبل القصّ لا بعده. على ويندوز يخلط
-                        // RecursiveDirectoryIterator الفاصلَين — الجذر
-                        // بما مُرّر إليه (`/`) والأبناء بفاصل النظام
-                        // (`\`) — فقصُّ جذرٍ مكتوبٍ بفاصل واحد يفشل
-                        // بصمت، وتخرج رسالة الفشل بمسار مطلق طويل.
+                        // ⚠️ Normalise before trimming, not after. On Windows,
+                        // RecursiveDirectoryIterator mixes the two separators — the root as
+                        // it was passed in (`/`) and the children with the system separator
+                        // (`\`) — so trimming a root written with one separator fails
+                        // silently, and the failure message comes out with a long absolute
+                        // path.
                         $normalised = str_replace('\\', '/', $path);
                         $root       = str_replace('\\', '/', dirname(__DIR__, 2)) . '/';
 
                         $found[] = str_replace($root, '', $normalised)
-                            . ':' . $line . "  (السمة: {$name})";
+                            . ':' . $line . "  (attribute: {$name})";
                         break;
                     }
 
@@ -170,31 +173,31 @@ final class DuplicateAttributeTest extends TestCase
         $this->assertSame(
             [],
             $offenders,
-            "وسم يحمل السمة نفسها مرّتين:\n  - " . implode("\n  - ", $offenders)
-            . "\n\nالمتصفّح يأخذ الأولى ويُسقط الثانية بصمت. ادمج القيمتين في سمة واحدة."
+            "A tag carrying the same attribute twice:\n  - " . implode("\n  - ", $offenders)
+            . "\n\nThe browser takes the first and drops the second silently. Merge the two values into one attribute."
         );
     }
 
     /**
-     * والماركب المُولَّد من جافاسكربت يخضع للقاعدة نفسها.
+     * And markup generated from JavaScript is subject to the same rule.
      *
      * ══════════════════════════════════════════════════════════
-     * لماذا فحصٌ ثانٍ لا توسيعُ الأول
+     * Why a second check rather than widening the first
      * ══════════════════════════════════════════════════════════
      *
-     * لأن نصف واجهة هذا المشروع تُبنى في المتصفّح: بطاقات المفضّلة،
-     * قائمة الإشعارات، منتقي المنتجات في Manage Slider، منتقي
-     * الكاتوجريز. وهي كلّها `innerHTML` من قوالب نصّية — فالمتصفّح
-     * يحلّلها كما يحلّل ماركب الـview تماماً، ويُسقط السمة المكرّرة
-     * بنفس الصمت.
+     * Because half of this project's interface is built in the browser: the wishlist cards,
+     * the notification list, the product picker in Manage Slider, the category picker. They
+     * are all `innerHTML` from string templates — so the browser parses them exactly as it
+     * parses a view's markup, and drops a duplicated attribute with the same silence.
      *
-     * وقد وُجدت هناك فعلاً بعد تنظيف الـviews: `product-picker-row`
-     * في js/admin/branding.js و`cat-delete-icon` في
-     * js/admin/category-picker.js، كلتاهما تفقد صنف `u-*` الثاني.
-     * أي أن حصر الفحص في app/views كان يترك نصف السطح بلا حارس.
+     * And duplicates really were found there after the views were cleaned:
+     * `product-picker-row` in js/admin/branding.js and `cat-delete-icon` in
+     * js/admin/category-picker.js, both losing their second `u-*` class. Which is to say
+     * confining the check to app/views left half the surface unguarded.
      *
-     * والقوالب النصّية تُفحص كما هي بلا تفسير: `${...}` تبقى داخل
-     * قيمة السمة، وهي لا تعني الفاحص — يعنيه اسم السمة وتكراره.
+     * And the string templates are examined as they are, uninterpreted: `${...}` stays
+     * inside the attribute's value, and that does not concern the checker — the attribute's
+     * name and its repetition do.
      */
     public function testNoScriptBuildsMarkupWithARepeatedAttribute(): void
     {
@@ -203,9 +206,9 @@ final class DuplicateAttributeTest extends TestCase
         foreach ($this->scriptFiles() as $path) {
             $src = (string) file_get_contents($path);
 
-            // التعليقات تُنزَع أوّلاً: هذا المشروع يشرح أعطاله في
-            // تعليقاته، ويذكر فيها الشكل المعطوب نفسه — فبدون النزع
-            // يمسك الاختبارُ التوثيقَ بدل الكود.
+            // The comments are stripped first: this project explains its faults in its
+            // comments and names the broken shape itself in them — so without stripping, the
+            // test catches the documentation instead of the code.
             $src = preg_replace('#/\*.*?\*/#s', '', $src) ?? '';
             $src = preg_replace('#^\s*//.*$#m', '', $src) ?? '';
 
@@ -215,9 +218,9 @@ final class DuplicateAttributeTest extends TestCase
         $this->assertSame(
             [],
             $offenders,
-            "قالب في جافاسكربت يبني وسماً بسمة مكرّرة:\n  - "
+            "A JavaScript template building a tag with a duplicated attribute:\n  - "
             . implode("\n  - ", $offenders)
-            . "\n\nالمتصفّح يأخذ الأولى ويُسقط الثانية بصمت. ادمج القيمتين في سمة واحدة."
+            . "\n\nThe browser takes the first and drops the second silently. Merge the two values into one attribute."
         );
     }
 }

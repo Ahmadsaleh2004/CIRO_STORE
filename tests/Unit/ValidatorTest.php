@@ -6,12 +6,13 @@ use App\Core\Validator;
 use PHPUnit\Framework\TestCase;
 
 /**
- * Validator — طبقة التحقّق التي حلّت محلّ 152 موضع استخراج يدوي
- * (88 بـ`$_POST[…] ??` و38 بـtrim و26 بـ(int)).
+ * Validator — the validation layer that replaced 152 hand-written extraction sites
+ * (88 with `$_POST[…] ??`, 38 with trim and 26 with (int)).
  *
- * تُختبَر بلا خادم ولا جلسة ولا شبكة، وهذا هو سبب فصلها عن الكنترولر
- * أصلاً: منطق التحقّق حين كان مبعثراً في أجسام الأفعال كان يحتاج طلب
- * HTTP كاملاً ليُفحص — أي لم يكن يُفحص.
+ * It is tested with no server, no session and no network, and that is the reason it was
+ * separated from the controller in the first place: while the validation logic was scattered
+ * through the action bodies, checking it needed a complete HTTP request — that is, it was
+ * never checked.
  */
 final class ValidatorTest extends TestCase
 {
@@ -40,16 +41,16 @@ final class ValidatorTest extends TestCase
     }
 
     /**
-     * الحالة التي تُنسى دائماً: نصّ من مسافات وحدها.
+     * The case that is always forgotten: a string of nothing but spaces.
      *
-     * `!empty('   ')` تساوي false في PHP، فالفحص الساذج يمرّرها —
-     * ويُحفظ في القاعدة اسمٌ فارغ المعنى.
+     * `!empty('   ')` is false in PHP, so the naive check lets it through — and a name with
+     * no meaning is saved to the database.
      */
     public function testRequiredRejectsWhitespaceOnly(): void
     {
         $v = $this->validate(['name' => "   \t "], ['name' => 'required|string']);
 
-        $this->assertTrue($v->fails(), 'نصّ من مسافات وحدها مرّ كقيمة صالحة.');
+        $this->assertTrue($v->fails(), 'A string of nothing but spaces passed as a valid value.');
     }
 
     public function testAnOptionalFieldMayBeAbsent(): void
@@ -64,10 +65,10 @@ final class ValidatorTest extends TestCase
 
     public function testStringTrimsBothEnds(): void
     {
-        $v = $this->validate(['name' => '  أحمد  '], ['name' => 'required|string']);
+        $v = $this->validate(['name' => '  Ahmad  '], ['name' => 'required|string']);
 
         $this->assertTrue($v->passes());
-        $this->assertSame('أحمد', $v->validated()['name']);
+        $this->assertSame('Ahmad', $v->validated()['name']);
     }
 
     public function testStringRejectsAnArray(): void
@@ -78,18 +79,18 @@ final class ValidatorTest extends TestCase
     // ── int ──────────────────────────────────────────────────
 
     /**
-     * أخطر اختبار في الملف.
+     * The most important test in the file.
      *
-     * `(int)'abc'` تساوي **صفراً** في PHP — بلا تحذير ولا خطأ. فكل
-     * موضع يكتب `(int)$_POST['id']` يحوّل مدخلاً تالفاً إلى معرّف صالح
-     * الشكل، ثم يُستعلم به. والنتيجة «لم يُعثر على العنصر» بدل «مدخل
-     * غير صالح» — تشخيص خاطئ يقود إلى المكان الخطأ.
+     * `(int)'abc'` is **zero** in PHP — with no warning and no error. So every site writing
+     * `(int)$_POST['id']` turns corrupt input into a well-formed id and then queries with it.
+     * The result is "item not found" instead of "invalid input" — a wrong diagnosis that
+     * leads to the wrong place.
      */
     public function testIntRejectsNonNumericInsteadOfSilentlyBecomingZero(): void
     {
         $v = $this->validate(['id' => 'abc'], ['id' => 'required|int']);
 
-        $this->assertTrue($v->fails(), "'abc' تحوّلت إلى رقم بصمت — عودة فخّ (int).");
+        $this->assertTrue($v->fails(), "'abc' was turned into a number silently — the (int) trap has returned.");
         $this->assertArrayNotHasKey('id', $v->validated());
     }
 
@@ -119,7 +120,7 @@ final class ValidatorTest extends TestCase
         foreach (['notanemail', 'a@', '@b.com', 'a b@c.com'] as $bad) {
             $this->assertTrue(
                 $this->validate(['email' => $bad], ['email' => 'email'])->fails(),
-                "قُبل بريد غير صالح: [{$bad}]"
+                "An invalid email address was accepted: [{$bad}]"
             );
         }
     }
@@ -127,17 +128,18 @@ final class ValidatorTest extends TestCase
     // ── min / max ────────────────────────────────────────────
 
     /**
-     * الحدّ يُقاس بالمحارف لا بالبايتات.
+     * The limit is measured in characters rather than bytes.
      *
-     * «أحمد» خمسة محارف وثمانية بايتات. فحص بـstrlen يقبل اسماً من
-     * ثلاثة محارف عربية على أنه ستّة — أو يرفض اسماً صالحاً حسب اتجاه
-     * الحدّ. والنتيجة قاعدة تتصرّف تصرّفين حسب لغة المستخدم.
+     * The name below is four characters and eight bytes. A check with strlen would read a
+     * three-character name as six — or reject a valid one, depending on which way the limit
+     * points. The result is a rule that behaves in two different ways depending on the
+     * user's language.
      */
     public function testLengthIsCountedInCharactersNotBytes(): void
     {
         $v = $this->validate(['name' => 'أحمد'], ['name' => 'required|string|min:4|max:4']);
 
-        $this->assertTrue($v->passes(), 'الطول قيس بالبايتات لا بالمحارف.');
+        $this->assertTrue($v->passes(), 'The length was measured in bytes rather than characters.');
     }
 
     public function testMinRejectsTooShortText(): void
@@ -155,7 +157,8 @@ final class ValidatorTest extends TestCase
         );
     }
 
-    /** على الأرقام يقارن الحدّ **القيمة** لا الطول — وهذا ما يتوقّعه القارئ. */
+    /** On numbers the limit compares **the value** rather than the length — which is what a
+     *  reader expects. */
     public function testMinAndMaxCompareValueForNumbers(): void
     {
         $this->assertTrue($this->validate(['qty' => '0'], ['qty' => 'int|min:1'])->fails());
@@ -171,7 +174,7 @@ final class ValidatorTest extends TestCase
 
         $this->assertTrue($this->validate(['role' => 'B'], $rules)->passes());
         $this->assertTrue($this->validate(['role' => 'Z'], $rules)->fails());
-        // حسّاسة لحالة الأحرف: العمود enum('A','B','C','D').
+        // Case sensitive: the column is enum('A','B','C','D').
         $this->assertTrue($this->validate(['role' => 'b'], $rules)->fails());
     }
 
@@ -195,8 +198,8 @@ final class ValidatorTest extends TestCase
     // ── bool ─────────────────────────────────────────────────
 
     /**
-     * كل مدخلات HTTP نصوص، و`(bool)'false'` تساوي **true** في PHP.
-     * نفس الفخّ الذي أوقع APP_DEBUG في env_loader.
+     * Every HTTP input is a string, and `(bool)'false'` is **true** in PHP.
+     * The same trap that caught APP_DEBUG in env_loader.
      */
     public function testBoolReadsTheStringFalseAsFalse(): void
     {
@@ -204,7 +207,7 @@ final class ValidatorTest extends TestCase
             $v = $this->validate(['flag' => $falsy], ['flag' => 'bool']);
             $this->assertNotTrue(
                 $v->validated()['flag'] ?? null,
-                "القيمة [{$falsy}] قُرئت true."
+                "The value [{$falsy}] was read as true."
             );
         }
 
@@ -216,19 +219,19 @@ final class ValidatorTest extends TestCase
     // ── validated() ──────────────────────────────────────────
 
     /**
-     * ما لم يُفحص لا يخرج.
+     * What was not validated does not come out.
      *
-     * تمرير كل المدخلات إلى المودل هو الباب الذي يدخل منه ما لم
-     * يُتوقّع — حقل `is_admin` مدسوس في طلب تحديث ملف شخصي مثلاً.
+     * Passing all of the input to the model is the door the unexpected comes in through — an
+     * `is_admin` field slipped into a profile update request, for instance.
      */
     public function testValidatedReturnsOnlyCheckedFields(): void
     {
         $v = $this->validate(
-            ['name' => 'أحمد', 'is_admin' => '1', 'role' => 'A'],
+            ['name' => 'Ahmad', 'is_admin' => '1', 'role' => 'A'],
             ['name' => 'required|string']
         );
 
-        $this->assertSame(['name' => 'أحمد'], $v->validated());
+        $this->assertSame(['name' => 'Ahmad'], $v->validated());
     }
 
     public function testFirstErrorIsNullWhenEverythingPasses(): void
@@ -249,7 +252,7 @@ final class ValidatorTest extends TestCase
     {
         $v = $this->validate([], ['full_address' => 'required|string']);
 
-        // 'full_address' لا يظهر خاماً في رسالة يقرأها مستخدم.
+        // 'full_address' does not appear raw in a message a user reads.
         $this->assertStringContainsString('Full address', (string) $v->firstError());
     }
 }

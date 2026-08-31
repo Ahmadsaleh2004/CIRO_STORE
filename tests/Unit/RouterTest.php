@@ -7,15 +7,16 @@ use App\Core\Router;
 use PHPUnit\Framework\TestCase;
 
 /**
- * الراوتر — مدخل كل طلب يصل إلى المشروع، و104 مسار تمرّ عبره.
+ * The router — the entry point of every request reaching the project, with 104 routes
+ * passing through it.
  *
- * كان بلا اختبار واحد. وهذه ليست ملاحظة تنظيمية: مطابقة المسار تُبنى
- * بـregex من نصّ المسار، وخطأ فيها يعني إما راوتاً لا يُبلَغ أبداً أو —
- * وهو الأخطر — راوتاً يُبلَغ بمسار لم يُقصد.
+ * It had not one test. And that is not an organisational remark: the path matching is built
+ * as a regex from the path's text, and an error in it means either a route that is never
+ * reached or — more dangerously — a route reached by a path that was never intended.
  *
- * الاختبارات هنا لا تلمس الشبكة ولا القاعدة: تفحص التسجيل والمطابقة
- * وبناء الروابط. أما التنفيذ الفعلي (dispatch) فيوقف العملية بـexit
- * داخل ErrorPage، فيُغطّى عبر HTTP في scripts/smoke-test.php.
+ * The tests here touch neither the network nor the database: they examine registration,
+ * matching and URL building. The actual dispatch ends the process with an exit inside
+ * ErrorPage, so it is covered over HTTP in scripts/smoke-test.php.
  */
 final class RouterTest extends TestCase
 {
@@ -24,7 +25,7 @@ final class RouterTest extends TestCase
         return new Router();
     }
 
-    /** يستخرج المسار المطابق دون تنفيذه — عبر الوصول إلى matchPath. */
+    /** Extracts the matching route without running it — by reaching matchPath. */
     private function findRoute(Router $router, string $method, string $path): ?Route
     {
         $match = new \ReflectionMethod(Router::class, 'matchPath');
@@ -43,7 +44,7 @@ final class RouterTest extends TestCase
         return null;
     }
 
-    // ── التسجيل ──────────────────────────────────────────────
+    // ── Registration ─────────────────────────────────────────
 
     public function testRegistersEveryHttpMethod(): void
     {
@@ -59,8 +60,8 @@ final class RouterTest extends TestCase
 
         $methods = array_map(static fn (Route $x): string => $x->getMethod(), $r->getRoutes());
 
-        // PUT/PATCH/DELETE لم تكن مدعومة إطلاقاً قبل هذه المرحلة، فكانت
-        // كل عملية تعديل أو حذف مضطرّة لأن تكون POST.
+        // PUT/PATCH/DELETE were not supported at all before this phase, so every update or
+        // delete operation was forced to be a POST.
         $this->assertSame(['GET', 'POST', 'PUT', 'PATCH', 'DELETE'], $methods);
     }
 
@@ -75,7 +76,7 @@ final class RouterTest extends TestCase
         $this->assertSame(['auth'], $route->getMiddleware());
     }
 
-    // ── المطابقة ─────────────────────────────────────────────
+    // ── Matching ─────────────────────────────────────────────
 
     public function testMatchesAnExactPath(): void
     {
@@ -99,14 +100,14 @@ final class RouterTest extends TestCase
     }
 
     /**
-     * HEAD يُعامَل كـGET.
+     * HEAD is treated as GET.
      *
-     * المعيار (RFC 9110 §9.3.2) يوجب أن كل مورد يدعم GET يدعم HEAD.
-     * وبلا ذلك كان **كل مسار في المشروع** يردّ على HEAD بـ404 — وأدوات
-     * المراقبة وفاحصات الصحّة ودوّارات الحمل تستعمله لأنه أرخص، فكانت
-     * كلها ستقرأ الموقع ميّتاً وهو حيّ.
+     * The standard (RFC 9110 §9.3.2) requires that every resource supporting GET supports
+     * HEAD. Without that, **every route in the project** answered HEAD with a 404 — and
+     * monitoring tools, health checkers and load balancers use it because it is cheaper, so
+     * all of them would have read the site as dead while it was alive.
      *
-     * والدليل كان في سجلّ المشروع نفسه: «[Cairo Store] 404: HEAD /».
+     * And the evidence was in the project's own log: "[Cairo Store] 404: HEAD /".
      */
     public function testHeadIsTreatedAsGet(): void
     {
@@ -117,19 +118,20 @@ final class RouterTest extends TestCase
         $normalize = new \ReflectionMethod(Router::class, 'normalizePath');
         $normalize->setAccessible(true);
 
-        // dispatch يوقف التنفيذ، فيُفحص التطبيع والمطابقة معاً بدلاً منه.
+        // dispatch ends execution, so the normalisation and the matching are examined
+        // together in its place.
         $this->assertNotNull($this->findRoute($r, 'GET', '/health'));
         $this->assertNull(
             $this->findRoute($r, 'HEAD', '/health'),
-            'المطابقة نفسها لا تعرف HEAD — التحويل يقع في dispatch.'
+            'The matching itself does not know HEAD — the conversion happens in dispatch.'
         );
 
-        // ما يهمّ فعلاً: أن dispatch يحوّل HEAD إلى GET قبل المطابقة.
+        // What actually matters: that dispatch converts HEAD to GET before matching.
         $source = file_get_contents((new \ReflectionClass(Router::class))->getFileName());
         $this->assertStringContainsString(
             "if (\$requestMethod === 'HEAD')",
             (string) $source,
-            'تحويل HEAD إلى GET اختفى من dispatch.'
+            'The HEAD-to-GET conversion has disappeared from dispatch.'
         );
     }
 
@@ -139,18 +141,19 @@ final class RouterTest extends TestCase
         $r->post('/p', static function (): void {
         });
 
-        // بعض الوكلاء يرسلون الطريقة بحروف صغيرة؛ رفضها عطل لا حماية.
+        // Some proxies send the method in lower case; rejecting it is a fault, not
+        // protection.
         $this->assertNotNull($this->findRoute($r, 'post', '/p'));
     }
 
     /**
-     * أخطر اختبار في الملف.
+     * The most important test in the file.
      *
-     * النسخة السابقة كانت تبني النمط من نصّ المسار الخام بلا تهريب:
+     * The previous version built the pattern from the raw path text with no escaping:
      *     $pattern = preg_replace('/\{(\w+)\}/', '([^/]+)', $routePath);
-     * فالنقطة في مسار مثل /handlers/notify_handler.php تبقى نقطةَ regex
-     * تطابق **أي محرف** — أي أن /handlers/notify_handlerXphp كان يصل
-     * إلى النقطة نفسها. وهذا مسار مسجَّل فعلاً في هذا المشروع.
+     * so the dot in a path like /handlers/notify_handler.php stayed a regex dot matching
+     * **any character** — that is, /handlers/notify_handlerXphp reached the same endpoint.
+     * And that is a path actually registered in this project.
      */
     public function testLiteralDotsAreNotTreatedAsRegexWildcards(): void
     {
@@ -161,7 +164,7 @@ final class RouterTest extends TestCase
         $this->assertNotNull($this->findRoute($r, 'POST', '/handlers/notify_handler.php'));
         $this->assertNull(
             $this->findRoute($r, 'POST', '/handlers/notify_handlerXphp'),
-            'النقطة عوملت كرمز regex — مسار لم يُقصد صار قابلاً للبلوغ.'
+            'The dot was treated as a regex metacharacter — an unintended path became reachable.'
         );
     }
 
@@ -187,12 +190,12 @@ final class RouterTest extends TestCase
         $r->get('/product/{id}', static function (): void {
         });
 
-        // {id} تعني «مقطعاً واحداً»، فلو طابقت الشرطة لابتلع مسارٌ واحد
-        // شجرةَ مسارات كاملة تحته.
+        // {id} means "one segment", so were it to match the slash, a single route would
+        // swallow a whole tree of routes beneath it.
         $this->assertNull($this->findRoute($r, 'GET', '/product/42/reviews'));
     }
 
-    // ── المجموعات ────────────────────────────────────────────
+    // ── Groups ───────────────────────────────────────────────
 
     public function testGroupAppliesPrefixAndMiddleware(): void
     {
@@ -219,7 +222,7 @@ final class RouterTest extends TestCase
         $this->assertSame(
             ['admin', 'perm:can_manage_products'],
             $r->getRoutes()[0]->getMiddleware(),
-            'حارس المجموعة يجب أن يسبق حارس المسار — الأعمّ قبل الأخصّ.'
+            'The group\'s guard must precede the route\'s — the more general before the more specific.'
         );
     }
 
@@ -250,11 +253,11 @@ final class RouterTest extends TestCase
 
         $routes = $r->getRoutes();
         $this->assertSame('/admin/inside', $routes[0]->getPath());
-        $this->assertSame('/outside', $routes[1]->getPath(), 'بادئة المجموعة تسرّبت إلى ما بعدها.');
-        $this->assertSame([], $routes[1]->getMiddleware(), 'حارس المجموعة تسرّب إلى ما بعدها.');
+        $this->assertSame('/outside', $routes[1]->getPath(), 'The group\'s prefix leaked past it.');
+        $this->assertSame([], $routes[1]->getMiddleware(), 'The group\'s guard leaked past it.');
     }
 
-    // ── الحُرّاس ─────────────────────────────────────────────
+    // ── The guards ───────────────────────────────────────────
 
     public function testUnknownMiddlewareNameThrows(): void
     {
@@ -265,13 +268,13 @@ final class RouterTest extends TestCase
         $run = new \ReflectionMethod(Router::class, 'runMiddleware');
         $run->setAccessible(true);
 
-        // الفشل الصاخب مقصود: حارس مكتوب خطأً يعني مساراً بلا حماية،
-        // وتجاهله بصمت أسوأ ما يمكن فعله هنا.
+        // Failing loudly is deliberate: a misspelled guard means an unprotected route, and
+        // ignoring it silently is the worst thing that can be done here.
         $this->expectException(\InvalidArgumentException::class);
         $run->invoke($r, $route);
     }
 
-    // ── الأسماء ──────────────────────────────────────────────
+    // ── Names ────────────────────────────────────────────────
 
     public function testUnknownRouteNameThrows(): void
     {
@@ -280,13 +283,13 @@ final class RouterTest extends TestCase
     }
 
     /**
-     * بناء الرابط من الاسم يعمل فعلاً.
+     * Building a URL from a name actually works.
      *
-     * النسخة الأولى من هذه الدالة كانت تبحث في خريطة $named لا يملؤها
-     * أحد: الاسم يُضبط **بعد** التسجيل عبر ->name()، فلا سبيل لأن يعرفه
-     * addRoute. فكانت route() ترمي على كل اسم مهما كان صحيحاً — دالة
-     * لا تعمل أبداً، ولا اختبار يكشف ذلك لأن الاختبار الوحيد كان يفحص
-     * الرمي على اسم **مجهول**، وهو ما كانت تفعله في الحالتين.
+     * The first version of this function searched a $named map that nobody filled: the name
+     * is set **after** registration through ->name(), so addRoute has no way to know it. So
+     * route() threw on every name however correct — a function that never worked, with no
+     * test revealing it because the one test checked the throw on an **unknown** name, which
+     * is what it did in both cases.
      */
     public function testBuildsAUrlFromARouteName(): void
     {
@@ -312,7 +315,7 @@ final class RouterTest extends TestCase
         $r->get('/search/{term}', static function (): void {
         })->name('search');
 
-        // قيمة غير مُرمَّزة تكسر الرابط أو تفتح باب حقن مسار.
+        // An unencoded value breaks the URL or opens the door to path injection.
         $this->assertSame(URLROOT . '/search/a%2Fb%20c', $r->route('search', ['term' => 'a/b c']));
     }
 }

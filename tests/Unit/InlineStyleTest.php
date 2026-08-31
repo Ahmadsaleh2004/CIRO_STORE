@@ -5,19 +5,19 @@ namespace Tests\Unit;
 use PHPUnit\Framework\TestCase;
 
 /**
- * صفر نمط مضمّن في الـviews — وهو ما يجعل الـCSP صارمة.
+ * Zero inline styles in the views — which is what makes the CSP strict.
  *
- * `style-src` حملت 'unsafe-inline' منذ أوّل يوم لأن الـviews حملت 234
- * سمة `style="…"`. وسياسة تسمح بالأنماط المضمّنة لا تستطيع أن تمنع
- * نمطاً محقوناً — فالسمة كان لا بدّ أن تختفي قبل أن يُشدَّد التوجيه.
+ * `style-src` carried 'unsafe-inline' from the first day because the views carried 234
+ * `style="…"` attributes. And a policy that permits inline styles cannot prevent an injected
+ * one — so the attribute had to disappear before the directive could be tightened.
  *
- * الاختبار هنا هو ما يبقي التوجيه صادقاً. سمةٌ واحدة تعود إلى view
- * تجعل الصفحة تُعرَض بلا ذلك النمط — وهو عطل بصري صامت لا يظهر إلا
- * على النشر، لأن الـCSP لا تُفرَض عادةً على خادم التطوير المحلي.
+ * The test here is what keeps the directive honest. One attribute returning to a view makes
+ * the page render without that style — a silent visual fault that appears only on the
+ * deployment, because the CSP is not usually enforced on a local development server.
  *
- * ⚠️ الفحص على الـviews وحدها. ملفات CSS مكانها الطبيعي للأنماط،
- * وسمة style في نصّ إيميل (Mailer::template) لا يحكمها CSP إطلاقاً —
- * عميل البريد ليس المتصفح.
+ * ⚠️ The check covers the views alone. CSS files are the natural home for styles, and a
+ * style attribute in an email's text (Mailer::template) is not governed by a CSP at all — a
+ * mail client is not the browser.
  */
 final class InlineStyleTest extends TestCase
 {
@@ -64,7 +64,7 @@ final class InlineStyleTest extends TestCase
         $this->assertSame(
             [],
             $offenders,
-            "نمط مضمّن في view — يكسر style-src الصارمة:\n  " . implode("\n  ", $offenders)
+            "An inline style in a view — it breaks the strict style-src:\n  " . implode("\n  ", $offenders)
         );
     }
 
@@ -73,20 +73,20 @@ final class InlineStyleTest extends TestCase
         $offenders = [];
 
         foreach (self::viewFiles() as $path) {
-            // التعليقات تُفرَّغ أوّلاً — **بصنفيها**. وسمٌ *مذكور* داخل
-            // تعليق ليس كتلة عاملة، بل هو الشرح الذي يمنع إعادتها.
-            // عدّه مخالفةً يعاقب التوثيق.
-            // (scripts/audit.php تعلّمت القاعدة نفسها حين قفز عدّادها من
-            // 55 إلى 337 بسبب تعليق واحد.)
+            // The comments are blanked first — **both kinds**. A tag *mentioned* inside a
+            // comment is not a working block; it is the explanation that prevents it coming
+            // back. Counting it as a violation punishes the documentation.
+            // (scripts/audit.php learned the same rule when its counter jumped from 55 to
+            // 337 because of one comment.)
             //
-            // ⚠️ تعليقات PHP أُضيفت إلى التفريغ بعد أن تحوّلت تعليقات
-            // الـviews من صيغة HTML إلى صيغة PHP كي لا تُشحن إلى
-            // الزائر. والاختبار فشل فوراً على checkout.php — وهو
-            // يحمل السطر الذي يشرح أن كتلة <style> **نُقلت** إلى ملف.
+            // ⚠️ PHP comments were added to the blanking after the views' comments moved
+            // from HTML form to PHP form, so they are not shipped to the visitor. And the
+            // test failed immediately on checkout.php — which carries the line explaining
+            // that a <style> block **was moved** into a file.
             //
-            // والفشل كان صحيحاً بحرفه: القاعدة تعرف صنف تعليق واحداً.
-            // فالإصلاح في القاعدة لا في الـview — تعديل القالب ليتجنّب
-            // ذكر الوسم كان سيحذف التوثيق إرضاءً لاختبار.
+            // And the failure was literally correct: the rule knew one kind of comment. So
+            // the fix belonged in the rule rather than in the view — editing the template to
+            // avoid mentioning the tag would have deleted documentation to satisfy a test.
             $src = preg_replace(
                 ['/<!--.*?-->/s', '#/\*.*?\*/#s', '#//[^\n?]*#'],
                 '',
@@ -98,20 +98,20 @@ final class InlineStyleTest extends TestCase
             }
         }
 
-        $this->assertSame([], $offenders, "كتلة <style> في view:\n  " . implode("\n  ", $offenders));
+        $this->assertSame([], $offenders, "A <style> block in a view:\n  " . implode("\n  ", $offenders));
     }
 
     /**
-     * ولا ملف JS يبني ترميزاً يحمل نمطاً مضمّناً.
+     * And no JS file builds markup carrying an inline style.
      *
-     * ⚠️ هذا الفحص أضافته الـCSP لا المراجعة. بعد تنظيف الـviews كانت
-     * الحزمة خضراء والمتصفح يبلّغ عن 27 نمطاً محجوباً في كل صفحة:
-     * ثمانية ملفات JS كانت تبني HTML كنصوص فيها `style="…"` ثم تحقنه.
-     * والترميز المحقون يخضع لـstyle-src تماماً كالمُصيَّر على الخادم.
+     * ⚠️ This check was added by the CSP rather than by review. After the views were cleaned
+     * the suite was green while the browser reported 27 blocked styles on every page: eight
+     * JS files were building HTML as strings containing `style="…"` and then injecting it.
+     * And injected markup is subject to style-src exactly as server-rendered markup is.
      *
-     * الدرس المُشفَّر هنا: «صفر نمط مضمّن» سؤالٌ عن **الصفحة النهائية**
-     * لا عن ملفات الـviews. اختبار يفحص المصدر الأوّل وحده يعلن النصر
-     * بينما يحجب المتصفح ثلاثين نمطاً.
+     * The lesson encoded here: "zero inline styles" is a question about **the final page**
+     * rather than about the view files. A test that examines the first source alone declares
+     * victory while the browser blocks thirty styles.
      */
     public function testNoScriptBuildsMarkupWithAnInlineStyle(): void
     {
@@ -127,15 +127,15 @@ final class InlineStyleTest extends TestCase
                 continue;
             }
 
-            // dist/ ناتج بناء — يُفحص مصدره لا هو.
+            // dist/ is build output — its source is checked rather than it.
             if (str_contains(str_replace('\\', '/', $file->getPathname()), '/dist/')) {
                 continue;
             }
 
             $src = (string) file_get_contents($file->getPathname());
 
-            // التعليقات تُفرَّغ: variant-swatches.js يشرح النمط الذي
-            // استبدله، وهو الشرح الذي يمنع عودته.
+            // The comments are blanked: variant-swatches.js explains the style it replaced,
+            // and that explanation is what prevents it coming back.
             $src = preg_replace('#/\*.*?\*/#s', '', $src) ?? '';
             $src = preg_replace('#^\s*//.*$#m', '', $src) ?? '';
 
@@ -147,15 +147,15 @@ final class InlineStyleTest extends TestCase
         $this->assertSame(
             [],
             $offenders,
-            "ملف JS يحقن ترميزاً بنمط مضمّن — تحجبه style-src:\n  " . implode("\n  ", $offenders)
+            "A JS file injecting markup with an inline style — style-src blocks it:\n  " . implode("\n  ", $offenders)
         );
     }
 
     /**
-     * والتوجيه نفسه صارم فعلاً.
+     * And the directive itself really is strict.
      *
-     * بلا هذا الفحص يبقى الاختباران أعلاه يحرسان الـviews بينما تكون
-     * السياسة قد رُخِّيت في .htaccess — فيُحرَس الباب ويُترك الشبّاك.
+     * Without this check the two tests above keep guarding the views while the policy has
+     * been loosened in .htaccess — the door guarded and the window left open.
      */
     public function testTheCspItselfForbidsInlineStyles(): void
     {
@@ -164,29 +164,29 @@ final class InlineStyleTest extends TestCase
         $this->assertMatchesRegularExpression(
             '/Header always set Content-Security-Policy/',
             $htaccess,
-            'الـCSP غير مفروضة إطلاقاً.'
+            'The CSP is not enforced at all.'
         );
 
         if (!preg_match('/style-src([^;"]*)/', $htaccess, $m)) {
-            $this->fail('لا توجيه style-src في الـCSP.');
+            $this->fail('There is no style-src directive in the CSP.');
         }
 
         $this->assertStringNotContainsString(
             'unsafe-inline',
             $m[1],
-            "style-src تسمح بالأنماط المضمّنة — التوجيه لا يحرس شيئاً:\n  style-src{$m[1]}"
+            "style-src permits inline styles — the directive guards nothing:\n  style-src{$m[1]}"
         );
     }
 
     /**
-     * وscript-src كذلك — فحصٌ مجاور يحرس ما أُنجز في مرحلة سابقة.
+     * And script-src likewise — a neighbouring check guarding what an earlier phase achieved.
      */
     public function testTheCspForbidsInlineScriptsToo(): void
     {
         $htaccess = (string) file_get_contents(dirname(__DIR__, 2) . '/public/.htaccess');
 
         if (!preg_match('/script-src([^;"]*)/', $htaccess, $m)) {
-            $this->fail('لا توجيه script-src في الـCSP.');
+            $this->fail('There is no script-src directive in the CSP.');
         }
 
         $this->assertStringNotContainsString('unsafe-inline', $m[1]);

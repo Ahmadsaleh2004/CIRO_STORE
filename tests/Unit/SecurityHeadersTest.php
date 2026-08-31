@@ -6,25 +6,25 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 /**
- * الترويسات الأمنية مُعلَنة في public/.htaccess.
+ * The security headers are declared in public/.htaccess.
  *
  * ══════════════════════════════════════════════════════════════
- * لماذا اختبار على ملف إعداد
+ * Why a test over a configuration file
  * ══════════════════════════════════════════════════════════════
  *
- * لأن كل حماية الاستجابة في هذا المشروع تعيش في ملف واحد لا يمرّ به
- * أي كود PHP ولا أي اختبار: CSP وnosniff وX-Frame-Options و
- * Referrer-Policy وPermissions-Policy وHSTS جميعاً في `.htaccess`.
+ * Because all of this project's response protection lives in one file that no PHP code and
+ * no test passes through: the CSP, nosniff, X-Frame-Options, Referrer-Policy,
+ * Permissions-Policy and HSTS are all in `.htaccess`.
  *
- * ومعنى ذلك أن حذف سطر واحد منه — أو الكتلة كلّها — لا يُفشل شيئاً:
- * الاختبارات خضراء، وPHPStan نظيف، والموقع يعمل. والفرق الوحيد أن
- * الزائر لم يعد محمياً.
+ * Which means deleting one line of it — or the whole block — fails nothing: the tests are
+ * green, PHPStan is clean, and the site works. The only difference is that the visitor is no
+ * longer protected.
  *
- * هذا الاختبار يحرس **ما نَعِد به**. ويرافقه في `composer smoke` فحصٌ
- * يسأل خادماً حيّاً عمّا يرسله فعلاً — ويغطّي العطل الآخر: أن يكون
- * الملف سليماً ولا يقرأه الخادم (nginx، أو Apache بلا AllowOverride،
- * أو بلا mod_headers). الاثنان لازمان: هذا يعمل في CI بلا خادم، وذاك
- * يمسك ما لا يراه أي قارئ كود.
+ * This test guards **what we promise**. And it is accompanied in `composer smoke` by a check
+ * that asks a live server what it actually sends — covering the other fault: the file being
+ * sound while the server never reads it (nginx, or Apache without AllowOverride, or without
+ * mod_headers). Both are needed: this one runs in CI without a server, and that one catches
+ * what no reader of the code can see.
  */
 final class SecurityHeadersTest extends TestCase
 {
@@ -35,14 +35,15 @@ final class SecurityHeadersTest extends TestCase
         parent::setUp();
 
         $path = dirname(__DIR__, 2) . '/public/.htaccess';
-        $this->assertFileExists($path, 'public/.htaccess مفقود — جذر الويب بلا حماية ولا توجيه.');
+        $this->assertFileExists($path, 'public/.htaccess is missing — the web root has neither protection nor routing.');
 
         $this->htaccess = (string) file_get_contents($path);
     }
 
     /**
-     * الاسم وحده لا يكفي: `Content-Security-Policy: default-src *`
-     * ترويسة موجودة وبلا قيمة. فلكلٍّ نصٌّ يجب أن يظهر في سطرها.
+     * The name alone is not enough: `Content-Security-Policy: default-src *` is a header
+     * that exists and is worth nothing. So each carries a string that must appear in its
+     * line.
      *
      * @return array<string, array{0: string, 1: string}>
      */
@@ -64,78 +65,78 @@ final class SecurityHeadersTest extends TestCase
         $this->assertStringContainsString(
             $header,
             $this->htaccess,
-            "الترويسة {$header} غير معلَنة في public/.htaccess."
+            "The {$header} header is not declared in public/.htaccess."
         );
 
         $this->assertStringContainsString(
             $needle,
             $this->htaccess,
-            "الترويسة {$header} معلَنة بلا «{$needle}»."
+            "The {$header} header is declared without \"{$needle}\"."
         );
     }
 
     /**
-     * `always` ليس تفصيلاً: بدونه لا تُضاف الترويسة إلى استجابات الخطأ.
-     * وصفحة 404 أو 500 تحتاج الحماية كما تحتاجها الصفحة الناجحة —
-     * وصفحات الخطأ هي بالضبط ما يُعرض فيه محتوى غير متوقَّع.
+     * `always` is not a detail: without it the header is not added to error responses.
+     * And a 404 or 500 page needs the protection just as a successful page does — and error
+     * pages are exactly where unexpected content is displayed.
      */
     public function testEverySecurityHeaderUsesAlways(): void
     {
         preg_match_all('/^\s*Header\s+(\S+)\s+set\s+(\S+)/mi', $this->htaccess, $matches, PREG_SET_ORDER);
 
-        $this->assertNotEmpty($matches, 'لا يوجد أي `Header set` في public/.htaccess.');
+        $this->assertNotEmpty($matches, 'There is no `Header set` at all in public/.htaccess.');
 
         foreach ($matches as [$line, $modifier, $header]) {
             $this->assertSame(
                 'always',
                 strtolower($modifier),
-                "الترويسة {$header} مضبوطة بلا `always` — فتغيب عن استجابات الخطأ."
+                "The {$header} header is set without `always` — so it is absent from error responses."
             );
         }
     }
 
     // ════════════════════════════════════════════════════════
-    // ما يجب ألّا يعود
+    // What must not come back
     // ════════════════════════════════════════════════════════
 
     /**
-     * `unsafe-inline` في script-src يُبطل CSP عملياً: أي نصّ يُحقن في
-     * الصفحة يصير قابلاً للتنفيذ، وهو الهجوم الذي وُجدت السياسة له.
+     * `unsafe-inline` in script-src nullifies the CSP in practice: any text injected into
+     * the page becomes executable, and that is the attack the policy exists for.
      *
-     * والمشروع دفع ثمن إزالتها فعلاً — أربع عشرة كتلة <script> مضمّنة
-     * وثلاثة وثلاثون معالج onclick خرجت من الـviews. هذا الاختبار يمنع
-     * أن يُعاد ذلك الثمن هدراً بسطر واحد.
+     * And the project actually paid the price of removing it — fourteen embedded <script>
+     * blocks and thirty-three onclick handlers left the views. This test prevents that price
+     * being thrown away by one line.
      */
     public function testScriptSrcHasNoUnsafeInline(): void
     {
         preg_match('/script-src([^;"]*)/', $this->htaccess, $m);
 
-        $this->assertNotEmpty($m, 'لا توجد script-src في CSP.');
+        $this->assertNotEmpty($m, 'There is no script-src in the CSP.');
         $this->assertStringNotContainsString("'unsafe-inline'", $m[1]);
         $this->assertStringNotContainsString("'unsafe-eval'", $m[1]);
     }
 
     /**
-     * `style-src` بلا unsafe-inline أيضاً — وهي آخر خطوة أُنجزت، وكلفتها
-     * كانت 234 سمة style مضمّنة نُقلت إلى أدوات وأصناف. سياسة تسمح
-     * بالأنماط المضمّنة لا تستطيع منع نمطٍ محقون.
+     * `style-src` without unsafe-inline as well — the last step completed, and its cost was
+     * 234 inline style attributes moved into utilities and classes. A policy that permits
+     * inline styles cannot prevent an injected one.
      */
     public function testStyleSrcHasNoUnsafeInline(): void
     {
         preg_match('/style-src([^;"]*)/', $this->htaccess, $m);
 
-        $this->assertNotEmpty($m, 'لا توجد style-src في CSP.');
+        $this->assertNotEmpty($m, 'There is no style-src in the CSP.');
         $this->assertStringNotContainsString("'unsafe-inline'", $m[1]);
     }
 
     /**
-     * كل مضيف في script-src نطاقٌ يستطيع تنفيذ جافاسكربت على كل صفحة،
-     * بما فيها صفحة الدفع ولوحة التحكّم. فاللائحة تُقرأ كقائمة ثقة لا
-     * كقائمة إعداد، ولا يدخلها مضيف بلا سبب قائم.
+     * Every host in script-src is an origin able to execute JavaScript on every page, the
+     * checkout page and the control panel included. So the list is read as a trust list
+     * rather than a configuration list, and no host enters it without a standing reason.
      *
-     * `code.jquery.com` أُسقط بعد أن ثبت أن jQuery غير مستعمَل إطلاقاً.
-     * عودته تعني إمّا رجوع المكتبة، أو — وهو الأخطر — نسخ سطر CSP من
-     * مصدر خارجي بلا قراءة.
+     * `code.jquery.com` was dropped once it was established that jQuery is not used at all.
+     * Its return would mean either the library coming back or — more dangerously — a CSP
+     * line copied from an external source without being read.
      */
     public function testNoUnusedScriptHostIsAllowed(): void
     {
@@ -145,15 +146,15 @@ final class SecurityHeadersTest extends TestCase
     }
 
     /**
-     * الوسوم التي تحمّل مكتبة خارجية يجب أن تحمل بصمتها.
+     * The tags loading an external library must carry its digest.
      *
-     * السماح بالمضيف في CSP لا يعني الثقة بأي ملف يرسله: حزمة مخترَقة
-     * على الـCDN تمرّ من CSP بلا اعتراض. و`integrity` هو ما يجعل
-     * المتصفح يرفض ملفاً تغيّر محتواه.
+     * Allowing a host in the CSP does not mean trusting any file it sends: a compromised
+     * package on the CDN passes the CSP unchallenged. And `integrity` is what makes the
+     * browser reject a file whose content has changed.
      *
-     * الفحص على assets_helper.php لا على الـviews: الوسوم كانت مكتوبة
-     * بيدها في سبعة مواضع وواحدٌ فقط منها كان يحمل بصمة — ولأنها
-     * متفرّقة لم يكن أحد يرى الفرق. الآن مصدرها واحد.
+     * The check is on assets_helper.php rather than the views: the tags were hand-written at
+     * seven sites and only one of them carried a digest — and because they were scattered,
+     * nobody could see the difference. Their source is now one.
      */
     public function testEveryVendorAssetCarriesAnIntegrityHash(): void
     {
@@ -161,61 +162,62 @@ final class SecurityHeadersTest extends TestCase
         $source = (string) file_get_contents($helper);
 
         preg_match('/const VENDOR_ASSETS = \[(.*?)\n\];/s', $source, $m);
-        $this->assertNotEmpty($m, 'VENDOR_ASSETS غير معرَّفة في assets_helper.php.');
+        $this->assertNotEmpty($m, 'VENDOR_ASSETS is not defined in assets_helper.php.');
 
         $urls = preg_match_all("/'url'\s*=>\s*'([^']+)'/", $m[1], $urlMatches);
         $sris = preg_match_all("/'sri'\s*=>\s*'(sha(?:256|384|512)-[^']+)'/", $m[1], $sriMatches);
 
-        $this->assertGreaterThan(0, $urls, 'لا مكتبة خارجية معرَّفة.');
+        $this->assertGreaterThan(0, $urls, 'No external library is defined.');
         $this->assertSame(
             $urls,
             $sris,
-            'مكتبة خارجية بلا بصمة SRI — راجع VENDOR_ASSETS.'
+            'An external library with no SRI digest — see VENDOR_ASSETS.'
         );
 
-        // نطاق نسخة مفتوح (@11) يجعل البصمة مستحيلة أصلاً: المحتوى
-        // يتغيّر بلا تغيّر الرابط. فالتثبيت شرطٌ للبصمة لا خياراً بجانبها.
+        // An open version range (@11) makes a digest impossible in the first place: the
+        // content changes without the URL changing. So pinning is a precondition of the
+        // digest rather than an option beside it.
         foreach ($urlMatches[1] as $url) {
             $this->assertMatchesRegularExpression(
                 '/@\d+\.\d+\.\d+/',
                 $url,
-                "نسخة غير مثبَّتة تماماً في: {$url}"
+                "A version that is not fully pinned in: {$url}"
             );
         }
     }
 
     /**
-     * بصمة سكربت تهيئة الثيم في CSP تطابق محتوى themeBootScript().
+     * The theme boot script's digest in the CSP matches themeBootScript()'s content.
      *
      * ══════════════════════════════════════════════════════════
-     * لماذا هذا الاختبار موجود
+     * Why this test exists
      * ══════════════════════════════════════════════════════════
      *
-     * لأن التعليق التحذيري فوق البصمة في .htaccess لم يمنع انحرافها.
-     * كانت مكتوبة `sha256-n33GJ97…` بينما الدالة تُنتج
-     * `sha256-6TLKQaFc…` — أي أن السكربت كان محجوباً في **كل** تحميل
-     * صفحة في المتجر ولوحة التحكّم معاً.
+     * Because the warning comment above the digest in .htaccess did not stop it drifting.
+     * It read `sha256-n33GJ97…` while the function produced `sha256-6TLKQaFc…` — which is to
+     * say the script was blocked on **every** page load, across the store and the control
+     * panel alike.
      *
-     * وهذا أسوأ أنواع الأعطال: لا صفحة بيضاء ولا استثناء ولا اختبار
-     * أحمر. فقط ومضة بيضاء عند كل تنقّل في الوضع الليلي، وسطر
-     * `Refused to execute inline script` في console لا يقرأه أحد.
+     * And that is the worst kind of fault: no blank page, no exception and no red test. Only
+     * a white flash on every navigation in dark mode, and a `Refused to execute inline
+     * script` line in a console nobody reads.
      *
-     * البصمة تُحسب على محتوى الوسم — ما بين <script> و</script> —
-     * حرفاً بحرف: كل مسافة وكل سطر جديد داخل. ولذلك يكفي أن يُعاد
-     * تنسيق الدالة ليُبطلها، وهو ما يجعل التعليق حارساً عاجزاً
-     * والاختبار حارساً حقيقياً.
+     * The digest is computed over the tag's content — what lies between <script> and
+     * </script> — character for character: every space and every newline inside it. Which is
+     * why merely reformatting the function invalidates it, and which is what makes the
+     * comment a powerless guard and the test a real one.
      */
     public function testTheThemeBootScriptHashMatchesItsSource(): void
     {
         $this->assertTrue(
             function_exists('themeBootScript'),
-            'themeBootScript() غير محمَّلة — راجع app/helpers/assets_helper.php.'
+            'themeBootScript() is not loaded — see app/helpers/assets_helper.php.'
         );
 
         $this->assertSame(
             1,
             preg_match('#<script>(.*?)</script>#s', themeBootScript(), $m),
-            'themeBootScript() لم تعد تُنتج وسم <script> واحداً — البصمة تفقد معناها.'
+            'themeBootScript() no longer produces a single <script> tag — the digest loses its meaning.'
         );
 
         $expected = 'sha256-' . base64_encode(hash('sha256', $m[1], true));
@@ -223,10 +225,10 @@ final class SecurityHeadersTest extends TestCase
         $this->assertStringContainsString(
             "'{$expected}'",
             $this->htaccess,
-            "بصمة سكربت الثيم في CSP لا تطابق محتوى themeBootScript().\n"
-            . "المتوقَّع: '{$expected}'\n"
-            . 'ضَعها في script-src داخل public/.htaccess. وحتى تفعل، '
-            . 'السكربت محجوب في كل صفحة ويومض الثيم عند كل تنقّل.'
+            "The theme script's digest in the CSP does not match themeBootScript()'s content.\n"
+            . "Expected: '{$expected}'\n"
+            . 'Put it in script-src inside public/.htaccess. Until you do, the script is '
+            . 'blocked on every page and the theme flashes on every navigation.'
         );
     }
 }

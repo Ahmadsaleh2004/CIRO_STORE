@@ -5,8 +5,8 @@ namespace Tests\Unit;
 use Tests\Support\SessionTestCase;
 
 /**
- * csrf_helper — الحارس الوحيد بين كل نقطة POST في المشروع وبين
- * الطلبات العابرة للمواقع. 45 نقطة JSON تعتمد عليه.
+ * csrf_helper — the only guard between every POST endpoint in the project and
+ * cross-site requests. 45 JSON endpoints depend on it.
  */
 final class CsrfHelperTest extends SessionTestCase
 {
@@ -14,16 +14,16 @@ final class CsrfHelperTest extends SessionTestCase
     {
         $token = generateCsrfToken();
 
-        // 32 بايتاً عشوائياً بترميز hex = 64 محرفاً. الطول ليس تفصيلاً
-        // تجميلياً: تقصيره يقلّل فضاء التخمين أُسّياً.
+        // 32 random bytes in hex = 64 characters. The length is not a cosmetic detail:
+        // shortening it reduces the guessing space exponentially.
         $this->assertSame(64, strlen($token));
         $this->assertMatchesRegularExpression('/^[0-9a-f]{64}$/', $token);
     }
 
     public function testGenerateIsStableWithinTheSameSession(): void
     {
-        // التوكن يجب أن يثبت داخل الجلسة، وإلا فسد كل نموذج مفتوح في
-        // تبويب آخر عند كل طلب جديد.
+        // The token must stay fixed within the session, or every form open in another tab
+        // is invalidated by each new request.
         $this->assertSame(generateCsrfToken(), generateCsrfToken());
     }
 
@@ -39,12 +39,12 @@ final class CsrfHelperTest extends SessionTestCase
     }
 
     /**
-     * أخطر حالة في الملف كلّه: جلسة بلا توكن.
+     * The most dangerous case in the whole file: a session with no token.
      *
-     * لو أرجعت verifyCsrfToken(true) هنا، لصارت **كل** نقطة POST
-     * مفتوحة لأي زائر بلا جلسة — وهو بالضبط ما يفعله المهاجم. الفحص
-     * `!empty($_SESSION['csrf_token'])` هو ما يمنع ذلك، وهذا الاختبار
-     * يحرسه.
+     * Were verifyCsrfToken to return true here, **every** POST endpoint would be open to any
+     * visitor without a session — which is exactly what an attacker has. The
+     * `!empty($_SESSION['csrf_token'])` check is what prevents that, and this test guards
+     * it.
      */
     public function testVerifyRejectsEverythingWhenSessionHasNoToken(): void
     {
@@ -62,10 +62,10 @@ final class CsrfHelperTest extends SessionTestCase
     }
 
     /**
-     * المقارنة يجب أن تكون بالقيمة كاملةً لا ببادئتها.
+     * The comparison must be against the whole value rather than its prefix.
      *
-     * مقارنة ساذجة بـstr_starts_with أو substr كانت ستقبل توكناً
-     * مقتطعاً — وهو هجوم عملي: يخمّن المهاجم محرفاً محرفاً.
+     * A naive comparison with str_starts_with or substr would accept a truncated token —
+     * which is a practical attack: the attacker guesses one character at a time.
      */
     public function testVerifyRejectsATruncatedPrefixOfTheRealToken(): void
     {
@@ -80,7 +80,8 @@ final class CsrfHelperTest extends SessionTestCase
     {
         $first = generateCsrfToken();
 
-        // محاكاة جلسة ثانية: نفس ما يحدث حين يفتح مستخدم آخر الموقع.
+        // Simulating a second session: the same thing that happens when another user opens
+        // the site.
         $_SESSION = [];
         $second = generateCsrfToken();
 
@@ -90,18 +91,19 @@ final class CsrfHelperTest extends SessionTestCase
     }
 
     // ════════════════════════════════════════════════════════
-    // التدوير عند تغيّر الصلاحية
+    // Rotation when the privilege level changes
     // ════════════════════════════════════════════════════════
 
     /**
-     * الثغرة التي يغلقها التدوير:
+     * The hole rotation closes:
      *
-     * `session_regenerate_id(true)` تُبدّل معرّف الجلسة وتُبقي محتواها —
-     * ومنه `csrf_token`. فتوكنُ زائرٍ مجهول قبل الدخول كان يبقى صالحاً
-     * بحرفه داخل الجلسة المصادَقة بعده.
+     * `session_regenerate_id(true)` replaces the session's id and keeps its contents — the
+     * `csrf_token` among them. So an anonymous visitor's token from before sign-in stayed
+     * valid, character for character, inside the authenticated session afterwards.
      *
-     * والتناقض بيّن: نبدّل المعرّف تحديداً لأننا نفترض أن ما قبل
-     * المصادقة قد يكون معروفاً لمهاجم — ثم نورّث التوكن.
+     * And the contradiction is plain: the id is replaced precisely because we assume what
+     * came before authentication may be known to an attacker — and then the token is
+     * inherited.
      */
     public function testRotateInvalidatesThePreviousToken(): void
     {
@@ -110,7 +112,7 @@ final class CsrfHelperTest extends SessionTestCase
         $after = rotateCsrfToken();
 
         $this->assertNotSame($before, $after);
-        $this->assertFalse(verifyCsrfToken($before), 'التوكن القديم ما زال مقبولاً بعد التدوير.');
+        $this->assertFalse(verifyCsrfToken($before), 'The old token is still accepted after rotation.');
         $this->assertTrue(verifyCsrfToken($after));
     }
 
@@ -120,18 +122,19 @@ final class CsrfHelperTest extends SessionTestCase
 
         $rotated = rotateCsrfToken();
 
-        // القيمة تُعاد لا تُقرأ من الجلسة عند المستدعي: النقاط التي
-        // تدوّر تُرسل التوكن الجديد في جسم الاستجابة كي يلتقطه
-        // js/core/csrf.js فوراً — بدونه يكتشف العميل البطلان بطلبٍ
-        // فاشل ثم يعيد المحاولة، أي طلبان بدل واحد.
+        // The value is returned rather than read from the session by the caller: the
+        // endpoints that rotate send the new token in the response body so js/core/csrf.js
+        // picks it up immediately — without it the client discovers the invalidation through
+        // a failed request and then retries, that is, two requests instead of one.
         $this->assertSame(64, strlen($rotated));
         $this->assertSame($_SESSION['csrf_token'], $rotated);
     }
 
     public function testRotateWorksWhenNoTokenExistsYet(): void
     {
-        // تُستدعى مباشرةً بعد session_regenerate_id في مسار قد لا يكون
-        // فيه توكن أصلاً (دخول Google مثلاً). يجب أن تُصدر لا أن تنهار.
+        // It is called immediately after session_regenerate_id on a path that may have had
+        // no token at all (a Google sign-in, for instance). It must issue one rather than
+        // fall over.
         $_SESSION = [];
 
         $token = rotateCsrfToken();
