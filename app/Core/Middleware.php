@@ -4,6 +4,16 @@ namespace App\Core;
 
 /**
  * Middleware — guarding the routes that require a sign-in.
+ *
+ * ⚠️ Every refusal here ends with ResponseSent::end() rather than a bare `exit`, and the
+ * difference is only visible under the CLI: in a web request it *is* `exit`, unchanged.
+ *
+ * The reason is that a guard refusing is the commonest way an action ends, so a bare exit
+ * in these six places meant no guarded action could be called by a test — the refusal took
+ * the test runner down with it. That is a large part of why app/Controllers measured 0%
+ * coverage while its endpoints were, in fact, exercised over HTTP.
+ *
+ * See app/Core/ResponseSent.php for the seam itself and why it is restricted to the CLI.
  */
 class Middleware
 {
@@ -43,12 +53,12 @@ class Middleware
                 'success' => false,
                 'message' => 'Please log in to continue.',
             ], JSON_UNESCAPED_UNICODE);
-            exit;
+            ResponseSent::end();
         }
 
         $_SESSION['redirect_after_login'] = $_SERVER['REQUEST_URI'] ?? URLROOT;
         header('Location: ' . URLROOT . '/?openLogin=1');
-        exit;
+        ResponseSent::end();
     }
 
     /**
@@ -108,11 +118,11 @@ class Middleware
                     'success' => false,
                     'message' => 'Session expired. Please log in again.',
                 ]);
-                exit;
+                ResponseSent::end();
             }
 
             header('Location: ' . URLROOT);
-            exit;
+            ResponseSent::end();
         }
     }
 
@@ -214,7 +224,7 @@ class Middleware
                 'success' => false,
                 'message' => 'Too many requests in a short time. Please wait a moment and try again.',
             ], JSON_UNESCAPED_UNICODE);
-            exit;
+            ResponseSent::end();
         }
 
         ErrorPage::tooManyRequests(
@@ -244,7 +254,7 @@ class Middleware
                 'success' => false,
                 'message' => 'Access denied. You do not have permission for this action.',
             ]);
-            exit;
+            ResponseSent::end();
         }
 
         // There used to be a bare <div> here with no <!DOCTYPE>, no <head> and no

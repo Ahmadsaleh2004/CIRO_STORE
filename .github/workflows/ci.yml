@@ -197,21 +197,29 @@ jobs:
       #
       # Measured with pcov, the same driver this job uses:
       #
-      #     Controllers   5,094 stmts        0 covered     0.0%
-      #     Models        2,281 stmts      424 covered    18.6%
-      #     Core            808 stmts      412 covered    51.0%
-      #     Services        217 stmts       73 covered    33.6%
-      #     config          494 stmts       15 covered     3.0%
-      #     helpers         229 stmts       18 covered     7.9%
-      #     TOTAL         9,123 stmts      942 covered    10.3%
+      #                     when the gate was fixed        now
+      #     Controllers     5,094 stmts    0    0.0%    4,783   102    2.1%
+      #     Models          2,281 stmts  424   18.6%    2,281   439   19.2%
+      #     Core              808 stmts  412   51.0%      812   451   55.5%
+      #     Services          217 stmts   73   33.6%      217    73   33.6%
+      #     config            494 stmts   15    3.0%      494    15    3.0%
+      #     helpers           229 stmts   18    7.9%      229    20    8.7%
+      #     TOTAL           9,123 stmts  942   10.3%    8,816 1,100   12.5%
       #
-      # Which says something more useful than the single number does. Core at 51% and
-      # Services at 34% are genuinely tested; the average is held down by 5,094 statements
-      # of controllers at zero — 56% of everything measured. Controllers are HTTP entry
-      # points, and reaching them needs the request-level harness that CsrfContractHttpTest
-      # already proves is possible. Raising this gate means writing those, not excluding
-      # app/Controllers from `source` in phpunit.xml: excluding it would print a much
-      # prettier number for exactly the same untested code.
+      # Which says something more useful than the single number does. Core and Services are
+      # genuinely tested; the average is held down by app/Controllers, over half of
+      # everything measured.
+      #
+      # Controllers stood at a flat 0.0% and the reason was not that nobody had tested
+      # them. Controller::respond() ends a request with `exit`, so calling any of the 225
+      # actions that end that way took the test runner down with it — and testing them over
+      # HTTP, as CsrfContractHttpTest does, runs the code in the *server's* process where
+      # this driver cannot see it. app/Core/ResponseSent.php is the seam that changed that:
+      # under the CLI alone, a finished response throws instead of exiting.
+      #
+      # Raising this gate further means more of those tests, not excluding app/Controllers
+      # from `source` in phpunit.xml: excluding it would print a much prettier number for
+      # exactly the same untested code.
       - name: The coverage gate
         if: matrix.php == '8.3'
         run: |
@@ -221,8 +229,8 @@ jobs:
             printf("%.1f", (int)$m["statements"] ? (int)$m["coveredstatements"] / (int)$m["statements"] * 100 : 0);
           ')
           echo "Line coverage: ${PCT}%"
-          php -r "exit((float)'$PCT' >= 10.0 ? 0 : 1);" \
-            || { echo "::error::Coverage of ${PCT}% is below the 10.0% floor — it may not go down"; exit 1; }
+          php -r "exit((float)'$PCT' >= 12.0 ? 0 : 1);" \
+            || { echo "::error::Coverage of ${PCT}% is below the 12.0% floor — it may not go down"; exit 1; }
 
   # ── Code quality ─────────────────────────────────────────────
   static-analysis:

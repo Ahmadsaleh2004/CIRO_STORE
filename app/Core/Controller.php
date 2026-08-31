@@ -8,6 +8,14 @@ abstract class Controller
     private const LAYOUTS = ['store', 'admin', 'bare'];
 
     /**
+     * The request's input, read once per controller — see requestData() for why it lives
+     * here rather than in a `static` inside that method.
+     *
+     * @var array<string,mixed>|null
+     */
+    private ?array $requestData = null;
+
+    /**
      * Renders a view inside one of three layouts.
      *
      * ┌─────────┬──────────────────────────────────────────────────┐
@@ -111,11 +119,27 @@ abstract class Controller
      */
     protected function respond(bool $success, string $message, array $extra = []): never
     {
-        echo json_encode(
+        $body = json_encode(
             array_merge(['success' => $success, 'message' => $message], $extra),
             JSON_UNESCAPED_UNICODE
         );
-        exit;
+
+        echo $body;
+
+        // ── The one seam that makes a controller testable ─────
+        //
+        // `exit` here is right for a web request and fatal for a test: it takes the PHPUnit
+        // process down with it, so none of the 225 actions ending this way could be called
+        // by a test at all. That is why app/Controllers — 5,094 statements, 40% of
+        // everything the coverage gate measures — stood at 0%.
+        //
+        // ⚠️ CLI only, exactly like Database::setConnection(). In a web request nothing
+        // changes: the same `exit`, no exception, no handler that could mishandle it. The
+        // throw is reachable only where the sole caller is the test suite.
+        //
+        // A throw satisfies the `never` return type, so the signature is untouched and
+        // every caller still reads this as "execution stops here".
+        ResponseSent::end((string) $body);
     }
 
     /**
@@ -251,16 +275,26 @@ abstract class Controller
      * The result is computed once per request: php://input is a stream that can be
      * read once, and this may be called from beginJsonPost and then from the action body.
      *
+     * ⚠️ Cached on the instance, not in a `static` inside the method. It was the latter,
+     * and "once per request" was true only because a request builds one controller: a
+     * function-level static lives for the whole **process**, which is the same thing under
+     * PHP-FPM and a very different thing anywhere a second controller runs.
+     *
+     * The test suite is exactly that place, and it showed the difference immediately —
+     * the first action to be called froze its input for every action called afterwards,
+     * so a later test's CSRF token was never seen and its request was refused as forged.
+     * The behaviour in a web request is unchanged; one controller still reads php://input
+     * once.
+     *
      * @return array<string,mixed>
      */
     protected function requestData(): array
     {
-        static $cache = null;
-        if ($cache !== null) {
-            return $cache;
+        if ($this->requestData !== null) {
+            return $this->requestData;
         }
 
         $body = json_decode(file_get_contents('php://input') ?: '', true);
-        return $cache = array_merge($_POST, is_array($body) ? $body : []);
+        return $this->requestData = array_merge($_POST, is_array($body) ? $body : []);
     }
 }

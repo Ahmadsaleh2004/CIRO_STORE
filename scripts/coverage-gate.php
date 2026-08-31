@@ -28,7 +28,7 @@
  * a merge, and this is what tells you before you push.
  */
 
-const FLOOR = 10.0;
+const FLOOR = 12.0;
 
 $root     = dirname(__DIR__);
 $clover   = $root . '/coverage.xml';

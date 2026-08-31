@@ -115,6 +115,27 @@ paths = [
 # The exception is by literal value rather than by path, deliberately: excluding the whole
 # of tests/Unit/TotpTest.php would have blinded the scan to any real secret written into
 # that file later. This way the file stays scanned and this one string alone is exempt.
+#
+# ── The registration test's passwords ─────────────────────────
+#
+# The three below are inputs to AuthControllerTest, and they cannot be softened into
+# something that does not look like a password: register() refuses anything under eight
+# characters or missing an uppercase, a lowercase, a digit or a symbol, so a value that
+# exercises the rule necessarily satisfies it — and then trips cairo-hardcoded-password,
+# which is that rule read from the other side. The scanner is not wrong about their shape;
+# it is wrong about what they are.
+#
+# Two of the three are *meant* to fail authentication, which is the clearest sign of what
+# they are: Wr0ng!Pass exists to be rejected, and Str0ngPass has no symbol precisely so the
+# validation refuses it.
+#
+# By literal value again, for the same reason as above: exempting
+# tests/Integration/AuthControllerTest.php by path would stop the scan seeing a real
+# credential pasted into it later, and a test file that signs in somewhere is exactly the
+# place that happens.
 regexes = [
     '''^GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ$''',
+    '''^Str0ng!Pass$''',
+    '''^Wr0ng!Pass$''',
+    '''^Str0ngPass$''',
 ]
