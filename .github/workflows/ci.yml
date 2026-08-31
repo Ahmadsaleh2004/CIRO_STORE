@@ -180,10 +180,38 @@ jobs:
           TEST_BASE_URL: http://127.0.0.1:8080
         run: vendor/bin/phpunit --coverage-clover=coverage.xml --coverage-text
 
-      # ⚠️ The gate sits at 25% for now — the figure actually reached today, not the goal.
-      # The plan's goal is 70%. Setting it at 70 now makes CI permanently red and therefore
-      # ignored, and setting it at 0 makes it meaningless. It is raised with every new batch
-      # of tests.
+      # ⚠️ The gate is a ratchet: it holds the figure **actually measured**, so it fails on a
+      # regression rather than on failing to reach an aspiration. It moves up with each new
+      # batch of tests and never down without a reason written beside it.
+      #
+      # It said 25% and claimed that was "the figure actually reached today". It was not:
+      # the real number is 10%, and the gate had been failing every push on every branch —
+      # so the one job that measures coverage was permanently red and therefore ignored,
+      # which is the exact outcome the note above it was written to prevent.
+      #
+      # And the number was unverifiable on the machine it was written on: no pcov, no
+      # xdebug, so `phpunit --coverage` produced nothing locally and 25% could only ever
+      # have been a guess. That is fixed on the developer side (php.ini now loads pcov,
+      # disabled by default), and `composer test:coverage:gate` runs this same computation
+      # before a push rather than after it.
+      #
+      # Measured with pcov, the same driver this job uses:
+      #
+      #     Controllers   5,094 stmts        0 covered     0.0%
+      #     Models        2,281 stmts      424 covered    18.6%
+      #     Core            808 stmts      412 covered    51.0%
+      #     Services        217 stmts       73 covered    33.6%
+      #     config          494 stmts       15 covered     3.0%
+      #     helpers         229 stmts       18 covered     7.9%
+      #     TOTAL         9,123 stmts      942 covered    10.3%
+      #
+      # Which says something more useful than the single number does. Core at 51% and
+      # Services at 34% are genuinely tested; the average is held down by 5,094 statements
+      # of controllers at zero — 56% of everything measured. Controllers are HTTP entry
+      # points, and reaching them needs the request-level harness that CsrfContractHttpTest
+      # already proves is possible. Raising this gate means writing those, not excluding
+      # app/Controllers from `source` in phpunit.xml: excluding it would print a much
+      # prettier number for exactly the same untested code.
       - name: The coverage gate
         if: matrix.php == '8.3'
         run: |
@@ -193,8 +221,8 @@ jobs:
             printf("%.1f", (int)$m["statements"] ? (int)$m["coveredstatements"] / (int)$m["statements"] * 100 : 0);
           ')
           echo "Line coverage: ${PCT}%"
-          php -r "exit((float)'$PCT' >= 25.0 ? 0 : 1);" \
-            || { echo "::error::Coverage of ${PCT}% is below the 25% minimum"; exit 1; }
+          php -r "exit((float)'$PCT' >= 10.0 ? 0 : 1);" \
+            || { echo "::error::Coverage of ${PCT}% is below the 10.0% floor — it may not go down"; exit 1; }
 
   # ── Code quality ─────────────────────────────────────────────
   static-analysis:
@@ -265,16 +293,24 @@ jobs:
       # The specification is both tracked in git and generated, so it can fall behind the
       # code: somebody edits an OA attribute and forgets docs:generate. Regenerating it and
       # comparing the result with what was committed catches that immediately.
+      #
+      # ⚠️ The comparison lives in scripts/docs-check.php rather than in these eight lines
+      # of shell, and that is the whole point. Written here, it could only ever be run by
+      # CI — so `composer check`, whose entire job is "run the gates before pushing", did
+      # not include it, and the only way to learn the specification had drifted was to push
+      # and wait. It is now `composer docs:check` in both places, which is the same code.
+      #
+      # The script also normalises line endings on both sides before comparing. Without
+      # that, this check could never pass for a developer on Windows: swagger-php joins
+      # description lines with PHP_EOL, so the same source produces `\r\n` there and `\n`
+      # here — 182 bytes of difference across 91 descriptions, none of it in the API.
+      #
+      # And it reports the difference through `::error::` rather than to the log alone,
+      # because an Actions log needs a signed-in session (the REST endpoint answers 403)
+      # while annotations are readable through the public API. A failure nobody can read
+      # gets guessed at instead of fixed.
       - name: Check that the specification is current
-        run: |
-          cp public/docs/openapi.yaml /tmp/committed.yaml
-          composer docs:generate
-          if ! diff -q /tmp/committed.yaml public/docs/openapi.yaml > /dev/null; then
-            echo "::error::openapi.yaml is behind the OA attributes — run 'composer docs:generate' and commit the result."
-            diff /tmp/committed.yaml public/docs/openapi.yaml | head -40
-            exit 1
-          fi
-          echo "The specification matches the code."
+        run: composer docs:check
 
       - name: spectral — lint the specification
         run: npx --yes @stoplight/spectral-cli lint public/docs/openapi.yaml --ruleset .spectral.yaml

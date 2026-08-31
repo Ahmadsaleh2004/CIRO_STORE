@@ -29,7 +29,10 @@
         }
     },
     "scripts": {
-        "docs:generate": "vendor/bin/openapi app/Controllers app/config -o public/docs/openapi.yaml --format yaml",
+        "docs:generate": [
+            "vendor/bin/openapi app/Controllers app/config -o public/docs/openapi.yaml --format yaml",
+            "@php scripts/normalize-openapi.php"
+        ],
         "test": "phpunit",
         "test:unit": "phpunit --testsuite Unit",
         "test:integration": "phpunit --testsuite Integration",
@@ -53,11 +56,17 @@
             "@lint",
             "@audit:escaping:gate",
             "@readme:check",
-            "@test"
+            "@docs:check",
+            "@test",
+            "@test:coverage:gate",
+            "@security:scan"
         ],
         "audit:escaping:gate": "php scripts/audit-escaping.php --gate",
         "readme:sync": "php scripts/sync-readme-stats.php",
-        "readme:check": "php scripts/sync-readme-stats.php --check"
+        "readme:check": "php scripts/sync-readme-stats.php --check",
+        "docs:check": "@php scripts/docs-check.php",
+        "test:coverage:gate": "@php scripts/coverage-gate.php",
+        "security:scan": "pre-commit run semgrep --hook-stage pre-push --all-files"
     },
     "require": {
         "php": ">=8.2",

@@ -48,8 +48,14 @@ desktop.ini
 
 # ── Test output ───────────────────────────────────────
 # PHPUnit's cache and the coverage reports — generated, and not tracked.
+#
+# coverage.xml is the clover report the coverage gate reads. It was not listed here
+# because nothing produced it: the machine had no coverage driver, so `--coverage-clover`
+# wrote nothing and the file never appeared. With pcov loaded it does, on every run of
+# `composer test:coverage:gate`.
 /.phpunit.cache/
 /coverage/
+/coverage.xml
 .phpunit.result.cache
 
 # ── The local CIRO_STORE copy ─────────────────────────
