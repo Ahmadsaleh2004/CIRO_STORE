@@ -6,15 +6,16 @@ use App\Models\AdminModel;
 use PHPUnit\Framework\TestCase;
 
 /**
- * قاعدة الرتب — حمّالة أمان.
+ * The rank rule — it carries security weight.
  *
- * canManageTarget هي ما يمنع أدمن رتبة C من حذف أدمن رتبة B أو من
- * ترقية نفسه. الخريطة A=4 > B=3 > C=2 > D=1، والمقارنة **أكبر تماماً**
- * لا «أكبر أو يساوي» — وهذا الفرق هو كل شيء: لو صارت >= لاستطاع كل
- * أدمن أن يحذف أقرانه في رتبته، ومنهم من أضافه.
+ * canManageTarget is what stops a rank C admin deleting a rank B admin or promoting
+ * themselves. The map is A=4 > B=3 > C=2 > D=1, and the comparison is **strictly greater**
+ * rather than "greater than or equal" — and that difference is everything: were it >=, every
+ * admin could delete their peers at the same rank, including whoever created their account.
  *
- * لا تلمس هذه الاختبارات القاعدة (الدالة حسابية بحتة)، لكنها هنا لا في
- * Unit لأنها تصف قاعدة عمل لا سلوك دالة.
+ * These tests do not touch the database (the function is purely arithmetic), but they live
+ * here rather than in Unit because they describe a business rule rather than a function's
+ * behaviour.
  */
 final class AdminRankRuleTest extends TestCase
 {
@@ -29,15 +30,15 @@ final class AdminRankRuleTest extends TestCase
     }
 
     /**
-     * الحالة التي تحرسها كلمة «تماماً» في المقارنة. لو كانت >= لكان كل
-     * أدمن قادراً على حذف من هم في رتبته — بمن فيهم من أنشأ حسابه.
+     * The case the word "strictly" in the comparison guards. Were it >=, every admin could
+     * delete those at their own rank — including whoever created their account.
      */
     public function testAnEqualRankCannotManageItsPeer(): void
     {
         foreach (['A', 'B', 'C', 'D'] as $role) {
             $this->assertFalse(
                 AdminModel::canManageTarget($role, $role),
-                "رتبة {$role} استطاعت إدارة رتبتها — المقارنة صارت >= بدل >."
+                "Rank {$role} was able to manage its own rank — the comparison has become >= instead of >."
             );
         }
     }
@@ -53,24 +54,24 @@ final class AdminRankRuleTest extends TestCase
     }
 
     /**
-     * رتبة مجهولة تساوي 0، فلا تدير شيئاً — والأهمّ أنها **تُدار من
-     * الجميع**. هذا هو السلوك الآمن: قيمة تالفة في العمود يجب أن تُنقص
-     * الصلاحية لا أن تمنحها.
+     * An unknown rank equals 0, so it manages nothing — and more importantly it **is
+     * managed by everyone**. That is the safe behaviour: a corrupt value in the column must
+     * reduce authority rather than grant it.
      */
     public function testAnUnknownRoleHasNoAuthority(): void
     {
         foreach (['', 'X', 'a', 'ADMIN', 'null'] as $bogus) {
             $this->assertFalse(
                 AdminModel::canManageTarget($bogus, 'D'),
-                "رتبة مجهولة [{$bogus}] منحت سلطة."
+                "An unknown rank [{$bogus}] granted authority."
             );
         }
     }
 
     public function testRoleComparisonIsCaseSensitive(): void
     {
-        // العمود enum('A','B','C','D') — الحروف الصغيرة ليست رتباً صالحة
-        // ويجب ألّا تُعامَل كأنها كذلك.
+        // The column is enum('A','B','C','D') — lower-case letters are not valid ranks and
+        // must not be treated as though they were.
         $this->assertFalse(AdminModel::canManageTarget('a', 'D'));
         $this->assertTrue(AdminModel::canManageTarget('A', 'd'));
     }

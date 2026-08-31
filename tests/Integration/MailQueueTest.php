@@ -6,31 +6,31 @@ use App\Core\Mailer;
 use Tests\Support\DatabaseTestCase;
 
 /**
- * طابور البريد — الطلب يكتب صفّاً ويعود، والعامل يرسل خارجه.
+ * The mail queue — the request writes a row and returns, and the worker sends outside it.
  *
- * كان Mailer::send يفتح اتصال Gmail SMTP **داخل الطلب**: يتصل ويصادق
- * ويرسل قبل أن يرى الزائر أي استجابة. فدخول الأدمن ينتظر Gmail في كل
- * مرّة، وتباطؤ SMTP يعلّق خيوط PHP لا يبطّئها فقط، وكل استدعاء
- * لـ/auth/forgot يفتح اتصالاً جديداً — فيصير الإغراق استنزافاً للخادم
- * لا للحصّة وحدها.
+ * Mailer::send used to open a Gmail SMTP connection **inside the request**: it connected,
+ * authenticated and sent before the visitor saw any response. So the admin sign-in waited on
+ * Gmail every time, a slow SMTP server hung PHP threads rather than merely slowing them, and
+ * every call to /auth/forgot opened a new connection — turning a flood into an exhaustion of
+ * the server rather than of the quota alone.
  *
- * ⚠️ لا اختبار هنا يتصل بـSMTP. كل استدعاء لـprocessQueue يمرّر
- * مُرسِلاً بديلاً — وهذا ليس تفضيلاً أسلوبياً: بيئة التطوير تحمل بيانات
- * Gmail الحقيقية للمشروع، وأوّل تشغيل بلا بديل سلّم رسالة فعلية إلى
- * الخادم. حزمة اختبارات ترسل بريداً من حساب حقيقي عطلٌ لا أداة.
+ * ⚠️ No test here connects to SMTP. Every call to processQueue passes a substitute sender —
+ * and that is not a stylistic preference: the development environment holds the project's
+ * real Gmail credentials, and the first run without a substitute delivered an actual message
+ * to the server. A test suite that sends email from a real account is a fault, not a tool.
  *
- * وما يُختبَر هو عقد الطابور — الكتابة والحجز والفشل وإعادة المحاولة —
- * وهو ما ينكسر بصمت، بخلاف الإرسال الذي ينكشف فوراً.
+ * And what is tested is the queue's contract — writing, claiming, failing and retrying —
+ * which is what breaks silently, unlike the sending, which reveals itself immediately.
  */
 final class MailQueueTest extends DatabaseTestCase
 {
-    /** مُرسِل بديل يفشل دائماً — لقياس مسار الفشل بلا شبكة. */
+    /** A substitute sender that always fails — to measure the failure path with no network. */
     private static function failingSender(): callable
     {
         return static fn(): bool => false;
     }
 
-    /** مُرسِل بديل ينجح دائماً — لقياس مسار النجاح بلا شبكة. */
+    /** A substitute sender that always succeeds — to measure the success path with no network. */
     private static function succeedingSender(): callable
     {
         return static fn(): bool => true;
@@ -38,14 +38,14 @@ final class MailQueueTest extends DatabaseTestCase
 
     public function testQueueingWritesAPendingRowAndDoesNotSend(): void
     {
-        $ok = Mailer::queue('someone@example.test', 'فلان', 'موضوع', '<p>جسم</p>');
+        $ok = Mailer::queue('someone@example.test', 'Somebody', 'A subject', '<p>A body</p>');
 
         $this->assertTrue($ok);
 
         $row = $this->pdo->query('SELECT * FROM mail_queue')->fetch(\PDO::FETCH_ASSOC);
 
         $this->assertSame('someone@example.test', $row['to_email']);
-        $this->assertSame('موضوع', $row['subject']);
+        $this->assertSame('A subject', $row['subject']);
         $this->assertSame('pending', $row['status']);
         $this->assertSame(0, (int) $row['attempts']);
         $this->assertNull($row['sent_at']);
@@ -64,7 +64,7 @@ final class MailQueueTest extends DatabaseTestCase
 
     public function testASuccessfulSendMarksTheRowSentAndStampsTheTime(): void
     {
-        Mailer::queue('a@b.test', 'x', 'م', 'ج');
+        Mailer::queue('a@b.test', 'x', 's', 'b');
 
         $result = Mailer::processQueue(25, self::succeedingSender());
 
@@ -77,21 +77,22 @@ final class MailQueueTest extends DatabaseTestCase
     }
 
     /**
-     * الرسالة الفاشلة تبقى معلّقة حتى تُستنفد المحاولات، ثم تُعلَّم فاشلة.
+     * A failing message stays pending until the attempts are exhausted, and is then marked
+     * failed.
      */
     public function testAFailingMessageIsRetriedThenMarkedFailed(): void
     {
-        Mailer::queue('nowhere@invalid.test', 'x', 'موضوع', 'جسم');
+        Mailer::queue('nowhere@invalid.test', 'x', 'A subject', 'A body');
 
         for ($pass = 1; $pass < Mailer::MAX_ATTEMPTS; $pass++) {
             Mailer::processQueue(25, self::failingSender());
 
             $row = $this->pdo->query('SELECT status, attempts FROM mail_queue')->fetch(\PDO::FETCH_ASSOC);
-            $this->assertSame('pending', $row['status'], "بعد المحاولة {$pass} يجب أن تبقى معلّقة.");
+            $this->assertSame('pending', $row['status'], "After attempt {$pass} it must stay pending.");
             $this->assertSame($pass, (int) $row['attempts']);
         }
 
-        // المحاولة الأخيرة تستنفد الرصيد.
+        // The final attempt exhausts the allowance.
         Mailer::processQueue(25, self::failingSender());
 
         $row = $this->pdo->query('SELECT status, attempts FROM mail_queue')->fetch(\PDO::FETCH_ASSOC);
@@ -100,16 +101,16 @@ final class MailQueueTest extends DatabaseTestCase
     }
 
     /**
-     * الرسالة المستنفَدة لا تعود إلى الدورة من تلقاء نفسها.
+     * An exhausted message does not return to the cycle on its own.
      *
-     * بدون شرط `attempts < MAX_ATTEMPTS` تدور رسالة إلى أبد الآبدين
-     * تحاول الاتصال بخادم لا يستجيب، فتُبطئ كل دفعة بعدها.
+     * Without the `attempts < MAX_ATTEMPTS` condition, a message circulates forever trying to
+     * reach a server that does not respond, slowing every batch after it.
      */
     public function testAnExhaustedMessageIsNotPickedUpAgain(): void
     {
         $this->pdo->exec(
             "INSERT INTO mail_queue (to_email, to_name, subject, body, status, attempts)
-             VALUES ('x@y.test', 'x', 'م', 'ج', 'failed', " . Mailer::MAX_ATTEMPTS . ')'
+             VALUES ('x@y.test', 'x', 's', 'b', 'failed', " . Mailer::MAX_ATTEMPTS . ')'
         );
 
         $result = Mailer::processQueue(25, self::succeedingSender());
@@ -119,15 +120,15 @@ final class MailQueueTest extends DatabaseTestCase
     }
 
     /**
-     * الحجز المتفائل يمنع الإرسال المزدوج.
+     * The optimistic claim prevents a double send.
      *
-     * عاملان يقرآن الصفّ نفسه؛ الحجز بشرط قيمة attempts المقروءة يجعل
-     * أحدهما فقط ينجح. وهذا ليس تحسيناً تجميلياً: إرسال مكرّر لرابط
-     * إعادة تعيين كلمة المرور يعني توكنين صالحين حيث يجب أن يكون واحد.
+     * Two workers read the same row; claiming it on the condition of the attempts value they
+     * read lets only one succeed. And that is not a cosmetic improvement: a duplicate send of
+     * a password reset link means two valid tokens where there should be one.
      */
     public function testAClaimedRowCannotBeClaimedTwice(): void
     {
-        Mailer::queue('a@b.test', 'x', 'م', 'ج');
+        Mailer::queue('a@b.test', 'x', 's', 'b');
         $id = (int) $this->pdo->lastInsertId();
 
         $claim = fn(int $attempts): int => (function () use ($id, $attempts) {
@@ -139,17 +140,18 @@ final class MailQueueTest extends DatabaseTestCase
             return $stmt->rowCount();
         })();
 
-        // العامل الأوّل يحجز بنجاح؛ الثاني يقرأ القيمة القديمة نفسها فيفشل.
+        // The first worker claims it successfully; the second reads the same old value and
+        // fails.
         $this->assertSame(1, $claim(0));
         $this->assertSame(0, $claim(0));
     }
 
     /**
-     * الكنترولرز لا تستدعي send() مباشرةً.
+     * The controllers do not call send() directly.
      *
-     * الطابور بلا هذه القاعدة نصف حلّ: يكفي سطر جديد واحد يستدعي
-     * send() ليعيد SMTP إلى مسار الطلب في نقطة واحدة — وهي غالباً
-     * النقطة الجديدة التي لم يفكّر أحد في حِملها.
+     * The queue without this rule is half an answer: one new line calling send() is enough to
+     * bring SMTP back into the request path at one endpoint — usually the new endpoint whose
+     * load nobody has thought about.
      */
     public function testNoControllerCallsSendDirectly(): void
     {
@@ -165,7 +167,7 @@ final class MailQueueTest extends DatabaseTestCase
         $this->assertSame(
             [],
             $offenders,
-            "كنترولرز تفتح SMTP داخل الطلب — استعمل Mailer::queue():\n  "
+            "Controllers opening SMTP inside the request — use Mailer::queue():\n  "
             . implode("\n  ", $offenders)
         );
     }

@@ -6,23 +6,22 @@ use App\Models\UserModel;
 use Tests\Support\DatabaseTestCase;
 
 /**
- * أمان الحساب: رموز الاستعادة وتفعيل البريد وعدّاد المحاولات.
+ * Account security: the recovery tokens, email verification and the attempt counter.
  *
  * ══════════════════════════════════════════════════════════════
- * لماذا هذا الملف
+ * Why this file exists
  * ══════════════════════════════════════════════════════════════
  *
- * UserModel يبلغ 716 سطراً ولم يكن يغطّيه اختبار واحد. وهو يحمل
- * الطبقة التي إن انكسرت لا يُسرَق منتج بل **حساب**: رابط استعادة
- * كلمة السر.
+ * UserModel runs to 716 lines and was covered by not one test. And it carries the layer
+ * whose breaking steals not a product but **an account**: the password recovery link.
  *
- * وخصائص هذه الطبقة كلّها من النوع الذي يعمل ظاهرياً وهو مكسور:
- * رمزٌ لا ينتهي يبقى صالحاً إلى الأبد، ورمزٌ يُقبل مرّتين يعني أن من
- * قرأ بريداً قديماً يدخل اليوم، ورمز حسابٍ يفتح حساباً آخر. لا شيء
- * من ذلك يظهر في الاستعمال العادي — كلّه يظهر يوم يُستغَلّ.
+ * And every property of this layer is of the kind that appears to work while broken: a token
+ * that never expires stays valid forever, a token accepted twice means whoever read an old
+ * email gets in today, and one account's token opens another. None of that shows up in
+ * ordinary use — all of it shows up on the day it is exploited.
  *
- * الاختبارات هنا تثبت الخصائص لا الأسطر: الانتهاء، والاستهلاك مرّة
- * واحدة، وارتباط الرمز بصاحبه، وأن الرمز الخام لا يُخزَّن.
+ * The tests here establish the properties rather than the lines: expiry, single use, the
+ * token's binding to its owner, and that the raw token is never stored.
  */
 final class AccountSecurityTest extends DatabaseTestCase
 {
@@ -41,7 +40,7 @@ final class AccountSecurityTest extends DatabaseTestCase
         return ['id' => (int) $this->pdo->lastInsertId(), 'email' => $email];
     }
 
-    /** يُقدّم انتهاء رمز الاستعادة إلى الماضي — محاكاة مرور الوقت. */
+    /** Moves a recovery token's expiry into the past — simulating the passage of time. */
     private function expirePasswordReset(string $email): void
     {
         $stmt = $this->pdo->prepare(
@@ -51,7 +50,7 @@ final class AccountSecurityTest extends DatabaseTestCase
     }
 
     // ════════════════════════════════════════════════════════
-    // رمز استعادة كلمة السر
+    // The password recovery token
     // ════════════════════════════════════════════════════════
 
     public function testAFreshResetTokenValidatesOnce(): void
@@ -64,11 +63,11 @@ final class AccountSecurityTest extends DatabaseTestCase
     }
 
     /**
-     * الخاصية الأهمّ في هذا الملف: **الرمز الخام لا يُخزَّن**.
+     * The most important property in this file: **the raw token is never stored**.
      *
-     * تسريب قاعدة البيانات — نسخة احتياطية ضائعة، أو حقن SQL في مسار
-     * آخر — يجب ألّا يسلّم المهاجم روابط استعادة صالحة لكل مستخدم طلب
-     * واحداً. الجدول يحمل sha256 وحده، وهو لا يُعكَس.
+     * A database leak — a lost backup, or an SQL injection on some other path — must not hand
+     * the attacker valid recovery links for every user who requested one. The table carries
+     * the sha256 alone, and that cannot be reversed.
      */
     public function testTheRawTokenIsNeverStored(): void
     {
@@ -79,7 +78,7 @@ final class AccountSecurityTest extends DatabaseTestCase
         $stmt->execute([$user['email']]);
         $stored = (string) $stmt->fetchColumn();
 
-        $this->assertNotSame($token, $stored, 'الرمز الخام مخزَّن في القاعدة.');
+        $this->assertNotSame($token, $stored, 'The raw token is stored in the database.');
         $this->assertSame(hash('sha256', $token), $stored);
     }
 
@@ -92,8 +91,8 @@ final class AccountSecurityTest extends DatabaseTestCase
 
         UserModel::consumePasswordResetToken($user['email'], $token);
 
-        // رابطٌ يُقبل مرّتين يعني أن من قرأ بريداً قديماً — على جهاز
-        // مشترك، أو في صندوق مخترَق لاحقاً — يدخل اليوم.
+        // A link accepted twice means whoever read an old email — on a shared machine, or in
+        // an inbox compromised later — gets in today.
         $this->assertFalse(UserModel::validatePasswordResetToken($user['email'], $token));
     }
 
@@ -114,8 +113,8 @@ final class AccountSecurityTest extends DatabaseTestCase
 
         $attackerToken = UserModel::createPasswordReset($attacker['email']);
 
-        // الرمز مرتبط بالبريد في نفس عبارة SELECT. بلا ذلك يصير أي رمز
-        // صالح مفتاحاً لأي حساب — وهو أسوأ ما يمكن أن يحدث هنا.
+        // The token is bound to the email address in the same SELECT. Without that, any
+        // valid token becomes a key to any account — the worst thing that can happen here.
         $this->assertFalse(UserModel::validatePasswordResetToken($victim['email'], $attackerToken));
     }
 
@@ -124,9 +123,9 @@ final class AccountSecurityTest extends DatabaseTestCase
         $user  = $this->makeUser();
         $token = UserModel::createPasswordReset($user['email'], 'user');
 
-        // جدول واحد يخدم المستخدمين والأدمنية معاً، وعمود user_type هو
-        // كل ما يفصلهما. لو أُهمل في التحقّق، صار رمزُ زبونٍ يعيد ضبط
-        // كلمة سرّ أدمن يحمل البريد نفسه.
+        // One table serves both the users and the admins, and the user_type column is all
+        // that separates them. Were it neglected in the check, a customer's token would reset
+        // the password of an admin holding the same email address.
         $this->assertFalse(UserModel::validatePasswordResetToken($user['email'], $token, 'admin'));
     }
 
@@ -141,7 +140,7 @@ final class AccountSecurityTest extends DatabaseTestCase
     }
 
     // ════════════════════════════════════════════════════════
-    // تفعيل البريد
+    // Email verification
     // ════════════════════════════════════════════════════════
 
     public function testVerifyingAnEmailMarksTheUserAndBurnsTheToken(): void
@@ -155,7 +154,7 @@ final class AccountSecurityTest extends DatabaseTestCase
         $this->assertTrue(UserModel::verifyEmailToken($token));
         $this->assertTrue(UserModel::isEmailVerified($user['id']));
 
-        // الرمز يُحذف بعد استعماله، فإعادة فتح الرابط لا تفعل شيئاً.
+        // The token is deleted after use, so reopening the link does nothing.
         $this->assertSame(0, $this->countRows('email_verifications'));
         $this->assertFalse(UserModel::verifyEmailToken($token));
     }
@@ -175,7 +174,7 @@ final class AccountSecurityTest extends DatabaseTestCase
     }
 
     // ════════════════════════════════════════════════════════
-    // عدّاد محاولات الدخول
+    // The sign-in attempt counter
     // ════════════════════════════════════════════════════════
 
     public function testRateLimitingKicksInAfterTheThreshold(): void
@@ -202,8 +201,8 @@ final class AccountSecurityTest extends DatabaseTestCase
 
         $this->assertTrue(UserModel::isRateLimited($target['email']));
 
-        // عدّادٌ عامّ كان سيجعل مهاجماً واحداً يقفل المتجر على كل
-        // زبائنه بخمس محاولات — حرمانُ خدمةٍ بتكلفة لا شيء.
+        // A global counter would let one attacker lock the store against all of its
+        // customers with five attempts — a denial of service at no cost.
         $this->assertFalse(UserModel::isRateLimited($bystander['email']));
     }
 
@@ -228,8 +227,9 @@ final class AccountSecurityTest extends DatabaseTestCase
         }
         $this->assertTrue(UserModel::isRateLimited($user['email']));
 
-        // النافذة متحرّكة لا قفلٌ دائم: من نسي كلمة سرّه ثم عاد بعد
-        // ساعة يجب أن يدخل، لا أن يجد حسابه مقفلاً إلى الأبد.
+        // The window is a sliding one rather than a permanent lock: somebody who forgot
+        // their password and comes back an hour later should get in, not find their account
+        // locked forever.
         $stmt = $this->pdo->prepare(
             'UPDATE login_attempts SET attempted_at = DATE_SUB(NOW(), INTERVAL 2 HOUR) WHERE email = ?'
         );

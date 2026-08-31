@@ -7,24 +7,24 @@ use App\Models\UserModel;
 use Tests\Support\DatabaseTestCase;
 
 /**
- * الإنذارات والحظر وحذف المستخدم.
+ * Strikes, blocking and deleting a user.
  *
  * ══════════════════════════════════════════════════════════════
- * لماذا
+ * Why
  * ══════════════════════════════════════════════════════════════
  *
- * ثلاثة إنذارات تعني حظراً، والحظر يُلغي الطلبات المعلّقة ويُرجع
- * مخزونها. أي أن هذا المسار **يكتب في عدّاد المخزون** — نفس العدّاد
- * الذي يكتب فيه الطلب والإلغاء — لكن من طرف ثالث بعيد عن الاثنين.
+ * Three strikes mean a block, and a block cancels the pending orders and returns their
+ * stock. Which is to say this path **writes to the stock counter** — the same counter that
+ * ordering and cancelling write to — but from a third party far from both.
  *
- * وهو أيضاً مسار يصعب اختباره يدوياً: يتطلّب مستخدماً بطلبات معلّقة،
- * وثلاثة إنذارات، ومراقبة عمود في جدول آخر. فبقاؤه بلا اختبار يعني
- * عملياً أنه لا يُجرَّب إلا في الإنتاج.
+ * And it is also a path that is hard to test by hand: it needs a user with pending orders,
+ * three strikes, and a column in another table watched. So leaving it untested means, in
+ * practice, that it is only ever exercised in production.
  *
- * والمشروع يحمل دليلاً على ذلك: سكربت
- * `scripts/backfill_blocked_users_cancel_orders.php` وُجد لإصلاح
- * «طلبات معلّقة لمستخدمين حُظروا **قبل** تفعيل الإلغاء التلقائي» — أي
- * أن هذه العلاقة انكسرت مرّة فعلاً وتُرك أثرها في القاعدة.
+ * And the project carries evidence of that: the
+ * `scripts/backfill_blocked_users_cancel_orders.php` script exists to repair "pending orders
+ * of users blocked **before** auto-cancel was switched on" — which is to say this
+ * relationship really did break once and left its mark in the database.
  */
 final class UserModerationTest extends DatabaseTestCase
 {
@@ -94,7 +94,7 @@ final class UserModerationTest extends DatabaseTestCase
     }
 
     // ════════════════════════════════════════════════════════
-    // الإنذارات
+    // The strikes
     // ════════════════════════════════════════════════════════
 
     public function testStrikesAccumulateAndAreCountedPerUser(): void
@@ -103,9 +103,9 @@ final class UserModerationTest extends DatabaseTestCase
         $first   = $this->makeUser();
         $second  = $this->makeUser();
 
-        UserModel::addStrike($first, $adminId, 'سلوك مسيء');
-        UserModel::addStrike($first, $adminId, 'طلب وهمي');
-        UserModel::addStrike($second, $adminId, 'سبب آخر');
+        UserModel::addStrike($first, $adminId, 'Abusive behaviour');
+        UserModel::addStrike($first, $adminId, 'A fake order');
+        UserModel::addStrike($second, $adminId, 'Another reason');
 
         $this->assertSame(2, UserModel::getStrikesCount($first));
         $this->assertSame(1, UserModel::getStrikesCount($second));
@@ -117,13 +117,13 @@ final class UserModerationTest extends DatabaseTestCase
         $owner   = $this->makeUser();
         $other   = $this->makeUser();
 
-        UserModel::addStrike($owner, $adminId, 'سبب');
+        UserModel::addStrike($owner, $adminId, 'A reason');
         $strikes  = UserModel::getStrikes($owner);
         $strikeId = (int) $strikes[0]['id'];
 
-        // شرط الملكية في نفس عبارة DELETE — لا فحص منفصل يمكن أن
-        // يُنسى في مسار آخر. بدونه يستطيع طلبٌ بمعرّف إنذار أن يمسح
-        // إنذار أي مستخدم (IDOR).
+        // The ownership condition is in the DELETE statement itself — not a separate check
+        // that could be forgotten on another path. Without it, a request carrying a strike id
+        // can erase any user's strike (IDOR).
         $this->assertFalse(UserModel::removeStrike($strikeId, $other));
         $this->assertSame(1, UserModel::getStrikesCount($owner));
 
@@ -135,14 +135,14 @@ final class UserModerationTest extends DatabaseTestCase
     {
         $userId = $this->makeUser();
 
-        // DELETE على معرّف غير موجود **ينجح** في SQL ويحذف صفر صفوف.
-        // فبلا فحص rowCount كانت الدالة تُرجع true عن حذف لم يحدث،
-        // ويكتب الكنترولر صفَّ تدقيق عن فعل لم يقع.
+        // A DELETE on a non-existent id **succeeds** in SQL and deletes zero rows. So
+        // without a rowCount check the function returned true for a deletion that never
+        // happened, and the controller wrote an audit row for an act that never occurred.
         $this->assertFalse(UserModel::removeStrike(99999, $userId));
     }
 
     // ════════════════════════════════════════════════════════
-    // الحظر يلغي الطلبات المعلّقة
+    // A block cancels the pending orders
     // ════════════════════════════════════════════════════════
 
     public function testTheThirdStrikeCancelsPendingOrdersAndReturnsStock(): void
@@ -155,15 +155,15 @@ final class UserModerationTest extends DatabaseTestCase
         $orderId = $this->placeOrder($userId, $addressId, $productId, $variantId, 5);
         $this->assertSame(15, $this->variantStock($variantId));
 
-        UserModel::addStrike($userId, $adminId, 'إنذار أوّل');
-        UserModel::addStrike($userId, $adminId, 'إنذار ثانٍ');
+        UserModel::addStrike($userId, $adminId, 'First strike');
+        UserModel::addStrike($userId, $adminId, 'Second strike');
 
-        // إنذاران لا يكفيان: الطلب سليم والمخزون محجوز كما هو.
+        // Two strikes are not enough: the order stands and the stock stays reserved.
         $this->assertSame(15, $this->variantStock($variantId));
 
-        UserModel::addStrike($userId, $adminId, 'إنذار ثالث');
+        UserModel::addStrike($userId, $adminId, 'Third strike');
 
-        // الثالث يحظر، والحظر يُرجع ما كان محجوزاً.
+        // The third blocks, and the block returns what was reserved.
         $this->assertSame(20, $this->variantStock($variantId));
 
         $stmt = $this->pdo->prepare('SELECT status, stock_restored FROM orders WHERE order_id = ?');
@@ -184,16 +184,17 @@ final class UserModerationTest extends DatabaseTestCase
         $this->placeOrder($userId, $addressId, $productId, $variantId, 5);
 
         for ($i = 0; $i < 3; $i++) {
-            UserModel::addStrike($userId, $adminId, "إنذار {$i}");
+            UserModel::addStrike($userId, $adminId, "Strike {$i}");
         }
         $this->assertSame(20, $this->variantStock($variantId));
 
-        // الشرط `=== 3` يعني أن الرابع لا يستدعي الإلغاء أصلاً. وحتى
-        // لو استدعاه، stock_restored يمنع الإرجاع المضاعف. الطبقتان
-        // مقصودتان: الأولى تمنع العمل، والثانية تمنع أثره لو وقع.
-        UserModel::addStrike($userId, $adminId, 'إنذار رابع');
+        // The `=== 3` condition means the fourth does not invoke the cancellation at all. And
+        // even if it did, stock_restored prevents the double return. The two layers are
+        // deliberate: the first prevents the work, the second prevents its effect should it
+        // happen.
+        UserModel::addStrike($userId, $adminId, 'Fourth strike');
 
-        $this->assertSame(20, $this->variantStock($variantId), 'أُرجع المخزون مرّتين.');
+        $this->assertSame(20, $this->variantStock($variantId), 'The stock was returned twice.');
     }
 
     public function testAlreadyDeliveredOrdersAreNotTouchedByABlock(): void
@@ -209,11 +210,11 @@ final class UserModerationTest extends DatabaseTestCase
         $stmt->execute([$delivered]);
 
         for ($i = 0; $i < 3; $i++) {
-            UserModel::addStrike($userId, $adminId, "إنذار {$i}");
+            UserModel::addStrike($userId, $adminId, "Strike {$i}");
         }
 
-        // طلبٌ سُلّم فعلاً: البضاعة عند الزبون. إرجاع مخزونه يعني
-        // زيادة وهمية في المستودع تُباع مرّة ثانية.
+        // An order that was actually delivered: the goods are with the customer. Returning
+        // its stock means a phantom increase in the warehouse that gets sold a second time.
         $this->assertSame(16, $this->variantStock($variantId));
 
         $stmt = $this->pdo->prepare('SELECT status FROM orders WHERE order_id = ?');
@@ -222,7 +223,7 @@ final class UserModerationTest extends DatabaseTestCase
     }
 
     // ════════════════════════════════════════════════════════
-    // حذف المستخدم
+    // Deleting a user
     // ════════════════════════════════════════════════════════
 
     public function testDeletingAUserRemovesTheirOrdersAndReportsWhatWentWithThem(): void
@@ -242,8 +243,8 @@ final class UserModerationTest extends DatabaseTestCase
         $this->assertTrue($result['success']);
         $this->assertSame(2, $result['ordersDeletedCount']);
 
-        // التقرير التفصيلي ليس زينة: هو ما يُكتب في سجلّ التدقيق.
-        // «حُذف مستخدم» جملة لا تكفي حين يُسأل لاحقاً عمّا ضاع معه.
+        // The detailed report is not decoration: it is what gets written into the audit log.
+        // "A user was deleted" is not enough when somebody later asks what went with them.
         $this->assertSame(1, $result['ordersByStatus']['not_taken']);
         $this->assertSame(1, $result['ordersByStatus']['completed']);
 

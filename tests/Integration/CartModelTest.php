@@ -6,23 +6,24 @@ use App\Models\CartModel;
 use Tests\Support\DatabaseTestCase;
 
 /**
- * سلّة المستخدم على الخادم.
+ * The user's cart on the server.
  *
  * ══════════════════════════════════════════════════════════════
- * ما يحرسه هذا الملف
+ * What this file guards
  * ══════════════════════════════════════════════════════════════
  *
- * السلّة انتقلت من `localStorage` إلى جدول. وما كان قبلها خطأ عرضٍ في
- * متصفّح واحد صار خطأ بيانات مشتركاً: كميّة تتضاعف، أو سطر يظهر
- * مرّتين، أو سلّةٌ تُقرأ لغير صاحبها.
+ * The cart moved from `localStorage` into a table. And what was previously a display error
+ * in one browser became a shared data error: a quantity doubling, a line appearing twice, or
+ * a cart read by somebody other than its owner.
  *
- * وثلاث خصائص تحديداً لا يظهر كسرُها في الاستعمال العادي:
+ * And three properties in particular do not reveal their breaking in ordinary use:
  *
- *   · الإضافة المكرّرة تُحدّث سطراً لا تُنشئ ثانياً — والمفتاح الفريد
- *     يفرضها، لكن `ON DUPLICATE KEY` هي ما يجعلها تنجح بدل أن ترمي.
- *   · تعديل سلّة مستخدم آخر مرفوض — شرط الملكية في نفس العبارة.
- *   · والسعر يُقرأ من القاعدة عند كل قراءة، لا يُخزَّن — فتغيّر السعر
- *     يظهر في السلّة قبل الدفع لا عنده.
+ *   · a repeated add updates a row rather than creating a second — the unique key enforces
+ *     that, but `ON DUPLICATE KEY` is what makes it succeed rather than throw.
+ *   · editing another user's cart is refused — the ownership condition is in the statement
+ *     itself.
+ *   · and the price is read from the database on every read rather than stored — so a price
+ *     change shows in the cart before checkout rather than at it.
  */
 final class CartModelTest extends DatabaseTestCase
 {
@@ -53,7 +54,7 @@ final class CartModelTest extends DatabaseTestCase
     }
 
     // ════════════════════════════════════════════════════════
-    // الإضافة
+    // Adding
     // ════════════════════════════════════════════════════════
 
     public function testAddingCreatesOneLineWithLiveProductData(): void
@@ -66,7 +67,8 @@ final class CartModelTest extends DatabaseTestCase
         $items = CartModel::getForUser($userId);
         $this->assertCount(1, $items);
 
-        // السعر والاسم والمخزون من القاعدة لا من المُدخَل: 100 − 10% = 90
+        // The price, the name and the stock come from the database rather than the input:
+        // 100 − 10% = 90
         $this->assertSame(90.00, $items[0]['price']);
         $this->assertSame('Cart Product', $items[0]['name']);
         $this->assertSame('Black', $items[0]['color_name']);
@@ -84,9 +86,9 @@ final class CartModelTest extends DatabaseTestCase
 
         $items = CartModel::getForUser($userId);
 
-        // سطران لنفس اللون يعنيان سلّةً تعرض المنتج مرّتين ويُطلَب
-        // مرّتين. المفتاح الفريد يمنع ذلك، وON DUPLICATE KEY يجعل
-        // المنع نجاحاً لا خطأً.
+        // Two rows for the same colour mean a cart displaying the product twice and
+        // ordering it twice. The unique key prevents that, and ON DUPLICATE KEY makes the
+        // prevention a success rather than an error.
         $this->assertCount(1, $items);
         $this->assertSame(5, $items[0]['quantity']);
         $this->assertSame(1, $this->countRows('cart_items'));
@@ -106,8 +108,9 @@ final class CartModelTest extends DatabaseTestCase
         CartModel::add($userId, $productId, $firstVariant, 1);
         CartModel::add($userId, $productId, $secondVariant, 1);
 
-        // نفس المنتج بلونين شيئان مختلفان في السلّة — وهو ما تعرضه
-        // الواجهة فعلاً. ولذلك المفتاح الفريد على variant لا على product.
+        // The same product in two colours is two different things in the cart — which is
+        // what the interface actually shows. Which is why the unique key is on the variant
+        // rather than on the product.
         $this->assertCount(2, CartModel::getForUser($userId));
     }
 
@@ -116,7 +119,7 @@ final class CartModelTest extends DatabaseTestCase
         $userId = $this->makeUser();
         [$productId, $variantId] = $this->makeProduct();
 
-        // خارج المدى المقبول يُرفض قبل أن يمسّ القاعدة.
+        // Anything outside the accepted range is refused before it touches the database.
         $this->assertFalse(CartModel::add($userId, $productId, $variantId, CartModel::MAX_QTY + 1));
         $this->assertFalse(CartModel::add($userId, $productId, $variantId, 0));
         $this->assertSame(0, $this->countRows('cart_items'));
@@ -126,19 +129,19 @@ final class CartModelTest extends DatabaseTestCase
     {
         $userId = $this->makeUser();
 
-        // مخزون أوسع من MAX_QTY كي يظهر أيّ السقفين يحكم.
+        // Stock wider than MAX_QTY, so it is clear which of the two ceilings governs.
         [$productId, $variantId] = $this->makeProduct(100.00, 0.00, CartModel::MAX_QTY + 50);
 
         CartModel::add($userId, $productId, $variantId, CartModel::MAX_QTY);
         CartModel::add($userId, $productId, $variantId, 10);
 
-        // السقفان معاً في LEAST داخل SQL: المخزون وMAX_QTY. هنا يفوز
-        // الثاني لأن الأوّل أوسع.
+        // Both ceilings together in a LEAST inside the SQL: the stock and MAX_QTY. Here the
+        // second wins because the first is wider.
         $this->assertSame(CartModel::MAX_QTY, CartModel::getForUser($userId)[0]['quantity']);
     }
 
     // ════════════════════════════════════════════════════════
-    // التعديل والحذف — والملكية
+    // Updating, deleting — and ownership
     // ════════════════════════════════════════════════════════
 
     public function testSettingQuantityToZeroRemovesTheLine(): void
@@ -149,8 +152,8 @@ final class CartModelTest extends DatabaseTestCase
         CartModel::add($userId, $productId, $variantId, 3);
         $this->assertTrue(CartModel::setQuantity($userId, $variantId, 0));
 
-        // سطرٌ بكمية صفر يظهر في السلّة ولا يُطلَب — حالة لا معنى لها
-        // تُربك العرض والعدّاد معاً.
+        // A row with a quantity of zero appears in the cart and is never ordered — a
+        // meaningless state that confuses the display and the counter alike.
         $this->assertSame(0, $this->countRows('cart_items'));
     }
 
@@ -161,8 +164,8 @@ final class CartModelTest extends DatabaseTestCase
 
         CartModel::add($userId, $productId, $variantId, 2);
 
-        // MySQL يُرجع rowCount = 0 حين لا تتغيّر القيمة. الاعتماد عليه
-        // وحده كان سيُرجع «فشل» عن نجاح — ويُظهر للزبون خطأً لا سبب له.
+        // MySQL returns rowCount = 0 when the value does not change. Relying on it alone
+        // would return "failed" for a success — showing the customer an error with no cause.
         $this->assertTrue(CartModel::setQuantity($userId, $variantId, 2));
     }
 
@@ -174,8 +177,8 @@ final class CartModelTest extends DatabaseTestCase
 
         CartModel::add($owner, $productId, $variantId, 4);
 
-        // شرط user_id في نفس عبارة UPDATE/DELETE — لا فحص منفصل يمكن
-        // أن يُنسى في مسار آخر (IDOR).
+        // The user_id condition is in the UPDATE/DELETE statement itself — not a separate
+        // check that could be forgotten on another path (IDOR).
         $this->assertFalse(CartModel::setQuantity($stranger, $variantId, 99));
         $this->assertFalse(CartModel::remove($stranger, $variantId));
 
@@ -199,7 +202,7 @@ final class CartModelTest extends DatabaseTestCase
     }
 
     // ════════════════════════════════════════════════════════
-    // ما تعكسه القراءة من القاعدة
+    // What the read reflects from the database
     // ════════════════════════════════════════════════════════
 
     public function testAPriceChangeShowsInTheCartWithoutTouchingIt(): void
@@ -213,9 +216,10 @@ final class CartModelTest extends DatabaseTestCase
         $stmt = $this->pdo->prepare('UPDATE product_variants SET price = ? WHERE id = ?');
         $stmt->execute([75.00, $variantId]);
 
-        // لا عمود سعر في cart_items عمداً: القيمة المخزَّنة خارج مصدرها
-        // تصير مصدرَ حقيقة ثانياً ثم يقرأها أحدهم يوماً. والقراءة الحيّة
-        // تجعل تغيّر السعر ظاهراً في السلّة قبل الدفع لا عنده.
+        // There is no price column in cart_items, deliberately: a value stored away from
+        // its source becomes a second source of truth, and one day somebody reads it. And the
+        // live read makes a price change visible in the cart before checkout rather than at
+        // it.
         $this->assertSame(75.00, CartModel::getForUser($userId)[0]['price']);
     }
 
@@ -230,8 +234,8 @@ final class CartModelTest extends DatabaseTestCase
         $stmt = $this->pdo->prepare('UPDATE products SET is_visible = 0 WHERE id = ?');
         $stmt->execute([$productId]);
 
-        // يختفي من السلّة بدل أن يصل الدفع فيُرفض هناك — الرفض المتأخّر
-        // في آخر خطوة أسوأ من اختفاء مبكّر.
+        // It disappears from the cart rather than reaching checkout and being refused there
+        // — a late refusal at the last step is worse than an early disappearance.
         $this->assertSame([], CartModel::getForUser($userId));
     }
 
@@ -245,8 +249,8 @@ final class CartModelTest extends DatabaseTestCase
         $stmt = $this->pdo->prepare('DELETE FROM product_variants WHERE id = ?');
         $stmt->execute([$variantId]);
 
-        // سلّة تشير إلى variant محذوف ليست بياناً بل عطلاً ينتظر من
-        // يقرأه. ON DELETE CASCADE يمنع وجوده أصلاً.
+        // A cart pointing at a deleted variant is not data but a fault waiting for somebody
+        // to read it. ON DELETE CASCADE prevents its existing at all.
         $this->assertSame(0, $this->countRows('cart_items'));
     }
 
@@ -259,7 +263,7 @@ final class CartModelTest extends DatabaseTestCase
         CartModel::add($userId, $p1, $v1, 3);
         CartModel::add($userId, $p2, $v2, 4);
 
-        // الشارة تقول «كم قطعة» لا «كم لوناً».
+        // The badge says "how many units", not "how many colours".
         $this->assertSame(7, CartModel::countItems($userId));
     }
     public function testAVariantFromAnotherProductIsRejected(): void
@@ -268,9 +272,9 @@ final class CartModelTest extends DatabaseTestCase
         [$firstProduct, ]      = $this->makeProduct();
         [, $otherVariant]      = $this->makeProduct(500.00);
 
-        // المفتاحان الأجنبيان يفحص كلٌّ منهما وجود صفّه وحده، ولا شيء
-        // يربط الاثنين. وبلا هذا الفحص كانت السلّة تعرض **اسم منتج
-        // وسعر منتج آخر** — مقيس على خادم حيّ قبل الإصلاح.
+        // Each of the two foreign keys checks only that its own row exists, and nothing
+        // ties the two together. And without this check the cart displayed **one product's
+        // name with another product's price** — measured on a live server before the fix.
         $this->assertFalse(CartModel::add($userId, $firstProduct, $otherVariant, 1));
         $this->assertSame(0, $this->countRows('cart_items'));
     }
@@ -284,7 +288,7 @@ final class CartModelTest extends DatabaseTestCase
         $this->assertSame(0, $this->countRows('cart_items'));
     }
     // ════════════════════════════════════════════════════════
-    // السقف بالمخزون — بلاغ من الاستعمال
+    // The stock ceiling — a report from real use
     // ════════════════════════════════════════════════════════
 
     public function testTheCartNeverHoldsMoreThanTheAvailableStock(): void
@@ -292,13 +296,13 @@ final class CartModelTest extends DatabaseTestCase
         $userId = $this->makeUser();
         [$productId, $variantId] = $this->makeProduct(100.00, 0.00, 5);
 
-        // «إذا كان في الآيفون منه 5 فقط وكبست بسرعة على الإضافة… الرقم
-        // يضلّ يزيد» — بلاغ من الاستعمال، أُعيد إنتاجه على خادم حيّ:
-        // عشر إضافات متوازية → السلّة تحمل 10 والمخزون 5.
+        // "If there are only 5 of the iPhone and I click add quickly… the number keeps
+        // going up" — a report from real use, reproduced on a live server: ten parallel adds
+        // → the cart holds 10 and the stock is 5.
         //
-        // كان السقف MAX_QTY وحده، والحارس الوحيد ضدّ تجاوز المخزون في
-        // المتصفّح — وهو يسقط بالنقر السريع لأن كل نقرة تقرأ المرآة
-        // قبل وصول ردّ سابقتها.
+        // The ceiling was MAX_QTY alone, and the only guard against exceeding the stock lived
+        // in the browser — and that collapses under rapid clicking, because every click reads
+        // the mirror before the previous one's reply arrives.
         $this->assertTrue(CartModel::add($userId, $productId, $variantId, 50));
         $this->assertSame(5, CartModel::getForUser($userId)[0]['quantity']);
     }
@@ -312,8 +316,8 @@ final class CartModelTest extends DatabaseTestCase
             CartModel::add($userId, $productId, $variantId, 1);
         }
 
-        // السقف داخل SQL في نفس عبارة الجمع، فعشر عبارات متزامنة
-        // تنتهي كلّها عند المخزون بلا سباق.
+        // The ceiling is inside the SQL, in the addition statement itself, so ten concurrent
+        // statements all settle at the stock with no race.
         $this->assertSame(3, CartModel::getForUser($userId)[0]['quantity']);
     }
 
@@ -322,13 +326,14 @@ final class CartModelTest extends DatabaseTestCase
         $userId = $this->makeUser();
         [$productId, $variantId] = $this->makeProduct(100.00, 0.00, 0);
 
-        // سقفٌ صفر يعني سطراً بكمية صفر — حالة لا معنى لها. الرفض أوضح.
+        // A ceiling of zero means a row with a quantity of zero — a meaningless state.
+        // Refusing is clearer.
         $this->assertFalse(CartModel::add($userId, $productId, $variantId, 1));
         $this->assertSame(0, $this->countRows('cart_items'));
     }
 
     // ════════════════════════════════════════════════════════
-    // سقف المخزون في التعديل — لا في الإضافة وحدها
+    // The stock ceiling on updates — not on adds alone
     // ════════════════════════════════════════════════════════
 
     public function testSetQuantityIsCappedByStock(): void
@@ -338,12 +343,12 @@ final class CartModelTest extends DatabaseTestCase
 
         CartModel::add($userId, $productId, $variantId, 1);
 
-        // كان هذا يمرّ كما هو: `setQuantity` تفحص MAX_QTY وحدها، فتكتب
-        // 100 على متغيّر مخزونه 2. والباب مفتوح من الشبكة مباشرةً عبر
-        // POST /cart/update — لا يلزم حتى تجاوز الواجهة.
+        // This used to go through as it was: `setQuantity` checked MAX_QTY alone, so it
+        // wrote 100 onto a variant with a stock of 2. And the door is open from the network
+        // directly through POST /cart/update — bypassing the interface is not even required.
         //
-        // والسقف في `add` كان قائماً منذ بلاغ «الرقم يضلّ يزيد»؛ الثغرة
-        // أن مسار التعديل لم يأخذه.
+        // And the ceiling in `add` had been in place since the "the number keeps going up"
+        // report; the hole was that the update path never took it.
         $this->assertTrue(CartModel::setQuantity($userId, $variantId, 100));
         $this->assertSame(2, CartModel::getForUser($userId)[0]['quantity']);
     }
@@ -355,7 +360,8 @@ final class CartModelTest extends DatabaseTestCase
 
         CartModel::add($userId, $productId, $variantId, 1);
 
-        // السقف سقفٌ لا تثبيت: ما دون المخزون يمرّ بلا تعديل.
+        // The ceiling is a ceiling rather than a fixed value: anything below the stock
+        // passes unchanged.
         $this->assertTrue(CartModel::setQuantity($userId, $variantId, 4));
         $this->assertSame(4, CartModel::getForUser($userId)[0]['quantity']);
     }
@@ -367,14 +373,14 @@ final class CartModelTest extends DatabaseTestCase
 
         CartModel::add($userId, $productId, $variantId, 3);
 
-        // نفاد المخزون بعد دخول السطر السلّة — الحالة الواقعية: زبون
-        // آخر أتمّ الشراء بينما السلّة مفتوحة.
+        // The stock running out after the line entered the cart — the real-world case:
+        // another customer completed their purchase while the cart was open.
         $this->pdo->prepare('UPDATE product_variants SET stock_quantity = 0 WHERE id = ?')
             ->execute([$variantId]);
 
-        // إبقاء السطر بكميته القديمة يعني سلّة تَعِد بما لا وجود له،
-        // و`add` ترفض النسخة النافدة أصلاً — فلا يصحّ أن يحرسها مسار
-        // ويتركها الآخر.
+        // Keeping the line at its old quantity means a cart promising what does not exist,
+        // and `add` already refuses a sold-out variant — so it will not do for one path to
+        // guard it and the other to let it through.
         $this->assertTrue(CartModel::setQuantity($userId, $variantId, 1));
         $this->assertSame(0, $this->countRows('cart_items'));
     }

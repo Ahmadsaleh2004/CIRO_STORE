@@ -6,28 +6,29 @@ use App\Models\OrderModel;
 use Tests\Support\DatabaseTestCase;
 
 /**
- * OrderModel::placeOrder — التسعير يأتي من القاعدة، لا من العميل.
+ * OrderModel::placeOrder — the pricing comes from the database, not from the client.
  *
  * ══════════════════════════════════════════════════════════════
- * العطل الأصلي
+ * The original fault
  * ══════════════════════════════════════════════════════════════
  *
- * السلّة تُبنى في localStorage ويرسلها المتصفح كما هي، وكانت الدالة
- * تقرأ `price` منها فتجمعه في `total_amount` وتكتبه في
- * `price_at_purchase`. أي أن **السعر كان مُدخَلاً من المستخدم**: طلبٌ
- * بـ`price: 0.01` يمرّ بتوكن صحيح وجلسة صحيحة، ويُخفّض المخزون، ويصل
- * الأدمن كطلب مشروع.
+ * The cart was built in localStorage and the browser sent it as it was, and the function
+ * read `price` from it, summed that into `total_amount` and wrote it into
+ * `price_at_purchase`. Which is to say **the price was user input**: an order carrying
+ * `price: 0.01` passed with a valid token and a valid session, decremented the stock, and
+ * reached the admin as a legitimate order.
  *
- * ولم يمسكه شيء لأن هذا المسار — أغلى مسار في المتجر — لم يكن مغطّى
- * بأي اختبار. هذا الملف هو الغطاء.
+ * And nothing caught it because this path — the most valuable path in the store — was
+ * covered by no test at all. This file is that cover.
  *
  * ══════════════════════════════════════════════════════════════
- * لماذا الرفض لا التمرير بسعر الخادم
+ * Why refusal rather than proceeding at the server's price
  * ══════════════════════════════════════════════════════════════
  *
- * قرار منتج صريح: الزبون لا يُفاجأ بمبلغ لم يوافق عليه. والدفع عند
- * الاستلام ينقل المفاجأة إلى الباب — حيث تكلفتها رفض استلام وشحنة
- * راجعة. فالسعر المختلف يُلغي العملية ويُعيد الأسعار الصحيحة.
+ * An explicit product decision: the customer is not surprised by an amount they never agreed
+ * to. And cash on delivery moves the surprise to the doorstep — where its cost is a refused
+ * delivery and a return shipment. So a differing price cancels the operation and returns the
+ * correct prices.
  */
 final class OrderPricingTest extends DatabaseTestCase
 {
@@ -95,7 +96,7 @@ final class OrderPricingTest extends DatabaseTestCase
     }
 
     // ════════════════════════════════════════════════════════
-    // المسار السليم
+    // The sound path
     // ════════════════════════════════════════════════════════
 
     public function testAnHonestOrderIsPricedFromTheDatabase(): void
@@ -104,7 +105,7 @@ final class OrderPricingTest extends DatabaseTestCase
         $addressId = $this->makeAddress($userId);
         [$productId, $variantId] = $this->makeProductWithVariant(100.00, 10.00, 5);
 
-        // price_after_discount عمود محسوب: 100 − 10% = 90.00
+        // price_after_discount is a computed column: 100 − 10% = 90.00
         $result = $this->place($userId, $addressId, [[
             'product_id'  => $productId,
             'variant_id'  => $variantId,
@@ -126,15 +127,15 @@ final class OrderPricingTest extends DatabaseTestCase
 
         $this->assertSame('90.00', $row['price_at_purchase']);
 
-        // اللقطة من القاعدة لا من العميل: لقطةٌ يكتبها الطرف الذي
-        // تُوثَّق ضدّه ليست لقطة.
+        // The snapshot comes from the database rather than from the client: a snapshot
+        // written by the party it is recorded against is not a snapshot.
         $this->assertSame('Black', $row['color_name_snapshot']);
 
         $this->assertSame(3, $this->variantStock($variantId));
     }
 
     // ════════════════════════════════════════════════════════
-    // الثغرة نفسها
+    // The hole itself
     // ════════════════════════════════════════════════════════
 
     public function testAForgedPriceIsRejectedAndNothingIsWritten(): void
@@ -143,7 +144,7 @@ final class OrderPricingTest extends DatabaseTestCase
         $addressId = $this->makeAddress($userId);
         [$productId, $variantId] = $this->makeProductWithVariant(100.00, 0.00, 5);
 
-        // «اشترِ منتجاً بمئة دولار بمليم» — الطلب الذي كان يمرّ.
+        // "Buy a hundred-dollar product for a cent" — the order that used to go through.
         $result = $this->place($userId, $addressId, [[
             'product_id'  => $productId,
             'variant_id'  => $variantId,
@@ -155,10 +156,10 @@ final class OrderPricingTest extends DatabaseTestCase
         $this->assertSame(0, $this->countRows('orders'));
         $this->assertSame(0, $this->countRows('order_items'));
 
-        // ولا سطر مخزون تحرّك — التراجع كامل لا جزئي.
+        // And no stock row moved — the rollback is complete rather than partial.
         $this->assertSame(5, $this->variantStock($variantId));
 
-        // والردّ يحمل السعر الصحيح ليصحّح العميل سلّته.
+        // And the reply carries the correct price so the client can correct its cart.
         $this->assertSame(100.00, $result['items'][0]['price']);
         $this->assertSame(0.01, $result['items'][0]['shown_price']);
     }
@@ -177,8 +178,8 @@ final class OrderPricingTest extends DatabaseTestCase
 
         $this->assertSame(OrderModel::PLACE_PRICE_CHANGED, $result['status']);
 
-        // زبونٌ بسعرين تغيّرا يستحقّ أن يراهما مرّة واحدة، لا أن يعيد
-        // المحاولة مرّتين ليكتشفهما واحداً واحداً.
+        // A customer with two changed prices deserves to see both at once, rather than
+        // retrying twice to discover them one by one.
         $this->assertCount(2, $result['items']);
     }
 
@@ -187,7 +188,7 @@ final class OrderPricingTest extends DatabaseTestCase
         $userId    = $this->makeUser();
         $addressId = $this->makeAddress($userId);
 
-        // 19.99 − 15% = 16.9915 → يخزّنها العمود المحسوب 16.99
+        // 19.99 − 15% = 16.9915 → the computed column stores it as 16.99
         [$productId, $variantId] = $this->makeProductWithVariant(19.99, 15.00, 5);
 
         $result = $this->place($userId, $addressId, [[
@@ -197,13 +198,13 @@ final class OrderPricingTest extends DatabaseTestCase
             'shown_price' => 16.99,
         ]]);
 
-        // المقارنة بالقروش لا بالعشريات: 0.1 + 0.2 !== 0.3 في أي حساب
-        // ثنائي، ومقارنة float كانت سترفض هذا الطلب السليم.
+        // The comparison is in cents rather than decimals: 0.1 + 0.2 !== 0.3 in any binary
+        // arithmetic, and a float comparison would have refused this sound order.
         $this->assertSame(OrderModel::PLACE_OK, $result['status']);
     }
 
     // ════════════════════════════════════════════════════════
-    // ما لم يعد قابلاً للشراء
+    // What is no longer purchasable
     // ════════════════════════════════════════════════════════
 
     public function testAHiddenProductCannotBeOrdered(): void
@@ -219,8 +220,8 @@ final class OrderPricingTest extends DatabaseTestCase
             'shown_price' => 100.00,
         ]]);
 
-        // لم يكن أي شيء في مسار الطلب يفحص is_visible. الاستعلام القافل
-        // يحمله، فأُغلق الباب مع إغلاق باب السعر.
+        // Nothing on the ordering path checked is_visible. The locking query carries it, so
+        // that door was closed along with the price's.
         $this->assertSame(OrderModel::PLACE_UNAVAILABLE, $result['status']);
         $this->assertSame(0, $this->countRows('orders'));
     }
@@ -232,8 +233,8 @@ final class OrderPricingTest extends DatabaseTestCase
         [$cheapProduct, ]           = $this->makeProductWithVariant(5.00, 0.00, 5);
         [, $expensiveVariant]       = $this->makeProductWithVariant(500.00, 0.00, 5);
 
-        // قرن variant غالٍ بمنتج رخيص: بلا فحص الانتماء يُخزَّن سطر
-        // order_items بمنتجٍ لم يُسعَّر سعرُه.
+        // Pairing an expensive variant with a cheap product: without the ownership check, an
+        // order_items row is stored against a product whose price was never the one charged.
         $result = $this->place($userId, $addressId, [[
             'product_id'  => $cheapProduct,
             'variant_id'  => $expensiveVariant,
@@ -246,7 +247,7 @@ final class OrderPricingTest extends DatabaseTestCase
     }
 
     // ════════════════════════════════════════════════════════
-    // لقطة العنوان
+    // The address snapshot
     // ════════════════════════════════════════════════════════
 
     public function testTheOrderKeepsItsOwnCopyOfTheAddress(): void
@@ -263,18 +264,18 @@ final class OrderPricingTest extends DatabaseTestCase
         ]]);
         $this->assertSame(OrderModel::PLACE_OK, $result['status']);
 
-        // المستخدم يعدّل عنوانه بعد الطلب — وهو تصرّف عادي تماماً.
+        // The user edits their address after the order — an entirely ordinary thing to do.
         $stmt = $this->pdo->prepare('UPDATE user_addresses SET full_address = ? WHERE id = ?');
-        $stmt->execute(['عنوان جديد تماماً', $addressId]);
+        $stmt->execute(['A completely new address', $addressId]);
 
         $stmt = $this->pdo->prepare('SELECT address_snapshot FROM orders WHERE order_id = ?');
         $stmt->execute([$result['order_id']]);
         $snapshot = (string) $stmt->fetchColumn();
 
-        // بلا اللقطة كان السجلّ يقول إن الشحنة ذهبت إلى مكان لم تذهب
-        // إليه قط — بأثر رجعي، وبلا أي أثر للتغيير.
+        // Without the snapshot, the record said the shipment went somewhere it never went —
+        // retroactively, and with no trace of the change.
         $this->assertStringContainsString('1 Test Street', $snapshot);
-        $this->assertStringNotContainsString('عنوان جديد', $snapshot);
+        $this->assertStringNotContainsString('A completely new address', $snapshot);
     }
 
     public function testDeletingTheAddressDoesNotEraseItFromPastOrders(): void
@@ -299,9 +300,9 @@ final class OrderPricingTest extends DatabaseTestCase
         $stmt->execute([$result['order_id']]);
         $order = $stmt->fetch();
 
-        // المفتاح يصير NULL بحكم ON DELETE SET NULL — وهذا هو السلوك
-        // القديم كاملاً: طلب مكتمل يفقد عنوانه نهائياً ولا نسخة في أي
-        // مكان. اللقطة هي ما ينجو.
+        // The key becomes NULL under ON DELETE SET NULL — and that is the whole of the old
+        // behaviour: a completed order loses its address permanently with no copy anywhere.
+        // The snapshot is what survives.
         $this->assertNull($order['address_id']);
         $this->assertStringContainsString('1 Test Street', (string) $order['address_snapshot']);
     }
@@ -319,21 +320,20 @@ final class OrderPricingTest extends DatabaseTestCase
             'shown_price' => 100.00,
         ]]);
 
-        // العطل الذي يغلقه هذا الاختبار: تخفيض المخزون كان داخل
-        // `if ($variantId)`، فعنصرٌ بلا variant كان يُسجَّل في
-        // order_items ويُباع **بلا أن يمسّ أي عدّاد مخزون** — مبيعات
-        // بلا حدّ لمنتج نفد.
+        // The fault this test closes: the stock decrement sat inside `if ($variantId)`, so
+        // an item without a variant was recorded in order_items and sold **without touching
+        // any stock counter** — unlimited sales of a product that had run out.
         //
-        // والرفض لا التخفيض من products: المتجر يفرض variant لكل منتج
-        // في موضعين، فمصدر حقيقة ثانٍ للمخزون ثمنٌ أغلى من رفض حالة
-        // لا تصل من واجهته أصلاً.
+        // And refusal rather than decrementing from products: the store requires a variant
+        // for every product in two places, so a second source of truth for the stock costs
+        // more than refusing a case that never arrives from its own interface.
         $this->assertSame(OrderModel::PLACE_UNAVAILABLE, $result['status']);
         $this->assertSame(0, $this->countRows('orders'));
         $this->assertSame(0, $this->countRows('order_items'));
     }
 
     // ════════════════════════════════════════════════════════
-    // المخزون والتكرار
+    // Stock and duplication
     // ════════════════════════════════════════════════════════
 
     public function testInsufficientStockRollsBackTheWholeOrder(): void
@@ -351,8 +351,9 @@ final class OrderPricingTest extends DatabaseTestCase
         $this->assertSame(OrderModel::PLACE_OUT_OF_STOCK, $result['status']);
         $this->assertSame(0, $this->countRows('orders'));
 
-        // العنصر الأوّل نجح مخزونه قبل أن يفشل الثاني — والتراجع يجب
-        // أن يُعيده. هذا ما يجعل المعاملة معاملةً لا سلسلة تحديثات.
+        // The first item's stock succeeded before the second failed — and the rollback must
+        // restore it. That is what makes the transaction a transaction rather than a chain of
+        // updates.
         $this->assertSame(10, $this->variantStock($v1));
         $this->assertSame(1, $this->variantStock($v2));
     }
@@ -380,7 +381,7 @@ final class OrderPricingTest extends DatabaseTestCase
 
         $this->assertSame(1, $this->countRows('orders'));
 
-        // والأهمّ: النقرة المكرّرة لا تخصم المخزون مرّتين.
+        // And more importantly: the repeated click does not deduct the stock twice.
         $this->assertSame(9, $this->variantStock($variantId));
     }
 }

@@ -7,13 +7,13 @@ use PDO;
 use Tests\Support\DatabaseTestCase;
 
 /**
- * المهاجر — يطبّق تغييرات المخطّط بترتيب وتتبّع وتراجع.
+ * The migrator — it applies schema changes with ordering, tracking and rollback.
  *
- * الاختبارات تعمل على مجلد هجرات **مؤقّت** تبنيه بنفسها، لا على
- * database/migrations الحقيقي. السبب أن الملفات الحقيقية تعتمد على
- * جداول موجودة في خطّ الأساس، وتشغيلها في اختبار يعني إعادة بناء
- * القاعدة كلها في كل حالة — بطيء، وما يُختبَر عندها هو ملفات SQL لا
- * منطقُ المهاجر.
+ * The tests run against a **temporary** migrations directory they build themselves, rather
+ * than the real database/migrations. The reason is that the real files depend on tables
+ * present in the baseline, and running them in a test means rebuilding the whole database
+ * for every case — slow, and what would then be tested is the SQL files rather than the
+ * migrator's logic.
  */
 final class MigratorTest extends DatabaseTestCase
 {
@@ -33,13 +33,12 @@ final class MigratorTest extends DatabaseTestCase
 
     protected function tearDown(): void
     {
-        // الخروج المبكّر ليس احتياطاً. parent::setUp() تتخطّى الاختبار حين
-        // لا تتوفّر قاعدة اختبار، والتخطّي استثناء — فيخرج setUp قبل إسناد
-        // $pdo و$dir، بينما tearDown تعمل على أي حال. النتيجة أن كلّ تخطٍّ
-        // كان يُبلَّغ عنه **خطأً** («typed property … before initialization»)،
-        // فتظهر ثمانية عشر نتيجة حمراء لا علاقة لها بالمهاجر على أي جهاز
-        // بلا MySQL — وحُزمة حمراء دائماً لا تحرس شيئاً، لأن الفشل الحقيقي
-        // يضيع بينها.
+        // The early return is not a precaution. parent::setUp() skips the test when no test
+        // database is available, and a skip is an exception — so setUp exits before assigning
+        // $pdo and $dir, while tearDown runs regardless. The result was that every skip was
+        // reported as an **error** ("typed property … before initialization"), producing
+        // eighteen red results unrelated to the migrator on any machine without MySQL — and a
+        // permanently red suite guards nothing, because the real failure is lost among them.
         if (!isset($this->pdo)) {
             parent::tearDown();
             return;
@@ -83,14 +82,15 @@ final class MigratorTest extends DatabaseTestCase
         return (int) $stmt->fetchColumn() > 0;
     }
 
-    // ── الترتيب ──────────────────────────────────────────────
+    // ── Ordering ─────────────────────────────────────────────
 
     /**
-     * الترتيب من رقم النسخة لا من نظام الملفات.
+     * The ordering comes from the version number rather than from the file system.
      *
-     * هذا هو سبب وجود المهاجر أصلاً: كانت التبعية مكتوبة نصّاً في
-     * التعليقات («يعتمد على admin_auth.sql») ولا شيء يفرضها، فترتيب
-     * التنفيذ يتبع ترتيب نظام الملفات — وهو يختلف بين جهاز وآخر.
+     * This is the reason the migrator exists at all: the dependency used to be written as
+     * prose in the comments ("depends on admin_auth.sql") with nothing enforcing it, so the
+     * execution order followed the file system's ordering — which differs from machine to
+     * machine.
      */
     public function testAppliesMigrationsInVersionOrder(): void
     {
@@ -117,13 +117,13 @@ final class MigratorTest extends DatabaseTestCase
         $this->write('0001_one.sql', 'SELECT 1;');
         $this->write('0001_two.sql', 'SELECT 1;');
 
-        // رقمان متطابقان يعنيان أن ترتيب الاثنين غير محدَّد — وهو
-        // بالضبط ما جاء المهاجر ليمنعه.
+        // Two identical numbers mean the order of the pair is undefined — which is exactly
+        // what the migrator came to prevent.
         $this->expectException(\RuntimeException::class);
         $this->migrator()->available();
     }
 
-    // ── التتبّع ──────────────────────────────────────────────
+    // ── Tracking ─────────────────────────────────────────────
 
     public function testAnAppliedMigrationIsNotRunTwice(): void
     {
@@ -131,8 +131,8 @@ final class MigratorTest extends DatabaseTestCase
 
         $this->assertSame(['0001_first'], $this->migrator()->up());
 
-        // لو أُعيد التنفيذ لفشل بـ«الجدول موجود» — وهذا ما كان يحدث
-        // فعلاً حين كانت الملفات تُشغَّل يدوياً بلا تتبّع.
+        // Were it run again it would fail with "table already exists" — which is what
+        // actually happened while the files were run by hand with no tracking.
         $this->assertSame([], $this->migrator()->up());
     }
 
@@ -153,18 +153,19 @@ final class MigratorTest extends DatabaseTestCase
         $done = $this->migrator()->up(true);
 
         $this->assertSame(['0001_first'], $done);
-        $this->assertFalse($this->tableExists('mt_widgets'), 'pretend أنشأ الجدول فعلاً.');
-        $this->assertCount(1, $this->migrator()->pending(), 'pretend سجّل الهجرة كمطبَّقة.');
+        $this->assertFalse($this->tableExists('mt_widgets'), 'pretend actually created the table.');
+        $this->assertCount(1, $this->migrator()->pending(), 'pretend recorded the migration as applied.');
     }
 
-    // ── الانحراف ─────────────────────────────────────────────
+    // ── Drift ────────────────────────────────────────────────
 
     /**
-     * أخطر ما يحرسه المهاجر.
+     * The most important thing the migrator guards.
      *
-     * تعديل ملف طُبِّق سلفاً عطلٌ صامت من أسوأ نوع: قاعدة المطوّر تحمل
-     * النسخة القديمة وقاعدة الإنتاج الجديدة، والاثنتان تقولان
-     * «مطبَّقة». لا شيء يكشف الفرق حتى ينفجر استعلام على عمود غير موجود.
+     * Editing a file that has already been applied is a silent fault of the worst kind: the
+     * developer's database holds the old version and production's holds the new, and both say
+     * "applied". Nothing reveals the difference until a query blows up on a column that does
+     * not exist.
      */
     public function testDetectsAMigrationFileEditedAfterItWasApplied(): void
     {
@@ -189,8 +190,8 @@ final class MigratorTest extends DatabaseTestCase
         $this->write('0001_first.sql', 'CREATE TABLE `mt_widgets` (`id` INT PRIMARY KEY, `x` INT);');
         $this->write('0002_second.sql', 'CREATE TABLE `mt_gadgets` (`id` INT PRIMARY KEY);');
 
-        // التوقّف مقصود: تطبيق هجرة جديدة فوق قاعدة انحرف تاريخها يبني
-        // على أساس مجهول.
+        // Stopping is deliberate: applying a new migration over a database whose history has
+        // drifted builds on an unknown foundation.
         $this->expectException(\RuntimeException::class);
         $this->migrator()->up();
     }
@@ -206,11 +207,11 @@ final class MigratorTest extends DatabaseTestCase
     }
 
     /**
-     * نهاية السطر لا تُحسب انحرافاً.
+     * A line ending does not count as drift.
      *
-     * .gitattributes يُخرج CRLF على Windows وLF على غيره، فالبصمة الخام
-     * كانت ستختلف بين جهازين للملف نفسه بمحتوى واحد — إنذار كاذب في كل
-     * مرّة، وإنذار كاذب متكرّر يُدرَّب الناس على تجاهله.
+     * .gitattributes checks out CRLF on Windows and LF elsewhere, so a raw checksum would
+     * differ between two machines for the same file with the same content — a false alarm
+     * every time, and a repeated false alarm trains people to ignore it.
      */
     public function testLineEndingsDoNotCountAsDrift(): void
     {
@@ -224,7 +225,7 @@ final class MigratorTest extends DatabaseTestCase
         $this->assertSame([], $this->migrator()->drifted());
     }
 
-    // ── التراجع ──────────────────────────────────────────────
+    // ── Rollback ─────────────────────────────────────────────
 
     public function testRollsBackTheMostRecentMigration(): void
     {
@@ -242,9 +243,9 @@ final class MigratorTest extends DatabaseTestCase
 
         $done = $this->migrator()->down();
 
-        $this->assertSame(['0002_second'], $done, 'التراجع بدأ من الأقدم لا الأحدث.');
+        $this->assertSame(['0002_second'], $done, 'The rollback started from the oldest rather than the newest.');
         $this->assertFalse($this->tableExists('mt_gadgets'));
-        $this->assertTrue($this->tableExists('mt_widgets'), 'التراجع تجاوز ما لم يُطلب.');
+        $this->assertTrue($this->tableExists('mt_widgets'), 'The rollback went past what was asked for.');
     }
 
     public function testRollsBackSeveralStepsInReverseOrder(): void
@@ -262,25 +263,26 @@ final class MigratorTest extends DatabaseTestCase
         $this->write('0001_first.sql', 'CREATE TABLE `mt_widgets` (`id` INT PRIMARY KEY);');
         $this->migrator()->up();
 
-        // الرفض الصريح خير من تراجع نصفيّ يترك القاعدة بين حالتين.
+        // An explicit refusal is better than a half rollback leaving the database between
+        // two states.
         $this->expectException(\RuntimeException::class);
         $this->migrator()->down();
     }
 
-    // ── خطّ الأساس ───────────────────────────────────────────
+    // ── The baseline ─────────────────────────────────────────
 
     /**
-     * baseline تسجّل بلا تنفيذ.
+     * baseline records without running.
      *
-     * الهجرات السبع القائمة مطبوعة في tests/fixtures/schema.sql فعلاً،
-     * فتنفيذها على قاعدة بُنيت منه يفشل بـ«الجدول موجود».
+     * The seven existing migrations are already imprinted in tests/fixtures/schema.sql, so
+     * running them over a database built from it fails with "table already exists".
      */
     public function testBaselineRecordsWithoutExecuting(): void
     {
         $this->write('0001_first.sql', 'CREATE TABLE `mt_widgets` (`id` INT PRIMARY KEY);');
 
         $this->assertSame(1, $this->migrator()->baseline());
-        $this->assertFalse($this->tableExists('mt_widgets'), 'baseline نفّذت السكربت.');
+        $this->assertFalse($this->tableExists('mt_widgets'), 'baseline executed the script.');
         $this->assertSame([], $this->migrator()->pending());
     }
 
@@ -292,7 +294,7 @@ final class MigratorTest extends DatabaseTestCase
         $this->assertSame(0, $this->migrator()->baseline());
     }
 
-    // ── الأقسام ──────────────────────────────────────────────
+    // ── Sections ─────────────────────────────────────────────
 
     public function testSectionsAreParsedIndependently(): void
     {
@@ -310,13 +312,13 @@ final class MigratorTest extends DatabaseTestCase
         $this->assertSame('', $this->migrator()->section($this->dir . '/0001_first.sql', 'DOWN'));
     }
 
-    // ── الهجرات الحقيقية ─────────────────────────────────────
+    // ── The real migrations ──────────────────────────────────
 
     /**
-     * ملفات database/migrations الفعلية كلها صالحة الصيغة.
+     * The actual database/migrations files are all well formed.
      *
-     * لا تُنفَّذ هنا — تعتمد على جداول من خطّ الأساس. لكن بنيتها تُفحص:
-     * رقم نسخة صحيح، وقسم @UP غير فارغ، وقسم @DOWN موجود.
+     * They are not run here — they depend on tables from the baseline. But their structure is
+     * checked: a valid version number, a non-empty @UP section, and a @DOWN section present.
      */
     public function testEveryRealMigrationIsWellFormed(): void
     {
@@ -327,67 +329,74 @@ final class MigratorTest extends DatabaseTestCase
             $label = $migration['version'] . '_' . $migration['name'];
 
             if ($real->section($migration['path'], 'UP') === '') {
-                $problems[] = "{$label} — قسم @UP فارغ.";
+                $problems[] = "{$label} — the @UP section is empty.";
             }
             if ($real->section($migration['path'], 'DOWN') === '') {
-                $problems[] = "{$label} — لا قسم @DOWN، ولو كان التراجع مستحيلاً فاكتب سببه.";
+                $problems[] = "{$label} — no @DOWN section; if rolling back is impossible, write the reason.";
             }
         }
 
-        // 10 منذ 0010_order_address_snapshot (عنوان الطلب لقطة لا مرجع:
-        // كان address_id مفتاحاً حيّاً بـON DELETE SET NULL، فتعديل
-        // المستخدم لعنوانه يغيّر وجهة طلب سُلّم فعلاً، وحذفه يمحو عنوان
-        // طلبات مكتملة نهائياً).
-        // 11 منذ 0011_server_side_cart (السلّة تتبع المستخدم لا المتصفّح:
-        // كانت في localStorage فلا تعبر أجهزته وتضيع بمسح بيانات
-        // المتصفّح — وضياع سلّة مليئة خسارة بيع لا إزعاج واجهة).
-        // 12 منذ 0012_slider_item_title (سطر عنوان فوق الوصف على صورة
-        // السلايدر: كان الحقل النصّي واحداً، فيحمل دورين متنافسين —
-        // عنوانٌ يُعرِّف ووصفٌ يشرح — والصورة تعرض أحدهما لا كليهما).
-        $this->assertCount(12, $real->available(), 'عدد الهجرات تغيّر — حدّث هذا الاختبار عمداً لا سهواً.');
-        $this->assertSame([], $problems, "هجرات غير مكتملة الصيغة:\n  " . implode("\n  ", $problems));
+        // 10 since 0010_order_address_snapshot (an order's address is a snapshot, not a
+        // reference: address_id was a live key with ON DELETE SET NULL, so a user editing
+        // their address changed the destination of an order already delivered, and deleting
+        // it erased completed orders' addresses permanently).
+        // 11 since 0011_server_side_cart (the cart follows the user, not the browser: it was
+        // in localStorage so it did not cross their devices and was lost when browser data
+        // was cleared — and losing a full cart is a lost sale, not a UI annoyance).
+        // 12 since 0012_slider_item_title (a title line above the description on the slider's
+        // image: the text field was a single one, so it carried two competing roles — a title
+        // that identifies and a description that explains — and the image showed one of them
+        // and not both).
+        $this->assertCount(12, $real->available(), 'The migration count changed — update this test deliberately, not by oversight.');
+        $this->assertSame([], $problems, "Malformed migrations:\n  " . implode("\n  ", $problems));
     }
 
     /**
-     * التعليق العربي يبقى تعليقاً بعد الاستخراج.
+     * A multi-byte comment stays a comment after extraction.
      *
-     * هذا الاختبار يحرس عطلاً كان صامتاً تماماً: section() كانت تقسّم
-     * الأسطر بـ`preg_split('/\R/')`، و`\R` بلا معدِّل /u يطابق البايت
-     * `\x85` — وهو بايت استمرار شرعي داخل «م» (D9 85) وأخواتها. فكان كل
-     * سطر تعليق عربي يُقطع في منتصف حرف، وتصير بقيّته سطراً لا يبدأ
-     * بـ`--`، أي نصّاً عربياً يُسلَّم إلى PDO::exec كأنه SQL.
+     * This test guards a fault that was entirely silent: section() split the lines with
+     * `preg_split('/\R/')`, and `\R` without the /u modifier matches the byte `\x85` — which
+     * is a legitimate continuation byte inside Arabic letters such as "م" (D9 85). So every
+     * Arabic comment line was cut in the middle of a character, and its remainder became a
+     * line not starting with `--`, that is, text handed to PDO::exec as though it were SQL.
      *
-     * ولم يظهر العطل قطّ لأن الهجرات السبع الأولى سُجِّلت بـbaseline بلا
-     * تنفيذ — فأول استدعاء حقيقي لـup() هو الذي اصطدم به.
+     * And the fault never appeared because the first seven migrations were recorded by
+     * baseline without being run — the first real call to up() is what hit it.
      *
-     * الفحص هنا على القاعدة لا على المظهر: كل سطر غير فارغ في القسم
-     * المستخرَج إمّا تعليق وإمّا SQL — ولا سطر يبدأ بحرف عربي.
+     * The migration is built here rather than read from database/migrations: those files are
+     * English now, so reading them would make this test pass over a case it never exercises.
+     * Writing the multi-byte comment ourselves keeps the guard real whatever language the
+     * repository's own migrations are written in.
      */
-    public function testArabicCommentsSurviveSectionExtraction(): void
+    public function testMultiByteCommentsSurviveSectionExtraction(): void
     {
-        $real     = new Migrator($this->pdo, dirname(__DIR__, 2) . '/database/migrations');
+        // The comment carries the exact bytes that broke it: "م" is D9 85, and the second
+        // byte is what an unescaped \R matches as a line separator.
+        $this->write(
+            '0001_first.sql',
+            "-- ملاحظة عربية تحمل البايت 0x85
+CREATE TABLE mt_widgets (id INT PRIMARY KEY);",
+            '-- تعليق آخر
+DROP TABLE mt_widgets;'
+        );
+
+        $migrator = $this->migrator();
+        $path     = $this->dir . '/0001_first.sql';
         $mangled  = [];
 
-        foreach ($real->available() as $migration) {
-            foreach (['UP', 'DOWN'] as $part) {
-                $section = $real->section($migration['path'], $part);
+        foreach (['UP', 'DOWN'] as $part) {
+            foreach (preg_split('/
 
-                foreach (preg_split('/\r\n|\n|\r/', $section) ?: [] as $n => $line) {
-                    $line = ltrim($line);
-                    if ($line === '' || str_starts_with($line, '--')) {
-                        continue;
-                    }
-                    // حرف عربي في أول سطر ليس تعليقاً = تعليق مقطوع.
-                    if (preg_match('/^[\x{0600}-\x{06FF}]/u', $line)) {
-                        $mangled[] = sprintf(
-                            '%s_%s [@%s سطر %d]: %s',
-                            $migration['version'],
-                            $migration['name'],
-                            $part,
-                            $n + 1,
-                            mb_substr($line, 0, 40)
-                        );
-                    }
+|
+|
+/', $migrator->section($path, $part)) ?: [] as $n => $line) {
+                $line = ltrim($line);
+                if ($line === '' || str_starts_with($line, '--')) {
+                    continue;
+                }
+                // A non-ASCII letter opening a line that is not a comment = a severed comment.
+                if (preg_match('/^[^ -]/u', $line)) {
+                    $mangled[] = sprintf('@%s line %d: %s', $part, $n + 1, mb_substr($line, 0, 40));
                 }
             }
         }
@@ -395,7 +404,13 @@ final class MigratorTest extends DatabaseTestCase
         $this->assertSame(
             [],
             $mangled,
-            "تعليقات عربية انقطعت فصارت SQL:\n  " . implode("\n  ", $mangled)
+            "A multi-byte comment was severed and became SQL:
+  " . implode("
+  ", $mangled)
         );
+
+        // And it really does run: a severed comment reaches PDO::exec as a syntax error.
+        $migrator->up();
+        $this->assertTrue($this->tableExists('mt_widgets'));
     }
 }

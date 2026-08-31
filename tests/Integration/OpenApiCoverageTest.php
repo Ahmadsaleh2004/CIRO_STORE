@@ -5,14 +5,15 @@ namespace Tests\Integration;
 use PHPUnit\Framework\TestCase;
 
 /**
- * بوّابة المواصفة — تحوّل قياساً لحظياً إلى ضمان دائم.
+ * The specification gate — it turns a momentary measurement into a standing guarantee.
  *
- * كانت التغطية 103 من 104 نقطة. الرقم جيّد، لكنه لقطة: تكفي نقطة
- * واحدة تُضاف إلى public/index.php بلا سمة OA ليصير 103 من 105، ولا
- * شيء يخبر أحداً. هذا الاختبار يجعل الفجوة تفشل البناء لا تمرّ صامتة.
+ * Coverage stood at 103 of 104 endpoints. The number is good, but it is a snapshot: one
+ * endpoint added to public/index.php without an OA attribute is enough to make it 103 of
+ * 105, and nothing tells anybody. This test makes the gap fail the build rather than pass
+ * silently.
  *
- * يقرأ الطرفين من مصدريهما الحقيقيين — الراوتر من index.php والمواصفة
- * من openapi.yaml — فلا قائمة يدوية تتقادم.
+ * It reads both sides from their real sources — the router from index.php and the
+ * specification from openapi.yaml — so no hand-written list goes stale.
  */
 final class OpenApiCoverageTest extends TestCase
 {
@@ -22,7 +23,7 @@ final class OpenApiCoverageTest extends TestCase
     }
 
     /**
-     * مسارات الراوتر: ['get /products', 'post /checkout', ...]
+     * The router's routes: ['get /products', 'post /checkout', ...]
      *
      * @return list<string>
      */
@@ -40,11 +41,11 @@ final class OpenApiCoverageTest extends TestCase
     }
 
     /**
-     * عمليات المواصفة بالشكل نفسه.
+     * The specification's operations in the same shape.
      *
-     * قراءة سطرية لا محلّل YAML: المشروع لا يحمل ext-yaml ولا مكتبة
-     * تحليل، وإضافة اعتمادية من أجل اختبار واحد ثمن أعلى من قيمته.
-     * البنية التي نقرأها ثابتة لأن swagger-php هو من يولّدها.
+     * A line-by-line read rather than a YAML parser: the project carries neither ext-yaml nor
+     * a parsing library, and adding a dependency for the sake of one test costs more than it
+     * is worth. The structure being read is stable because swagger-php is what generates it.
      *
      * @return list<string>
      */
@@ -63,7 +64,7 @@ final class OpenApiCoverageTest extends TestCase
             if (!$inPaths) {
                 continue;
             }
-            // بداية قسم من المستوى الأعلى (components، tags…) تُنهي paths.
+            // The start of a top-level section (components, tags…) ends paths.
             if (preg_match('/^[a-z]/i', $line)) {
                 break;
             }
@@ -80,11 +81,11 @@ final class OpenApiCoverageTest extends TestCase
     }
 
     /**
-     * كل مسار في الراوتر موثّق.
+     * Every route in the router is documented.
      *
-     * المسارات ذات المعاملات ({id}) مستثناة: swagger-php يكتبها بصيغة
-     * قد تختلف عن صيغة الراوتر، والمقارنة النصّية بينهما تنتج ضجيجاً لا
-     * معلومة.
+     * Parameterised routes ({id}) are excluded: swagger-php writes them in a form that may
+     * differ from the router's, and a textual comparison between the two produces noise
+     * rather than information.
      */
     public function testEveryRouterOperationIsDocumented(): void
     {
@@ -95,21 +96,21 @@ final class OpenApiCoverageTest extends TestCase
 
         $missing = array_values(array_diff($router, self::specOperations()));
 
-        $this->assertGreaterThan(90, count($router), 'قارئ الراوتر لم يجد مسارات كافية.');
+        $this->assertGreaterThan(90, count($router), 'The router reader did not find enough routes.');
         $this->assertSame(
             [],
             $missing,
-            "نقاط مسجَّلة في public/index.php وغائبة عن openapi.yaml.\n"
-            . "أضف سمة #[OA\\Get] أو #[OA\\Post] ثم شغّل `composer docs:generate`:\n  "
+            "Endpoints registered in public/index.php and absent from openapi.yaml.\n"
+            . "Add an #[OA\\Get] or #[OA\\Post] attribute, then run `composer docs:generate`:\n  "
             . implode("\n  ", $missing)
         );
     }
 
     /**
-     * والعكس: لا عملية موثّقة بلا راوت.
+     * And the reverse: no documented operation without a route.
      *
-     * توثيق نقطة غير موجودة أسوأ من عدم توثيقها — يبني عليها من يقرأ
-     * المواصفة ثم يكتشف 404 وقت التشغيل.
+     * Documenting an endpoint that does not exist is worse than not documenting it — whoever
+     * reads the specification builds on it and then discovers a 404 at run time.
      */
     public function testNoDocumentedOperationLacksARoute(): void
     {
@@ -123,17 +124,17 @@ final class OpenApiCoverageTest extends TestCase
         $this->assertSame(
             [],
             $orphans,
-            "عمليات موثّقة بلا راوت مقابل — تصف واجهة لا وجود لها:\n  " . implode("\n  ", $orphans)
+            "Documented operations with no matching route — they describe an API that does not exist:\n  " . implode("\n  ", $orphans)
         );
     }
 
     /**
-     * المواصفة محدَّثة مقابل الشيفرة.
+     * The specification is current against the code.
      *
-     * openapi.yaml مولَّد ومتتبَّع في git معاً، وهذا يعني أنه قد يتخلّف:
-     * يعدّل أحدهم سمة OA وينسى `composer docs:generate`، فيبقى الملف
-     * المرفوع يصف نسخة قديمة. مقارنة عدد العمليات تمسك أوضح صور هذا
-     * التخلّف — إضافة نقطة أو حذفها بلا إعادة توليد.
+     * openapi.yaml is both generated and tracked in git, which means it can fall behind:
+     * somebody edits an OA attribute and forgets `composer docs:generate`, so the committed
+     * file keeps describing an older version. Comparing the operation counts catches the
+     * clearest form of that lag — an endpoint added or removed without regeneration.
      */
     public function testSpecOperationCountMatchesTheRouter(): void
     {
@@ -145,16 +146,16 @@ final class OpenApiCoverageTest extends TestCase
         $this->assertCount(
             count($router),
             self::specOperations(),
-            'عدد عمليات المواصفة لا يطابق الراوتر — شغّل `composer docs:generate`.'
+            'The specification\'s operation count does not match the router — run `composer docs:generate`.'
         );
     }
 
     /**
-     * المكوّنات المشتركة موجودة ومُشار إليها فعلاً.
+     * The shared components exist and really are referenced.
      *
-     * المواصفة كانت تحمل صفر schema وصفر $ref: كل عملية تصف جسمها
-     * بأسطر مضمّنة تخصّها وحدها، فتتفرّق الصياغات كلما عُدِّلت واحدة.
-     * هذا الاختبار يمنع الانزلاق إلى تلك الحالة مرّة أخرى.
+     * The specification used to carry zero schemas and zero $refs: every operation described
+     * its body with inline lines of its own, so the wordings diverged every time one of them
+     * was edited. This test prevents sliding back into that state.
      */
     public function testSharedComponentsExistAndAreReferenced(): void
     {
@@ -164,7 +165,7 @@ final class OpenApiCoverageTest extends TestCase
             $this->assertStringContainsString(
                 "    {$schema}:",
                 $yaml,
-                "المخطّط المشترك {$schema} غائب عن components/schemas."
+                "The shared schema {$schema} is absent from components/schemas."
             );
         }
 
@@ -172,7 +173,7 @@ final class OpenApiCoverageTest extends TestCase
             $this->assertStringContainsString(
                 "    {$response}:",
                 $yaml,
-                "الاستجابة المشتركة {$response} غائبة عن components/responses."
+                "The shared response {$response} is absent from components/responses."
             );
         }
 
@@ -180,21 +181,21 @@ final class OpenApiCoverageTest extends TestCase
         $this->assertGreaterThan(
             100,
             $refCount,
-            "عدد \$ref هبط إلى {$refCount} — العمليات تعود إلى وصف أجسامها بأسطر مضمّنة."
+            "The \$ref count has fallen to {$refCount} — the operations are going back to describing their bodies inline."
         );
     }
 
     /**
-     * رمز CSRF موثّق في المواصفة.
+     * The CSRF error code is documented in the specification.
      *
-     * العقد بين الخادم وjs/core/csrf.js يجب أن يكون مقروءاً ممّن يقرأ
-     * المواصفة وحدها. غيابه منها يعني أن مستهلكاً جديداً للـAPI سيعيد
-     * اكتشاف الخطأ نفسه الذي كلّف هذا المشروع ثلاث دورات.
+     * The contract between the server and js/core/csrf.js has to be readable to somebody
+     * reading the specification alone. Its absence means a new consumer of the API will
+     * rediscover the same mistake that cost this project three rounds.
      */
     public function testCsrfErrorCodeIsDocumented(): void
     {
         $yaml = (string) file_get_contents(self::root() . '/public/docs/openapi.yaml');
 
-        $this->assertStringContainsString('csrf_invalid', $yaml, 'رمز فشل CSRF غير موثّق في المواصفة.');
+        $this->assertStringContainsString('csrf_invalid', $yaml, 'The CSRF failure code is not documented in the specification.');
     }
 }

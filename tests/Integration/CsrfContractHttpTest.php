@@ -6,33 +6,34 @@ use App\Core\Controller;
 use PHPUnit\Framework\TestCase;
 
 /**
- * عقد CSRF عبر HTTP — الحارس الدائم لعطل تكرّر **ثلاث مرّات**.
+ * The CSRF contract over HTTP — the standing guard for a fault that recurred **three
+ * times**.
  *
- * القصة: js/core/csrf.js كان يكتشف فشل التوكن بـ
+ * The story: js/core/csrf.js detected a token failure with
  *     message.startsWith('Invalid CSRF token')
- * فأي نقطة تصوغ رسالتها بشكل آخر تفقد إعادة المحاولة التلقائية بصمت.
- * حدث ذلك في WishlistController::notify ('Invalid session…') و
- * ContactController::send ('Invalid request…')، ونجت ستّ نقاط بالصدفة
- * وحدها لأن صياغتها بدأت بالبادئة نفسها.
+ * so any endpoint wording its message differently loses the automatic retry silently.
+ * That happened in WishlistController::notify ('Invalid session…') and
+ * ContactController::send ('Invalid request…'), and six endpoints survived by luck alone
+ * because their wording happened to begin with the same prefix.
  *
- * الحلّ كان error_code صريحاً. لكن الحلّ بلا اختبار يتآكل: تكفي نقطة
- * جديدة واحدة تستدعي respond() مباشرةً بدل beginJsonPost() ليعود
- * العطل. هذا الملف يمنع ذلك — يمسح **كل** نقاط POST من الراوتر نفسه،
- * فأي نقطة تُضاف غداً تدخل الفحص تلقائياً بلا أن يتذكّرها أحد.
+ * The answer was an explicit error_code. But an answer without a test erodes: one new
+ * endpoint calling respond() directly instead of beginJsonPost() is enough to bring the
+ * fault back. This file prevents that — it sweeps **every** POST endpoint from the router
+ * itself, so an endpoint added tomorrow enters the check automatically with nobody having to
+ * remember it.
  *
- * ⚠️ يحتاج خادم التطوير يعمل. يتخطّى نفسه بوضوح إن لم يكن كذلك، كي لا
- * يفشل CI على غياب خدمة بدل غياب صحّة.
+ * ⚠️ It needs the development server running. It skips itself plainly if that is not the
+ * case, so CI does not fail over a missing service instead of a missing correctness.
  */
 final class CsrfContractHttpTest extends TestCase
 {
     /**
-     * جذر الخادم الذي تُفحص نقاطه.
+     * The root of the server whose endpoints are checked.
      *
-     * قابل للضبط بمتغيّر البيئة TEST_BASE_URL كي يعمل الاختبار في
-     * موضعين مختلفين تماماً: XAMPP محلياً على مسار فرعي
-     * (/STORE/public)، وخادم PHP المدمج في CI على جذر منفذ
-     * (http://127.0.0.1:8080). تثبيت المسار كان سيجعل الاختبار
-     * يتخطّى نفسه في CI دائماً — أي حارس لا يحرس.
+     * Settable through the TEST_BASE_URL environment variable so the test works in two
+     * entirely different places: XAMPP locally on a subpath (/STORE/public), and PHP's
+     * built-in server in CI on a port's root (http://127.0.0.1:8080). Hard-coding the path
+     * would have made the test skip itself in CI permanently — a guard that guards nothing.
      */
     private static function base(): string
     {
@@ -43,16 +44,18 @@ final class CsrfContractHttpTest extends TestCase
     }
 
     /**
-     * نقاط POST عامة **لا** تتحقّق من CSRF — كل واحدة بسببها.
+     * Public POST endpoints that do **not** verify CSRF — each with its reason.
      *
-     * القائمة قصيرة عمداً، وكل إضافة إليها قرار يُبرَّر لا سهو يُغتفر.
+     * The list is deliberately short, and every addition to it is a decision to be justified
+     * rather than an oversight to be forgiven.
      */
     private const DOCUMENTED_EXEMPTIONS = [
-        // صفحتان تعرضان HTML وتقبلان POST لنموذج فلترة/عرض، لا لتغيير حالة.
-        '/product'  => 'صفحة عرض تقبل POST لنموذج الفلترة — لا تغيّر حالة',
-        '/contact'  => 'صفحة عرض تقبل POST لإعادة ملء النموذج — الإرسال الفعلي على /contact/send',
-        // قراءة محضة: تُرجع مخزون variants. لا تكتب شيئاً.
-        '/cart/check-stock' => 'قراءة محضة للمخزون — لا تكتب، فلا حالة تُزوَّر',
+        // Two pages that render HTML and accept POST for a filter/display form, not for a
+        // state change.
+        '/product'  => 'A display page accepting POST for the filter form — it changes no state',
+        '/contact'  => 'A display page accepting POST to refill the form — the actual send is on /contact/send',
+        // A pure read: it returns the variants' stock. It writes nothing.
+        '/cart/check-stock' => 'A pure stock read — it writes nothing, so there is no state to forge',
     ];
 
     protected function setUp(): void
@@ -60,31 +63,32 @@ final class CsrfContractHttpTest extends TestCase
         parent::setUp();
 
         if (self::request('/', 'GET') === null) {
-            $this->markTestSkipped('خادم التطوير لا يستجيب على ' . self::base());
+            $this->markTestSkipped('The development server is not responding on ' . self::base());
         }
 
         self::clearThrottle();
     }
 
     /**
-     * يصفّر عدّاد الخنق قبل كل حالة.
+     * Resets the throttle counter before every case.
      *
-     * هذا الملف يضرب كل نقاط POST من عنوان واحد بتوكن باطل — وهو
-     * بالضبط النمط الذي يُفترض أن يوقفه Middleware::throttle. فبلا
-     * تصفير يبدأ الاختبار بقياس عقد CSRF وينتهي بقياس الخنق: تردّ
-     * النقاط 429 برسالة «محاولات كثيرة» بدل رمز csrf_invalid، فيفشل
-     * الاختبار على سلوك صحيح.
+     * This file hits every POST endpoint from one address with an invalid token — which is
+     * exactly the pattern Middleware::throttle is meant to stop. So without a reset the test
+     * begins by measuring the CSRF contract and ends by measuring the throttle: the endpoints
+     * answer 429 with a "too many attempts" message instead of the csrf_invalid code, and the
+     * test fails over correct behaviour.
      *
-     * الحذف مباشر على القاعدة لا عبر Throttle::clear: تلك تمسح دلواً
-     * واحداً لمصدر واحد، والمطلوب هنا أرضٌ نظيفة تماماً.
+     * The deletion goes straight to the database rather than through Throttle::clear: that
+     * clears one bucket for one source, and what is wanted here is entirely clean ground.
      */
     private static function clearThrottle(): void
     {
         try {
             \App\Core\Database::connect()->exec('DELETE FROM throttle_attempts');
         } catch (\Throwable $e) {
-            // القاعدة غير متاحة — الاختبار سيتخطّى نفسه أو يفشل لسبب
-            // أوضح من هذا. ابتلاع الاستثناء هنا يمنع رسالة مضلّلة.
+            // The database is unavailable — the test will skip itself or fail for a clearer
+            // reason than this one. Swallowing the exception here prevents a misleading
+            // message.
         }
     }
 
@@ -110,7 +114,7 @@ final class CsrfContractHttpTest extends TestCase
         return $body === false ? null : ['status' => $status, 'body' => (string) $body];
     }
 
-    /** يقرأ مسارات POST من الراوتر نفسه — لا قائمة يدوية تتقادم. */
+    /** Reads the POST routes from the router itself — no hand-written list that goes stale. */
     /**
      * @return list<string>
      */
@@ -119,17 +123,17 @@ final class CsrfContractHttpTest extends TestCase
         $index = file_get_contents(dirname(__DIR__, 2) . '/public/index.php');
         preg_match_all('/->post\(\s*\'([^\']+)\'/', (string) $index, $m);
 
-        // المسارات ذات المعاملات {id} تحتاج قيمة حقيقية — خارج نطاق هذا العقد.
+        // Routes with {id} parameters need a real value — outside this contract's scope.
         return array_values(array_filter($m[1], static fn ($p) => !str_contains($p, '{')));
     }
 
     /**
-     * المسارات المحروسة بـauth في جدول المسارات.
+     * The auth-guarded routes in the route table.
      *
-     * تُقرأ من public/index.php لا من قائمة يدوية: نقل الحراسة إلى
-     * تعريف المسار جعل الحارس يسبق الكنترولر، فتغيّر ما تردّه هذه
-     * النقاط على طلب غير مصادَق — والاختبار يجب أن يتبع المصدر لا أن
-     * يحمل صورة قديمة عنه.
+     * They are read from public/index.php rather than from a hand-written list: moving the
+     * guarding onto the route definition put the guard before the controller, which changed
+     * what these endpoints answer to an unauthenticated request — and the test must follow
+     * the source rather than carry an old picture of it.
      *
      * @return list<string>
      */
@@ -147,13 +151,13 @@ final class CsrfContractHttpTest extends TestCase
     }
 
     /**
-     * كل نقطة JSON عامة ترفض الطلب بلا توكن، وترفضه **بالرمز الصريح**
-     * لا بنصّ رسالة. الرمز هو ما يقرأه csrf.js.
+     * Every public JSON endpoint refuses a request without a token, and refuses it **with
+     * the explicit code** rather than with a message's text. The code is what csrf.js reads.
      *
-     * تُستثنى النقاط المحروسة بـauth: عندها المصادقة تسبق CSRF، وهذا
-     * هو الترتيب الصحيح — فحص توكن يحمي جلسةً لا وجود لها بلا معنى،
-     * ورسالة «توكن غير صالح» لزائر غير مسجّل تصف عرضاً لا سبباً.
-     * تُغطّى في الاختبار التالي.
+     * The auth-guarded endpoints are excluded: there, authentication precedes CSRF, and that
+     * is the right order — checking a token that protects a session which does not exist is
+     * meaningless, and an "invalid token" message to a signed-out visitor describes a symptom
+     * rather than a cause. They are covered in the next test.
      */
     public function testEveryPublicJsonPostEndpointRejectsWithTheExplicitErrorCode(): void
     {
@@ -163,7 +167,7 @@ final class CsrfContractHttpTest extends TestCase
 
         foreach (self::postRoutes() as $path) {
             if (str_starts_with($path, '/admin/')) {
-                continue; // تُغطّى أدناه — حارس الجلسة يسبق حارس CSRF
+                continue; // Covered below — the session guard precedes the CSRF guard
             }
             if (isset(self::DOCUMENTED_EXEMPTIONS[$path]) || in_array($path, $authGuarded, true)) {
                 continue;
@@ -174,12 +178,12 @@ final class CsrfContractHttpTest extends TestCase
             $json     = json_decode($response['body'] ?? '', true);
 
             if (!is_array($json)) {
-                $failures[] = "{$path} — لم تُرجع JSON إطلاقاً";
+                $failures[] = "{$path} — it did not return JSON at all";
                 continue;
             }
             if (($json['error_code'] ?? null) !== Controller::ERR_CSRF_INVALID) {
                 $failures[] = sprintf(
-                    '%s — error_code = %s (متوقّع %s) · message: %s',
+                    '%s — error_code = %s (expected %s) · message: %s',
                     $path,
                     var_export($json['error_code'] ?? null, true),
                     Controller::ERR_CSRF_INVALID,
@@ -188,11 +192,11 @@ final class CsrfContractHttpTest extends TestCase
             }
         }
 
-        $this->assertGreaterThan(8, $checked, 'المسح لم يجد نقاطاً كافية — تحقّق من قارئ الراوتر.');
+        $this->assertGreaterThan(8, $checked, 'The sweep did not find enough endpoints — check the router reader.');
         $this->assertSame(
             [],
             $failures,
-            "نقاط لا تحترم عقد error_code (وهو ما يقرأه js/core/csrf.js):
+            "Endpoints that do not honour the error_code contract (which is what js/core/csrf.js reads):
   "
             . implode("
   ", $failures)
@@ -200,15 +204,16 @@ final class CsrfContractHttpTest extends TestCase
     }
 
     /**
-     * النقاط المحروسة بـauth تردّ **JSON بكود 401** لا تحويلاً إلى HTML.
+     * The auth-guarded endpoints answer with **JSON and a 401** rather than a redirect to
+     * HTML.
      *
-     * هذا ما كان عطلاً كامناً قبل نقل الحراسة إلى المسار:
-     * Middleware::requireLogin كانت تحوّل بـ302 دائماً، بلا تفريق بين
-     * صفحة كاملة ونقطة JSON. لم يظهر العطل لأنها كانت تُستدعى من داخل
-     * جسم الفعل — أي بعد أن تكون beginJsonPost قد أنهت الطلب.
+     * This was a latent fault before the guarding moved onto the route:
+     * Middleware::requireLogin always redirected with a 302, drawing no distinction between a
+     * full page and a JSON endpoint. The fault never appeared because it was called from
+     * inside the action's body — that is, after beginJsonPost had already ended the request.
      *
-     * ولحظة صار الحارس يسبق الكنترولر بدأ fetch في المتصفح يتلقّى صفحة
-     * HTML كاملة ويحاول قراءتها JSON. أمسك ذلك هذا الاختبار.
+     * And the moment the guard came before the controller, fetch in the browser began
+     * receiving a whole HTML page and trying to read it as JSON. This test caught that.
      */
     public function testAuthGuardedJsonEndpointsAnswerWithJsonNotARedirect(): void
     {
@@ -221,35 +226,35 @@ final class CsrfContractHttpTest extends TestCase
             $json     = json_decode($response['body'] ?? '', true);
 
             if (!is_array($json)) {
-                $failures[] = "{$path} — ردّت بغير JSON (كود {$response['status']})";
+                $failures[] = "{$path} — it answered with something other than JSON (code {$response['status']})";
                 continue;
             }
             if (($json['success'] ?? null) !== false) {
-                $failures[] = "{$path} — success ليست false لطلب غير مصادَق";
+                $failures[] = "{$path} — success is not false for an unauthenticated request";
                 continue;
             }
             if ($response['status'] !== 401) {
-                $failures[] = "{$path} — الكود {$response['status']} (متوقّع 401)";
+                $failures[] = "{$path} — the code is {$response['status']} (expected 401)";
             }
         }
 
-        $this->assertGreaterThan(3, $checked, 'لم يُعثر على مسارات محروسة بـauth.');
+        $this->assertGreaterThan(3, $checked, 'No auth-guarded routes were found.');
         $this->assertSame(
             [],
             $failures,
-            "نقاط محروسة بـauth لا تردّ JSON/401 على طلب غير مصادَق:
+            "Auth-guarded endpoints not answering JSON/401 to an unauthenticated request:
   " . implode("
   ", $failures)
         );
     }
 
     /**
-     * السطح الإداري مغلق قبل CSRF.
+     * The admin surface is closed before CSRF.
      *
-     * نقاط /admin/* لا تصل إلى فحص CSRF أصلاً لأن Middleware::requireAdmin
-     * يسبقه — وهذا صحيح ومقصود (دفاع بالطبقات). ما يجب إثباته هنا أن أياً
-     * منها **لا ينجح** بلا جلسة: لا success:true، ولا كود 200 يحمل عملاً
-     * منجزاً.
+     * The /admin/* endpoints never reach the CSRF check because Middleware::requireAdmin
+     * precedes it — and that is correct and deliberate (defence in layers). What has to be
+     * established here is that none of them **succeeds** without a session: no success:true,
+     * and no 200 carrying completed work.
      */
     public function testNoAdminPostEndpointSucceedsWithoutASession(): void
     {
@@ -260,7 +265,8 @@ final class CsrfContractHttpTest extends TestCase
             if (!str_starts_with($path, '/admin/')) {
                 continue;
             }
-            // نقاط الدخول نفسها يجب أن تكون متاحة بلا جلسة — وإلا استحال الدخول.
+            // The sign-in endpoints themselves must be reachable without a session — or
+            // signing in would be impossible.
             if (in_array($path, ['/admin/login', '/admin/login/2fa', '/admin/forgot'], true)) {
                 continue;
             }
@@ -270,17 +276,17 @@ final class CsrfContractHttpTest extends TestCase
             $json     = json_decode($response['body'] ?? '', true);
 
             if (is_array($json) && ($json['success'] ?? false) === true) {
-                $leaks[] = "{$path} — أرجعت success:true بلا جلسة أدمن";
+                $leaks[] = "{$path} — it returned success:true with no admin session";
             }
         }
 
-        $this->assertGreaterThan(20, $checked, 'المسح لم يغطِّ نقاط الأدمن.');
-        $this->assertSame([], $leaks, "نقاط إدارية تعمل بلا مصادقة:\n  " . implode("\n  ", $leaks));
+        $this->assertGreaterThan(20, $checked, 'The sweep did not cover the admin endpoints.');
+        $this->assertSame([], $leaks, "Admin endpoints working without authentication:\n  " . implode("\n  ", $leaks));
     }
 
     /**
-     * الرمز نفسه ثابت. تغييره يكسر js/core/csrf.js صامتاً، فيُجمَّد هنا
-     * بالقيمة الحرفية التي يبحث عنها المتصفح.
+     * The code itself is fixed. Changing it breaks js/core/csrf.js silently, so it is frozen
+     * here as the literal value the browser looks for.
      */
     public function testTheErrorCodeConstantMatchesWhatTheBrowserLooksFor(): void
     {
@@ -290,7 +296,7 @@ final class CsrfContractHttpTest extends TestCase
         $this->assertStringContainsString(
             'csrf_invalid',
             (string) $clientSide,
-            'js/core/csrf.js لم يعد يذكر الرمز — طرفا العقد افترقا.'
+            'js/core/csrf.js no longer mentions the code — the two sides of the contract have parted.'
         );
     }
 }

@@ -5,25 +5,25 @@ namespace Tests\Integration;
 use PHPUnit\Framework\TestCase;
 
 /**
- * تكافؤ الحُرّاس — بين جدول المسارات وأجسام الأفعال.
+ * Guard parity — between the route table and the action bodies.
  *
- * الحراسة في هذا المشروع مُعلَنة في موضعين الآن:
+ * Guarding in this project is now declared in two places:
  *
- *   1. جدول المسارات في public/index.php  →  ->middleware('perm:x')
- *   2. جسم الفعل في الكنترولر             →  Middleware::requirePermission('x')
+ *   1. the route table in public/index.php  →  ->middleware('perm:x')
+ *   2. the action's body in the controller  →  Middleware::requirePermission('x')
  *
- * الازدواج **مقصود ومؤقّت**. نقل الحراسة إلى المسار هو الاتجاه الصحيح
- * (الحارس يعمل قبل بناء الكنترولر لا بعده)، لكن حذف الفحص الداخلي في
- * الخطوة نفسها كان سيجعل أي خطأ في النقل ثغرةً صامتة. وبإبقاء
- * الاثنين، لا يمكن للحارس الجديد أن يكون **أضعف** من القديم — أسوأ ما
- * قد يحدث أن يكون أشدّ، وذلك يظهر فوراً كصفحة 403.
+ * The duplication is **deliberate and temporary**. Moving the guarding onto the route is the
+ * right direction (the guard runs before the controller is constructed, not after), but
+ * removing the internal check in the same step would have turned any mistake in the move
+ * into a silent hole. With both in place, the new guard cannot be **weaker** than the old —
+ * the worst that can happen is that it is stricter, and that shows up immediately as a 403.
  *
- * وهذا الاختبار هو ما يجعل الازدواج آمناً بدل أن يكون خطراً: يشتقّ
- * الطرفين من مصدريهما ويقارنهما. فإن انحرف أحدهما — أضيف مسار بلا
- * حارس، أو غُيّرت صلاحية الفعل بلا تغيير المسار — يفشل البناء.
+ * And this test is what makes the duplication safe rather than dangerous: it derives both
+ * sides from their sources and compares them. So if either drifts — a route added without a
+ * guard, or an action's permission changed without changing the route's — the build fails.
  *
- * حين تُحذف الفحوص الداخلية لاحقاً، يبقى النصف الأول من هذا الملف
- * حارساً على أن كل مسار إداري يُعلن صلاحيته.
+ * When the internal checks are removed later, the first half of this file remains a guard
+ * that every admin route declares its permission.
  */
 final class RouteGuardParityTest extends TestCase
 {
@@ -33,11 +33,11 @@ final class RouteGuardParityTest extends TestCase
     }
 
     /**
-     * يحذف تعليقات PHP ويُبقي الكود.
+     * Removes the PHP comments and keeps the code.
      *
-     * token_get_all لا regex: تعليق داخل نصّ («// ليس تعليقاً» بين
-     * علامتَي اقتباس) وnowdoc وسلاسل متعددة الأسطر كلها تكسر أي تعبير
-     * نمطي، والمحلّل اللغوي وحده يعرف الفرق.
+     * token_get_all rather than a regex: a comment inside a string ("// not a comment" between
+     * quotes), a nowdoc and multi-line strings all break any regular expression, and only the
+     * language's own lexer knows the difference.
      */
     private static function stripComments(string $src): string
     {
@@ -57,7 +57,7 @@ final class RouteGuardParityTest extends TestCase
     }
 
     /**
-     * الصلاحية التي يعلنها كل فعل في جسمه.
+     * The permission each action declares in its body.
      *
      * @return array<string, string> "Controller::action" => "perm:x" | "auth"
      */
@@ -92,7 +92,7 @@ final class RouteGuardParityTest extends TestCase
     }
 
     /**
-     * الحارس المُعلَن في جدول المسارات لكل فعل.
+     * The guard declared in the route table for each action.
      *
      * @return array<string, string>
      */
@@ -110,9 +110,9 @@ final class RouteGuardParityTest extends TestCase
 
         $out = [];
         foreach ($matches as $m) {
-            // المجموعة 4 هي اسم الحارس، وتوجد فقط حين طابق الجزء
-            // الاختياري ->middleware(...). فحص `!== ''` بعد isset كان
-            // شرطاً لا يتحقّق: النمط لا يقبل اسماً فارغاً أصلاً.
+            // Group 4 is the guard's name, and it exists only when the optional
+            // ->middleware(...) part matched. A `!== ''` check after isset was a condition
+            // that never held: the pattern does not accept an empty name in the first place.
             if (!isset($m[4])) {
                 continue;
             }
@@ -124,24 +124,25 @@ final class RouteGuardParityTest extends TestCase
     }
 
     /**
-     * كل فعل يعلن صلاحية في جسمه، يعلنها مساره أيضاً — وبالقيمة نفسها.
+     * Every action declaring a permission in its body has its route declare it too — with
+     * the same value.
      */
     public function testRouteTableDeclaresTheSameGuardTheActionEnforces(): void
     {
         $inBody  = self::guardsInActionBodies();
         $inTable = self::guardsInRouteTable();
 
-        $this->assertGreaterThan(40, count($inBody), 'قارئ أجسام الأفعال لم يجد حُرّاساً كافية.');
+        $this->assertGreaterThan(40, count($inBody), 'The action-body reader did not find enough guards.');
 
         $problems = [];
         foreach ($inBody as $action => $guard) {
             if (!isset($inTable[$action])) {
-                $problems[] = "{$action} — الفعل يفرض [{$guard}] والمسار لا يعلن شيئاً.";
+                $problems[] = "{$action} — the action enforces [{$guard}] and the route declares nothing.";
                 continue;
             }
             if ($inTable[$action] !== $guard) {
                 $problems[] = sprintf(
-                    '%s — المسار يعلن [%s] والفعل يفرض [%s].',
+                    '%s — the route declares [%s] and the action enforces [%s].',
                     $action,
                     $inTable[$action],
                     $guard
@@ -152,15 +153,16 @@ final class RouteGuardParityTest extends TestCase
         $this->assertSame(
             [],
             $problems,
-            "انحراف بين جدول المسارات وأجسام الأفعال:\n  " . implode("\n  ", $problems)
+            "Divergence between the route table and the action bodies:\n  " . implode("\n  ", $problems)
         );
     }
 
     /**
-     * والعكس: لا مسار يعلن حارساً لا يفرضه فعله.
+     * And the reverse: no route declares a guard its action does not enforce.
      *
-     * هذا الاتجاه يمسك الحالة الأخطر على الاستعمال: مسار يعلن صلاحية
-     * أشدّ ممّا يحتاجه الفعل فعلاً، فيُمنع أدمن من صفحة يملك حقّها.
+     * This direction catches the case most damaging to use: a route declaring a stricter
+     * permission than the action actually needs, so an admin is barred from a page they hold
+     * the right to.
      */
     public function testNoRouteDeclaresAGuardItsActionDoesNotEnforce(): void
     {
@@ -169,37 +171,39 @@ final class RouteGuardParityTest extends TestCase
 
         $extra = [];
         foreach ($inTable as $action => $guard) {
-            // الخنق مُعلَن في المسار وحده بلا مقابل في الجسم، وهذا تصميمه
-            // لا سهو فيه. قاعدة التكافؤ أعلاه تخصّ ازدواج **التخويل**
-            // (perm/auth) وهو ازدواج مؤقّت مقصود يُحذف نصفه لاحقاً؛ أمّا
-            // الخنق فوُلد في المسار من أوّل يوم: مكانه الصحيح قبل بناء
-            // الكنترولر، لأنه يعدّ الطلبات لا نتائجها — ونسخة منه داخل
-            // الجسم كانت ستعدّ الطلب مرّتين.
+            // The throttle is declared on the route alone with no counterpart in the body,
+            // and that is its design rather than an oversight. The parity rule above concerns
+            // the duplication of **authorisation** (perm/auth), which is a deliberate,
+            // temporary duplication half of which is removed later; the throttle, meanwhile,
+            // was born on the route from the first day: its right place is before the
+            // controller is constructed, because it counts requests rather than their
+            // outcomes — and a copy of it inside the body would count the request twice.
             if (str_starts_with($guard, 'throttle:')) {
                 continue;
             }
 
             if (!isset($inBody[$action])) {
-                $extra[] = "{$action} — المسار يعلن [{$guard}] ولا أثر له في جسم الفعل.";
+                $extra[] = "{$action} — the route declares [{$guard}] with no trace of it in the action's body.";
             }
         }
 
-        $this->assertSame([], $extra, "حُرّاس مُعلَنة بلا مقابل:\n  " . implode("\n  ", $extra));
+        $this->assertSame([], $extra, "Guards declared with no counterpart:\n  " . implode("\n  ", $extra));
     }
 
     /**
-     * لا تخويل معلَّق بمعرّف حرفي، ولا إعادة ترقيم للمفاتيح.
+     * No authorisation hung on a literal id, and no renumbering of keys.
      *
-     * يحرس عطلين انهارا معاً في المرحلة أ-2:
+     * It guards two faults that collapsed together in phase A-2:
      *
-     *   · BackupController كان يمنح حقّ تنزيل القاعدة كاملةً لـ
-     *     `getCurrentAdminId() !== 1` — أي لموضعٍ في طابور لا لشخص.
-     *   · AdminModel::deleteAdmin كانت تزحف بالمعرّفات عبر تسعة جداول
-     *     عند كل حذف، فتجعل ذلك الموضع متحرّكاً.
+     *   · BackupController granted the right to download the entire database to
+     *     `getCurrentAdminId() !== 1` — that is, to a position in a queue rather than to a
+     *     person.
+     *   · AdminModel::deleteAdmin shifted the ids across nine tables on every deletion,
+     *     making that position a moving one.
      *
-     * أيّ منهما وحده مُحتمَل؛ اجتماعهما يعني أن حذف صفٍّ ينقل حقّ
-     * تنزيل قاعدة البيانات إلى شخص آخر بصمت. القاعدة الآن: الهوية
-     * رتبةٌ (role='A')، والمفتاح لا يتحرّك أبداً.
+     * Either alone is tolerable; together they mean deleting a row silently transfers the
+     * right to download the database to somebody else. The rule now: identity is a rank
+     * (role='A'), and a key never moves.
      */
     public function testNoAuthorizationIsPinnedToALiteralIdAndNoKeyIsRenumbered(): void
     {
@@ -212,41 +216,43 @@ final class RouteGuardParityTest extends TestCase
         );
 
         foreach ($sources as $file) {
-            // التعليقات تُجرَّد قبل الفحص. النمط الممنوع مذكور نصّاً في
-            // توثيق المواضع التي أصلحته — وهذا هو الشرح الذي يمنع عودته،
-            // فلا يصحّ أن يوقع الاختبار في إيجابية كاذبة. (scripts/audit.php
-            // تعلّمت القاعدة نفسها حين قفز عدّاد <style> من 55 إلى 337
-            // بسبب تعليق واحد يشرح أين انتقلت الكتلة.)
+            // The comments are stripped before the check. The forbidden pattern is named
+            // verbatim in the documentation of the places that fixed it — and that
+            // explanation is what prevents it coming back, so it must not trip the test into
+            // a false positive. (scripts/audit.php learned the same rule when its <style>
+            // counter jumped from 55 to 337 because of one comment explaining where the block
+            // had moved to.)
             $src   = self::stripComments((string) file_get_contents($file));
             $label = basename($file);
 
-            // تخويل معلَّق بمعرّف حرفي: getCurrentAdminId() قورنت برقم.
+            // Authorisation hung on a literal id: getCurrentAdminId() compared to a number.
             if (preg_match('/getCurrentAdminId\(\)\s*[!=]==?\s*\d+/', $src)) {
-                $problems[] = "{$label} — تخويل معلَّق بمعرّف حرفي بدل رتبة.";
+                $problems[] = "{$label} — authorisation hung on a literal id rather than a rank.";
             }
 
-            // إعادة ترقيم مفتاح أساسي.
+            // Renumbering a primary key.
             if (preg_match('/UPDATE\s+\w+\s+SET\s+id\s*=/i', $src)) {
-                $problems[] = "{$label} — يعيد ترقيم مفتاحاً أساسياً؛ المعرّف هوية لا ترتيب.";
+                $problems[] = "{$label} — it renumbers a primary key; an id is an identity, not a position.";
             }
 
-            // AUTO_INCREMENT مُعاد ضبطه = الوجه الآخر لإعادة الترقيم،
-            // وهو أيضاً implicit commit يكسر أي transaction حوله.
+            // A reset AUTO_INCREMENT is the other face of renumbering, and it is also an
+            // implicit commit that breaks any transaction around it.
             if (str_contains($src, 'AUTO_INCREMENT =') || str_contains($src, 'AUTO_INCREMENT=')) {
-                $problems[] = "{$label} — يعيد ضبط AUTO_INCREMENT (implicit commit يكسر الـtransaction).";
+                $problems[] = "{$label} — it resets AUTO_INCREMENT (an implicit commit that breaks the transaction).";
             }
         }
 
-        $this->assertSame([], $problems, "اقتران المعرّفات عاد:\n  " . implode("\n  ", $problems));
+        $this->assertSame([], $problems, "The id coupling has returned:\n  " . implode("\n  ", $problems));
     }
 
     /**
-     * كل حارس خنق مكتوب بالصيغة التي يفهمها الراوتر، وبحدود معقولة.
+     * Every throttle guard is written in the form the router understands, with sensible
+     * limits.
      *
-     * Router::runMiddleware يرمي عند صيغة مشوّهة — لكن وقت الطلب. وخطأ
-     * مطبعي في رقم («throttle:login,5» بلا نافذة، أو نافذة صفر) يعني
-     * إمّا صفحة 500 لكل زائر، وإمّا حارساً يمرّ كل شيء. كلاهما يُكتشَف
-     * هنا لا هناك.
+     * Router::runMiddleware throws on a malformed form — but at request time. And a typo in a
+     * number ("throttle:login,5" with no window, or a window of zero) means either a 500 page
+     * for every visitor or a guard that lets everything through. Both are discovered here
+     * rather than there.
      */
     public function testEveryThrottleGuardIsWellFormed(): void
     {
@@ -260,34 +266,34 @@ final class RouteGuardParityTest extends TestCase
             $args = explode(',', substr($guard, 9));
 
             if (count($args) !== 3) {
-                $problems[] = "{$action} → [{$guard}] — الصيغة throttle:bucket,max,windowMinutes.";
+                $problems[] = "{$action} → [{$guard}] — the form is throttle:bucket,max,windowMinutes.";
                 continue;
             }
 
             [$bucket, $max, $window] = $args;
 
             if (!preg_match('/^[a-z0-9-]+$/', $bucket)) {
-                $problems[] = "{$action} → اسم دلو غير صالح [{$bucket}].";
+                $problems[] = "{$action} → an invalid bucket name [{$bucket}].";
             }
             if ((int)$max < 1) {
-                $problems[] = "{$action} → حدّ [{$max}] لا يمنع شيئاً.";
+                $problems[] = "{$action} → a limit of [{$max}] prevents nothing.";
             }
             if ((int)$window < 1) {
-                $problems[] = "{$action} → نافذة [{$window}] دقيقة تُفرغ العدّاد فوراً.";
+                $problems[] = "{$action} → a window of [{$window}] minutes empties the counter immediately.";
             }
         }
 
-        $this->assertSame([], $problems, "حُرّاس خنق مشوّهة:\n  " . implode("\n  ", $problems));
+        $this->assertSame([], $problems, "Malformed throttle guards:\n  " . implode("\n  ", $problems));
     }
 
     /**
-     * كل نقطة دخول حسّاسة مخنوقة — لا واحدة منسيّة.
+     * Every sensitive entry point is throttled — not one forgotten.
      *
-     * القائمة مكتوبة بأسمائها عمداً بدل اشتقاقها: الاشتقاق يجيب عن
-     * «ما المخنوق؟» بينما السؤال الذي يحرس هو «ما الذي **يجب** أن
-     * يُخنق؟». من يضيف نقطة دخول جديدة ولا يخنقها لن يكسر اشتقاقاً،
-     * لكنه سيصطدم بهذه القائمة حين يضيف اسمه إليها — وهو الموضع الصحيح
-     * لاتخاذ القرار.
+     * The list is written out by name deliberately rather than derived: a derivation answers
+     * "what is throttled?" while the question that guards is "what **must** be throttled?".
+     * Somebody adding a new entry point and not throttling it breaks no derivation, but they
+     * will run into this list when they add its name to it — and that is the right place for
+     * the decision to be made.
      */
     public function testEverySensitiveEntryPointIsThrottled(): void
     {
@@ -313,15 +319,16 @@ final class RouteGuardParityTest extends TestCase
             }
         }
 
-        $this->assertSame([], $missing, "نقاط دخول حسّاسة بلا خنق:\n  " . implode("\n  ", $missing));
+        $this->assertSame([], $missing, "Sensitive entry points with no throttle:\n  " . implode("\n  ", $missing));
     }
 
     /**
-     * أسماء الحُرّاس المستعملة كلها معروفة للراوتر.
+     * Every guard name in use is known to the router.
      *
-     * Router::runMiddleware يرمي عند اسم مجهول — وهو السلوك الصحيح، إذ
-     * حارس مكتوب خطأً يعني مساراً بلا حماية. لكن الرمي يحدث **وقت
-     * الطلب**، أي أن أول من يكتشفه زائر. هذا الاختبار يكتشفه وقت البناء.
+     * Router::runMiddleware throws on an unknown name — which is the right behaviour, since a
+     * misspelled guard means an unprotected route. But the throw happens **at request time**,
+     * which is to say the first to discover it is a visitor. This test discovers it at build
+     * time.
      */
     public function testEveryDeclaredGuardNameIsRecognised(): void
     {
@@ -339,16 +346,16 @@ final class RouteGuardParityTest extends TestCase
             }
         }
 
-        $this->assertSame([], $unknown, "أسماء حُرّاس لا يعرفها الراوتر:\n  " . implode("\n  ", $unknown));
+        $this->assertSame([], $unknown, "Guard names the router does not know:\n  " . implode("\n  ", $unknown));
     }
 
     /**
-     * أسماء الصلاحيات موجودة فعلاً في جدول admin_permissions.
+     * The permission names really do exist in the admin_permissions table.
      *
-     * صلاحية مكتوبة خطأً (can_manage_order بدل can_manage_orders) تمرّ
-     * صامتة: hasPermission تقرأ مفتاحاً غير موجود فتُرجع false، فيُمنع
-     * كل أدمن عدا رتبة A — وتبدو المشكلة «صلاحيات لا تعمل» لا «خطأ
-     * إملائي».
+     * A misspelled permission (can_manage_order instead of can_manage_orders) passes
+     * silently: hasPermission reads a key that does not exist and returns false, so every
+     * admin except rank A is barred — and the problem looks like "the permissions do not
+     * work" rather than "a spelling mistake".
      */
     public function testPermissionNamesExistInTheDatabaseSchema(): void
     {
@@ -369,7 +376,7 @@ final class RouteGuardParityTest extends TestCase
         $this->assertSame(
             [],
             $unknown,
-            "أسماء صلاحيات لا عمود لها في admin_permissions:\n  " . implode("\n  ", $unknown)
+            "Permission names with no column in admin_permissions:\n  " . implode("\n  ", $unknown)
         );
     }
 }

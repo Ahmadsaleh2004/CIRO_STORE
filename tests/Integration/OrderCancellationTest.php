@@ -6,23 +6,24 @@ use App\Models\OrderModel;
 use Tests\Support\DatabaseTestCase;
 
 /**
- * إلغاء الطلب واسترجاع المخزون.
+ * Cancelling an order and returning its stock.
  *
  * ══════════════════════════════════════════════════════════════
- * لماذا هذا الملف
+ * Why this file exists
  * ══════════════════════════════════════════════════════════════
  *
- * الإلغاء هو **الجانب الآخر من نفس العدّاد** الذي يخفّضه الطلب. وأي
- * خطأ فيه يظهر كخسارة مباشرة بأحد اتجاهين:
+ * Cancellation is **the other side of the same counter** the order decrements. And any error
+ * in it shows up as a direct loss in one of two directions:
  *
- *   · لم يُرجَع المخزون  → بضاعة موجودة في المستودع ولا تُباع.
- *   · أُرجع مرّتين       → بيعُ ما لا يوجد، ثم اعتذارٌ لزبون.
+ *   · the stock was not returned → goods sitting in the warehouse that are never sold.
+ *   · it was returned twice      → selling what does not exist, and then apologising to a
+ *                                  customer.
  *
- * والاتجاه الثاني هو ما يحرسه عمود `stock_restored`: علامة تقول إن
- * هذا الطلب أعاد بضاعته سلفاً. وهي بالضبط نوع الحماية التي لا يظهر
- * كسرُها إلا بعد أن يتراكم الخطأ في القاعدة أسابيع.
+ * And the second direction is what the `stock_restored` column guards: a flag saying this
+ * order has already returned its goods. And that is exactly the kind of protection whose
+ * breaking shows up only after the error has accumulated in the database for weeks.
  *
- * ولا شيء كان يغطّي ذلك: صفر اختبار على OrderModel قبل هذه المرحلة.
+ * And nothing covered that: zero tests on OrderModel before this phase.
  */
 final class OrderCancellationTest extends DatabaseTestCase
 {
@@ -58,7 +59,7 @@ final class OrderCancellationTest extends DatabaseTestCase
         return [$productId, (int) $this->pdo->lastInsertId()];
     }
 
-    /** يضع طلباً سليماً ويُرجع معرّفه. */
+    /** Places a sound order and returns its id. */
     private function placeOrder(int $userId, int $addressId, int $productId, int $variantId, int $qty): int
     {
         $result = OrderModel::placeOrder($userId, $addressId, [[
@@ -68,7 +69,7 @@ final class OrderCancellationTest extends DatabaseTestCase
             'shown_price' => 100.00,
         ]], 'cash_on_delivery', bin2hex(random_bytes(8)));
 
-        $this->assertSame(OrderModel::PLACE_OK, $result['status'], 'تعذّر تجهيز طلب الاختبار.');
+        $this->assertSame(OrderModel::PLACE_OK, $result['status'], 'The test order could not be prepared.');
 
         return $result['order_id'];
     }
@@ -87,7 +88,7 @@ final class OrderCancellationTest extends DatabaseTestCase
     }
 
     // ════════════════════════════════════════════════════════
-    // الإلغاء من المستخدم
+    // Cancellation by the user
     // ════════════════════════════════════════════════════════
 
     public function testCancellingReturnsTheStockAndRemovesTheOrder(): void
@@ -104,7 +105,8 @@ final class OrderCancellationTest extends DatabaseTestCase
         $this->assertSame(10, $this->variantStock($variantId));
         $this->assertSame(0, $this->countRows('orders'));
 
-        // حذف نهائي مقصود لهذه الحالة وحدها (not_taken)، وعناصره تتبعه.
+        // A hard delete, deliberately, for this state alone (not_taken), with its items
+        // following it.
         $this->assertSame(0, $this->countRows('order_items'));
     }
 
@@ -117,12 +119,12 @@ final class OrderCancellationTest extends DatabaseTestCase
 
         $orderId = $this->placeOrder($ownerId, $addressId, $productId, $variantId, 2);
 
-        // الملكية شرط في نفس عبارة SELECT (WHERE order_id=? AND user_id=?)،
-        // لا فحصاً منفصلاً يمكن أن يُنسى في مسار آخر.
+        // Ownership is a condition in the SELECT itself (WHERE order_id=? AND user_id=?),
+        // not a separate check that could be forgotten on another path.
         $this->assertFalse(OrderModel::cancelOrder($orderId, $strangerId));
 
         $this->assertSame(1, $this->countRows('orders'));
-        $this->assertSame(8, $this->variantStock($variantId), 'مخزون تحرّك رغم رفض الإلغاء.');
+        $this->assertSame(8, $this->variantStock($variantId), 'Stock moved despite the cancellation being refused.');
     }
 
     public function testAnOrderAlreadyTakenByAnAdminCannotBeCancelledByTheUser(): void
@@ -134,8 +136,8 @@ final class OrderCancellationTest extends DatabaseTestCase
         $orderId = $this->placeOrder($userId, $addressId, $productId, $variantId, 2);
         $this->setStatus($orderId, 'taken');
 
-        // القاعدة: يُلغي الزبون قبل أن يتولّى الطلبَ أدمن، لا بعده —
-        // فبعدها تكون البضاعة في طريقها إليه.
+        // The rule: the customer cancels before an admin takes the order, not after — after
+        // that the goods are already on their way to them.
         $this->assertFalse(OrderModel::cancelOrder($orderId, $userId));
 
         $this->assertSame(1, $this->countRows('orders'));
@@ -153,15 +155,15 @@ final class OrderCancellationTest extends DatabaseTestCase
         $this->assertTrue(OrderModel::cancelOrder($orderId, $userId));
         $this->assertSame(10, $this->variantStock($variantId));
 
-        // النقرة المزدوجة، أو طلبان متسابقان من تبويبين. الطلب لم يعد
-        // موجوداً، فالثانية يجب أن تفشل بلا أثر — لا أن تضيف أربع قطع
-        // وهمية إلى المخزون.
+        // The double click, or two racing requests from two tabs. The order no longer
+        // exists, so the second must fail with no effect — not add four phantom units to the
+        // stock.
         $this->assertFalse(OrderModel::cancelOrder($orderId, $userId));
         $this->assertSame(10, $this->variantStock($variantId));
     }
 
     // ════════════════════════════════════════════════════════
-    // كاسكيد الحظر
+    // The block cascade
     // ════════════════════════════════════════════════════════
 
     public function testBlockingAUserCancelsPendingOrdersAndReturnsStockOnce(): void
@@ -178,8 +180,8 @@ final class OrderCancellationTest extends DatabaseTestCase
 
         $this->assertSame(20, $this->variantStock($variantId));
 
-        // إلغاء ناعم هنا لا حذف: سجلّ التدقيق يجب أن يحتفظ بأثر ما
-        // أُلغي عند الحظر — من أُلغي له وماذا ومتى.
+        // A soft cancellation here rather than a delete: the audit log must keep a record of
+        // what was cancelled by the block — for whom, what, and when.
         $stmt = $this->pdo->prepare('SELECT status, stock_restored FROM orders WHERE order_id IN (?, ?)');
         $stmt->execute([$first, $second]);
 
@@ -188,14 +190,14 @@ final class OrderCancellationTest extends DatabaseTestCase
             $this->assertSame(1, (int) $row['stock_restored']);
         }
 
-        // وإعادة التشغيل — حظرٌ ثانٍ، أو سكربت الإصلاح — يجب ألّا تُرجع
-        // شيئاً مرّة أخرى. هذا هو الغرض الكامل من عمود stock_restored.
+        // And a rerun — a second block, or the repair script — must not return anything a
+        // second time. That is the entire purpose of the stock_restored column.
         OrderModel::cancelAllPendingForUser($userId);
         $this->assertSame(20, $this->variantStock($variantId));
     }
 
     // ════════════════════════════════════════════════════════
-    // انتقالات حالة الطلب من لوحة التحكّم
+    // The order's state transitions from the control panel
     // ════════════════════════════════════════════════════════
 
     private function makeAdmin(): int
@@ -234,10 +236,10 @@ final class OrderCancellationTest extends DatabaseTestCase
 
         $this->assertTrue(OrderModel::adminTakeOrder($orderId, $first)['success']);
 
-        // الثاني يُرفض: الحالة لم تعد not_taken. وقبل إضافة المعاملة
-        // و`FOR UPDATE` كان الفحص والكتابة عبارتين منفصلتين، فيمرّ
-        // الاثنان معاً وتفوز الكتابة الأخيرة — فيظنّ الأوّل أنه يحمل
-        // الطلب بينما يحمله الثاني.
+        // The second is refused: the state is no longer not_taken. And before the
+        // transaction and `FOR UPDATE` were added, the check and the write were two separate
+        // statements, so both passed together and the last write won — leaving the first
+        // believing they hold the order while the second holds it.
         $result = OrderModel::adminTakeOrder($orderId, $second);
         $this->assertFalse($result['success']);
 
@@ -257,14 +259,13 @@ final class OrderCancellationTest extends DatabaseTestCase
 
         $this->setStatus($orderId, 'cancelled');
 
-        // ⚠️ لم تكن adminMarkDelivered تفحص الحالة إطلاقاً: تقرأ
-        // user_id وحده ثم تكتب 'completed' على أي طلب. فطلبٌ ملغى —
-        // وقد أُعيد مخزونه إلى المستودع — كان يُقلَب إلى «مكتمل» بطلب
-        // واحد إلى /admin/orders/mark-delivered، فيدخل تقارير المبيعات
-        // بلا بضاعة خرجت.
+        // ⚠️ adminMarkDelivered did not check the state at all: it read user_id alone and
+        // then wrote 'completed' over any order. So a cancelled order — whose stock had
+        // already gone back to the warehouse — was flipped to "completed" by one request to
+        // /admin/orders/mark-delivered, entering the sales reports with no goods having left.
         //
-        // والواجهة لا تعرض الزرّ إلا على طلب taken، لكن الحراسة في
-        // الواجهة ليست حراسة — النقطة تقبل طلباً مباشراً.
+        // And the interface only shows the button on a taken order, but guarding in the
+        // interface is not guarding — the endpoint accepts a direct request.
         $result = OrderModel::adminMarkDelivered($orderId, $adminId);
 
         $this->assertFalse($result['success']);
@@ -280,8 +281,8 @@ final class OrderCancellationTest extends DatabaseTestCase
         $orderId = $this->placeOrder($userId, $addressId, $productId, $variantId, 1);
         $adminId = $this->makeAdmin();
 
-        // التسليم يفترض أن أحداً أخذ الطلب وجهّزه. القفز فوق ذلك يُنتج
-        // طلباً «مكتملاً» لا يحمل اسم من نفّذه.
+        // Delivery presupposes that somebody took the order and prepared it. Skipping that
+        // produces a "completed" order carrying nobody's name as its handler.
         $this->assertFalse(OrderModel::adminMarkDelivered($orderId, $adminId)['success']);
         $this->assertSame('not_taken', $this->orderStatus($orderId));
     }
@@ -295,7 +296,7 @@ final class OrderCancellationTest extends DatabaseTestCase
         $orderId = $this->placeOrder($userId, $addressId, $productId, $variantId, 1);
         $adminId = $this->makeAdmin();
 
-        // المسار السليم يبقى سليماً: الحارس يمنع ما يجب منعه وحده.
+        // The sound path stays sound: the guard blocks only what it should block.
         $this->assertTrue(OrderModel::adminTakeOrder($orderId, $adminId)['success']);
         $this->assertTrue(OrderModel::adminMarkDelivered($orderId, $adminId)['success']);
         $this->assertSame('completed', $this->orderStatus($orderId));
