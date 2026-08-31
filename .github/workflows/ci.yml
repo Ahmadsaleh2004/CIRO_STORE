@@ -375,16 +375,36 @@ jobs:
       # somebody edits a CSS file and forgets `npm run build`, and what is deployed keeps
       # serving the old version — the worst case of all: the code is right and what is shown
       # is old. Rebuilding and comparing the fingerprint catches that immediately.
-      - name: The CSS bundles are current
+      # ⚠️ Both manifests, not just the CSS one. The step was named "The CSS bundles are
+      # current" and compared public/css/dist/manifest.json alone, while `npm run build`
+      # rebuilds the JavaScript in the same breath — so a stale JS bundle passed silently.
+      #
+      # It is not hypothetical: merging the esbuild 0.24 → 0.28 bump changed the minifier's
+      # output, and with it all three content hashes —
+      #     store.79b45b89ad2b.js  →  store.4ba232e08027.js
+      # — while the committed files stayed as they were. Nothing failed. The gate that
+      # exists precisely to catch "the built files no longer match their source" watched
+      # the half of the build that had not changed.
+      #
+      # Both manifests are fingerprints of the whole output, so comparing them compares
+      # every bundle without reading any of them.
+      - name: The bundles are current
         run: |
-          cp public/css/dist/manifest.json /tmp/committed.json
+          cp public/css/dist/manifest.json /tmp/committed-css.json
+          cp public/js/dist/manifest.json  /tmp/committed-js.json
           npm run build
-          if ! diff -q /tmp/committed.json public/css/dist/manifest.json > /dev/null; then
+          STALE=0
+          if ! diff -q /tmp/committed-css.json public/css/dist/manifest.json > /dev/null; then
             echo "::error::The CSS bundles are behind — run 'npm run build' and commit public/css/dist/."
-            echo "Committed:"; cat /tmp/committed.json
-            echo "Expected:"; cat public/css/dist/manifest.json
-            exit 1
+            diff /tmp/committed-css.json public/css/dist/manifest.json || true
+            STALE=1
           fi
+          if ! diff -q /tmp/committed-js.json public/js/dist/manifest.json > /dev/null; then
+            echo "::error::The JS bundles are behind — run 'npm run build' and commit public/js/dist/."
+            diff /tmp/committed-js.json public/js/dist/manifest.json || true
+            STALE=1
+          fi
+          [ "$STALE" = "0" ] || exit 1
           echo "The bundles match the source."
 
   # ── The performance and accessibility budget ─────────────────
