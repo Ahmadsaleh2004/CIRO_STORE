@@ -71,6 +71,22 @@ function countLines(array $files): int
  *
  * @return list<string>
  */
+/**
+ * The files git knows about, matching a pattern.
+ *
+ * ⚠️ `git ls-files` reads the **index**, so a new file counts only once it has been staged.
+ * That is the right definition — the numbers describe what the repository publishes, not
+ * what happens to be lying in the working directory — but it makes the order of operations
+ * matter, and getting it wrong is silent:
+ *
+ *     composer readme:sync && git add -A && git commit    ← wrong, and it passes locally
+ *     git add -A && composer readme:sync && git add README.md && git commit    ← right
+ *
+ * The first order syncs before the new files are in the index, so it counts the old total,
+ * `composer check` agrees with it, the commit goes through, and CI fails on numbers that
+ * were correct at the moment they were written. It happened exactly that way: 19 new tests
+ * and 62 lines of PHP arrived in the same commit that told the README there were none.
+ */
 function trackedFiles(string $root, string $pattern): array
 {
     $cmd = 'git -C ' . escapeshellarg($root) . ' ls-files ' . escapeshellarg($pattern);
