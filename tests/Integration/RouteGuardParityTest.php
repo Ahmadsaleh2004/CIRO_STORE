@@ -66,7 +66,20 @@ final class RouteGuardParityTest extends TestCase
         $out = [];
 
         foreach (glob(self::root() . '/app/Controllers/*.php') as $file) {
-            $src = (string) file_get_contents($file);
+            // stripComments() existed above and was called from the id-authorisation check
+            // alone, not from here — and this is the method that needed it most.
+            //
+            // The split below treats everything between one `public function` and the next as
+            // the first one's body, so the comment block introducing the *next* action falls
+            // inside the previous action's body. CartController is the case that exposed it:
+            // checkStock is deliberately unguarded, and the comment describing `index`
+            // underneath it contains the words "Middleware::requireLogin() is the guard that
+            // matters here". str_contains found that sentence and reported that checkStock
+            // enforces auth while its route declares nothing — a divergence that did not
+            // exist, failing CI on every branch over a description of another method.
+            //
+            // A guard mentioned in prose is not a guard, so the prose goes first.
+            $src = self::stripComments((string) file_get_contents($file));
             $class = basename($file, '.php');
 
             $parts = preg_split('/\n    public function (\w+)\s*\(/', $src, -1, PREG_SPLIT_DELIM_CAPTURE);
