@@ -74,6 +74,11 @@ function countLines(array $files): int
 function trackedFiles(string $root, string $pattern): array
 {
     $cmd = 'git -C ' . escapeshellarg($root) . ' ls-files ' . escapeshellarg($pattern);
+    // A development script that is never served over the web. Both variable parts of the
+    // command pass through escapeshellarg, and the rest is literal on the line above — so
+    // there is no input a caller could steer. The same reasoning, and the same exemption, as
+    // in scripts/dump-schema.php and scripts/smoke-test.php.
+    // nosemgrep: php.lang.security.exec-use.exec-use
     exec($cmd, $out, $code);
 
     if ($code !== 0) {

@@ -31,11 +31,26 @@
 version: 2
 
 updates:
+  # ── Why every entry carries a cooldown ─────────────────────
+  #
+  # A cooldown makes Dependabot wait before proposing a release that has just been
+  # published. The attack it answers is the one that actually happens to package registries:
+  # an account is compromised, a malicious version is published, and it is pulled and yanked
+  # within hours. Without a wait, an automated PR can carry that version into the repository
+  # inside the window in which it existed.
+  #
+  # Seven days is the value semgrep's rule asks for, and it costs nothing here: the schedule
+  # is monthly anyway, so the delay never actually holds anything up. And the security
+  # alerts are not affected — those raise a PR the moment a vulnerability is published,
+  # regardless of the cooldown.
+
   # ── The PHP dependencies ───────────────────────────────────
   - package-ecosystem: composer
     directory: /
     schedule:
       interval: monthly
+    cooldown:
+      default-days: 7
     open-pull-requests-limit: 3
     labels:
       - dependencies
@@ -57,6 +72,8 @@ updates:
     directory: /
     schedule:
       interval: monthly
+    cooldown:
+      default-days: 7
     open-pull-requests-limit: 3
     labels:
       - dependencies
@@ -80,6 +97,8 @@ updates:
     directory: /
     schedule:
       interval: monthly
+    cooldown:
+      default-days: 7
     open-pull-requests-limit: 2
     labels:
       - dependencies
@@ -94,6 +113,8 @@ updates:
     directory: /
     schedule:
       interval: monthly
+    cooldown:
+      default-days: 7
     open-pull-requests-limit: 1
     labels:
       - dependencies

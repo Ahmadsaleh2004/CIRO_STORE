@@ -106,6 +106,18 @@ class CartController extends Controller
     // ════════════════════════════════════════════════════════
     // GET /cart — the user's cart
     // ════════════════════════════════════════════════════════
+    //
+    // A pure read on GET: it returns the signed-in user's own cart and writes nothing, so
+    // there is no state for a cross-site request to forge. Middleware::requireLogin() is the
+    // guard that matters here, and it runs before anything is read.
+    //
+    // The exemption sits above the attribute block rather than above the header line because
+    // the rule's match begins at #[OA\...] — see the note in .semgrep/cairo-store.yml.
+    //
+    // ⚠️ It is exempted here rather than by name in that file's list: the method is called
+    // `index`, and adding that name there would blanket-exempt every controller's index.
+    //
+    // nosemgrep: cairo-json-endpoint-without-csrf
     #[OA\Get(
         path: '/cart',
         summary: "The current user's cart",
