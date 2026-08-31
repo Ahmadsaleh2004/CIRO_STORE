@@ -22,7 +22,7 @@
     "esbuild": "^0.28.2",
     "eslint": "^9.16.0",
     "globals": "^17.11.0",
-    "jsdom": "^25.0.1",
+    "jsdom": "^30.0.1",
     "lightningcss": "^1.28.2",
     "prettier": "^3.4.2",
     "stylelint": "^16.11.0",
