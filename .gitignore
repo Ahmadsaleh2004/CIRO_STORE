@@ -38,7 +38,13 @@ desktop.ini
 
 # ── Internal documentation ────────────────────────────
 # The decision log is archived outside the repository and is not committed with the code.
-/docs/
+#
+# `/docs/*` rather than `/docs/`: git cannot re-include anything beneath a directory that
+# is itself excluded, so excluding the *contents* is what makes the exception below
+# possible. The screenshots are the one thing in here meant to be published — README
+# embeds them, and an ignored image is a broken image on the repository page.
+/docs/*
+!/docs/screenshots/
 
 # ── Test output ───────────────────────────────────────
 # PHPUnit's cache and the coverage reports — generated, and not tracked.
