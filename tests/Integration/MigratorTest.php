@@ -374,10 +374,8 @@ final class MigratorTest extends DatabaseTestCase
         // byte is what an unescaped \R matches as a line separator.
         $this->write(
             '0001_first.sql',
-            "-- ملاحظة عربية تحمل البايت 0x85
-CREATE TABLE mt_widgets (id INT PRIMARY KEY);",
-            '-- تعليق آخر
-DROP TABLE mt_widgets;'
+            "-- ملاحظة عربية تحمل البايت 0x85\nCREATE TABLE mt_widgets (id INT PRIMARY KEY);",
+            "-- تعليق آخر\nDROP TABLE mt_widgets;"
         );
 
         $migrator = $this->migrator();
@@ -385,17 +383,15 @@ DROP TABLE mt_widgets;'
         $mangled  = [];
 
         foreach (['UP', 'DOWN'] as $part) {
-            foreach (preg_split('/
+            $lines = preg_split('/\r\n|\n|\r/', $migrator->section($path, $part)) ?: [];
 
-|
-|
-/', $migrator->section($path, $part)) ?: [] as $n => $line) {
+            foreach ($lines as $n => $line) {
                 $line = ltrim($line);
                 if ($line === '' || str_starts_with($line, '--')) {
                     continue;
                 }
                 // A non-ASCII letter opening a line that is not a comment = a severed comment.
-                if (preg_match('/^[^ -]/u', $line)) {
+                if (preg_match('/^[^\x00-\x7F]/u', $line)) {
                     $mangled[] = sprintf('@%s line %d: %s', $part, $n + 1, mb_substr($line, 0, 40));
                 }
             }
@@ -404,9 +400,7 @@ DROP TABLE mt_widgets;'
         $this->assertSame(
             [],
             $mangled,
-            "A multi-byte comment was severed and became SQL:
-  " . implode("
-  ", $mangled)
+            "A multi-byte comment was severed and became SQL:\n  " . implode("\n  ", $mangled)
         );
 
         // And it really does run: a severed comment reaches PDO::exec as a syntax error.
