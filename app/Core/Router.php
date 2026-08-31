@@ -232,8 +232,29 @@ class Router
     {
         $path = parse_url($uri, PHP_URL_PATH);
 
-        $scriptName = dirname($_SERVER['SCRIPT_NAME'] ?? '');
-        if ($scriptName !== '/' && $scriptName !== '\\' && $path !== null && $path !== false) {
+        // ⚠️ Only when SCRIPT_NAME really is the front controller. It used to be
+        // `dirname($_SERVER['SCRIPT_NAME'])` unconditionally, which assumes every server
+        // sets SCRIPT_NAME to index.php — and PHP's own built-in server does not.
+        //
+        // Measured on `php -S 127.0.0.1:8080 -t public public/index.php`:
+        //     GET /cart/add                     SCRIPT_NAME = /index.php
+        //     GET /handlers/notify_handler.php  SCRIPT_NAME = /handlers/notify_handler.php
+        //
+        // For any URL ending in .php the built-in server reports the *requested* path as
+        // SCRIPT_NAME, so dirname gave `/handlers` and that prefix was stripped from the
+        // path itself: `/handlers/notify_handler.php` arrived at the route table as
+        // `/notify_handler.php` and matched nothing. Under Apache the same request is
+        // fine, because SCRIPT_NAME there is `/STORE/public/index.php`.
+        //
+        // It cost a real failure: CsrfContractHttpTest posts to every registered endpoint
+        // and this one answered with a 404 page instead of JSON, so CI was red on a
+        // contract the application honours perfectly in production. The check below keeps
+        // the subdirectory support that Apache needs and ignores a SCRIPT_NAME that is
+        // pointing at something other than the entry script.
+        $scriptFile = $_SERVER['SCRIPT_NAME'] ?? '';
+        $scriptName = str_ends_with($scriptFile, '/index.php') ? dirname($scriptFile) : '';
+
+        if ($scriptName !== '' && $scriptName !== '/' && $scriptName !== '\\' && $path !== null && $path !== false) {
             if (strpos($path, $scriptName) === 0) {
                 $path = substr($path, strlen($scriptName));
             }
