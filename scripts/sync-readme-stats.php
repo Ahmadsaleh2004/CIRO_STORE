@@ -86,6 +86,8 @@ function countLines(array $files): int
  * `composer check` agrees with it, the commit goes through, and CI fails on numbers that
  * were correct at the moment they were written. It happened exactly that way: 19 new tests
  * and 62 lines of PHP arrived in the same commit that told the README there were none.
+ *
+ * @return list<string>
  */
 function trackedFiles(string $root, string $pattern): array
 {

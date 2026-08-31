@@ -38,6 +38,18 @@ parameters:
     # Level 7 is next, and it needs a measurement of its own before any promise.
     level: 6
 
+    # ── The analysed version is pinned, not inherited ─────────
+    #
+    # Without this, PHPStan analyses against whatever PHP is running it. The development
+    # machine runs 8.2 and the Static analysis job runs 8.3, so the same commit was analysed
+    # two different ways — and "PHPStan is green" meant nothing about the gate that actually
+    # blocks a merge.
+    #
+    # 80200 rather than 80300 because composer.json requires ">=8.2": the analysis should
+    # hold for the oldest version the project claims to support, or the claim is untested.
+    # Raise both together, never this alone.
+    phpVersion: 80200
+
     paths:
         - app
         - scripts
