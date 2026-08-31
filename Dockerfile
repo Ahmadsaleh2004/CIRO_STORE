@@ -33,9 +33,17 @@ RUN docker-php-ext-install pdo_mysql \
 # `send_default_pii` is set to false. So do not switch this value on in an installation that
 # has disabled that scrubbing.
 #
+# mysqlnd.net_read_timeout = 30 is the half of the database timeout that PDO cannot set.
+# PDO::ATTR_TIMEOUT in app/Core/Database.php bounds the connect; this bounds waiting for the
+# server's reply, and its default is 86400 — a full day. The difference is not academic: a
+# MariaDB that binds its port and then aborts its startup completes the TCP handshake and
+# sends nothing, so PDO alone still hung past 140 seconds against it, while 30 here turns
+# the same case into a 503 the visitor can read. It cannot live in the application because
+# it is PHP_INI_SYSTEM — ini_set() on it is silently ignored.
+#
 # ⚠️ And this file concerns the Docker image alone. Anyone running the project on XAMPP
-# locally adds the same line to php.ini by hand — otherwise they alone see `*args omitted*`
-# in their reports.
+# locally adds the same lines to php.ini by hand — otherwise they alone see `*args omitted*`
+# in their reports, and they alone keep the day-long database timeout.
 RUN { \
       echo 'expose_php = Off'; \
       echo 'display_errors = Off'; \
@@ -44,6 +52,7 @@ RUN { \
       echo 'upload_max_filesize = 8M'; \
       echo 'post_max_size = 10M'; \
       echo 'zend.exception_ignore_args = 0'; \
+      echo 'mysqlnd.net_read_timeout = 30'; \
     } > /usr/local/etc/php/conf.d/cairo-store.ini
 
 # ── The web root is public/ alone ────────────────────────────

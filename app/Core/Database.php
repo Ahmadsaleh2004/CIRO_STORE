@@ -45,6 +45,24 @@ class Database
             PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
             PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
             PDO::ATTR_EMULATE_PREPARES   => false,
+
+            // Without a connect timeout the request hangs for as long as PHP lets it.
+            // That is not a theoretical risk — it happened here: a MariaDB whose startup
+            // aborted after binding port 3306 still completed the TCP handshake and then
+            // never sent its greeting, so every page load stalled with no error at all.
+            //
+            // ⚠️ This alone is **not** the whole fix, and the gap is easy to miss.
+            // ATTR_TIMEOUT becomes MYSQL_OPT_CONNECT_TIMEOUT, which bounds the connect
+            // and nothing after it. Waiting for the server's reply — the greeting and
+            // every query result — is bounded by `mysqlnd.net_read_timeout` in php.ini,
+            // whose default is 86400: a full day. Measured against a socket that accepts
+            // and never answers, this option alone still hung past 140 seconds; with
+            // net_read_timeout set, the same case threw in 5.0.
+            //
+            // Five seconds is far longer than a healthy local or same-network connect
+            // needs, and it hands control to the catch block below, which already
+            // answers with a proper 503 instead of a page that never finishes loading.
+            PDO::ATTR_TIMEOUT            => 5,
         ];
 
         try {
