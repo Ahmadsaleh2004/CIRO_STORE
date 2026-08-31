@@ -105,7 +105,7 @@ jobs:
 
       - name: The composer cache
         # nosemgrep: yaml.github-actions.security.github-actions-mutable-action-tag.github-actions-mutable-action-tag
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ~/.composer/cache
           key: composer-${{ matrix.php }}-${{ hashFiles('composer.lock') }}
