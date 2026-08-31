@@ -13,6 +13,22 @@
  * Everything here describes the system **as it actually is**, not as it ought to
  * be. The types and nullability are taken from the real database schema
  * (tests/fixtures/schema.sql).
+ *
+ * ⚠️ This file is listed in composer.json under `autoload.files`, and it has to be.
+ * Every attribute below attaches to `final class Schemas` at the foot of the file, and
+ * swagger-php reads them by reflecting on that class — which first has to be loadable.
+ * PSR-4 maps `App\Config\OpenApi\Schemas` to `app/Config/OpenApi/Schemas.php`, and the
+ * real path is `app/config/openapi/schemas.php`. Windows resolves the two as the same
+ * file and Linux does not.
+ *
+ * So without the explicit entry the class simply never loads on Linux, swagger-php finds
+ * nothing to reflect, and it drops the file **without an error**: the generated
+ * specification comes out 15KB shorter with `components.schemas` missing entirely, while
+ * regenerating it on Windows looks perfectly correct. That is exactly how it reached CI —
+ * green on the machine it was written on, red on the runner, for months.
+ *
+ * app/config/openapi_info.php is in that list for the same reason. If a third file joins
+ * this directory, it belongs there too.
  */
 
 namespace App\Config\OpenApi;

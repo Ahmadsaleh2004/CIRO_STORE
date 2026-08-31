@@ -16,6 +16,13 @@
  * Operations reference them with `new OA\Response(ref: '#/components/responses/…')`
  * so each is written once and used a hundred times, and their wording never drifts
  * apart.
+ *
+ * ⚠️ Listed in composer.json under `autoload.files`, and not optionally — see the note at
+ * the top of schemas.php in this directory for the measurement. In short: the attributes
+ * attach to `final class Responses` below, swagger-php reaches them by reflection, and
+ * PSR-4 resolves `App\Config\OpenApi\Responses` to a path whose capitalisation only
+ * matches on a case-insensitive filesystem. On Linux the class never loads and the file is
+ * dropped silently.
  */
 
 namespace App\Config\OpenApi;

@@ -9,6 +9,8 @@
         },
         "files": [
             "app/config/openapi_info.php",
+            "app/config/openapi/schemas.php",
+            "app/config/openapi/responses.php",
             "app/helpers/functions.php",
             "app/helpers/assets_helper.php",
             "app/helpers/auth_helper.php",
