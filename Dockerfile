@@ -19,15 +19,35 @@ FROM php:8.3-apache
 RUN docker-php-ext-install pdo_mysql \
  && a2enmod rewrite headers
 
-# ── curl, for the health check alone ─────────────────────────
-# The HEALTHCHECK at the bottom of this file calls curl. The base image happens to ship
-# it, but that is an implementation detail of php:8.3-apache rather than a promise — and
-# the failure mode if it ever stops shipping it is nasty: the health check exits non-zero
-# forever, the platform marks a perfectly working container unhealthy, and nothing in the
-# application log says why. One explicit line removes the guess.
+# ── unzip and curl ───────────────────────────────────────────
+#
+# ⚠️ `unzip` is not a convenience — without it this image cannot be built at all, and it
+# never could be. `composer install --prefer-dist` fetches every package as a zip archive
+# and needs either PHP's zip extension or an unzip binary to open it. php:8.3-apache ships
+# neither, so the build died on the first package:
+#
+#     Failed to download dasprid/enum from dist:
+#     The zip extension and unzip/7z commands are both missing, skipping.
+#     In ZipDownloader.php line 81
+#
+# The file had carried that fault since it was written, unnoticed because nothing had ever
+# built it: Docker is not installed on the development machine, and CI does not build the
+# image either. The first real attempt — a deploy to Railway — found it in nineteen
+# seconds. A Dockerfile nobody builds is a document, not a build.
+#
+# `curl` is the smaller reason: the HEALTHCHECK at the foot of this file calls it. The base
+# image happens to ship it, but that is an implementation detail rather than a promise, and
+# the failure mode is quiet — the check exits non-zero forever and the platform marks a
+# working container unhealthy with nothing in the application log to explain it.
 RUN apt-get update \
- && apt-get install -y --no-install-recommends curl \
+ && apt-get install -y --no-install-recommends unzip curl \
  && rm -rf /var/lib/apt/lists/*
+
+# Composer refuses to load plugins when it runs as root and says so on every install. In a
+# container root is the only user there is, so the warning describes the situation rather
+# than a mistake — and composer's own error output points at the disabled plugins as a
+# possible cause of an install failure, which makes the noise actively misleading.
+ENV COMPOSER_ALLOW_SUPERUSER=1
 
 # ── The PHP settings for production ──────────────────────────
 # expose_php belongs here rather than in the application: header_remove in config.php covers
