@@ -331,10 +331,30 @@ jobs:
       # nosemgrep: yaml.github-actions.security.github-actions-mutable-action-tag.github-actions-mutable-action-tag
       - uses: actions/checkout@v4
 
+      # ── Node 24, and the reason is measured ──────────────────
+      #
+      # It was '20', and that broke Dependabot's jsdom bump in a way the failure message did
+      # not explain: the Vitest step exited 1 while the same suite — all 45 tests — passed on
+      # the development machine. The difference was not jsdom.
+      #
+      #     jsdom 30.0.1 engines:  ^22.22.2 || ^24.15.0 || >=26.0.0
+      #     the runner ran:        Node 20
+      #     the laptop ran:        Node 24.16.0
+      #
+      # So the version here is what decided it, and Node 20 is in any case past its
+      # end-of-life (April 2026). 24 rather than 22 for the reason this file keeps arriving
+      # at: it is the version the code is actually written and run against locally, and a
+      # gate that tests a different version from the one the developer uses reports on
+      # something nobody is building.
+      #
+      # ⚠️ package.json still declares engines.node ">=20". That claim becomes false the
+      # moment the jsdom bump lands — the floor becomes jsdom's own range. Move the two
+      # together.
+      #
       # nosemgrep: yaml.github-actions.security.github-actions-mutable-action-tag.github-actions-mutable-action-tag
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24'
           cache: npm
 
       - run: npm ci
@@ -403,7 +423,7 @@ jobs:
       # nosemgrep: yaml.github-actions.security.github-actions-mutable-action-tag.github-actions-mutable-action-tag
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24'
           cache: npm
 
       - run: composer install --prefer-dist --no-interaction --no-progress
