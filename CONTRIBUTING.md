@@ -9,7 +9,24 @@ pre-commit install --hook-type pre-commit --hook-type pre-push
 
 ⚠️ The second line is **required**. Without `--hook-type pre-push` the `.git/hooks/pre-push` file does not exist at all, so semgrep never runs — the configuration alone is not enough.
 
-The tools are called by their bare names, so they must be on the `PATH` that git sees. After any fresh installation, close the terminal and open it again: the running process inherited an older `PATH`.
+gitleaks and trivy are called by their bare names, so they must be on the `PATH` that git sees. After any fresh installation, close the terminal and open it again: the running process inherited an older `PATH`. semgrep is **not** on that list any more — `.pre-commit-config.yaml` pins it and pre-commit builds its own environment, so the version you run is the version CI runs.
+
+### A coverage driver
+
+The coverage gate needs one, and without it `phpunit --coverage` produces nothing at all — which is how the threshold in CI came to sit at a figure nobody could measure. Install **pcov**, the same driver CI uses:
+
+1. Download the build matching your PHP from the official archive — check `php -i | findstr "Thread Compiler Architecture"` first. For XAMPP's PHP 8.2 on Windows that is `php_pcov-1.0.12-8.2-ts-vs16-x64.zip` from `downloads.php.net/~windows/pecl/releases/pcov/`.
+2. Put `php_pcov.dll` in `php/ext/`.
+3. Add to `php.ini`:
+
+   ```ini
+   extension=pcov
+   pcov.enabled=0
+   ```
+
+`pcov.enabled=0` is deliberate: the extension loads but instruments nothing, so the web server and ordinary scripts pay no cost. `composer test:coverage:gate` switches it on for its own process with `-d pcov.enabled=1`.
+
+Confirm with `php -m | findstr pcov`.
 
 ---
 
@@ -21,7 +38,7 @@ A branch per unit of work, then a merge with `--no-ff` so the unit's history sta
 git checkout -b cleanup/some-topic
 # … the work …
 composer check          # must be green
-git checkout master
+git checkout main
 git merge --no-ff cleanup/some-topic
 ```
 
@@ -29,7 +46,7 @@ git merge --no-ff cleanup/some-topic
 
 ## The gates
 
-`composer check` runs all six together, and every one of them must pass:
+`composer check` runs all nine together, and every one of them must pass:
 
 | Gate | The bar |
 |---|---|
@@ -38,7 +55,24 @@ git merge --no-ff cleanup/some-topic
 | PSR-12 | **zero** violations |
 | Escaping gate | `NEEDS` at zero in the views |
 | README numbers | they match what the code measures |
+| OpenAPI specification | regenerating it changes nothing |
 | PHPUnit | every test green |
+| Coverage | not below the floor in `scripts/coverage-gate.php` |
+| semgrep | zero findings, on CI's rules and CI's version |
+
+### It has to be the same command CI runs
+
+The last three arrived late, and their absence was not a detail. `composer check` is the thing that answers "is this safe to push", and those three gates lived only in the workflow — so they could not be run before a push, and each one was red in CI for a long time without anyone being able to see why:
+
+- **semgrep** ran `--config auto` here and `--config p/php` there, on whatever version happened to be installed. Measured: 1.174.0 scanned 185 files and reported nothing; the 1.145.0 that CI pins scanned 343 and reported nine findings, two of them real bugs.
+- **Coverage** could not be measured at all without a driver, and the threshold read 25% while the reality was 10%.
+- **The OpenAPI check** compared bytes that a Windows machine cannot produce, because swagger-php joins description lines with `PHP_EOL`.
+
+So when you add a gate to `.github/workflows/ci.yml`, add it to `composer check` in the same commit — and if the two need different commands to do the same job, the difference is a bug in one of them.
+
+### The coverage floor is a ratchet
+
+It holds the figure **actually measured**, so it fails on a regression rather than on failing to reach an aspiration — the second kind of gate is red forever and therefore ignored. Raise it when new tests raise the number; never lower it without writing the reason beside the change. Keep `scripts/coverage-gate.php` and the value in `ci.yml` in step.
 
 ### Zero means zero
 
