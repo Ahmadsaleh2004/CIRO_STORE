@@ -12,6 +12,40 @@ An e-commerce store in PHP on a hand-written MVC structure with no framework —
 
 ---
 
+## Screenshots
+
+### The storefront
+
+| Home | Catalogue |
+|---|---|
+| ![The home page: a slider, category chips and a best-sellers carousel](docs/screenshots/home.webp) | ![The catalogue: live search, sorting, a price filter and stock badges](docs/screenshots/products.webp) |
+
+| Product page | Dark mode |
+|---|---|
+| ![A product page: gallery, stock state, reviews and related products](docs/screenshots/product-detail.webp) | ![The same catalogue in dark mode](docs/screenshots/products-dark.webp) |
+
+### The control panel
+
+Ranks and permissions are the part worth looking at: every admin holds a role (**A** to **D**) and a row of individual permissions, and the panel hides what a rank cannot reach rather than merely refusing it on submit.
+
+| Dashboard | Admins, ranks and permissions |
+|---|---|
+| ![The dashboard: sales for the month, a 30-day chart, user states and best sellers](docs/screenshots/admin-dashboard.webp) | ![Managing admins: role badges and the per-admin permission list](docs/screenshots/admin-admins.webp) |
+
+| Orders | Products |
+|---|---|
+| ![Managing orders: status, which admin took each order, and CSV export](docs/screenshots/admin-orders.webp) | ![Managing products: stock, visibility and discounts](docs/screenshots/admin-products.webp) |
+
+### On a phone
+
+| Home | Catalogue |
+|---|---|
+| ![The home page at 390px](docs/screenshots/mobile-home.webp) | ![The catalogue at 390px](docs/screenshots/mobile-products.webp) |
+
+> The e-mail addresses and phone numbers in the control-panel images are placeholders, substituted before the screenshot was taken. The data behind them is real, so it is not shown.
+
+---
+
 ## What makes this repository worth a look
 
 **The comments explain "why", not "what".** Every non-obvious decision is written down with its reason, in place: why `SameSite=Lax` rather than `Strict`, why `require` rather than `require_once`, why a `csrf_invalid` code rather than the message's text. The decisions were taken by measurement rather than estimation, and the numbers are in the comment itself.
@@ -38,6 +72,67 @@ curl http://localhost:8080/health
 ```
 
 > `/health` runs a real query against the database rather than returning a fixed reply — because a container answering 200 with its database down is not healthy. It is also what `HEALTHCHECK` uses inside the image.
+
+To fill the store with the demo catalogue rather than staring at an empty one:
+
+```bash
+docker compose exec -T db mysql -ucairo -pcairo ciro_db < database/demo-seed.sql
+```
+
+---
+
+## Deploying it somewhere public
+
+The same image runs unchanged on any platform that builds a Dockerfile — Railway, Render, Fly, Cloud Run. Two things are worth knowing before you start, because both fail quietly rather than loudly.
+
+**The port comes from the platform.** These platforms inject a `$PORT` and route to that alone, while the image's own default is 80. `docker/entrypoint.sh` rewrites Apache's `Listen` and `VirtualHost` from `$PORT` on every start, falling back to 80 so nothing about `docker compose` changes. Without it the container works perfectly and is killed anyway, with nothing in the application log to explain it.
+
+**A fresh database is empty.** `tests/fixtures/schema.sql` builds the structure and carries no rows at all — correct for a test database, wrong for a public demo. `database/demo-seed.sql` supplies the catalogue and the presentation settings, and deliberately supplies nothing else: no accounts, no orders, no messages.
+
+### The steps
+
+1. Create a project on the platform from this repository, and add a **MySQL** database to it.
+2. Set the environment variables. Only these six are required:
+
+   | Variable | Value |
+   |---|---|
+   | `APP_ENV` | `production` |
+   | `APP_DEBUG` | `false` |
+   | `APP_URL` | the URL the platform gives you |
+   | `DB_HOST` `DB_PORT` `DB_DATABASE` `DB_USERNAME` `DB_PASSWORD` | from the MySQL add-on |
+
+   Everything else in `.env.example` is optional in the sense that the application boots without it — but "optional" does not mean "harmless", and one of them is a security decision rather than a feature toggle:
+
+   | Left empty | What actually happens |
+   |---|---|
+   | `GOOGLE_CLIENT_ID` | `/auth/google` redirects back with `error=google_unavailable`. Sign-in by password still works. |
+   | `MAIL_*` | `Mailer::send()` returns `false`. Verification and reset e-mails are never delivered, so accounts needing them cannot complete. |
+   | `SENTRY_DSN` | Monitoring is not initialised. Nothing else changes. |
+   | `HCAPTCHA_SECRET_KEY` | ⚠️ **The captcha check is skipped and `verifyCaptcha()` returns `true`.** This is a deliberate development bypass (`AdminAuthController::verifyCaptcha`), and on a publicly reachable deployment it leaves the admin login with no captcha in front of it. Set a real key, or accept that only the rate limiter stands between the login form and an automated attempt. |
+
+3. Load the schema, then the demo data, then record the migration baseline:
+
+   ```bash
+   mysql -h HOST -u USER -p DBNAME < tests/fixtures/schema.sql
+   mysql -h HOST -u USER -p DBNAME < database/demo-seed.sql
+   php scripts/migrate.php baseline
+   ```
+
+4. Give the demo administrator a password. The seed ships an account that **cannot be logged into** — its stored value is not a valid bcrypt hash, so every attempt is rejected until you replace it:
+
+   ```bash
+   php -r "echo password_hash('choose-a-password', PASSWORD_DEFAULT), PHP_EOL;"
+   ```
+
+   ```sql
+   UPDATE admins SET password = '<the printed hash>' WHERE id = 1;
+   ```
+
+   The account's e-mail is `admin@example.com`. Do not commit the password you choose.
+
+5. Confirm the deploy with `/health`, which answers only if the database really responds.
+
+> **On uploaded images.** Product images are written to `public/images`, which lives inside the container's file system and is wiped by every redeploy. `docker-compose.yml` solves this locally with a named volume; on a platform, attach a persistent disk at that path, or expect images added through the panel to vanish on the next deploy. The seeded catalogue is unaffected — those files are in the repository.
 
 ---
 
