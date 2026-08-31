@@ -92,7 +92,7 @@ jobs:
 
     steps:
       # nosemgrep: yaml.github-actions.security.github-actions-mutable-action-tag.github-actions-mutable-action-tag
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Set up PHP
         # nosemgrep: yaml.github-actions.security.github-actions-mutable-action-tag.github-actions-mutable-action-tag
@@ -238,7 +238,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       # nosemgrep: yaml.github-actions.security.github-actions-mutable-action-tag.github-actions-mutable-action-tag
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # nosemgrep: yaml.github-actions.security.github-actions-mutable-action-tag.github-actions-mutable-action-tag
       - uses: shivammathur/setup-php@v2
@@ -287,7 +287,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       # nosemgrep: yaml.github-actions.security.github-actions-mutable-action-tag.github-actions-mutable-action-tag
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # nosemgrep: yaml.github-actions.security.github-actions-mutable-action-tag.github-actions-mutable-action-tag
       - uses: shivammathur/setup-php@v2
@@ -329,7 +329,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       # nosemgrep: yaml.github-actions.security.github-actions-mutable-action-tag.github-actions-mutable-action-tag
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # ── Node 24, and the reason is measured ──────────────────
       #
@@ -411,7 +411,7 @@ jobs:
           --health-interval=10s --health-timeout=5s --health-retries=10
     steps:
       # nosemgrep: yaml.github-actions.security.github-actions-mutable-action-tag.github-actions-mutable-action-tag
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # nosemgrep: yaml.github-actions.security.github-actions-mutable-action-tag.github-actions-mutable-action-tag
       - uses: shivammathur/setup-php@v2
@@ -463,7 +463,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       # nosemgrep: yaml.github-actions.security.github-actions-mutable-action-tag.github-actions-mutable-action-tag
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           # gitleaks needs the full history: a secret deleted in the last commit remains in
           # the history, and scanning the final snapshot alone does not see it.
