@@ -19,7 +19,7 @@
     "test:watch": "vitest"
   },
   "devDependencies": {
-    "esbuild": "^0.24.2",
+    "esbuild": "^0.28.2",
     "eslint": "^9.16.0",
     "globals": "^15.13.0",
     "jsdom": "^25.0.1",
