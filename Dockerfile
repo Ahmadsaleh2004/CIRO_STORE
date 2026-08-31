@@ -19,6 +19,16 @@ FROM php:8.3-apache
 RUN docker-php-ext-install pdo_mysql \
  && a2enmod rewrite headers
 
+# ── curl, for the health check alone ─────────────────────────
+# The HEALTHCHECK at the bottom of this file calls curl. The base image happens to ship
+# it, but that is an implementation detail of php:8.3-apache rather than a promise — and
+# the failure mode if it ever stops shipping it is nasty: the health check exits non-zero
+# forever, the platform marks a perfectly working container unhealthy, and nothing in the
+# application log says why. One explicit line removes the guess.
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends curl \
+ && rm -rf /var/lib/apt/lists/*
+
 # ── The PHP settings for production ──────────────────────────
 # expose_php belongs here rather than in the application: header_remove in config.php covers
 # the normal path, but a response Apache generates before PHP never passes through it.
@@ -82,8 +92,22 @@ RUN composer dump-autoload --optimize --no-dev \
 
 EXPOSE 80
 
+# ── The port is decided at run time, not here ────────────────
+# EXPOSE 80 is the compose default and stays. But Railway, Render, Fly and Cloud Run all
+# inject a $PORT and route only there, so docker/entrypoint.sh rewrites Apache's Listen
+# and VirtualHost on every start. Without it the container serves on 80, the platform
+# health-checks a port nothing is bound to, and the deploy is killed before it answers a
+# request — with no error in the application log to explain why.
+COPY docker/entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
+CMD ["apache2-foreground"]
+
 # A real health check: it requests /health, which actually verifies the database, rather
 # than merely "is Apache responding". A container answering 200 with its database down is
 # not healthy.
+#
+# ⚠️ Shell form deliberately, not exec form: ${PORT:-80} has to be expanded by a shell at
+# run time, and the exec form would look for a file literally named "${PORT:-80}".
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
-  CMD curl -fsS http://127.0.0.1/health || exit 1
+  CMD curl -fsS "http://127.0.0.1:${PORT:-80}/health" || exit 1

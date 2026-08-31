@@ -1,6 +1,18 @@
 # Uniform line endings across systems — it prevents diff noise between Windows and the rest
 * text=auto
 
+# Shell scripts are LF in the working tree too, not only in the repository.
+#
+# `text=auto` above already guarantees LF in what git stores, which is what the Docker
+# build reads — so this line is a second belt rather than the only one. What it adds is
+# the checkout: with core.autocrlf=true a Windows clone writes docker/entrypoint.sh with
+# CRLF, and running that copy directly through Git Bash or WSL fails in a way that names
+# the wrong file:
+#     /usr/local/bin/entrypoint.sh: /bin/sh^M: bad interpreter: No such file or directory
+# `eol=lf` keeps the file identical on every platform, so the script that gets read is the
+# script that was written.
+*.sh text eol=lf
+
 # Binary files — left untouched
 *.png binary
 *.jpg binary
