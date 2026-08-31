@@ -37,10 +37,18 @@ A branch per unit of work, then a merge with `--no-ff` so the unit's history sta
 ```bash
 git checkout -b cleanup/some-topic
 # … the work …
+git add -A              # ⚠️ before the next line, not after
+composer readme:sync
+git add README.md
 composer check          # must be green
+git commit
 git checkout main
 git merge --no-ff cleanup/some-topic
 ```
+
+⚠️ **`git add` comes before `composer readme:sync`.** The counts come from `git ls-files`, which reads the *index* — so a file that has not been staged yet is not counted. Syncing first therefore writes the old totals, `composer check` agrees with them, the commit goes through, and CI fails on numbers that were correct at the moment they were written. It is a silent failure: nothing local disagrees.
+
+And run `composer check` **after the last edit**, not before it. A change made between the check and the commit is a change nothing verified — which is how a missing `@return` type reached CI on a green local run.
 
 ---
 
