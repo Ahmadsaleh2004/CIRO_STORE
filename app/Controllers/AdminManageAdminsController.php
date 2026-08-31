@@ -359,7 +359,16 @@ class AdminManageAdminsController extends AdminController
             $this->respond(false, 'Cannot delete the last admin in the system.');
         }
 
-        AdminModel::deleteAdmin($targetId);
+        // The return value is checked rather than discarded. There is a SELECT above that
+        // proves the admin exists, but it is a separate statement: between it and this
+        // line another admin can delete the same row, and the delete then affects nothing.
+        // Ignoring the result meant the audit row and the notification below were written
+        // for a deletion that never took place — the log recording an event that did not
+        // happen, under the name of whoever pressed the button second.
+        if (!AdminModel::deleteAdmin($targetId)) {
+            $this->respond(false, 'Admin not found.');
+        }
+
         AdminModel::logAction($adminId, 'delete_admin', 'admin', $targetId, "Deleted: {$target['email']}. Reason: {$reason}");
         AdminModel::sendNotification(
             $adminId,

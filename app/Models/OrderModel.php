@@ -472,7 +472,28 @@ class OrderModel extends Model
             // here guarantees a clear order independent of the database's behaviour.
             $db->prepare("DELETE FROM order_items WHERE order_id=?")->execute([$orderId]);
             $db->prepare("DELETE FROM order_expiry_log WHERE order_id=?")->execute([$orderId]);
-            $db->prepare("DELETE FROM orders WHERE order_id=?")->execute([$orderId]);
+
+            // ⚠️ rowCount on the authoritative delete, and it is not belt-and-braces.
+            //
+            // This was first exempted with a nosemgrep, on the grounds that the SELECT
+            // forty lines above already proves the order exists inside this transaction.
+            // That reasoning was wrong: the SELECT carries no FOR UPDATE, and under
+            // InnoDB's default REPEATABLE READ a plain SELECT is a non-locking snapshot
+            // read. It establishes what the row looked like when the transaction began,
+            // not that it is still there to delete.
+            //
+            // So two sessions cancelling the same order both pass the status check, and
+            // the second deletes nothing and returns true — after the stock restore above
+            // has already run, which is how the same order's stock gets returned twice.
+            // The rule was right and the exemption was the mistake; the rollBack here
+            // undoes that restore along with everything else.
+            $stmt = $db->prepare("DELETE FROM orders WHERE order_id=?");
+            $stmt->execute([$orderId]);
+
+            if ($stmt->rowCount() === 0) {
+                $db->rollBack();
+                return false;
+            }
 
             $db->commit();
             return true;

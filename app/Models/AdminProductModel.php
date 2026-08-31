@@ -392,6 +392,18 @@ class AdminProductModel extends Model
             // nosemgrep: cairo-execute-then-return-true
             $db->prepare("UPDATE products SET {$setSql} WHERE id = ?")->execute($params);
 
+            // ⚠️ A second exemption, and it is not a duplicate of the one above. The rule
+            // matches a *range* ending at `return true`, so it produces more than one match
+            // in this function: one starting at the UPDATE, another starting here. A
+            // `nosemgrep` suppresses only the match that begins on its own line, so the
+            // exemption above left this one firing — the justification was written and the
+            // gate stayed red anyway, which is the worst of both.
+            //
+            // Same justification: the row's existence is checked with a SELECT above the
+            // transaction, and rowCount is deliberately not used — see the comment at the
+            // top of the transaction for why.
+            //
+            // nosemgrep: cairo-execute-then-return-true
             $db->prepare("DELETE FROM product_variants WHERE product_id = ?")->execute([$productId]);
             self::insertVariants($db, $productId, $variants);
             self::syncCategories($db, $productId, $categoryIds);

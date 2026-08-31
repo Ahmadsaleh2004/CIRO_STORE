@@ -417,10 +417,24 @@ jobs:
       # maintained. Pinning it to a digest would have turned the gate green while freezing it
       # on abandoned code — hiding the problem rather than solving it.
       #
-      # What replaces it here is literally what the pre-commit hooks do — the same command
-      # and the same rules. Which serves this file's principle stated above: "every tool that
-      # runs in the pre-commit hooks runs here too". And it is one dependency fewer: a
-      # version-pinned pip package instead of a whole third-party action.
+      # What replaces it here is what the pre-commit hooks do — the same command, the same
+      # rules and the same version. Which serves this file's principle stated above: "every
+      # tool that runs in the pre-commit hooks runs here too". And it is one dependency
+      # fewer: a version-pinned pip package instead of a whole third-party action.
+      #
+      # ⚠️ That sentence used to say "literally what the pre-commit hooks do — the same
+      # command and the same rules", and it was not true. The hook ran
+      # `semgrep --config auto` on `language: system`, so it resolved a *different* rule set
+      # through whichever semgrep sat on the developer's PATH — 1.174.0 against the 1.145.0
+      # pinned below. The two disagreed by more than rules: the newer one scanned 185 files
+      # where this scans 343, and reported zero findings where this reported nine. So the
+      # local gate went green, the push was made on the strength of it, and CI went red on
+      # code the developer had just been told was clean.
+      #
+      # A comment asserting an equivalence that does not hold is worse than no comment: it
+      # is the reason nobody thought to check. The hook now carries this exact command and
+      # pins this exact version, and the version is stated in .pre-commit-config.yaml —
+      # if it moves there, move it here in the same commit.
       #
       # `--error` is required: without it semgrep prints the findings and exits 0, so it
       # looks successful while reporting vulnerabilities.

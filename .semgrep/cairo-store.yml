@@ -129,10 +129,46 @@ rules:
       - metavariable-regex:
           metavariable: $SQL
           regex: (?i).*(DELETE|UPDATE)\s.*
-      # No exception for rowCount: the chained form is itself the smell.
-      # The fixed version separates `$stmt = prepare(); $stmt->execute();` so rowCount can
-      # be read off $stmt — and therefore does not match this pattern at all. That is, the
-      # separation is the fix and the chaining is the fault.
+      # ⚠️ There used to be no exception for rowCount here, on the theory that "the chained
+      # form is itself the smell": fixing a function means splitting `$stmt = prepare();
+      # $stmt->execute();` so rowCount can be read off $stmt, and the split no longer
+      # matches the pattern above.
+      #
+      # The theory holds for a function with **one** statement and breaks for every one
+      # with several. The pattern matches a *range* — any chained execute, then anything,
+      # then `return true` — so a transaction that clears its child rows before deleting
+      # the parent produces one match per cleanup statement, no matter how carefully the
+      # parent delete is checked.
+      #
+      # Measured, not assumed. After AdminModel::deleteAdmin and
+      # CategoryModel::deleteAndReassign were genuinely fixed, five findings remained — and
+      # one of them was **AdminProductModel::delete**, the very function this rule exists to
+      # protect, with its `if ($stmt->rowCount() === 0)` visible inside the reported range.
+      # A rule that flags its own reference fix is not strict, it is imprecise, and the cost
+      # is the one this repository already wrote down: "a gate that blocks every push is
+      # worked around within two days, which makes it worse than its absence".
+      #
+      # So the exception is scoped to the path between the statement and the return: if
+      # rowCount is consulted anywhere along it, the function is not returning true blindly,
+      # which is the whole claim in the message above. A function that checks one statement
+      # and not another is out of this rule's reach by design — catching that needs
+      # dataflow, and a rule that reports its own fixes catches nothing at all in practice.
+      #
+      # It is written as a range rather than `pattern-not-inside: function $F(...) {...}`
+      # because semgrep's PHP parser rejects that form outright:
+      #     [ERROR] Invalid pattern for PHP: Stdlib.Parsing.Parse_error
+      # A bare `$STMT->rowCount()` on its own line is rejected for the same reason — it is
+      # an expression where a statement is required. The `if` with `<... ...>` around the
+      # call is what parses, and the deep-expression operator is not decoration: it makes
+      # the exception match any shape of the check rather than one spelling. Proven on a
+      # fixture carrying all three that occur in practice — `=== 0`, `!$stmt->rowCount()`
+      # and `< 1` — against a deliberately unchecked delete that still fires.
+      - pattern-not: |
+          $DB->prepare($SQL)->execute(...);
+          ...
+          if (<... $STMT->rowCount() ...>) { ... }
+          ...
+          return true;
 
   # ════════════════════════════════════════════════════════════
   # 4. A POST fetch() outside the CSRF safety net

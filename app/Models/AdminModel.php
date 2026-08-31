@@ -422,7 +422,22 @@ class AdminModel extends Model
         $db = self::db();
         try {
             $db->beginTransaction();
-            $db->prepare("DELETE FROM admins WHERE id=?")->execute([$id]);
+
+            // rowCount, not a bare execute. `DELETE ... WHERE id=?` for an id that does not
+            // exist succeeds and affects zero rows, so returning true unconditionally told
+            // the caller an admin had been deleted when none had. That is the same fault
+            // AdminProductModel::delete carried, and it did not stop at a wrong return
+            // value there either: AdminManageAdminsController wrote an audit row reading
+            // "Deleted: <email>" and sent a notification for it. A log that records
+            // deletions which never happened is worse than no log, because it is believed.
+            $stmt = $db->prepare("DELETE FROM admins WHERE id=?");
+            $stmt->execute([$id]);
+
+            if ($stmt->rowCount() === 0) {
+                $db->rollBack();
+                return false;
+            }
+
             $db->commit();
             return true;
         } catch (\Exception $e) {

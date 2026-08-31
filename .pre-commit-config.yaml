@@ -72,19 +72,35 @@ repos:
       # `--error` is required: without it semgrep prints the findings and exits 0, so the
       # push goes through despite the vulnerabilities.
       #
-      # `--config auto` pulls a rule set suited to the project's languages from the registry
-      # — it needs a network, and it is the reason for the 141 seconds.
-      #
       # The dot at the end of the command means "the whole repository", and
       # `pass_filenames: false` stops pre-commit appending file names after it.
       #
       # False positives are documented with a `// nosemgrep: <rule>` **on the finding's own
       # line**, with the reason written above it — not in an ignore file far from the code,
       # so the exemption dies with the line it was justified for.
+      #
+      # ── Why this is `p/php` and a pinned version ─────────
+      #
+      # It used to be `entry: semgrep --config auto --error .` on `language: system`, and
+      # CI ran `--config p/php --config .semgrep/` on a pinned pip install. Two different
+      # rule sets and two different binaries, under a comment in ci.yml claiming they were
+      # "literally what the pre-commit hooks do — the same command and the same rules".
+      #
+      # It cost exactly what such a claim costs: the security gate went green here and red
+      # in CI, and the local pass said nothing about the push that followed. `--config auto`
+      # also resolves against the registry at run time, so its rule set changes underneath
+      # the project — the same commit can pass today and fail tomorrow with nothing in the
+      # repository having moved.
+      #
+      # `language: python` rather than `system` for the same reason: `system` runs whichever
+      # semgrep happens to be on PATH (1.174.0 on the machine this was written on, against
+      # 1.145.0 in CI), while pre-commit builds its own virtualenv from the pin below. The
+      # version is stated once, here, and ci.yml installs that same version.
       - id: semgrep
         name: semgrep — code vulnerabilities across the whole repository
-        entry: semgrep --config auto --error .
-        language: system
+        entry: semgrep --config p/php --config .semgrep/ --error .
+        language: python
+        additional_dependencies: ['semgrep==1.145.0']
         pass_filenames: false
         stages: [pre-push]
 
@@ -112,14 +128,22 @@ repos:
       # that blocks every push is worked around within two days, which makes it worse than
       # its absence. Close the finding first, or document it with a nosemgrep.
       #
-      # They can also be run by hand:
+      # ⚠️ `manual` only, no longer `pre-push`. The hook above now passes `--config
+      # .semgrep/` alongside `p/php`, so leaving this on pre-push scanned the local rules
+      # twice on every push — and semgrep's cost is startup, so the second pass was
+      # another ~112 seconds for a result already computed.
+      #
+      # It stays as its own hook because running the local rules **alone** is genuinely
+      # useful: no network, no registry, a couple of seconds of intent rather than a full
+      # scan. Run it by hand while working on a rule in .semgrep/:
       #     pre-commit run semgrep-local --hook-stage manual
       - id: semgrep-local
         name: semgrep — the project's local rules
         entry: semgrep --config .semgrep/ --error .
-        language: system
+        language: python
+        additional_dependencies: ['semgrep==1.145.0']
         pass_filenames: false
-        stages: [pre-push, manual]
+        stages: [manual]
 
       # ── Known vulnerabilities in the dependencies ────────
       #

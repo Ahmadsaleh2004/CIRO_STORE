@@ -6,7 +6,7 @@ An e-commerce store in PHP on a hand-written MVC structure with no framework —
 |---|---|
 | **PHP** | 8.2+ |
 | **Database** | MySQL 8 · <!--stats:tables-->32 tables<!--/stats:tables--> |
-| **Size** | <!--stats:php-->27,060 lines of PHP<!--/stats:php--> · <!--stats:js-->7,206 JS<!--/stats:js--> · <!--stats:css-->5,583 CSS<!--/stats:css--> |
+| **Size** | <!--stats:php-->27,132 lines of PHP<!--/stats:php--> · <!--stats:js-->7,206 JS<!--/stats:js--> · <!--stats:css-->5,583 CSS<!--/stats:css--> |
 | **Tests** | <!--stats:tests-->267 tests<!--/stats:tests--> (unit + integration + browser) |
 | **API documentation** | OpenAPI 3.0 — <!--stats:operations-->109 operations<!--/stats:operations-->, generated from the code |
 

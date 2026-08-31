@@ -180,8 +180,23 @@ class CategoryModel extends Model
             $db->prepare("DELETE FROM product_category_pivot WHERE category_id = ?")
                ->execute([$categoryId]);
 
-            $db->prepare("DELETE FROM categories WHERE id = ? AND is_core = 0")
-               ->execute([$categoryId]);
+            // rowCount, not a bare execute. Two conditions sit in this WHERE, and either
+            // one failing affects zero rows while the statement still succeeds: a category
+            // id that does not exist, or one that turned core between the isCore() check
+            // above and this line. Returning true regardless told AdminProductsController
+            // the category was gone — and it reports success to the admin, who then looks
+            // at a list still containing it.
+            //
+            // The products have already been reassigned at this point, so a rollBack is
+            // required rather than optional: without it the links would move to the
+            // destination while the category they were moved out of stayed behind.
+            $stmt = $db->prepare("DELETE FROM categories WHERE id = ? AND is_core = 0");
+            $stmt->execute([$categoryId]);
+
+            if ($stmt->rowCount() === 0) {
+                $db->rollBack();
+                return false;
+            }
 
             $db->commit();
             return true;
