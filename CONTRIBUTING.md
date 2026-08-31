@@ -1,144 +1,148 @@
-# المساهمة في Cairo Store
+# Contributing to Cairo Store
 
-## قبل أي شيء
+## Before anything else
 
 ```bash
 composer install
 pre-commit install --hook-type pre-commit --hook-type pre-push
 ```
 
-⚠️ السطر الثاني **لازم**. بلا `--hook-type pre-push` لا يوجد ملف `.git/hooks/pre-push` أصلاً، فلا يعمل semgrep إطلاقاً — والإعداد وحده لا يكفي.
+⚠️ The second line is **required**. Without `--hook-type pre-push` the `.git/hooks/pre-push` file does not exist at all, so semgrep never runs — the configuration alone is not enough.
 
-الأدوات تُنادى بأسمائها المجرّدة فيجب أن تكون على `PATH` الذي يراه git. بعد أي تثبيت جديد أغلق الطرفية وافتحها: العملية القائمة ترث `PATH` قديماً.
+The tools are called by their bare names, so they must be on the `PATH` that git sees. After any fresh installation, close the terminal and open it again: the running process inherited an older `PATH`.
 
 ---
 
-## سير العمل
+## Workflow
 
-فرع لكل وحدة عمل، ثم دمج بـ`--no-ff` كي يبقى تاريخ الوحدة مقروءاً:
+A branch per unit of work, then a merge with `--no-ff` so the unit's history stays readable:
 
 ```bash
 git checkout -b cleanup/some-topic
-# … العمل …
-composer check          # يجب أن يكون أخضر
+# … the work …
+composer check          # must be green
 git checkout master
 git merge --no-ff cleanup/some-topic
 ```
 
 ---
 
-## البوّابات
+## The gates
 
-`composer check` يشغّل الأربعة معاً، وكلها يجب أن تمرّ:
+`composer check` runs all six together, and every one of them must pass:
 
-| البوّابة | الحدّ |
+| Gate | The bar |
 |---|---|
-| `composer validate --strict` | صالح |
-| PHPStan | **صفر** خطأ عند المستوى 5 |
-| PSR-12 | **صفر** مخالفة |
-| PHPUnit | كل الاختبارات خضراء |
+| `composer validate --strict` | valid |
+| PHPStan | **zero** errors at level 6 |
+| PSR-12 | **zero** violations |
+| Escaping gate | `NEEDS` at zero in the views |
+| README numbers | they match what the code measures |
+| PHPUnit | every test green |
 
-### صفر يعني صفر
+### Zero means zero
 
-**لا `@phpstan-ignore` ولا خطّ أساس ولا استثناء في `phpcs.xml`** إلا بتعليق يشرح لماذا الفحص نفسه خاطئ هنا — لا لماذا يصعب إصلاح الكود.
+**No `@phpstan-ignore`, no baseline, and no exclusion in `phpcs.xml`** without a comment explaining why the check itself is wrong here — not why the code is hard to fix.
 
-المستودع اليوم يحمل استثناءين، وكلاهما مكتوب سببه:
+The repository carries two exclusions today, and both have their reason written down:
 
-- `Generic.Files.LineEndings` — نهايات الأسطر يملكها `.gitattributes`. مع `text=auto` يخزّن git الملف بـLF ويُخرجه CRLF على Windows، فالفحص يستحيل أن ينجح على النظامين معاً: يمرّ في CI ويفشل محلياً للملف نفسه بمحتوى واحد. فحصٌ نتيجته تتبع نظام التشغيل ليس فحصاً.
-- `PSR1.Files.SideEffects` لملفات التهيئة — `config.php` يعرّف ثوابت ويضبط الجلسة معاً، و`tests/bootstrap.php` يعرّف دوال ويبني قاعدة الاختبار. هذا تعريف ملف التهيئة لا مخالفة فيه.
+- `Generic.Files.LineEndings` — the line endings belong to `.gitattributes`. With `text=auto`, git stores the file as LF and checks it out as CRLF on Windows, so this check cannot possibly pass on both systems: it passes in CI and fails locally for the same file with the same content. A check whose result follows the operating system is not a check.
+- `Generic.Files.LineLength` — 153 lines pass 120 characters, and almost all of them are single `new OA\Property(...)` arguments inside an OpenAPI attribute block. Splitting those across lines makes the specification harder to read, not easier.
+- `PSR1.Files.SideEffects` for the bootstrap files — `config.php` defines constants and configures the session together, and `tests/bootstrap.php` defines functions and builds the test database. That is the definition of a bootstrap file, not a violation in it.
 
-### الخطّافات لا تُتخطّى
+### The hooks are not skipped
 
-**لا `--no-verify` أبداً.** خطّاف يفشل يُصلَح لا يُتجاوَز.
+**Never `--no-verify`.** A failing hook is repaired, not bypassed.
 
-إن أنذر gitleaks إنذاراً كاذباً، أضف استثناءً **بالقيمة الحرفية لا بالمسار** في `.gitleaks.toml` مع تعليق يشرح لماذا ليست سرّاً. استثناء المسار يُعمي الفحص عن أي سرّ حقيقي يُكتب في الملف لاحقاً.
+If gitleaks raises a false alarm, add an exception **by literal value rather than by path** in `.gitleaks.toml`, with a comment explaining why it is not a secret. A path exclusion blinds the scan to any real secret written into that file later.
 
-مثال قائم: متجه RFC 6238 في `tests/Unit/TotpTest.php` — سلسلة عالية العشوائية تبدو كمفتاح تماماً، لكنها منشورة في المعيار، وقيمتها في كونها معروفة للجميع.
-
----
-
-## الاختبارات
-
-اختبار لكل إصلاح عطل، **يفشل قبل الإصلاح وينجح بعده**. اختبار لا يفشل على الكود المعطوب لا يحرس شيئاً.
-
-- `tests/Unit/` — بلا قاعدة بيانات، بلا شبكة، أجزاء من الثانية.
-- `tests/Integration/` — قاعدة `<DB_DATABASE>_test` منفصلة، تُفرَّغ جداولها بين كل اختبار.
-
-اختبر **العقد لا التنفيذ**. مثال: `Totp` يُختبر مقابل متجهات RFC 6238 المرجعية لا مقابل نفسه — لأن تنفيذ TOTP معطوب يبقى متّسقاً مع ذاته تماماً (يولّد رمزاً ويقبله)، فاختبار «ولّد ثم تحقّق» يمرّ على كود لا يعمل مع Google Authenticator إطلاقاً.
+A standing example: the RFC 6238 test vector in `tests/Unit/TotpTest.php` — a high-entropy string that looks exactly like a key, but is published in the standard, and whose whole value lies in being known to everyone.
 
 ---
 
-## أسلوب الكود
+## Tests
 
-**التعليق يشرح «لماذا» لا «ماذا».** الكود يقول ما يفعل؛ التعليق يقول ما لا يُقرأ منه: القرار المرفوض، والفخّ الذي وقعنا فيه، والرقم الذي غيّر الرأي.
+A test for every bug fix, **failing before the fix and passing after it**. A test that does not fail against the broken code guards nothing.
+
+- `tests/Unit/` — no database, no network, fractions of a second.
+- `tests/Integration/` — a separate `<DB_DATABASE>_test` database, with its tables emptied between every test.
+- `tests/js/` — the browser files loaded into jsdom on the global scope, exactly as a `<script>` tag loads them.
+
+Test **the contract, not the implementation**. For example: `Totp` is tested against the reference vectors of RFC 6238 rather than against itself — because a broken TOTP implementation stays perfectly consistent with itself (it generates a code and accepts it), so a "generate then verify" test passes over code that does not work with Google Authenticator at all.
+
+---
+
+## Code style
+
+**A comment explains "why", not "what".** The code says what it does; the comment says what cannot be read from it: the option that was rejected, the trap we fell into, and the number that changed our minds.
 
 ```php
-// ✗ يزيد المتغيّر بواحد
+// ✗ increments the variable by one
 $i++;
 
-// ✓ التفريغ بـDELETE لا TRUNCATE. الفرق مقيس:
-//     TRUNCATE (28 جدولاً): 8.585 ث
-//     DELETE   (28 جدولاً): 0.256 ث   ← أسرع 33 مرّة
-// لأن TRUNCATE في InnoDB يُسقط مساحة الجدول ويعيد إنشاءها.
+// ✓ Emptying with DELETE rather than TRUNCATE. The difference is measured:
+//     TRUNCATE (28 tables): 8.585 s
+//     DELETE   (28 tables): 0.256 s   ← 33 times faster
+// because TRUNCATE in InnoDB drops the table's space and recreates it.
 ```
 
-**قِس، لا تقدّر.** أي ادّعاء عن الأداء أو التكرار يحمل رقمه.
+**Measure, do not estimate.** Any claim about performance or duplication carries its number.
 
-**عند إصلاح عطل، اذكره.** التعليق الذي يقول «كان هنا X وهذا ما كسره» يمنع عودته أكثر ممّا يمنعها الكود الصحيح وحده.
+**When you fix a fault, name it.** A comment saying "X used to be here and this is what it broke" prevents its return more than correct code does on its own.
 
-**العربية مقبولة في التعليقات** — معظم توثيق المشروع بها. الأسماء البرمجية بالإنجليزية.
+**English throughout** — comments, strings, commit bodies and documentation. The repository was written in Arabic and converted; a new Arabic comment reintroduces the split. The one exception is test *data* that exists to exercise UTF-8 handling: `MailQueueTest` round-trips an Arabic subject, `ValidatorTest` measures a four-character eight-byte name, and `MigratorTest` builds a migration with a multi-byte comment. In each of those the non-ASCII text is the subject under test, not prose.
 
 ---
 
-## إضافة مسار
+## Adding a route
 
-في `public/index.php`:
+In `public/index.php`:
 
 ```php
 $r->post('/admin/things/delete', [AdminThingsController::class, 'delete'])
     ->middleware('perm:can_manage_things');
 ```
 
-**أعلن الحارس في المسار.** يعمل قبل بناء الكنترولر، ويجعل السياسة مقروءة في جدول واحد بدل 24 كنترولراً.
+**Declare the guard on the route.** It runs before the controller is constructed, and it makes the policy readable in one table rather than across 24 controllers.
 
-الفحوص داخل أجسام الأفعال ما زالت قائمة، والازدواج مقصود ومؤقّت. و`tests/Integration/RouteGuardParityTest.php` يقارن الطرفين — أي انحراف يُفشل البناء.
+The checks inside the action bodies are still in place, and the duplication is deliberate and temporary. And `tests/Integration/RouteGuardParityTest.php` compares the two sides — any divergence fails the build.
 
-الحُرّاس المتاحة: `auth` · `admin` · `perm:<اسم_الصلاحية>`.
+The available guards: `auth` · `admin` · `perm:<permission_name>` · `throttle:<bucket>,<max>,<windowMinutes>`.
 
 ---
 
-## إضافة نقطة API
+## Adding an API endpoint
 
-وثّقها بسمة `#[OA\Get]` أو `#[OA\Post]` فوق الفعل، ثم:
+Document it with an `#[OA\Get]` or `#[OA\Post]` attribute above the action, then:
 
 ```bash
 composer docs:generate
 ```
 
-والتزم `public/docs/openapi.yaml` مع تغييرك. اختبار التغطية يفشل على أي مسار بلا توثيق، وCI يفشل إن كان الملف متخلّفاً عن السمات.
+and commit `public/docs/openapi.yaml` along with your change. The coverage test fails on any route without documentation, and CI fails if the file has fallen behind the attributes.
 
-استعمل المكوّنات المشتركة بدل وصف الأجسام بأسطر مضمّنة:
+Use the shared components rather than describing bodies inline:
 
 ```php
 new OA\Response(response: 403, ref: '#/components/responses/PermissionDenied')
 ```
 
-المخططات في `app/config/openapi/schemas.php`، والاستجابات في `responses.php`.
+The schemas live in `app/config/openapi/schemas.php`, and the responses in `responses.php`.
 
 ---
 
-## تغيير المخطّط
+## Changing the schema
 
 ```bash
-php scripts/migrate.php make add_something   # يُنشئ الملف بالرقم التالي
-# … اكتب قسمَي @UP و @DOWN …
-php scripts/migrate.php up --pretend         # راجع ما سيُنفَّذ
-composer migrate                             # طبّق
-composer test:schema                         # حدّث المخطّط المرجعي
+php scripts/migrate.php make add_something   # creates the file with the next number
+# … write the @UP and @DOWN sections …
+php scripts/migrate.php up --pretend         # review what will run
+composer migrate                             # apply
+composer test:schema                         # update the reference schema
 ```
 
-التزم ملف الهجرة و`tests/fixtures/schema.sql` **معاً**. بلا الثاني تفشل اختبارات التكامل على بنية قديمة — وهذا مقصود: الفشل الواضح خير من مرور اختبار على مخطّط لم يعد قائماً.
+Commit the migration file and `tests/fixtures/schema.sql` **together**. Without the second, the integration tests fail against an old structure — and that is deliberate: a plain failure is better than a test passing over a schema that no longer exists.
 
-**اكتب قسم `@DOWN` دائماً.** وإن كان التراجع مستحيلاً فاكتب سببه صراحةً بدل ترك القسم فارغاً — الفراغ يُقرأ سهواً، والسبب يُقرأ قراراً. مثال قائم: `0006_categories_dynamic` تحوّل عموداً من `ENUM` إلى `VARCHAR`، والعودة تعني فقدان كل تصنيف أضافه أدمن بعدها.
+**Always write the `@DOWN` section.** And if rolling back is impossible, write the reason plainly rather than leaving the section empty — emptiness reads as an oversight, a reason reads as a decision. A standing example: `0006_categories_dynamic` converts a column from `ENUM` to `VARCHAR`, and going back means losing every category an admin added afterwards.
 
-**لا تعدّل هجرة طُبِّقت.** المهاجر يخزّن بصمة كل ملف ويرفض التقدّم إن تغيّر — لأن التعديل يعني أن قاعدتك وقاعدة الإنتاج مختلفتان وكلتاهما تقول «مطبَّقة».
+**Do not edit a migration that has been applied.** The migrator stores each file's checksum and refuses to go forward if it changes — because an edit means your database and production's are different and both say "applied".

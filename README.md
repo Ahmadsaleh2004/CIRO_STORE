@@ -1,259 +1,254 @@
 # Cairo Store
 
-متجر إلكتروني بـPHP على بنية MVC مكتوبة يدوياً بلا إطار — <!--stats:controllers-->25 controllers<!--/stats:controllers--> و<!--stats:models-->17 models<!--/stats:models--> و<!--stats:routes-->109 routes<!--/stats:routes-->، مع لوحة تحكم كاملة بنظام رتب وصلاحيات.
+An e-commerce store in PHP on a hand-written MVC structure with no framework — <!--stats:controllers-->25 controllers<!--/stats:controllers-->, <!--stats:models-->17 models<!--/stats:models--> and <!--stats:routes-->109 routes<!--/stats:routes-->, with a full control panel built on ranks and permissions.
 
 | | |
 |---|---|
 | **PHP** | 8.2+ |
-| **قاعدة البيانات** | MySQL 8 · <!--stats:tables-->32 tables<!--/stats:tables--> |
-| **الحجم** | ‏<!--stats:php-->27,009 lines of PHP<!--/stats:php--> · <!--stats:js-->7,206 JS<!--/stats:js--> · <!--stats:css-->5,583 CSS<!--/stats:css--> |
-| **الاختبارات** | <!--stats:tests-->267 tests<!--/stats:tests--> (وحدة + تكامل) |
-| **توثيق الـAPI** | OpenAPI 3.0 — <!--stats:operations-->109 operations<!--/stats:operations-->، مولَّدة من الكود |
+| **Database** | MySQL 8 · <!--stats:tables-->32 tables<!--/stats:tables--> |
+| **Size** | <!--stats:php-->27,009 lines of PHP<!--/stats:php--> · <!--stats:js-->7,206 JS<!--/stats:js--> · <!--stats:css-->5,583 CSS<!--/stats:css--> |
+| **Tests** | <!--stats:tests-->267 tests<!--/stats:tests--> (unit + integration + browser) |
+| **API documentation** | OpenAPI 3.0 — <!--stats:operations-->109 operations<!--/stats:operations-->, generated from the code |
 
 ---
 
-## ما الذي يميّز هذا المستودع
+## What makes this repository worth a look
 
-**التعليقات تشرح «لماذا» لا «ماذا».** كل قرار غير بديهي مكتوب مع سببه في موضعه: لماذا `SameSite=Lax` لا `Strict`، لماذا `require` لا `require_once`، لماذا رمز `csrf_invalid` بدل نصّ الرسالة. القرارات مأخوذة بالقياس لا بالتقدير، والأرقام مكتوبة في التعليق نفسه.
+**The comments explain "why", not "what".** Every non-obvious decision is written down with its reason, in place: why `SameSite=Lax` rather than `Strict`, why `require` rather than `require_once`, why a `csrf_invalid` code rather than the message's text. The decisions were taken by measurement rather than estimation, and the numbers are in the comment itself.
 
-**الأمان مفروض آلياً لا بالانضباط الشخصي.** ‏gitleaks و semgrep و trivy تعمل محلياً في خطّافات git وفي CI معاً — فلا تتّكئ الحماية على أن يتذكّر أحدهم تشغيلها.
+**Every fix is a test that failed first.** The repository's faults are not described in prose — they are encoded as tests that fire against the broken version and fall silent against the fixed one. `AdminProductModel::delete` returned `true` for a product that never existed and wrote a lying audit row; `Router` treated a dot as a regex metacharacter, so `/handlers/notify_handler.php` was also reachable as `/handlers/notify_handlerXphp`; `env()` let an empty key bypass its default, so `APP_ENV=` opened debug mode on a production server. Each of those has a test beside it now.
+
+**Security is enforced automatically, not by personal discipline.** gitleaks, semgrep and trivy run locally in the git hooks and in CI alike — so the protection does not rest on somebody remembering to run it. And four of the local semgrep rules encode faults that occurred *in this project* and were never caught by a general rule.
 
 ---
 
-## التشغيل بـDocker (الأسرع)
+## Running it with Docker (the fastest way)
 
 ```bash
 docker compose up -d
 docker compose exec app php scripts/migrate.php baseline
 ```
 
-ثم افتح `http://localhost:8080`. لا XAMPP ولا مسار بعينه ولا قاعدة
-تُبنى يدوياً — المخطّط يُحمَّل تلقائياً عند أول تشغيل.
+Then open `http://localhost:8080`. No XAMPP, no particular path and no database built by hand — the schema is loaded automatically on the first run.
 
-للتحقّق من أن كل شيء حيّ:
+To check that everything is alive:
 
 ```bash
 curl http://localhost:8080/health
 ```
 
-> `/health` تنفّذ استعلاماً حقيقياً على القاعدة لا ردّاً ثابتاً — فحاوية تردّ 200 وقاعدتها ساقطة ليست سليمة. وهي ما يستعمله `HEALTHCHECK` في الصورة.
+> `/health` runs a real query against the database rather than returning a fixed reply — because a container answering 200 with its database down is not healthy. It is also what `HEALTHCHECK` uses inside the image.
 
 ---
 
-## التركيب المحلي (بلا Docker)
+## Local setup (without Docker)
 
 ```bash
 git clone <repo-url> && cd STORE
 composer install
-npm install && npm run build   # حزم CSS
-cp .env.example .env           # ثم املأ القيم
+npm install && npm run build   # the CSS bundles
+cp .env.example .env           # then fill in the values
 ```
 
-أنشئ قاعدة البيانات وحمّل مخطّطها:
+Create the database and load its schema:
 
 ```bash
 mysql -u root -e "CREATE DATABASE ciro_db CHARACTER SET utf8mb4"
 mysql -u root ciro_db < tests/fixtures/schema.sql
 ```
 
-ثم سجّل الهجرات الموجودة كمطبَّقة:
+Then record the existing migrations as applied:
 
 ```bash
 composer migrate:baseline
 ```
 
-> **لماذا `baseline` لا `migrate`؟** الهجرات القائمة لا تبني القاعدة من الصفر — كلها تعتمد على جداول (`users`, `products`, `orders`) لا وجود لها في أيٍّ منها. فالمخطّط الحقيقي وُلد قبلها ونما بها.
+> **Why `baseline` and not `migrate`?** The existing migrations do not build the database from nothing — every one of them depends on tables (`users`, `products`, `orders`) that none of them creates. The real schema was born before them and grew through them.
 >
-> `tests/fixtures/schema.sql` هو **خطّ الأساس** ويحوي أثرها فعلاً، فتنفيذها عليه يفشل بـ«الجدول موجود». و`baseline` تسجّلها كمطبَّقة بلا تنفيذها. أي هجرة تُضاف بعد ذلك تعمل بـ`composer migrate` عادةً.
+> `tests/fixtures/schema.sql` is **the baseline** and already carries their effect, so running them over it fails with "table already exists". And `baseline` records them as applied without running them. Any migration added after that runs with `composer migrate` as normal.
 
-### المتغيّرات اللازمة في `.env`
+### The variables `.env` needs
 
-| المفتاح | ملاحظة |
+| Key | Note |
 |---|---|
-| `APP_ENV` | `local` أو `production`. **الغياب يعني `production`** — أي تُخفى الأخطاء. الافتراضي الآمن مقصود. |
-| `APP_DEBUG` | `true` يعرض الأخطاء في المتصفح. اتركه `false` على أي خادم عام. |
-| `APP_URL` | جذر الموقع بلا شرطة في آخره. |
-| `DB_*` | مضيف القاعدة واسمها ومستخدمها وكلمة سرّها. |
-| `MAIL_*` | إعدادات SMTP لرسائل التحقّق واستعادة كلمة السر. |
-| `GOOGLE_*` | اختياري — دخول Google OAuth. |
-| `HCAPTCHA_*` | اختياري — كابتشا دخول لوحة التحكم. |
-| `SENTRY_DSN` | اختياري — رصد الأخطاء. غيابه يعطّل الرصد كلّه بلا أثر على التشغيل. |
-| `SENTRY_TRACES_SAMPLE_RATE` | نسبة تتبّع الأداء. **اتركها `0.0`** — أي الأخطاء وحدها. ارفعها إلى `0.1`–`0.2` مؤقّتاً عند تشخيص بطء، فـ`1.0` تستهلك الحصّة في ساعات. |
+| `APP_ENV` | `local` or `production`. **Absence means `production`** — that is, the errors are hidden. The safe default is deliberate. |
+| `APP_DEBUG` | `true` displays the errors in the browser. Leave it `false` on any public server. |
+| `APP_URL` | The site's root, with no trailing slash. |
+| `DB_*` | The database's host, name, user and password. |
+| `MAIL_*` | The SMTP settings for the verification and password recovery messages. |
+| `GOOGLE_*` | Optional — Google OAuth sign-in. |
+| `HCAPTCHA_*` | Optional — the captcha on the control panel's sign-in. |
+| `SENTRY_DSN` | Optional — error monitoring. Its absence disables monitoring entirely with no effect on running. |
+| `SENTRY_TRACES_SAMPLE_RATE` | The performance trace rate. **Leave it at `0.0`** — errors alone. Raise it to `0.1`–`0.2` temporarily when diagnosing slowness; `1.0` burns through the quota in hours. |
 
-#### رصد الأخطاء (Sentry)
+#### Error monitoring (Sentry)
 
-الحزمة مثبَّتة والتهيئة في `app/config/monitoring.php`، ويستدعيها
-`app/config/config.php` — أي أنها تعمل من كل نقطة دخول، بما فيها
-سكربتات `scripts/*.php` (الهجرات وعامل البريد). **لا تضع الـDSN في
-الكود**: قراءته من `.env` هي ما يمنع تسريبه في git، ويُبقي التعقيم في
-`before_send` ساري المفعول.
+The package is installed and the configuration lives in `app/config/monitoring.php`, called by `app/config/config.php` — which means it works from every entry point, the `scripts/*.php` scripts (the migrations and the mail worker) included. **Do not put the DSN in the code**: reading it from `.env` is what keeps it out of git, and keeps the scrubbing in `before_send` in force.
 
-⚠️ وأضف في `php.ini`:
+⚠️ And add to `php.ini`:
 
 ```ini
 zend.exception_ignore_args = 0
 ```
 
-بدونها تصل آثار الاستدعاء إلى Sentry بلا وسائط (`*args omitted*`)، فتعرف
-أين وقع الخطأ ولا تعرف بأي مدخلات. صورة Docker تضبطها تلقائياً؛ تركيب
-XAMPP المحلي يحتاجها يدوياً.
+Without it the stack traces reach Sentry with no arguments (`*args omitted*`), so you know where the error happened and not with what inputs. The Docker image sets it automatically; a local XAMPP installation needs it by hand.
 
-⚠️ **جذر الويب هو `public/` وحده.** وجّه الخادم إليه؛ فكل ما فوقه — `app/` و`.env` و`vendor/` — يجب ألّا يكون قابلاً للوصول عبر HTTP.
+⚠️ **The web root is `public/` alone.** Point the server at it; everything above it — `app/`, `.env`, `vendor/` — must not be reachable over HTTP.
 
 ---
 
-## التشغيل اليومي
+## Day-to-day
 
 ```bash
-composer check           # ← البوّابة الكاملة. شغّله قبل أي push
+composer check           # ← the full gate. Run it before any push
 ```
 
-`check` يشغّل `validate` و`analyse` و`lint` و`test` معاً. وكلٌّ منها متاح وحده:
+`check` runs `validate`, `analyse`, `lint`, the escaping gate, the README gate and `test` together. Each is available on its own:
 
-| الأمر | ماذا يفعل |
+| Command | What it does |
 |---|---|
-| `composer test` | كل اختبارات PHP (وحدة + تكامل) |
-| `composer test:unit` | الوحدة فقط — بلا قاعدة بيانات، أجزاء من الثانية |
-| `composer test:coverage` | مع تقرير تغطية HTML في `coverage/` |
-| `composer analyse` | PHPStan — أخطاء منطقية |
-| `composer lint` · `lint:fix` | PSR-12 — فحص وإصلاح آلي |
-| `composer smoke` | يطلب **كل راوت GET** ويتحقّق من سلامة الاستجابة |
-| `composer docs:generate` | يعيد توليد `openapi.yaml` من سمات الكود |
+| `composer test` | Every PHP test (unit + integration) |
+| `composer test:unit` | The unit tests alone — no database, fractions of a second |
+| `composer test:coverage` | With an HTML coverage report in `coverage/` |
+| `composer analyse` | PHPStan — logic errors |
+| `composer lint` · `lint:fix` | PSR-12 — checking and automatic fixing |
+| `composer smoke` | Requests **every GET route** and checks the response is sound |
+| `composer docs:generate` | Regenerates `openapi.yaml` from the code's attributes |
 
-### الواجهة
+### The front end
 
 ```bash
-npm run build      # يدمج 55 ملف CSS في حزمتين مضغوطتين مبصومتين
-npm test           # اختبارات JS (Vitest + jsdom)
+npm run build      # merges 55 CSS files into two minified, fingerprinted bundles
+npm test           # the JS tests (Vitest + jsdom)
 npm run lint       # ESLint + Stylelint
 npm run format     # Prettier
 ```
 
-### أدوات القياس
+### The measurement tools
 
-تُشغَّل عند الحاجة، لا في كل دورة:
+Run when needed, not on every cycle:
 
-| الأمر | ماذا يقيس |
+| Command | What it measures |
 |---|---|
-| `composer audit:code` | حالة الكود — أسطر وتكرار وأطول الدوال |
-| `composer audit:escaping` | يصنّف كل `<?= ?>` في الـviews حسب حاجتها للهروب |
-| `composer audit:imports` | يكشف الكلاسات المستعملة بلا استيراد وبلا تأهيل |
-| `composer images:webp` | يولّد نسخ WebP لصور المنتجات — **`<picture>` تعتمد عليها** |
-| `composer fix:blocked-orders` | إصلاح لمرّة واحدة: يلغي الطلبات المعلّقة لمستخدمين حُظروا قبل تفعيل الإلغاء التلقائي. لا يلزم تركيباً جديداً |
+| `composer audit:code` | The state of the code — lines, duplication and the longest functions |
+| `composer audit:escaping` | Classifies every `<?= ?>` in the views by its need for escaping |
+| `composer audit:imports` | Reveals classes used with neither an import nor a qualification |
+| `composer images:webp` | Generates the WebP copies of the product images — **`<picture>` depends on them** |
+| `composer fix:blocked-orders` | A one-time repair: it cancels the pending orders of users blocked before auto-cancel was switched on. A fresh installation does not need it |
 
-> `composer run-script --list` يعرض كل الأوامر مع وصف كلٍّ منها.
+> `composer run-script --list` shows every command with its description.
 
-### الاختبارات وقاعدة البيانات
+### The tests and the database
 
-اختبارات التكامل تبني قاعدة **منفصلة** اسمها `<DB_DATABASE>_test` وتفرّغ جداولها بين كل اختبار. الفصل ليس احتياطاً: تشغيلها على قاعدة التطوير يمحو بياناتها في أول تشغيل.
+The integration tests build a **separate** database named `<DB_DATABASE>_test` and empty its tables between every test. The separation is not a precaution: running them against the development database erases its data on the first run.
 
-تتخطّى نفسها بوضوح إن لم يستجب MySQL، فتبقى `composer test:unit` قابلة للتشغيل على أي جهاز.
+They skip themselves plainly if MySQL does not respond, so `composer test:unit` stays runnable on any machine.
 
-بعد أي تغيير في المخطّط:
+After any change to the schema:
 
 ```bash
-composer test:schema     # يعيد توليد tests/fixtures/schema.sql
+composer test:schema     # regenerates tests/fixtures/schema.sql
 ```
 
 ---
 
-## الهجرات
+## Migrations
 
 ```bash
-composer migrate:status              # ما طُبِّق وما هو معلّق
-composer migrate                     # تطبيق المعلّق
-php scripts/migrate.php up --pretend # ماذا سيُطبَّق، بلا تنفيذ
-php scripts/migrate.php down 1       # تراجع عن آخر هجرة
-php scripts/migrate.php make add_x   # ملف هجرة جديد بالرقم التالي
+composer migrate:status              # what is applied and what is pending
+composer migrate                     # apply what is pending
+php scripts/migrate.php up --pretend # what would be applied, without running it
+php scripts/migrate.php down 1       # roll back the last migration
+php scripts/migrate.php make add_x   # a new migration file with the next number
 ```
 
-**الترتيب في اسم الملف لا في تعليق.** كان مكتوباً نصّاً («يعتمد على `admin_auth.sql`») ولا شيء يفرضه، فترتيب التنفيذ يتبع ترتيب نظام الملفات — وهو يختلف بين جهاز وآخر.
+**The order lives in the file's name, not in a comment.** It used to be written as prose ("depends on `admin_auth.sql`") with nothing enforcing it, so the execution order followed the file system's ordering — which differs from machine to machine.
 
-**كل ملف يحمل قسمَي `-- @UP` و`-- @DOWN`.** التعليق اختير صيغةً كي يبقى الملف SQL صالحاً يمكن لصقه في أي عميل كما هو.
+**Every file carries an `-- @UP` and an `-- @DOWN` section.** The comment form was chosen so the file stays valid SQL that can be pasted into any client as it is.
 
-**البصمة تكشف الانحراف.** تعديل ملف طُبِّق سلفاً عطلٌ صامت من أسوأ نوع: قاعدة المطوّر تحمل النسخة القديمة وقاعدة الإنتاج الجديدة، والاثنتان تقولان «مطبَّقة». المهاجر يرفض التقدّم حتى يُحلّ الانحراف. (نهايات الأسطر لا تُحسب انحرافاً — راجع `.gitattributes`.)
+**The checksum reveals drift.** Editing a file that has already been applied is a silent fault of the worst kind: the developer's database holds the old version and production's holds the new, and both say "applied". The migrator refuses to go forward until the drift is resolved. (Line endings do not count as drift — see `.gitattributes`.)
 
 ---
 
-## البنية
+## Structure
 
 ```
 app/
-  Core/         الراوتر · الحُرّاس · قاعدة البيانات · الكلاسات الأب · TOTP · صفحات الخطأ
-  Controllers/  منطق الطلب وحده
-  Models/       استعلامات static عبر PDO
-  Services/     منطق أعمال لا يخصّ مودلاً بعينه
-  helpers/      دوال عامة تُحمَّل عبر composer autoload.files
-  views/        قوالب PHP — ثلاثة layouts: store · admin · bare
-  config/       الثوابت · قارئ .env · سمات OpenAPI
-public/         جذر الويب — index.php وجدول المسارات · css · js · docs
-tests/          Unit · Integration · Support · fixtures
-scripts/        أدوات تدقيق وصيانة تعمل على الطرفية
-database/       هجرات مرقّمة بقسمَي @UP و @DOWN
+  Core/         the router · the guards · the database · the base classes · TOTP · the error pages
+  Controllers/  request logic and nothing else
+  Models/       static queries through PDO
+  Services/     business logic belonging to no single model
+  helpers/      global functions loaded through composer autoload.files
+  views/        PHP templates — three layouts: store · admin · bare
+  config/       the constants · the .env reader · the OpenAPI attributes
+public/         the web root — index.php and the route table · css · js · docs
+tests/          Unit · Integration · js · Support · fixtures
+scripts/        audit and maintenance tools that run on the terminal
+database/       numbered migrations with @UP and @DOWN sections
 ```
 
-### كيف يمرّ الطلب
+### How a request passes through
 
 ```
 public/index.php → Router::dispatch()
-                     ├── مطابقة المسار (المسار أولاً، ثم الطريقة)
-                     ├── حُرّاس المسار  ← قبل بناء الكنترولر
+                     ├── path matching (the path first, then the method)
+                     ├── the route's guards  ← before the controller is constructed
                      ├── Controller::action()
-                     │     └── Model (PDO مُحضَّر) → View
+                     │     └── Model (a prepared PDO statement) → View
                      └── ErrorPage: 404 · 405 · 403 · 503
 ```
 
 ---
 
-## الأمان
+## Security
 
-| الطبقة | التفصيل |
+| Layer | The detail |
 |---|---|
-| **SQL** | استعلامات مُحضَّرة حصراً · `ATTR_EMULATE_PREPARES = false` |
-| **CSRF** | توكن 32 بايتاً · مقارنة `hash_equals` · رمز `csrf_invalid` صريح يقرأه العميل ويعيد المحاولة مرّة واحدة · التوكن يدور عند كل تغيّر صلاحية |
-| **الجلسات** | `use_strict_mode` · `HttpOnly` · `SameSite=Lax` · `secure` مشروط بالبروتوكول · تجديد المعرّف عند الدخول · جلسة الأدمن منفصلة الاسم |
-| **كلمات السر** | bcrypt بتكلفة 12 |
-| **الصلاحيات** | رتب A > B > C > D — والمقارنة **أكبر تماماً**، فلا يدير أدمنٌ رتبتَه |
-| **‏2FA** | TOTP متوافق مع RFC 6238 (مختبَر بمتجهات المعيار المرجعية) |
-| **الترويسات** | `nosniff` · `X-Frame-Options` · `Referrer-Policy` · `Permissions-Policy` · HSTS مشروط بـHTTPS · CSP **مفروضة بالكامل** بلا `unsafe-inline` |
+| **SQL** | Prepared statements exclusively · `ATTR_EMULATE_PREPARES = false` |
+| **CSRF** | A 32-byte token · a `hash_equals` comparison · an explicit `csrf_invalid` code the client reads and retries once on · the token rotates on every change of privilege |
+| **Sessions** | `use_strict_mode` · `HttpOnly` · `SameSite=Lax` · `secure` conditional on the protocol · id regeneration on sign-in · the admin session under a separate name |
+| **Passwords** | bcrypt at cost 12 |
+| **Permissions** | Ranks A > B > C > D — and the comparison is **strictly greater**, so no admin manages their own rank |
+| **2FA** | TOTP conforming to RFC 6238 (tested against the standard's reference vectors) |
+| **Headers** | `nosniff` · `X-Frame-Options` · `Referrer-Policy` · `Permissions-Policy` · HSTS conditional on HTTPS · a CSP **fully enforced** with no `unsafe-inline` |
 
-### الفحص الآلي
+### The automated scanning
 
 ```bash
 pre-commit install --hook-type pre-commit --hook-type pre-push
 ```
 
-- **gitleaks** عند كل `commit` — أسرار في التغيير المُدرَج
-- **semgrep** عند `push` — قواعد عامة + قواعد محلية تُشفّر أعطال هذا المشروع تحديداً
-- **trivy** حين يتغيّر `composer.lock` — ثغرات الاعتماديات
+- **gitleaks** on every `commit` — secrets in the staged change
+- **semgrep** on `push` — the general rules plus local rules encoding this project's own faults specifically
+- **trivy** when `composer.lock` changes — dependency vulnerabilities
 
-الثلاثة تعمل في CI أيضاً. الخطّاف يحمي من ينصّبه، وCI يحمي المستودع.
+All three run in CI as well. The hook protects whoever installs it; CI protects the repository.
 
-**CSP مفروضة بالكامل** — بلا `unsafe-inline` في `script-src` ولا `style-src`. كلفة ذلك كانت إخراج 14 كتلة `<script>` مضمّنة و33 معالج `onclick` و234 سمة `style` من الـviews. و`tests/Unit/SecurityHeadersTest.php` يمنع عودتها.
+**The CSP is fully enforced** — with no `unsafe-inline` in `script-src` and none in `style-src`. The price of that was moving 14 embedded `<script>` blocks, 33 `onclick` handlers and 234 `style` attributes out of the views. And `tests/Unit/SecurityHeadersTest.php` prevents their return.
 
-وكل مكتبة خارجية مثبَّتة النسخة ومبصومة بـ`integrity` — راجع `VENDOR_ASSETS` في `app/helpers/assets_helper.php`.
-
----
-
-## توثيق الـAPI
-
-المواصفة **مولَّدة من سمات PHP** في الكنترولرز — لا تُحرَّر يدوياً.
-
-- الصفحة التفاعلية: `<APP_URL>/docs`
-- الملف: [`public/docs/openapi.yaml`](public/docs/openapi.yaml)
-
-بعد تعديل أي سمة `#[OA\...]` شغّل `composer docs:generate` والتزم الناتج. وإن نسيت، يُفشل CI البناء ويقول لك ذلك.
-
-**بوّابتان تحرسان المواصفة:**
-1. اختبار يقارن جدول المسارات بالمواصفة في الاتجاهين — لا راوت بلا توثيق، ولا عملية موثّقة بلا راوت.
-2. `spectral` يفحص صحّة المواصفة في CI.
+And every external library is version-pinned and carries an `integrity` digest — see `VENDOR_ASSETS` in `app/helpers/assets_helper.php`.
 
 ---
 
-## المساهمة
+## API documentation
 
-اقرأ [CONTRIBUTING.md](CONTRIBUTING.md). باختصار: فرع لكل عمل، `composer check` أخضر قبل الـpush، وتعليق يشرح **لماذا** مع كل قرار غير بديهي.
+The specification is **generated from PHP attributes** in the controllers — it is never hand-edited.
 
-## الرخصة
+- The interactive page: `<APP_URL>/docs`
+- The file: [`public/docs/openapi.yaml`](public/docs/openapi.yaml)
+
+After editing any `#[OA\...]` attribute, run `composer docs:generate` and commit the result. And if you forget, CI fails the build and tells you so.
+
+**Two gates guard the specification:**
+1. A test comparing the route table with the specification in both directions — no route without documentation, and no documented operation without a route.
+2. `spectral` checks the specification's validity in CI.
+
+---
+
+## Contributing
+
+Read [CONTRIBUTING.md](CONTRIBUTING.md). In short: a branch per piece of work, `composer check` green before the push, and a comment explaining **why** beside every non-obvious decision.
+
+## Licence
 
 [MIT](LICENSE)
