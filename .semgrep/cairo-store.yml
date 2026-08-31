@@ -44,7 +44,7 @@ rules:
       ErrorPage::notFound() for pages, and $this->respond(false, ...) for JSON endpoints.
     paths:
       include:
-        - "app/Controllers/*.php"
+        - "/app/Controllers/*.php"
     patterns:
       - pattern-either:
           - pattern: die("...")
@@ -70,7 +70,7 @@ rules:
       BackupModel::getBackupPath() before deleting.
     paths:
       include:
-        - "app/**/*.php"
+        - "/app/**/*.php"
     patterns:
       - pattern: unlink($PATH)
       - pattern-not: unlink(publicFileToDelete(...))
@@ -118,7 +118,7 @@ rules:
       found" from "a technical failure".
     paths:
       include:
-        - "app/Models/*.php"
+        - "/app/Models/*.php"
     patterns:
       # The "=~/…/" form inside a pattern is not valid in semgrep — filtering on a
       # metavariable's value is done with a separate metavariable-regex.
@@ -160,7 +160,7 @@ rules:
       does not verify CSRF at all.
     paths:
       include:
-        - "public/js/**/*.js"
+        - "/public/js/**/*.js"
     patterns:
       - pattern-either:
           # The quoting is required: the pattern contains ": " so YAML reads it as a map
@@ -198,7 +198,7 @@ rules:
       rewording — and it did break three endpoints in this project.
     paths:
       include:
-        - "public/js/**/*.js"
+        - "/public/js/**/*.js"
     patterns:
       - pattern-either:
           - pattern: $D.message.startsWith("Invalid CSRF ...")
@@ -224,7 +224,7 @@ rules:
       document the reason with a nosemgrep if it is a pure read on GET.
     paths:
       include:
-        - "app/Controllers/*.php"
+        - "/app/Controllers/*.php"
     # The pattern matches **the whole function**, not the header line alone. The first
     # attempt used pattern-inside for the function with pattern-not-inside for the guard,
     # and semgrep did not bind $F across the two conditions, producing 11 results most of
