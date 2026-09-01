@@ -130,4 +130,4 @@ CMD ["apache2-foreground"]
 # ⚠️ Shell form deliberately, not exec form: ${PORT:-80} has to be expanded by a shell at
 # run time, and the exec form would look for a file literally named "${PORT:-80}".
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
-  CMD curl -fsS "http://127.0.0.1:${PORT:-80}/health" || exit 1
+  CMD curl -fsS "http://127.0.0.1:${PORT:-80}/" || exit 1
