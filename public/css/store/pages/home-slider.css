@@ -162,9 +162,10 @@
     opacity: 1;
 }
 
-/* ── Mobile response: a column rather than a row on small screens ── */
+/* ── Mobile response: no hover-driven growth on a touch screen ──
+   The height that used to be here (320px) moved to the block further
+   down that owns the phone sizing, so one place decides it. */
 @media (max-width: 767px) {
-    .slide-items-row { height: 320px; }
     .slide-items-row.compact-count:hover > .slide-item,
     .slide-items-row.compact-count:hover > .slide-item-link { flex-grow: 1; } /* No enlargement on touch */
     .slide-items-row.compact-count > .slide-item:hover,
@@ -173,53 +174,59 @@
     }
 }
 
-/* ── Phone: fewer images per slide, and a shorter row ──────────
-   Height alone could not fix this. A slide holds up to six images side
-   by side, and at 375px that measured 61px wide by 320px tall each — a
-   ratio of about 1:5, a column of slivers. At 320px it was 52px. The
-   item COUNT has to come down before any height is worth choosing.
+/* ── Phone and tablet: one image per slide, and two per screen ──
+   A slide holds every image its slider row carries — up to six. At
+   375px that measured 61px wide against 320 tall, a column of slivers.
+   Three of them measured 124px: better, and still not a photograph of a
+   product. A phone has room for exactly one.
+
+   So js/store/slider-chunk.js re-deals them — one image per slide below
+   768px, three between 768 and 991 — and a slider of six becomes six
+   slides. Nothing is hidden from a phone visitor; it is one swipe away.
 
    ⚠️ `:not([data-chunked])` — the hiding here is only for the moment
-   BEFORE js/store/slider-chunk.js runs. That file re-deals the images
-   into more slides (a slide of five becomes 3 + 2) and marks each row
-   it built with data-chunked, after which every child shows: nothing
-   is hidden from a phone visitor, it is spread over another swipe.
+   BEFORE that file runs. It marks each row it builds with data-chunked,
+   after which every child in it shows.
 
-   The hiding still earns its place, though. Without it the first paint
-   would show six slivers and then jump to three the moment the deferred
-   bundle executes — a shift in the page's largest contentful element.
-   With it the count is right from the first frame and the script only
-   rehouses what was already invisible.
+   The hiding still earns its place: without it the first paint would
+   show six slivers and then jump to one the moment the deferred bundle
+   executes — a shift in the page's largest contentful element. With it
+   the count is right from the first frame and the script only rehouses
+   what was already invisible.
 
-   The counts here and the ones in slider-chunk.js must agree: three per
-   slide on a phone, two at the 320px floor.
-
-   These blocks come after the two above deliberately: they are the
-   later rule at equal specificity, which is how they beat the 320px
-   height and the 1.1rem title. */
-@media (max-width: 767px) {
-    .slide-items-row { height: 240px; }
+   The counts here and in slider-chunk.js must agree: three below 992,
+   one below 768. Change them together. */
+@media (max-width: 991px) {
+    .slide-items-row { height: 360px; }
     .slide-items-row:not([data-chunked]) > *:nth-child(n+4) { display: none; }
 }
 
-@media (max-width: 575px) {
-    .slide-items-row { height: 200px; gap: 1px; }
+@media (max-width: 767px) {
+    /* One image across the full width, so the row can afford to be
+       taller than it was when it held slivers: 375 x 260 is a hero,
+       375 x 320 (the old value) crowds the page below it. */
+    .slide-items-row { height: 260px; }
+    .slide-items-row:not([data-chunked]) > *:nth-child(n+2) { display: none; }
+}
 
-    /* compact-count hides its captions until :hover, and a phone has no
-       hover — measured opacity was 0 on every slide on every phone, so
-       these captions have never once been readable there. Same selector
-       as the rule above, later in the file, so it wins on order. */
-    .slide-items-row.compact-count .slide-item .slide-item-caption,
-    .slide-items-row.compact-count .slide-item-link .slide-item-caption {
-        opacity: 1;
-    }
-    .slide-item-title { font-size: 0.85rem; }
-    .slide-item-desc { display: none; }
+@media (max-width: 575px) {
+    .slide-items-row { height: 240px; }
+
+    /* ⚠️ The description is NOT hidden here, and hiding it was a
+       mistake worth naming: an earlier pass wrote `display: none` on it
+       because three images to a slide left 124px of width, in which two
+       clamped lines of text were unreadable. The answer was never to
+       delete the sentence the admin wrote for that slide — it was to
+       give the image the whole screen, which is what happens now. The
+       two-line clamp above still bounds it. */
+    .slide-item-title { font-size: 1.05rem; }
+    .slide-item-desc { font-size: 0.9rem; }
 }
 
 @media (max-width: 320px) {
-    .slide-items-row { height: 170px; }
-    .slide-items-row:not([data-chunked]) > *:nth-child(n+3) { display: none; }
+    .slide-items-row { height: 200px; }
+    .slide-item-title { font-size: 0.95rem; }
+    .slide-item-desc { font-size: 0.82rem; }
 }
 
 /* ═══════════════════════════════════════════════════════════════════

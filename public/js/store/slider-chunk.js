@@ -11,9 +11,10 @@
 // trade: it made the remaining images legible by making the others unreachable — a
 // visitor on a phone simply never saw them, and nothing said so.
 //
-// This deals them again instead. On a phone each original slide becomes as many slides
-// as it needs at three images each: a slide of five turns into 3 + 2, a slide of six
-// into 3 + 3. Nothing is hidden and nothing is lost; the carousel is one swipe longer.
+// This deals them again instead. On a phone each original slide becomes one slide per
+// image: a slider of six turns into six slides, each image at the full width of the
+// screen. On a tablet it is three to a slide. Nothing is hidden and nothing is lost —
+// the carousel is simply longer.
 //
 // ⚠️ The grouping is per original slide, never across them. Each slide is one row in
 // home_slider_items — an editorial grouping somebody made in the control panel — and
@@ -36,14 +37,19 @@
     const INNER_ID = 'slider-inner';
     const CAROUSEL_ID = 'mainSlider';
 
-    // Three per slide on a phone, two at the 320px floor — where three would be ~100px
-    // each, the very complaint this file exists to answer.
+    // ONE image per slide on a phone. Three of them at 375px came out 124px wide each —
+    // better than the 61px they started at, and still not a photograph of a product. A
+    // phone screen has room for exactly one, so a slider of six becomes six slides and
+    // every image gets the full width.
     //
-    // ⚠️ These two numbers are duplicated in store/pages/home-slider.css, which hides the
-    // same overflow before this file runs. They have to agree: if the CSS shows three and
-    // this deals two, the third image blinks in and then moves. Change them together.
+    // Three on a tablet, where six would be ~128px each — the same complaint one screen
+    // size up. Above 991px the server's own grouping is right and is left alone.
+    //
+    // ⚠️ These counts are duplicated in store/pages/home-slider.css, which hides the same
+    // overflow before this file runs. They have to agree: if the CSS shows three and this
+    // deals one, two images blink in and then move. Change them together.
     const PHONE_MAX = 767;
-    const NARROW_MAX = 320;
+    const TABLET_MAX = 991;
 
     /** The original grouping, captured once: an array of arrays of item elements. */
     let original = null;
@@ -52,8 +58,8 @@
     let resizeTimer = null;
 
     function chunkSizeFor(width) {
-        if (width > PHONE_MAX) return 0;
-        return width <= NARROW_MAX ? 2 : 3;
+        if (width > TABLET_MAX) return 0; // the server's own grouping
+        return width > PHONE_MAX ? 3 : 1;
     }
 
     /** count-N drives flex and hover behaviour in home-slider.css; 5+ is compact-count. */
@@ -78,6 +84,36 @@
             out.push(items.slice(i, i + size));
         }
         return out;
+    }
+
+    /**
+     * Starts the load of the visible slide's image and the one after it.
+     *
+     * ⚠️ This is not an optimisation; without it the redesign does not work at all.
+     *
+     * The images carry loading="lazy" — correct when six of them shared one slide, since
+     * all six were on screen at once and the browser fetched them immediately. Dealing
+     * them one to a slide moves five of them into carousel items that Bootstrap keeps at
+     * display:none, and a lazy image inside a display:none subtree is never "near the
+     * viewport": the browser does not fetch it until the slide is shown, which is the
+     * moment the visitor is already looking at an empty rectangle.
+     *
+     * Measured on the local site after the re-deal: the first image loaded and the other
+     * six reported naturalWidth 0 — six blank slides, which is very probably what "there
+     * are six but only four appear" was describing.
+     *
+     * Current plus next rather than all of them: the slider's photographs are heavy
+     * enough (one is 3.3 MB) that fetching seven at once on a phone would trade a blank
+     * slide for a stalled page. One slide of lead time is what a swipe needs.
+     */
+    function prime(inner, index) {
+        for (const i of [index, index + 1]) {
+            const slide = inner.children[i];
+            if (!slide) continue;
+            slide.querySelectorAll('img[loading="lazy"]').forEach(function (img) {
+                img.loading = 'eager'; // changing this starts the fetch immediately
+            });
+        }
     }
 
     function build(inner, size) {
@@ -119,7 +155,14 @@
 
         if (carousel && window.bootstrap && window.bootstrap.Carousel) {
             new window.bootstrap.Carousel(carousel);
+            // Bootstrap fires this BEFORE the transition, so the incoming image gets the
+            // length of the slide animation as a head start.
+            carousel.addEventListener('slide.bs.carousel', function (event) {
+                prime(inner, event.to);
+            });
         }
+
+        prime(inner, 0);
     }
 
     function sync() {
