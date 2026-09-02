@@ -8,21 +8,44 @@
     animation: fadeSlideIn var(--dur-slow) var(--ease-decelerate) both;
 }
 
-@media (max-width: 575px) {
-    #wishlist-container .col-lg-4,
-    #wishlist-container .col-md-6,
-    #wishlist-container .col-sm-6 {
-        flex: 0 0 100% !important;
-        max-width: 100% !important;
-    }
-}
+/* Two cards per row on a phone, matching the products grid. The card
+   markup is built by js/features/wishlist.js and carries the same
+   col-lg-4, so the same hook works and the JavaScript is untouched.
 
-/* Moved here from style.css — enforce a single column on tiny phones. */
-@media (max-width: 320px) {
-    #wishlist-container .col-lg-4,
-    #wishlist-container .col-md-6,
-    #wishlist-container .col-sm-6 {
-        flex: 0 0 100% !important;
-        max-width: 100% !important;
+   The two blocks replaced here (575 and 320) both said 100% and both
+   said !important — the second was a copy of a rule that was already
+   forcing one card per row, kept for "tiny phones" where the first
+   already applied. */
+@media (max-width: 575px) {
+    #wishlist-container {
+        --bs-gutter-x: 0.75rem;
+    }
+
+    #wishlist-container .col-lg-4 {
+        flex: 0 0 50%;
+        max-width: 50%;
+    }
+
+    /* Same stepper arithmetic as the products grid — see the comment in
+       store/pages/products.css. */
+    #wishlist-container .quantity-box .btn {
+        width: 34px !important;
+        height: 34px !important;
+        min-height: 34px;
+        font-size: 1rem !important;
+    }
+    #wishlist-container .quantity-input {
+        width: 40px !important;
+        height: 34px !important;
+        padding: 0 2px !important;
+        font-size: 0.9rem !important;
+    }
+
+    #wishlist-container .card-body .btn {
+        padding: 6px 4px;
+        font-size: 0.8rem;
+    }
+    #wishlist-container .new-price.fs-5 {
+        font-size: 1rem !important;
     }
 }

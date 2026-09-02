@@ -152,3 +152,47 @@
         max-width: 100%;
     }
 }
+
+
+/* --- Phone: two cards per row, so the card itself has to halve ------
+   These are shared by the products grid, the wishlist and the home
+   cards, which is why they are here rather than written three times.
+
+   .product-image is 250px !important above. On a 175px-wide card —
+   half of a 375px viewport — that is a portrait tile, and one card
+   fills the screen from top to bottom. The !important here is not a
+   preference: the base rule has one, so nothing without one reaches
+   it. --- */
+@media (max-width: 575px) {
+    .product-image {
+        height: 140px !important;
+    }
+
+    .product-card .card-body {
+        padding: 10px 8px 12px;
+    }
+    .product-card .card-body h5,
+    .product-card .card-body h6 {
+        margin-bottom: 6px;
+        font-size: 12.5px;
+    }
+
+    /* 40x40 from components/favorite-button.css covers a fifth of a
+       half-width card's image. 32px still clears WCAG 2.2's 24px. */
+    .favorite-btn {
+        top: 5px;
+        right: 5px;
+        width: 32px;
+        height: 32px;
+    }
+
+    /* components/skeleton.css ties the placeholder to --card-height,
+       260px at this width, while the real card now measures about
+       300px — the swap was visibly jumping. */
+    .skeleton-card {
+        height: 300px;
+    }
+    .skeleton-img {
+        height: 46%;
+    }
+}

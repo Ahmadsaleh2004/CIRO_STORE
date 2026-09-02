@@ -199,40 +199,62 @@
 /* ==================================================
    Responsive — products grid
    ==================================================
-   Moved here from style.css. The order is the original cascade
-   order and is load-bearing: on a 375px screen all four blocks
-   match and the last one wins.
+   This replaced four stacked blocks — 767 / 575 / 576 / 320 — that all
+   matched on a phone and cancelled one another out. The 767 block said
+   50%, and the three below it said 100%, so the last one won and a
+   phone got ONE card per row at every width. The comment above them
+   described the mechanism accurately and nobody noticed that the
+   mechanism was defeating the only rule anybody wanted.
+
+   One query is enough now. From 576px up Bootstrap's own col-md-6 and
+   col-lg-4 already give two and three across; below 576 the column
+   carries no width class at all and `.row > *` makes it full width —
+   that single case is all there is to override.
+
+   .col-lg-4 alone is the hook. Every card column in this grid carries
+   it, including the skeletons that js/features/products-catalog.js
+   builds — so no JavaScript changes and public/js/dist stays untouched.
    ================================================== */
-@media (max-width: 767px) {
-    /* 2 columns on tablet portrait */
+@media (max-width: 575px) {
+    /* Half the default gutter: 24px of a 375px viewport was going to
+       padding that two columns cannot spare. */
+    #products-container {
+        --bs-gutter-x: 0.75rem;
+    }
+
     #products-container .col-lg-4 {
         flex: 0 0 50%;
         max-width: 50%;
     }
-}
 
-@media (max-width: 575px) {
-    #products-container .col-lg-4,
-    #products-container .col-md-6 {
-        flex: 0 0 100%;
-        max-width: 100%;
+    /* The stepper is what decides whether two cards fit at all.
+       components/quantity-box.css raises it to 44+56+44 = 144px below
+       767px for touch, and a half column at 320px leaves 132px of card
+       body. Those declarations are !important, so these have to be, and
+       (1,2,0) then beats (0,2,0). 34px still clears WCAG 2.2's 24px
+       minimum target size. New width: 34+40+34 = 108px. */
+    #products-container .quantity-box .btn {
+        width: 34px !important;
+        height: 34px !important;
+        min-height: 34px;
+        font-size: 1rem !important;
     }
-}
-
-@media (max-width: 576px) {
-    #products-container .col-lg-4,
-    #products-container .col-md-6,
-    #products-container .col-sm-6 {
-        flex: 0 0 100% !important;
-        max-width: 100% !important;
+    #products-container .quantity-input {
+        width: 40px !important;
+        height: 34px !important;
+        padding: 0 2px !important;
+        font-size: 0.9rem !important;
     }
-}
 
-@media (max-width: 320px) {
-    #products-container .col-lg-4,
-    #products-container .col-md-6,
-    #products-container .col-sm-6 {
-        flex: 0 0 100% !important;
-        max-width: 100% !important;
+    /* "🛒 Add to Cart" at 1rem takes three lines in 132px. */
+    #products-container .card-body .btn {
+        padding: 6px 4px;
+        font-size: 0.8rem;
+    }
+    #products-container .new-price.fs-5 {
+        font-size: 1rem !important;
+    }
+    #products-container .old-price {
+        font-size: 0.75rem;
     }
 }
