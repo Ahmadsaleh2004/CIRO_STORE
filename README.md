@@ -16,7 +16,7 @@ An e-commerce store in PHP on a hand-written MVC structure with no framework —
 | **Live** | [cairo-store.onrender.com](https://cairo-store.onrender.com) · [`/health`](https://cairo-store.onrender.com/health) answers only if the database really responds |
 | **PHP** | 8.2+ |
 | **Database** | MySQL 8 · <!--stats:tables-->32 tables<!--/stats:tables--> |
-| **Size** | <!--stats:php-->27,355 lines of PHP<!--/stats:php--> · <!--stats:js-->7,274 JS<!--/stats:js--> · <!--stats:css-->5,924 CSS<!--/stats:css--> |
+| **Size** | <!--stats:php-->27,355 lines of PHP<!--/stats:php--> · <!--stats:js-->7,274 JS<!--/stats:js--> · <!--stats:css-->5,990 CSS<!--/stats:css--> |
 | **Tests** | <!--stats:tests-->299 tests<!--/stats:tests--> (unit + integration + browser) |
 | **API documentation** | OpenAPI 3.0 — <!--stats:operations-->109 operations<!--/stats:operations-->, generated from the code |
 

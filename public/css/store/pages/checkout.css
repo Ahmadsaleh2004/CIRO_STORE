@@ -218,3 +218,20 @@
    animations/micro-interactions.css with identical text. The copy here was removed and the
    one there kept — its correct home is with the rest of the interface's transitions, and it
    is loaded on every page through store.css. */
+
+
+/* --- Phone: the address list and the trust row ------------------
+   Both are desktop-sized rows of boxes: the address labels carry
+   16px 20px of padding and the trust badges sit in a 16px gap, which
+   at 320px pushes the last badge off the line. --- */
+@media (max-width: 575px) {
+    .addr-label {
+        padding: 10px 12px;
+    }
+    .trust-badges {
+        gap: 8px;
+    }
+    .trust-badge {
+        font-size: 0.7rem;
+    }
+}

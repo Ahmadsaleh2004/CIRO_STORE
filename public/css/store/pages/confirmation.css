@@ -6,12 +6,15 @@
    it now has one.
    ================================================== */
 
-@media (max-width: 375px) {
+/* 575 rather than 375: 3rem of padding is as wrong on a 414px phone as
+   on a 375px one, and the project's breakpoints are the four in
+   base/breakpoints.css. */
+@media (max-width: 575px) {
     /* The !important is deliberate and not the result of competing with another file:
        Bootstrap's p-5 class is defined as `padding: 3rem !important`, like the rest of its
        spacing utilities, so nothing but an !important beats it. */
     #main-content .card {
-        padding: 1.5rem !important;
+        padding: 1rem !important;
     }
 
     #main-content .d-flex.gap-3.justify-content-center {

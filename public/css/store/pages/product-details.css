@@ -80,22 +80,31 @@
 }
 
 /* ==================================================
-   Responsive — layout (moved here from style.css)
-   ================================================== */
-@media (max-width: 991px) and (min-width: 768px) {
-    #product-details .row { gap: 2rem; }
-}
+   Responsive — layout
+   ==================================================
+   Two blocks here used to be keyed on `#product-details`, and **no
+   element with that id exists** — not in this page's view, not in any
+   view in the project. The ids on the details page are main-content,
+   productMainImg, discountBadge, colorSwatches and so on. So the rule
+   that was meant to cap the photograph at 260px on a phone had never
+   once run, and the column-stacking rule beside it was redundant
+   anyway: Bootstrap's own col-lg-6 stacks below 992px unaided.
 
-@media (max-width: 767px) {
-    #product-details .col-lg-6 {
-        flex: 0 0 100%;
-        max-width: 100%;
-    }
-    #product-details .col-lg-6:first-child img {
+   Rewritten against the elements that are actually there. --- */
+@media (max-width: 575px) {
+    /* The photograph is 400px tall by default. On a phone that is the
+       whole screen before a price or a colour is visible. `contain`
+       rather than `cover` because a phone in a 260px box is a tall
+       object and cropping it removes the product. */
+    .product-detail-main-img {
         max-height: 260px;
         object-fit: contain;
-        margin: 0 auto;
-        display: block;
+    }
+    .product-specs {
+        padding: 12px !important;
+    }
+    .product-description {
+        font-size: 0.9rem;
     }
 }
 

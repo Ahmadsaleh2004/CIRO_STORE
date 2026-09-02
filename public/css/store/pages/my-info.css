@@ -58,3 +58,15 @@
         padding: 8px 10px;
     }
 }
+
+
+/* --- Phone: the tab row fits on two lines rather than three ---
+   #myInfoTabs is a flex row of full-size Bootstrap nav links; at 320px
+   it wrapped to three lines and pushed the form below the fold. The
+   40px touch height from the block above is kept. --- */
+@media (max-width: 575px) {
+    #myInfoTabs .nav-link {
+        padding: 0.4rem 0.6rem;
+        font-size: 0.85rem;
+    }
+}
