@@ -596,8 +596,66 @@ class AuthController extends Controller
     }
 
     // ════════════════════════════════════════════════════════
-    // GET /auth/google — redirect to Google's consent screen
+    // The redirect URI, shared by the two Google routes below
+    /**
+     * The address Google is told to send the visitor back to.
+     *
+     * It is one value used in two places — the consent redirect and the token exchange —
+     * and Google rejects the exchange if the two differ, which is why both call this
+     * rather than reading the environment twice.
+     *
+     * ⚠️ A configured value that points at localhost is **ignored** when the site itself
+     * is not served from localhost.
+     *
+     * The live deployment carried GOOGLE_REDIRECT_URI from the development machine, so the
+     * store on Render asked Google to return every visitor to
+     * http://localhost/STORE/public/auth/google/callback — an address that exists only on
+     * the developer's own computer. The failure surfaced on **Google's** page, not on the
+     * site, so nothing in the application's logs or its error banner said anything at all:
+     * from the store's side the visitor simply left and never came back.
+     *
+     * The empty case already fell back to APP_URL correctly. The trap was that a value
+     * which is present and wrong never reaches that fallback — so being wrong in a
+     * specific, detectable way is treated here as being absent, and said out loud in the
+     * log rather than left to be discovered by a visitor.
+     *
+     * @param string $configured GOOGLE_REDIRECT_URI as it stands, or an empty string
+     * @param string $appUrl     where this copy of the site is actually served from (APP_URL)
+     */
+    public static function resolveGoogleRedirectUri(string $configured, string $appUrl): string
+    {
+        $derived = rtrim($appUrl, '/') . '/auth/google/callback';
+
+        if (trim($configured) === '') {
+            return $derived;
+        }
+
+        if (self::isLocalAddress($configured) && !self::isLocalAddress($appUrl)) {
+            error_log(
+                'AuthController: GOOGLE_REDIRECT_URI is ' . $configured
+                . ' while the site is served from ' . $appUrl
+                . ' — a visitor would be sent back to the developer machine. Using '
+                . $derived . ' instead.'
+            );
+            return $derived;
+        }
+
+        return $configured;
+    }
+
+    /** Whether a URL's host is this machine rather than somewhere on the network. */
+    private static function isLocalAddress(string $url): bool
+    {
+        $host = strtolower(trim((string) parse_url($url, PHP_URL_HOST), '[]'));
+
+        return $host === 'localhost'
+            || $host === '127.0.0.1'
+            || $host === '::1'
+            || str_ends_with($host, '.localhost');
+    }
+
     // ════════════════════════════════════════════════════════
+    // GET /auth/google — redirect to Google's consent screen
     #[OA\Get(
         path: '/auth/google',
         summary: 'Begin sign-in through Google OAuth',
@@ -613,7 +671,7 @@ class AuthController extends Controller
         }
 
         $clientId    = $_ENV['GOOGLE_CLIENT_ID'] ?? '';
-        $redirectUri = $_ENV['GOOGLE_REDIRECT_URI'] ?? (URLROOT . '/auth/google/callback');
+        $redirectUri = self::resolveGoogleRedirectUri($_ENV['GOOGLE_REDIRECT_URI'] ?? '', URLROOT);
 
         if (!$clientId) {
             header('Location: ' . URLROOT . '/?openLogin=1&error=google_unavailable');
@@ -678,7 +736,7 @@ class AuthController extends Controller
                 'code'          => $code,
                 'client_id'     => $_ENV['GOOGLE_CLIENT_ID'] ?? '',
                 'client_secret' => $_ENV['GOOGLE_CLIENT_SECRET'] ?? '',
-                'redirect_uri'  => $_ENV['GOOGLE_REDIRECT_URI'] ?? (URLROOT . '/auth/google/callback'),
+                'redirect_uri'  => self::resolveGoogleRedirectUri($_ENV['GOOGLE_REDIRECT_URI'] ?? '', URLROOT),
                 'grant_type'    => 'authorization_code',
             ]);
 
