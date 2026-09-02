@@ -43,6 +43,20 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentVariantId = window.SELECTED_VARIANT_ID || 0;
 
     function applyVariantToUI(variant) {
+        // ⚠️ The <source> is updated, not the <img> alone.
+        //
+        // The main image sits inside a <picture>, and the browser picks its source by
+        // walking the <source> children first — the <img> is the last resort, not the
+        // default. So assigning imgEl.src on its own changed nothing visible: the
+        // <source> still carried the first colour's WebP, still matched, and still won.
+        // Choosing a second colour showed the first colour's photograph.
+        //
+        // The source goes first so there is no frame in which the new <img> is paired
+        // with the old WebP. An empty srcset parses to no candidates, so a variant with
+        // no WebP twin falls through to the <img> exactly as it should.
+        const srcEl = document.getElementById('productMainSource');
+        if (srcEl) srcEl.srcset = imagePathOrEmpty(variant.webp);
+
         const imgEl = document.getElementById('productMainImg');
         if (imgEl) imgEl.src = imagePathOrEmpty(variant.image);
 

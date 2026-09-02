@@ -37,9 +37,17 @@ usort($sortedByStock, fn($a, $b) => (int)$a['stock_quantity'] <=> (int)$b['stock
                 <?php endif; ?>
                 <?php $mainWebp = getWebpPath($imgSrc); ?>
                 <picture>
-                    <?php if ($mainWebp): ?>
-                    <source srcset="<?= htmlspecialchars($mainWebp) ?>" type="image/webp">
-                    <?php endif; ?>
+                    <?php
+                    // The <source> is printed even when this image has no WebP twin, with an
+                    // empty srcset — a source that parses to zero candidates is skipped and the
+                    // <img> below is used, which is what the old `if` achieved by omitting it.
+                    //
+                    // It is printed unconditionally because js/features/product-details.js has to
+                    // update it when the colour changes, and it cannot update an element that is
+                    // not there. Choosing the first colour would otherwise decide, for the whole
+                    // visit, whether switching colours works at all.
+                    ?>
+                    <source id="productMainSource" srcset="<?= htmlspecialchars((string) $mainWebp) ?>" type="image/webp">
                     <img src="<?= htmlspecialchars($imgSrc) ?>" alt="<?= htmlspecialchars($p['name']) ?>" id="productMainImg" class="product-detail-main-img">
                 </picture>
             </div>
@@ -336,6 +344,11 @@ Stock badge — the same getStockBadge() the product list uses, plus the
                 : $v['price']),
             'stock'       => (int) $v['stock_quantity'],
             'image'       => fixImagePath($v['image_path'] ?? ''),
+            // The WebP twin, or null when the file is not on disk. Sent from here because
+            // only the server can tell whether it exists: deriving ".webp" in the browser
+            // and hoping produces a <source> pointing at a 404, and a chosen source that
+            // fails does not fall back to the <img> — it shows nothing.
+            'webp'        => getWebpPath($v['image_path'] ?? ''),
         ];
     }, $variants),
     'SELECTED_VARIANT_ID' => (int) $selectedVariant['id'],
