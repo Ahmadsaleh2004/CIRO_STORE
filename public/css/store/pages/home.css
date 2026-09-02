@@ -2,27 +2,13 @@
    css/pages/home.css — the home page's styles
    ================================================== */
 
-/* ── Hero Slider ────────────────────────────────── */
-.slider-image {
-    height: 500px;
-    object-fit: cover;
-}
-
-.carousel-item img {
-    transition: transform var(--dur-slow);
-}
-
-.carousel-item img:hover {
-    transform: scale(1.015);
-}
-
-.carousel-item {
-    overflow: hidden;
-}
-
-.text-shadow {
-    text-shadow: 2px 2px 6px rgba(0,0,0,0.75);
-}
+/* ── Hero Slider ──────────────────────────────────
+   `.slider-image` and `.text-shadow` used to be declared here as well.
+   Neither class exists in any view: the slider's images are
+   `.slide-item-img`, styled in home-slider.css, and .text-shadow lives
+   in base/typography.css. The `.carousel-item` rules that were beside
+   them are real, and they are declared in components/hero-slider.css —
+   this file repeated them with identical values. */
 
 /* ── Section Carousel (Horizontal Scroll) ────────── */
 .section-carousel-wrapper {
@@ -217,7 +203,9 @@
     }
 }
 
-@media (max-width: 576px) {
+/* 575 rather than 576: the project's four breakpoints are documented in
+   base/breakpoints.css, and this block is being rewritten anyway. */
+@media (max-width: 575px) {
     .section-carousel-track .carousel-item-wrap {
         flex: 0 0 calc(75% - 9px);
     }
@@ -225,8 +213,6 @@
     /* .section-carousel-wrapper reserves 26px each side for the
        prev/next buttons above — reclaim it now that they're hidden. */
     .section-carousel-wrapper { padding: 0; }
-    .slider-image { height: 200px; }
-    .carousel-caption { display: none !important; }
 }
 
 /* Section header (title + "View All") — defensive wrap in case a

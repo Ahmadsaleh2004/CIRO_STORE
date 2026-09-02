@@ -173,6 +173,46 @@
     }
 }
 
+/* ── Phone: fewer images per slide, and a shorter row ──────────
+   Height alone could not fix this. A slide holds up to six images side
+   by side, and at 375px that measured 61px wide by 320px tall each — a
+   ratio of about 1:5, a column of slivers. At 320px it was 52px. The
+   item COUNT has to come down before any height is worth choosing.
+
+   Hiding the surplus items in CSS rather than in the view keeps
+   app/views/home.php and renderSlider() in products-catalog.js
+   structurally identical — the one invariant both files are documented
+   to preserve — and the same slide still opens correctly on a laptop.
+
+   These blocks come after the two above deliberately: they are the
+   later rule at equal specificity, which is how they beat the 320px
+   height and the 1.1rem title. */
+@media (max-width: 767px) {
+    .slide-items-row { height: 240px; }
+    .slide-items-row > *:nth-child(n+4) { display: none; }
+}
+
+@media (max-width: 575px) {
+    .slide-items-row { height: 200px; gap: 1px; }
+    .slide-items-row > *:nth-child(n+3) { display: none; }
+
+    /* compact-count hides its captions until :hover, and a phone has no
+       hover — measured opacity was 0 on every slide on every phone, so
+       these captions have never once been readable there. Same selector
+       as the rule above, later in the file, so it wins on order. */
+    .slide-items-row.compact-count .slide-item .slide-item-caption,
+    .slide-items-row.compact-count .slide-item-link .slide-item-caption {
+        opacity: 1;
+    }
+    .slide-item-title { font-size: 0.85rem; }
+    .slide-item-desc { display: none; }
+}
+
+@media (max-width: 320px) {
+    .slide-items-row { height: 170px; }
+    .slide-items-row > *:nth-child(n+2) { display: none; }
+}
+
 /* ═══════════════════════════════════════════════════════════════════
    Slider Navigation Arrows — Compact & Non-blocking
    ═══════════════════════════════════════════════════════════════════
