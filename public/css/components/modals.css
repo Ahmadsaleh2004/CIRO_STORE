@@ -9,6 +9,19 @@
    and therefore wins on those widths; the <=414 / <=375 / <=320
    blocks sit after it and win in turn. Reordering changes the
    rendered padding. DO NOT REORDER.
+
+   ⚠️ That interleaving had a cost nobody had measured. Part 1's phone
+   padding was not merely overridden on some widths — it was DEAD:
+   .modal-body kept the desktop 28px everywhere from 415px to 767px,
+   and the coloured header kept 28px 28px 20px at EVERY width, because
+   nothing after the enhanced block ever named the header again. So a
+   430px phone, and every phone in landscape, opened the sign-in modal
+   at full desktop padding.
+
+   Part 3 at the end of the responsive run is the repair, and it is
+   this file's own mechanism rather than a way around it: the later
+   block wins, which is exactly what the paragraph above describes.
+   Anything new belongs THERE, at the end — not here.
    ================================================== */
 
 .modal-content {
@@ -52,15 +65,14 @@
 }
 
 
-/* --- Responsive, part 1 (runs BEFORE the enhanced design) --- */
+/* --- Responsive, part 1 (runs BEFORE the enhanced design) ---
+   The header and body padding that used to be declared here is gone: it
+   could never take effect from this position, and reading it here while
+   the browser rendered 28px is what hid the fault for so long. Both now
+   live in part 3 at the end of the file. What is left is what the
+   enhanced block never re-declares, so it still applies. */
 @media (max-width: 767px) {
     .modal-dialog { margin: 0.75rem !important; }
-    .modal-header.modal-header-login,
-    .modal-header.modal-header-register,
-    .modal-header.modal-header-forgot {
-        padding: 20px 20px 14px !important;
-    }
-    .modal-body { padding: 20px !important; }
     .modal-icon { font-size: 1.8rem !important; }
 }
 
@@ -147,14 +159,17 @@
 
 
 /* --- Responsive, part 2 (runs AFTER the enhanced design) --- */
+/* The .modal-body padding that used to be repeated in all three of
+   these blocks is now set once, in part 3 below. Three widths declaring
+   the same property in 0.25rem steps was how the file got into this
+   state; the margins and the register-modal country code stay, because
+   nothing else owns them. */
 @media (max-width: 414px) {
     .modal-dialog { margin: 0.6rem !important; }
-    .modal-body   { padding: 1.1rem !important; }
 }
 
 @media (max-width: 375px) {
     .modal-dialog { margin: 0.5rem !important; }
-    .modal-body   { padding: 1rem !important; }
     #registerModal .input-group #phoneCountryCode {
         max-width: 90px !important;
         min-width: 70px !important;
@@ -163,11 +178,45 @@
 
 @media (max-width: 320px) {
     .modal-dialog { margin: 0.25rem !important; }
-    .modal-body   { padding: 0.85rem !important; }
     #registerModal .input-group #phoneCountryCode {
         max-width: 80px !important;
         min-width: 60px !important;
     }
+}
+
+/* --- Responsive, part 3 (appended, and appended deliberately) ---
+   Everything here is the last matching rule for its property, which is
+   the only reason it works. Measured before it existed: a 500px
+   viewport rendered .modal-body at 28px and .modal-header-login at
+   28px 28px 20px — the desktop values, on a phone. */
+@media (max-width: 767px) {
+    .modal-header.modal-header-login,
+    .modal-header.modal-header-register,
+    .modal-header.modal-header-forgot {
+        padding: 18px 18px 14px !important;
+    }
+    .modal-header-login .modal-title,
+    .modal-header-register .modal-title,
+    .modal-header-forgot .modal-title {
+        font-size: 1.1rem !important;
+    }
+    .modal-header-login .modal-icon,
+    .modal-header-register .modal-icon,
+    .modal-header-forgot .modal-icon {
+        margin-bottom: 2px;
+        font-size: 1.9rem;
+    }
+    .modal-body { padding: 18px !important; }
+}
+
+@media (max-width: 575px) {
+    .modal-header.modal-header-login,
+    .modal-header.modal-header-register,
+    .modal-header.modal-header-forgot {
+        padding: 14px 14px 12px !important;
+    }
+    .modal-body { padding: 14px !important; }
+    .modal-divider { margin: 10px 0; }
 }
 
 /* --- Backdrop: a light blur instead of Bootstrap's heavy black --- */
