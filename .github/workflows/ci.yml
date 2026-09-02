@@ -359,8 +359,19 @@ jobs:
 
       - run: npm ci
 
+      # The ceiling used to be 60, one above the 59 warnings the files carried, which made it
+      # a record of the debt rather than a gate against it: every new warning was allowed
+      # until the sixtieth, and then an unrelated change would be the one to fail.
+      #
+      # The 59 are gone. Thirty of them were `var` and `let` — ESLint rewrote twenty-nine
+      # itself and one needed a hand. The other twenty-nine were comparisons with `==`, and
+      # those could not be rewritten mechanically: the coercion was doing real work, because
+      # an id from JSON is a number while the same id read from `dataset` is a string. They
+      # unify the type through sameId/sameVariant in js/core/utils.js instead.
+      #
+      # So the ceiling is zero, and `composer lint:js` runs the same command locally.
       - name: ESLint
-        run: npx eslint public/js --max-warnings 60
+        run: npx eslint public/js --max-warnings 0
 
       - name: Stylelint
         run: npx stylelint "public/css/**/*.css"
