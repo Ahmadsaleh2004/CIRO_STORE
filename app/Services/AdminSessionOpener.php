@@ -61,7 +61,6 @@ final class AdminSessionOpener
         $_SESSION['last_active'] = time();
 
         loadAdminPermissions($adminId);
-        AdminModel::updateActivity($adminId);
         AdminModel::logAction($adminId, 'login');
 
         self::clearThrottleBuckets();

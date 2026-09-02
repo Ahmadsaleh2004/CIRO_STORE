@@ -97,18 +97,24 @@ class AdminModel extends Model
     }
 
     // ════════════════════════════════════════════════════════
-    // Update the admin's last_activity
+    // updateActivity() used to live here, and it wrote to a column that
+    // does not exist: `admins.last_activity` is declared in the very first
+    // migration and is absent from the schema the database actually has.
+    // Every successful sign-in therefore logged
+    //     Unknown column 'last_activity' in 'field list'
+    // and carried on, because the write was wrapped in a try/catch.
+    //
+    // It is deleted rather than repaired with a migration: nothing in the
+    // project ever READ the value — not a query, not a view, not a report —
+    // so adding the column would create a field that is written on every
+    // sign-in and never once looked at. (`users.last_activity` is a different
+    // column, is read in several places, and is untouched here.)
+    //
+    // `admins.is_active` is in the same position — declared in migration 0001,
+    // absent from the schema, and referenced by no PHP anywhere in the project.
+    // Nothing depends on it, so nothing here changes; it is recorded so the next
+    // reader of that migration knows the drift is known rather than missed.
     // ════════════════════════════════════════════════════════
-    public static function updateActivity(int $adminId): void
-    {
-        try {
-            $db = self::db();
-            $db->prepare("UPDATE admins SET last_activity = NOW() WHERE id = ?")
-               ->execute([$adminId]);
-        } catch (Exception $e) {
-            error_log("AdminModel::updateActivity Error: " . $e->getMessage());
-        }
-    }
 
     // ════════════════════════════════════════════════════════
     // Fetch an admin by id, from the admins table
