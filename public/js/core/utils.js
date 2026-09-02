@@ -163,3 +163,57 @@ function stockBadge(stock, showInStock = false) {
     return null;
 }
 window.stockBadge = stockBadge;
+
+/**
+ * sameId — comparing two identifiers that reached the page by different routes.
+ *
+ * The same product id arrives here in two types. From JSON — an API response, or a data
+ * island read by js/core/page-data.js — it is a **number**, because the database column is
+ * an integer and PDO runs with ATTR_EMULATE_PREPARES off, so an INT comes back an int. From
+ * the DOM it is a **string**, because every value in `dataset` is a string: there is no
+ * other type in an HTML attribute.
+ *
+ * So `3 === "3"` is false while the two are the same product. That is why these comparisons
+ * were written with `==` for so long, and why replacing the operator alone would have been a
+ * silent bug: `wishlist.filter(i => i.id !== btn.dataset.id)` keeps nothing, because every
+ * number differs from every string. The type has to be unified before the comparison, not
+ * the comparison loosened.
+ *
+ * Unified to a **string**, not a number, because Number('') is 0 — an empty attribute would
+ * match the id 0 — and Number(null) is 0 as well, while `null == 0` is false. String() has
+ * neither trap. And null or undefined is not an identifier at all, so it matches nothing,
+ * itself included.
+ *
+ * @param {string|number|null|undefined} a
+ * @param {string|number|null|undefined} b
+ * @returns {boolean}
+ */
+function sameId(a, b) {
+    if (a === null || a === undefined || b === null || b === undefined) return false;
+    return String(a) === String(b);
+}
+window.sameId = sameId;
+
+/**
+ * sameVariant — as sameId, for the variant id, where the absence of a value carries meaning.
+ *
+ * A product with no variants stores `variant_id: null`, and a line in the cart or the
+ * wishlist is identified by the pair (product, variant). So two nulls are **the same
+ * variant** — the one that does not exist — whereas in sameId two absent ids are simply not
+ * an identifier.
+ *
+ * Which is what `(a ?? null) == (b ?? null)` used to say: `null == null` is true, and
+ * `null == 0` is false — a real variant numbered 0 would not equal an absent one. Both
+ * hold below.
+ *
+ * @param {string|number|null|undefined} a
+ * @param {string|number|null|undefined} b
+ * @returns {boolean}
+ */
+function sameVariant(a, b) {
+    const x = a ?? null;
+    const y = b ?? null;
+    if (x === null || y === null) return x === y;
+    return String(x) === String(y);
+}
+window.sameVariant = sameVariant;

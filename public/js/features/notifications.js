@@ -142,7 +142,7 @@
         // to a single listener on the list itself (below this function) — the same pattern
         // the rest of the interface follows through js/core/inline-actions.js.
         cfg.sidebarList.innerHTML = allNotifs.map(n => `
-            <li class="notif-item ${n.is_read == 1 ? 'read' : 'unread'}"
+            <li class="notif-item ${Number(n.is_read) === 1 ? 'read' : 'unread'}"
                 data-id="${n.id}" data-notif-open="${n.id}">
                 <button class="notif-dismiss-btn" type="button"
                         data-notif-dismiss="${n.id}"
@@ -150,7 +150,7 @@
                 <div class="notif-title">${escHtml(n.title)}</div>
                 <div class="notif-msg">${escHtml(n.message.length > 80 ? n.message.slice(0,80) + '…' : n.message)}</div>
                 <div class="notif-time">${formatRelativeTime(n.created_at)} ${orderTakenCountdownHtml(n)}</div>
-                ${n.is_read == 0 ? '<span class="notif-dot"></span>' : ''}
+                ${Number(n.is_read) === 0 ? '<span class="notif-dot"></span>' : ''}
             </li>
         `).join('');
 
@@ -175,7 +175,7 @@
         const now = Date.now();
         els.forEach(function (el) {
             const deadline = parseInt(el.dataset.deadline, 10);
-            let remaining = Math.max(0, Math.floor((deadline - now) / 1000));
+            const remaining = Math.max(0, Math.floor((deadline - now) / 1000));
             if (remaining <= 0) {
                 el.textContent = 'Expired';
                 return;
@@ -188,10 +188,10 @@
     }
 
     const openDetail = function (id) {
-        const notif = allNotifs.find(n => n.id == id);
+        const notif = allNotifs.find(n => sameId(n.id, id));
         if (!notif) return;
 
-        if (notif.is_read == 0) markAsRead(id);
+        if (Number(notif.is_read) === 0) markAsRead(id);
 
         const sentDate = new Date(notif.created_at).toLocaleString('en-US', {
             year:'numeric', month:'short', day:'numeric',
@@ -242,11 +242,11 @@
                 { method: 'POST', body: fd }
             );
             if (data.csrf_token && typeof updateCsrfToken === 'function') updateCsrfToken(data.csrf_token);
-            const n = allNotifs.find(n => n.id == id);
+            const n = allNotifs.find(n => sameId(n.id, id));
             if (n) n.is_read = 1;
             const unread = data.unread_count !== undefined
                 ? data.unread_count
-                : allNotifs.filter(n => n.is_read == 0).length;
+                : allNotifs.filter(n => Number(n.is_read) === 0).length;
             setBadge(unread);
             renderSidebar();
         } catch {}
@@ -259,10 +259,10 @@
         fd.append('csrf_token', window._csrfToken || document.querySelector('input[name="csrf_token"]')?.value || '');
         const data = await fetchWithCsrfRetry(window.BASE_URL + '/notifications/dismiss', { method: 'POST', body: fd });
         if (data.success) {
-            allNotifs = allNotifs.filter(n => n.id != id);
+            allNotifs = allNotifs.filter(n => !sameId(n.id, id));
             const unread = data.unread_count !== undefined
                 ? data.unread_count
-                : allNotifs.filter(n => n.is_read == 0).length;
+                : allNotifs.filter(n => Number(n.is_read) === 0).length;
             setBadge(unread);
             renderSidebar();
         }

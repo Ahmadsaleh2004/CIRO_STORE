@@ -191,7 +191,7 @@ async function renderWishlist() {
     }
 
     // Auto-remove products that are no longer visible (hidden by an admin) from the wishlist
-    let stillVisibleWishlist = wishlist.filter(p => {
+    const stillVisibleWishlist = wishlist.filter(p => {
         const live = liveStockData[String(parseInt(p.id, 10))];
         return live && live.is_visible !== 0; // keep only if we have live data AND it's visible
     });
@@ -318,7 +318,7 @@ async function renderWishlist() {
 
     document.querySelectorAll('.remove-fav').forEach(btn => {
         btn.addEventListener('click', () => {
-            wishlist = wishlist.filter(i => i.id != btn.dataset.id);
+            wishlist = wishlist.filter(i => !sameId(i.id, btn.dataset.id));
             localStorage.setItem('wishlist', JSON.stringify(wishlist));
             if (typeof updateCounters === 'function') updateCounters();
             renderWishlist();
@@ -335,7 +335,7 @@ async function renderWishlist() {
             }
 
             const id = parseInt(btn.dataset.id, 10);
-            const product = wishlist.find(i => i.id == id);
+            const product = wishlist.find(i => sameId(i.id, id));
             if (!product) return;
 
             await fetchLiveStock([id]);
@@ -362,7 +362,7 @@ async function renderWishlist() {
 
             const variantId = product.variant_id ?? null;
             const ex = (window.getCartData ? window.getCartData() : [])
-                .find(i => i.id == id && i.variant_id == variantId);
+                .find(i => sameId(i.id, id) && sameVariant(i.variant_id, variantId));
             const existingQty = ex ? ex.quantity : 0;
 
             if (existingQty + qty > stock) {

@@ -6,7 +6,7 @@
  * Toggle Wishlist (Central)
  */
 window.toggleWishlist = (id, btnElement, productData = null) => {
-    let wishlist = JSON.parse(localStorage.getItem('wishlist')) || [];
+    const wishlist = JSON.parse(localStorage.getItem('wishlist')) || [];
     const index  = wishlist.findIndex(item => item.id === id);
 
     if (index > -1) {
@@ -252,10 +252,10 @@ window.changeQtyDB = (id, val) => {
 window.addToCartDB = async (id, variantId, price, stock) => {
     const input = document.getElementById('qty-' + id);
     const qty   = parseInt(input?.value || 1);
-    if (!window.dbProducts?.find(x => x.id == id)) return;
+    if (!window.dbProducts?.find(x => sameId(x.id, id))) return;
 
     const existing = (window.getCartData ? window.getCartData() : [])
-        .find(i => i.id == id && i.variant_id == variantId);
+        .find(i => sameId(i.id, id) && sameVariant(i.variant_id, variantId));
     const currentQtyInCart = existing ? existing.quantity : 0;
 
     if (currentQtyInCart + qty > stock) {
@@ -306,7 +306,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         const wl = JSON.parse(localStorage.getItem('wishlist') || '[]');
-        if (wl.some(i => i.id == p.id)) btn.innerHTML = '❤️';
+        if (wl.some(i => sameId(i.id, p.id))) btn.innerHTML = '❤️';
         btn.addEventListener('click', () => window.toggleWishlist(p.id, btn, p));
     });
 });
@@ -329,7 +329,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const maxPrice = parseInt(slider?.value || 9999);
         if (sliderLbl) sliderLbl.textContent = '≤$' + maxPrice;
 
-        let visible = [];
+        const visible = [];
         items.forEach(item => {
             let show = true;
             if (q      && !item.dataset.name.includes(q))      show = false;

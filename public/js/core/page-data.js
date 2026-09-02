@@ -40,21 +40,21 @@
 (function () {
     'use strict';
 
-    var PROCESSED = 'data-page-data-loaded';
+    const PROCESSED = 'data-page-data-loaded';
 
     function absorb() {
-        var islands = document.querySelectorAll(
+        const islands = document.querySelectorAll(
             'script[type="application/json"][data-page-data]:not([' + PROCESSED + '])'
         );
 
-        for (var i = 0; i < islands.length; i++) {
-            var island = islands[i];
+        for (let i = 0; i < islands.length; i++) {
+            const island = islands[i];
             island.setAttribute(PROCESSED, '');
 
-            var raw = island.textContent;
+            const raw = island.textContent;
             if (!raw) continue;
 
-            var payload;
+            let payload;
             try {
                 payload = JSON.parse(raw);
             } catch (e) {
@@ -67,7 +67,7 @@
 
             if (!payload || typeof payload !== 'object') continue;
 
-            for (var key in payload) {
+            for (const key in payload) {
                 if (!Object.prototype.hasOwnProperty.call(payload, key)) continue;
 
                 // ⚠️ Nothing already present is overwritten. Two islands carrying the same

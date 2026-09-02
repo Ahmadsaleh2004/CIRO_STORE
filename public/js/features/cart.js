@@ -204,7 +204,7 @@ function renderCart() {
     const cartTotal     = document.getElementById("cart-total");
     if (!cartContainer) return;
 
-    let cart = getCartData();
+    const cart = getCartData();
     if (cart.length === 0) {
         cartContainer.innerHTML = `<li class="text-center py-5 u-placeholder">Your cart is empty.</li>`;
         if (cartTotal) cartTotal.innerText = "$0.00";
@@ -319,7 +319,7 @@ document.addEventListener("DOMContentLoaded", () => {
             if (!id) return;
 
             const item = getCartData().find(
-                p => p.id === id && (p.variant_id ?? null) == (variantId ?? null)
+                p => p.id === id && sameVariant(p.variant_id, variantId)
             );
             if (!item || !variantId) return;
 

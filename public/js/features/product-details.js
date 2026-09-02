@@ -273,7 +273,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // display time. Building them here meant a second copy that could go stale against
         // its original.
         const existing = (window.getCartData ? window.getCartData() : [])
-            .find(i => i.id == window.PRODUCT_ID && i.variant_id == currentVariantId);
+            .find(i => sameId(i.id, window.PRODUCT_ID) && sameVariant(i.variant_id, currentVariantId));
         const currentQtyInCart = existing ? existing.quantity : 0;
 
         if (currentQtyInCart + q > variant.stock) {
@@ -305,7 +305,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function isInWishlist(prod) {
         const wl = JSON.parse(localStorage.getItem('wishlist') || '[]');
-        return wl.some(i => i.id == prod.id && (i.variant_id ?? null) == (prod.variant_id ?? null));
+        return wl.some(i => sameId(i.id, prod.id) && sameVariant(i.variant_id, prod.variant_id));
     }
 
     function dedupeWishlist() {

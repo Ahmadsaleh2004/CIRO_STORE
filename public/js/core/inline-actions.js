@@ -31,7 +31,7 @@
 
     /** Calls a global function if it exists, and complains clearly if it does not. */
     function call(name, args) {
-        var fn = window[name];
+        const fn = window[name];
         if (typeof fn !== 'function') {
             console.error('[inline-actions] the function [' + name + '] is not defined.');
             return;
@@ -39,7 +39,7 @@
         return fn.apply(null, args || []);
     }
 
-    var handlers = {
+    const handlers = {
         // It stops a clickable table row firing when something inside it is clicked.
         'stop-propagation': function (el, event) {
             event.stopPropagation();
@@ -59,22 +59,22 @@
         },
 
         navigate: function (el) {
-            var href = el.getAttribute('data-href');
+            const href = el.getAttribute('data-href');
             if (href) window.location.href = href;
         },
 
         'switch-modal': function (el, event) {
             event.preventDefault();
 
-            var target = el.getAttribute('data-modal-target');
-            var extra = el.getAttribute('data-modal-after');
+            const target = el.getAttribute('data-modal-target');
+            const extra = el.getAttribute('data-modal-after');
 
             // The third argument used to be a function written inside the attribute. The
             // only case using it is the privacy modal: it ticks the box and then re-validates
             // the form. It is now a declared intent rather than code in a tag.
             if (extra === 'accept-privacy') {
                 call('switchAuthModal', [el, target, function () {
-                    var cb = document.getElementById('privacyCheck');
+                    const cb = document.getElementById('privacyCheck');
                     if (cb) cb.checked = true;
                     if (typeof window.checkSignupFormValidity === 'function') {
                         window.checkSignupFormValidity();
@@ -109,7 +109,7 @@
         // The alternative is nine separate attributes — longer for no benefit, and their
         // order is the contract either way.
         'perm-modal': function (el) {
-            var perms = (el.getAttribute('data-perms') || '').split(',').map(Number);
+            const perms = (el.getAttribute('data-perms') || '').split(',').map(Number);
             call('openPermModal', [
                 Number(el.getAttribute('data-admin-id')),
                 el.getAttribute('data-admin-name'),
@@ -162,18 +162,18 @@
     function dispatch(event) {
         // data-confirm is independent of data-action: it used to be
         // onclick="return confirm('…')" on a delete link, and it may coexist with an action.
-        var confirmEl = event.target.closest ? event.target.closest('[data-confirm]') : null;
+        const confirmEl = event.target.closest ? event.target.closest('[data-confirm]') : null;
         if (confirmEl && !window.confirm(confirmEl.getAttribute('data-confirm'))) {
             event.preventDefault();
             event.stopPropagation();
             return;
         }
 
-        var el = event.target.closest ? event.target.closest('[data-action]') : null;
+        const el = event.target.closest ? event.target.closest('[data-action]') : null;
         if (!el) return;
 
-        var action = el.getAttribute('data-action');
-        var handler = handlers[action];
+        const action = el.getAttribute('data-action');
+        const handler = handlers[action];
 
         if (!handler) {
             console.error('[inline-actions] unknown action: [' + action + ']');
@@ -185,12 +185,12 @@
 
     document.addEventListener('click', dispatch);
     document.addEventListener('change', function (event) {
-        var el = event.target.closest ? event.target.closest('[data-action]') : null;
+        const el = event.target.closest ? event.target.closest('[data-action]') : null;
         if (!el) return;
 
         // change belongs to form elements alone; keeping the listeners separate stops a
         // click action firing twice on an element that receives both.
-        var handler = handlers[el.getAttribute('data-action')];
+        const handler = handlers[el.getAttribute('data-action')];
         if (handler) handler(el, event);
     });
 })();

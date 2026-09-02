@@ -74,7 +74,7 @@ document.addEventListener('DOMContentLoaded', () => {
         listEl.innerHTML = allNotifs.map(n => {
             const msg = n.message.length > 80 ? n.message.slice(0, 80) + '…' : n.message;
             return `
-                <li class="notif-item ${n.is_read == 1 ? 'read' : 'unread'}"
+                <li class="notif-item ${Number(n.is_read) === 1 ? 'read' : 'unread'}"
                     data-id="${n.id}" data-notif-open="${n.id}">
                     <button type="button" class="notif-dismiss-btn"
                             data-notif-dismiss="${n.id}"
@@ -82,7 +82,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div class="notif-title">${escHtml(n.title)}</div>
                     <div class="notif-msg">${escHtml(msg)}</div>
                     <div class="notif-time">${formatRelativeTime(n.created_at)}</div>
-                    ${n.is_read == 0 ? '<span class="notif-dot"></span>' : ''}
+                    ${Number(n.is_read) === 0 ? '<span class="notif-dot"></span>' : ''}
                 </li>
             `;
         }).join('');
@@ -162,8 +162,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // ── Opening and marking read when an item is clicked ─────────
     window.adminNotifOpen = async function (id) {
-        const n = allNotifs.find(x => x.id == id);
-        if (n && n.is_read == 0) {
+        const n = allNotifs.find(x => sameId(x.id, id));
+        if (n && Number(n.is_read) === 0) {
             await markRead(id);
         }
         if (typeof Swal !== 'undefined') {
@@ -187,8 +187,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     window.adminNotifDeleteOne = async function (event, id) {
         if (event && event.stopPropagation) event.stopPropagation();
-        allNotifs = allNotifs.filter(x => x.id != id);
-        const unread = allNotifs.filter(x => x.is_read == 0).length;
+        allNotifs = allNotifs.filter(x => !sameId(x.id, id));
+        const unread = allNotifs.filter(x => Number(x.is_read) === 0).length;
         setBadge(unread);
         renderList();
         try {
@@ -230,9 +230,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     + '&csrf_token=' + encodeURIComponent(window._csrfToken || ''),
             });
             if (data.success) {
-                const n = allNotifs.find(x => x.id == id);
+                const n = allNotifs.find(x => sameId(x.id, id));
                 if (n) n.is_read = 1;
-                setBadge(data.unread_count !== undefined ? data.unread_count : allNotifs.filter(x => x.is_read == 0).length);
+                setBadge(data.unread_count !== undefined ? data.unread_count : allNotifs.filter(x => Number(x.is_read) === 0).length);
                 renderList();
             }
         } catch {}

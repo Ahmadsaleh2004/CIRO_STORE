@@ -107,6 +107,8 @@ export default [
         renderHomeSections: 'writable',
         renderSelectedChips: 'writable',
         renderSlider: 'writable',
+        sameId: 'writable',
+        sameVariant: 'writable',
         saveCart: 'writable',
         selectedCategoryIds: 'writable',
         setTheme: 'writable',

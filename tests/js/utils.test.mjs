@@ -139,4 +139,51 @@ describe('utils.js', () => {
             expect(html).toContain('src="images/x.png"');
         });
     });
+
+    describe('sameId — an id from JSON against one from the DOM', () => {
+        it('a number equals the string of the same number, which is the whole point', () => {
+            // From JSON the id is a number; from dataset it is always a string.
+            expect(window.sameId(3, '3')).toBe(true);
+            expect(window.sameId('3', 3)).toBe(true);
+        });
+
+        it('two different ids stay different in either direction', () => {
+            expect(window.sameId(3, '4')).toBe(false);
+            expect(window.sameId('10', 1)).toBe(false);
+        });
+
+        it('an absent id is not an identifier, so it matches nothing — itself included', () => {
+            expect(window.sameId(null, null)).toBe(false);
+            expect(window.sameId(undefined, undefined)).toBe(false);
+            expect(window.sameId(null, 3)).toBe(false);
+            expect(window.sameId(3, undefined)).toBe(false);
+        });
+
+        it('an empty attribute does not match the id zero — the trap in a numeric cast', () => {
+            expect(window.sameId('', 0)).toBe(false);
+        });
+    });
+
+    describe('sameVariant — the absence of a variant carries meaning', () => {
+        it('two absences are the same variant: the one that does not exist', () => {
+            expect(window.sameVariant(null, null)).toBe(true);
+            expect(window.sameVariant(undefined, null)).toBe(true);
+            expect(window.sameVariant(undefined, undefined)).toBe(true);
+        });
+
+        it('a real variant against an absent one is a different line in the cart', () => {
+            expect(window.sameVariant(null, 5)).toBe(false);
+            expect(window.sameVariant('5', null)).toBe(false);
+        });
+
+        it('a variant numbered zero is not an absent variant — as null == 0 was false', () => {
+            expect(window.sameVariant(null, 0)).toBe(false);
+            expect(window.sameVariant(0, 0)).toBe(true);
+        });
+
+        it('the string and the number of one variant are one variant', () => {
+            expect(window.sameVariant(7, '7')).toBe(true);
+            expect(window.sameVariant('7', 8)).toBe(false);
+        });
+    });
 });

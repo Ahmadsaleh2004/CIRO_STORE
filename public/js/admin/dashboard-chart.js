@@ -19,7 +19,7 @@
     'use strict';
 
     function draw() {
-        var canvas = document.getElementById('salesChart');
+        const canvas = document.getElementById('salesChart');
         if (!canvas) return;
 
         // The file is only loaded on the dashboard page, but the guard stays: a missing
@@ -33,7 +33,7 @@
             return;
         }
 
-        var ctx = window.ADMIN_SALES_CHART;
+        const ctx = window.ADMIN_SALES_CHART;
         if (!ctx || !Array.isArray(ctx.labels) || !Array.isArray(ctx.values)) {
             console.error(
                 '[dashboard-chart] The ADMIN_SALES_CHART island is missing or malformed — '
@@ -42,9 +42,9 @@
             return;
         }
 
-        var dark = document.body.classList.contains('dark-mode');
-        var grid = dark ? 'rgba(255,255,255,.07)' : 'rgba(0,0,0,.06)';
-        var tc   = dark ? '#e6edf3' : '#1a1a2e';
+        const dark = document.body.classList.contains('dark-mode');
+        const grid = dark ? 'rgba(255,255,255,.07)' : 'rgba(0,0,0,.06)';
+        const tc   = dark ? '#e6edf3' : '#1a1a2e';
 
         new window.Chart(canvas, {
             type: 'line',
