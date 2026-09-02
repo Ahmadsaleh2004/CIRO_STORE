@@ -1,9 +1,19 @@
 # Cairo Store
 
+**[Open the live store →](https://cairo-store.onrender.com)**
+
 An e-commerce store in PHP on a hand-written MVC structure with no framework — <!--stats:controllers-->25 controllers<!--/stats:controllers-->, <!--stats:models-->17 models<!--/stats:models--> and <!--stats:routes-->109 routes<!--/stats:routes-->, with a full control panel built on ranks and permissions.
+
+> The live copy runs the image built from this repository, against a MySQL database seeded
+> from `database/demo-seed.sql`. It is hosted on a free tier that sleeps after fifteen
+> minutes of inactivity, so the **first request after a quiet spell takes about a minute** —
+> after that it is immediate. Anything uploaded through the control panel is lost on the
+> next deploy: that tier has no persistent disk, and the sixteen catalogue images are served
+> from the repository rather than from uploads.
 
 | | |
 |---|---|
+| **Live** | [cairo-store.onrender.com](https://cairo-store.onrender.com) · [`/health`](https://cairo-store.onrender.com/health) answers only if the database really responds |
 | **PHP** | 8.2+ |
 | **Database** | MySQL 8 · <!--stats:tables-->32 tables<!--/stats:tables--> |
 | **Size** | <!--stats:php-->27,261 lines of PHP<!--/stats:php--> · <!--stats:js-->7,206 JS<!--/stats:js--> · <!--stats:css-->5,583 CSS<!--/stats:css--> |

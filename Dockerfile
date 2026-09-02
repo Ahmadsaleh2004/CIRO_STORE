@@ -129,5 +129,15 @@ CMD ["apache2-foreground"]
 #
 # ⚠️ Shell form deliberately, not exec form: ${PORT:-80} has to be expanded by a shell at
 # run time, and the exec form would look for a file literally named "${PORT:-80}".
+#
+# ⚠️ It pointed at `/` for a while, during the first deployment. That was the right call at
+# the time and the wrong one to keep: the database was not configured yet, so `/health`
+# failed — correctly — and the container was declared unhealthy before anything could be
+# debugged. Pointing at `/` silenced it and let the deploy proceed.
+#
+# The reason is gone: the database is connected and /health answers 200. Leaving it on `/`
+# would have kept a check that cannot fail for the one cause worth catching — a store that
+# loads its layout and shows no products because the database is unreachable would report
+# itself healthy, and nobody would be told.
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
-  CMD curl -fsS "http://127.0.0.1:${PORT:-80}/" || exit 1
+  CMD curl -fsS "http://127.0.0.1:${PORT:-80}/health" || exit 1
