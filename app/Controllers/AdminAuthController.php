@@ -728,6 +728,26 @@ class AdminAuthController extends Controller
      */
     private function verifyCaptcha(string $captchaResponse): bool
     {
+        // ⚠️ A captcha is not merely unnecessary on a developer's copy — it is
+        // IMPOSSIBLE there. hCaptcha refuses to issue a token to localhost and says so
+        // inside its own widget, in red: "Warning: localhost detected. Please use a valid
+        // host." The token therefore never arrives, verification fails, and because the
+        // captcha only appears AFTER a failed attempt, the admin login becomes a dead end
+        // from the first mistyped password onward, with a message that names the captcha
+        // and explains nothing.
+        //
+        // The bypass below existed for this, but it was keyed on an unset secret — and a
+        // developer with a real secret in .env (the ordinary case) never reached it.
+        //
+        // The test is APP_URL, not $_SERVER['HTTP_HOST']. The Host header comes from the
+        // client, so a check resting on it could be switched off by sending
+        // "Host: localhost" — turning a defence off from outside. APP_URL is server
+        // configuration and cannot be reached that way.
+        if (isLocalUrl(URLROOT)) {
+            error_log('AdminAuthController: APP_URL is local — hCaptcha cannot issue a token for localhost, so the captcha is skipped');
+            return true;
+        }
+
         $secretKey = trim($_ENV['HCAPTCHA_SECRET_KEY'] ?? '');
 
         // A placeholder value (such as YOUR_HCAPTCHA_SECRET_KEY_HERE) is treated as

@@ -148,3 +148,32 @@ function categoryEmoji(string $category): string
         default       => '🏷️',
     };
 }
+
+/**
+ * Whether a URL's host is this machine rather than somewhere on the network.
+ *
+ * It answers one question — "is this deployment a developer's own copy?" — and two
+ * separate defects turned on it, which is why it is here rather than private to either
+ * caller:
+ *
+ *   · GOOGLE_REDIRECT_URI carried the development address to the live server, so Google
+ *     was told to return every visitor to the developer's machine
+ *     (AuthController::resolveGoogleRedirectUri).
+ *
+ *   · hCaptcha refuses to issue a token on localhost — the widget itself prints
+ *     "Warning: localhost detected. Please use a valid host." — so a captcha required
+ *     there can never be satisfied (AdminAuthController::verifyCaptcha).
+ *
+ * ⚠️ Pass APP_URL (or URLROOT), never $_SERVER['HTTP_HOST']. The Host header is sent by
+ * the client and can say anything it likes, so a security decision resting on it can be
+ * turned off by whoever it is protecting against. APP_URL is server configuration.
+ */
+function isLocalUrl(string $url): bool
+{
+    $host = strtolower(trim((string) parse_url($url, PHP_URL_HOST), '[]'));
+
+    return $host === 'localhost'
+        || $host === '127.0.0.1'
+        || $host === '::1'
+        || str_ends_with($host, '.localhost');
+}

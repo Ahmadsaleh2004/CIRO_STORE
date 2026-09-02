@@ -630,7 +630,7 @@ class AuthController extends Controller
             return $derived;
         }
 
-        if (self::isLocalAddress($configured) && !self::isLocalAddress($appUrl)) {
+        if (isLocalUrl($configured) && !isLocalUrl($appUrl)) {
             error_log(
                 'AuthController: GOOGLE_REDIRECT_URI is ' . $configured
                 . ' while the site is served from ' . $appUrl
@@ -643,16 +643,8 @@ class AuthController extends Controller
         return $configured;
     }
 
-    /** Whether a URL's host is this machine rather than somewhere on the network. */
-    private static function isLocalAddress(string $url): bool
-    {
-        $host = strtolower(trim((string) parse_url($url, PHP_URL_HOST), '[]'));
-
-        return $host === 'localhost'
-            || $host === '127.0.0.1'
-            || $host === '::1'
-            || str_ends_with($host, '.localhost');
-    }
+    // isLocalUrl() moved to app/helpers/functions.php once the captcha needed the same
+    // question answered. See the note there on why the Host header must not be used.
 
     // ════════════════════════════════════════════════════════
     // GET /auth/google — redirect to Google's consent screen

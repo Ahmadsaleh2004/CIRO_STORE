@@ -179,6 +179,18 @@
         script.src   = 'https://js.hcaptcha.com/1/api.js?render=explicit&onload=adminHcaptchaOnLoad';
         script.async = true;
         script.defer = true;
+
+        // A blocked or unreachable script left the page silent: the container was shown,
+        // nothing rendered inside it, and the next attempt failed on a captcha the visitor
+        // could not see. Say so instead.
+        script.onerror = function () {
+            showAlert(
+                document.querySelector(ALERT_SELECTOR),
+                'The captcha could not be loaded. Check your connection, or an extension blocking js.hcaptcha.com.',
+                'error'
+            );
+        };
+
         document.head.appendChild(script);
 
         // The callback for when the API is ready
@@ -188,6 +200,37 @@
                 sitekey: siteKey,
                 theme:   'dark',
                 size:    'normal',
+
+                // ⚠️ The widget refuses for reasons of its own, and prints them in small
+                // red text inside its own frame — which is a cross-origin iframe, so the
+                // page cannot read it and nobody reports it. The one that cost a working
+                // day was "Warning: localhost detected. Please use a valid host.": hCaptcha
+                // will not issue a token to localhost at all, so every subsequent sign-in
+                // failed on a captcha that was displayed, tickable, and incapable of
+                // succeeding.
+                //
+                // The server side now skips the captcha entirely when APP_URL is local, so
+                // that particular dead end is gone. This callback is for the next one — an
+                // unregistered domain, a revoked key, a network refusal — where the cause
+                // is again visible only inside a frame nobody can read.
+                'error-callback': function (code) {
+                    showAlert(
+                        document.querySelector(ALERT_SELECTOR),
+                        'The captcha refused to load' + (code ? ' (' + code + ')' : '')
+                        + '. Its site key may not be registered for this domain.',
+                        'error'
+                    );
+                },
+
+                // A solved captcha expires after about two minutes. Without this the page
+                // looks solved while the token is already worthless.
+                'expired-callback': function () {
+                    showAlert(
+                        document.querySelector(ALERT_SELECTOR),
+                        'The captcha expired. Please solve it again.',
+                        'error'
+                    );
+                },
             });
         };
     }
