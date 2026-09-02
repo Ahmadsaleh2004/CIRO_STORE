@@ -42,14 +42,19 @@ $adminInStoreMode = !empty($_SESSION['admin_in_store_mode']);
 //
 // So the collapse and its toggler are gone and .navbar's own flex-wrap does the work: the
 // brand and the action buttons hold the first row, and below 576px the links drop to a
-// second row. What shrinks instead of disappearing is the wording — Products becomes Shop,
-// the brand becomes the icon alone, the buttons lose their labels — through paired spans
-// with Bootstrap's display utilities.
+// second row. What shrinks is the type size and the chrome — the brand becomes the icon
+// alone and the action buttons lose their labels — not the page names.
 //
-// The spans are how a label changes without a second class attribute on the <a>: the
-// anchor keeps the single class it already had (with its active-state ternary), and the
-// two spans are new elements. tests/Unit/DuplicateAttributeTest.php fails the build for a
-// tag carrying the same attribute twice, and that is the rule it protects.
+// ⚠️ The four links keep their full wording at every width. They were abbreviated for one
+// commit (Products → Shop) and it was wrong: "Shop" is a different word, not a shorter
+// one, and a visitor who has learnt where Products is should not have to re-read the bar
+// on a phone. Measured at 320px, the four full names occupy about 240px of the 304px
+// available — the space that abbreviating was buying was never needed.
+//
+// Where a label does still vary by width — the account name — it is done with paired
+// spans and Bootstrap's display utilities, never a second class attribute on an existing
+// tag: tests/Unit/DuplicateAttributeTest.php fails the build for a tag carrying the same
+// attribute twice.
 //
 // .store-navbar is the scoping hook for layout/navbar.css. The admin navbar carries the
 // same id="mainNavbar" AND the same .custom-navbar, and admin pages load store.css before
@@ -67,13 +72,13 @@ $adminInStoreMode = !empty($_SESSION['admin_in_store_mode']);
                 <a class="nav-link <?= (isset($data['activePage']) && $data['activePage'] == 'home') ? 'active fw-bold' : '' ?>" href="<?= URLROOT ?>">Home</a>
             </li>
             <li class="nav-item">
-                <a class="nav-link <?= (isset($data['activePage']) && $data['activePage'] == 'products') ? 'active fw-bold' : '' ?>" href="<?= URLROOT ?>/products"><span class="d-none d-sm-inline">Products</span><span class="d-sm-none">Shop</span></a>
+                <a class="nav-link <?= (isset($data['activePage']) && $data['activePage'] == 'products') ? 'active fw-bold' : '' ?>" href="<?= URLROOT ?>/products">Products</a>
             </li>
             <li class="nav-item">
-                <a class="nav-link <?= (isset($data['activePage']) && $data['activePage'] == 'about') ? 'active fw-bold' : '' ?>" href="<?= URLROOT ?>/about"><span class="d-none d-sm-inline">About Us</span><span class="d-sm-none">About</span></a>
+                <a class="nav-link <?= (isset($data['activePage']) && $data['activePage'] == 'about') ? 'active fw-bold' : '' ?>" href="<?= URLROOT ?>/about">About Us</a>
             </li>
             <li class="nav-item">
-                <a class="nav-link <?= (isset($data['activePage']) && $data['activePage'] == 'contact') ? 'active fw-bold' : '' ?>" href="<?= URLROOT ?>/contact"><span class="d-none d-sm-inline">Contact Us</span><span class="d-sm-none">Contact</span></a>
+                <a class="nav-link <?= (isset($data['activePage']) && $data['activePage'] == 'contact') ? 'active fw-bold' : '' ?>" href="<?= URLROOT ?>/contact">Contact Us</a>
             </li>
         </ul>
 
@@ -110,10 +115,14 @@ $adminInStoreMode = !empty($_SESSION['admin_in_store_mode']);
             // Log In sits with the account actions rather than among the four page links.
             // It opens a modal — it is not a page — and on a phone the links row is for
             // places you can go.
+            //
+            // 👤 rather than a key, and the same glyph the signed-in dropdown uses: the
+            // button keeps its position and its icon across the sign-in, and only gains the
+            // visitor's name. A key said "authentication"; a person says "you".
             ?>
             <?php if (!isset($data['userLoggedIn']) || !$data['userLoggedIn']): ?>
-            <button type="button" class="btn btn-outline-light" aria-label="Log in"
-                    data-bs-toggle="modal" data-bs-target="#loginModal">🔑 <span class="d-none d-lg-inline">Log In</span></button>
+            <button type="button" class="btn btn-outline-light navbar-account" aria-label="Log in"
+                    data-bs-toggle="modal" data-bs-target="#loginModal">👤 <span class="d-none d-lg-inline">Log In</span></button>
             <?php endif; ?>
 
             <?php // The user dropdown — shown only to a signed-in user ?>
@@ -123,10 +132,17 @@ $adminInStoreMode = !empty($_SESSION['admin_in_store_mode']);
                 // aria-label because the name is hidden below 992px and the accessible name
                 // would otherwise be a bare emoji.
                 ?>
-                <button class="btn btn-outline-light dropdown-toggle" type="button"
+                <?php
+                // The name shows on a phone too, shortened to its first word. The point of
+                // the 👤 button is that signing in turns it into your name; hiding the name
+                // on the width where the button matters most would have taken that back.
+                // A single long word still needs a ceiling — the CSS caps and ellipsises it.
+                $fullName  = (string) ($data['userName'] ?? '');
+                $firstName = strtok($fullName, ' ') ?: $fullName;
+                ?>
+                <button class="btn btn-outline-light dropdown-toggle navbar-account" type="button"
                     data-bs-toggle="dropdown" aria-expanded="false" aria-label="Account menu">
-                    <?php // The user's name arrives ready from the controller ?>
-                    👤 <span class="d-none d-lg-inline"><?= htmlspecialchars($data['userName']) ?></span>
+                    👤 <span class="d-none d-lg-inline"><?= htmlspecialchars($fullName) ?></span><span class="d-lg-none"><?= htmlspecialchars($firstName) ?></span>
                 </button>
                 <ul class="dropdown-menu dropdown-menu-end u-surface-card">
                     <li><a class="dropdown-item u-text" href="<?= URLROOT ?>/user/info">👤 My Info</a></li>

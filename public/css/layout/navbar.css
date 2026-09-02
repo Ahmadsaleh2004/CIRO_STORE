@@ -156,7 +156,7 @@
         gap: 4px !important;
         flex-wrap: nowrap;
     }
-    .store-navbar .navbar-actions .btn:not(#theme-toggle),
+    .store-navbar .navbar-actions .btn:not(#theme-toggle, .navbar-account),
     .store-navbar #theme-toggle {
         width: 34px;
         height: 34px;
@@ -166,11 +166,33 @@
         align-items: center;
         justify-content: center;
     }
-    .store-navbar .navbar-actions .btn:not(#theme-toggle) {
+    .store-navbar .navbar-actions .btn:not(#theme-toggle, .navbar-account) {
         font-size: 0.95rem;
     }
     .store-navbar #theme-toggle {
         font-size: 15px;
+    }
+
+    /* The account button is the one that carries text on a phone — the
+       visitor's first name, once they are signed in. A 34px square
+       would clip it, so it keeps the height and takes its width from
+       the name, with a ceiling: a single long first name has to stop
+       somewhere or it pushes the other buttons off the row.
+       Signed out it holds 👤 alone and comes out square anyway. */
+    /* :not(#theme-toggle) again — and again only for its specificity.
+       base/utilities.css holds the 40px touch floor as
+       `.btn:not(#theme-toggle)`, which is (1,1,0); no number of plain
+       classes can reach that, so the account button came out 40px tall
+       beside 34px squares until this matched its shape. */
+    .store-navbar .navbar-account:not(#theme-toggle) {
+        height: 34px;
+        min-height: 34px;
+        max-width: 118px;
+        padding: 0 8px;
+        font-size: 0.8rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
     .store-navbar .counter-badge {
         top: -4px;
@@ -187,11 +209,18 @@
     .store-navbar .navbar-actions {
         gap: 3px !important;
     }
-    .store-navbar .navbar-actions .btn:not(#theme-toggle),
+    .store-navbar .navbar-actions .btn:not(#theme-toggle, .navbar-account),
     .store-navbar #theme-toggle {
         width: 31px;
         height: 31px;
         min-height: 31px;
+    }
+    .store-navbar .navbar-account:not(#theme-toggle) {
+        height: 31px;
+        min-height: 31px;
+        max-width: 84px;
+        padding: 0 6px;
+        font-size: 0.72rem;
     }
 }
 
