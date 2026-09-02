@@ -88,6 +88,78 @@
 }
 
 
+/* ── No editable field below 16px on a phone ──────────────────
+   iOS Safari zooms the whole page when a field it is about to focus
+   computes below 16px, and it does not zoom back out afterwards. One
+   tap on the sign-in email or the contact form and the site stays
+   magnified for the rest of the visit — which is the "everything looks
+   zoomed in on the phone" report, arriving through a door nobody was
+   watching.
+
+   Measured before this rule, at a 375px viewport: #contactName,
+   #contactEmail, #contactMessage and #loginEmail all computed 14.4px,
+   from .float-group's 0.95rem base and a 0.9rem step below 575px.
+
+   16px flat rather than 1rem, so a future change to the root size
+   cannot quietly drop it back under the threshold. Labels and
+   placeholders are deliberately untouched — Safari reads the field.
+
+   body:not(.admin-layout): this file ships in the store bundle, and
+   admin pages load that bundle before their own. The admin panel is a
+   separate pass, so every rule added here from now on carries this
+   prefix. The admin body has .admin-layout (admin/inc/head.php); the
+   store's and the bare pages' do not. */
+@media (max-width: 767px) {
+    body:not(.admin-layout) .form-control,
+    body:not(.admin-layout) .form-select,
+    body:not(.admin-layout) .float-group input,
+    body:not(.admin-layout) .float-group textarea,
+    body:not(.admin-layout) .float-group select {
+        font-size: 16px;
+    }
+}
+
+/* ── Phone density: the page shell ────────────────────────────
+   Bootstrap's p-3/p-4 cards and py-5 sections are sized for a laptop.
+   At 320px a .card.p-4 spends 48 of the 296 available pixels on its
+   own padding, and .lead renders at 20px.
+
+   One block here instead of a rule per page: it is what lets
+   /about and /contact — which have no stylesheet of their own — come
+   out right without gaining one, and it keeps ten pages from each
+   inventing their own answer to the same question.
+
+   The !important matches Bootstrap's: p-3, p-4 and py-5 are declared
+   !important by the framework, so nothing without one can reach them.
+   The heading rules need none.
+
+   h2:not(.section-title) — base/typography.css already owns
+   .section-title across four widths and ends with an !important.
+   Excluding it keeps one owner per element rather than two. */
+@media (max-width: 575px) {
+    body:not(.admin-layout) .card.p-4 { padding: 1rem !important; }
+    body:not(.admin-layout) .card.p-3 { padding: 0.75rem !important; }
+
+    body:not(.admin-layout) .container.py-5 {
+        padding-top: 1.5rem !important;
+        padding-bottom: 1.5rem !important;
+    }
+
+    body:not(.admin-layout) .lead { font-size: 1rem; }
+
+    body:not(.admin-layout) h1,
+    body:not(.admin-layout) .h1 { font-size: 1.4rem; }
+
+    body:not(.admin-layout) h2:not(.section-title),
+    body:not(.admin-layout) .h2 { font-size: 1.2rem; }
+
+    body:not(.admin-layout) h3,
+    body:not(.admin-layout) .h3 { font-size: 1.1rem; }
+
+    body:not(.admin-layout) .about-stat-value { font-size: 1.5rem; }
+}
+
+
 /* ==================================================
    Inline-style replacements — the last step to a strict CSP
    ==================================================

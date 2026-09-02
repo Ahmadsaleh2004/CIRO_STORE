@@ -1,5 +1,28 @@
 /* ==================================================
-   base/breakpoints.css — Card-size scale per breakpoint.
+   base/breakpoints.css — the project's breakpoints, and the card-size
+   scale that hangs off them.
+   ==================================================
+   THE CONVENTION. New and rewritten rules use these four widths and
+   no others, always as max-width:
+
+     <=991px   below lg — tablet landscape and down
+     <=767px   below md — tablet portrait and down; "touch"
+     <=575px   below sm — PHONE; where most of the phone work lives
+     <=320px   the floor — the narrowest real device
+
+   They are Bootstrap's own boundaries minus one, and they are already
+   the majority in the store layer.
+
+   ⚠️ The project also contains 768 / 576 / 414 / 400 / 375 blocks,
+   mostly under public/css/admin. They are NOT rewritten in bulk: a
+   sweep across files nobody is otherwise editing risks a silent
+   regression on a page nobody rechecks, for a tidiness nobody sees.
+   A stale width is converted only when its block is already being
+   rewritten for another reason. 768 and 767 differ by one pixel and
+   that pixel has never mattered; the cost of the mixture is that a
+   reader cannot tell which convention is in force, which the four
+   lines above now answer.
+
    ==================================================
    These are the ONLY blocks in the project that redefine
    --card-height / --img-height. Custom properties have no
