@@ -10,7 +10,7 @@
         "build:css": "node build/build-css.mjs",
         "build:js": "node build/build-js.mjs",
         "lint": "npm run lint:js && npm run lint:css",
-        "lint:js": "eslint public/js",
+        "lint:js": "eslint public/js --max-warnings 0",
         "lint:css": "stylelint \"public/css/**/*.css\"",
         "lint:fix": "eslint public/js --fix && stylelint \"public/css/**/*.css\" --fix",
         "format": "prettier --write \"public/js/**/*.js\" \"public/css/**/*.css\"",
