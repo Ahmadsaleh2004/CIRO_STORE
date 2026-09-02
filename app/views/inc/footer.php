@@ -11,22 +11,23 @@ $csrfToken = generateCsrfToken();
 <footer class="custom-footer mt-5">
     <div class="container py-5">
         <div class="row">
-            <div class="col-lg-4 mb-4">
+            <?php
+            // Two columns, not three. The middle one was "Quick Links": Home, Products,
+            // About Us, Contact Us — the same four links the navbar carries, and the navbar
+            // now shows all four at every width without a hamburger, so the footer copy
+            // repeated what was already on screen and gave a visitor a second place to
+            // maintain when a page is renamed.
+            //
+            // The remaining two take half the row each rather than a third, or the space
+            // the links held would stay empty.
+            ?>
+            <div class="col-lg-6 mb-4">
                 <h4 class="fw-bold mb-2">🏪 Cairo Store</h4>
                 <p class="small u-footer-text">
                     <?= htmlspecialchars($footerText ?? 'Premium electronics store offering smartphones, laptops, gaming devices and smart accessories.') ?>
                 </p>
             </div>
-            <div class="col-lg-4 mb-4">
-                <h5 class="fw-semibold mb-3">Quick Links</h5>
-                <ul class="list-unstyled">
-                    <li class="mb-1"><a href="<?= URLROOT ?>">Home</a></li>
-                    <li class="mb-1"><a href="<?= URLROOT ?>/products">Products</a></li>
-                    <li class="mb-1"><a href="<?= URLROOT ?>/about">About Us</a></li>
-                    <li class="mb-1"><a href="<?= URLROOT ?>/contact">Contact Us</a></li>
-                </ul>
-            </div>
-            <div class="col-lg-4 mb-4">
+            <div class="col-lg-6 mb-4">
                 <h5 class="fw-semibold mb-3">Stay Connected</h5>
                 <p class="small mb-3 u-footer-text">Stay updated with our latest news and offers!</p>
                 <div class="d-flex gap-3 mt-2">
