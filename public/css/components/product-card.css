@@ -177,14 +177,8 @@
         font-size: 12.5px;
     }
 
-    /* 40x40 from components/favorite-button.css covers a fifth of a
-       half-width card's image. 32px still clears WCAG 2.2's 24px. */
-    .favorite-btn {
-        top: 5px;
-        right: 5px;
-        width: 32px;
-        height: 32px;
-    }
+    /* The heart's phone size lives in components/favorite-button.css,
+       which is imported after this file and would win the tie. */
 
     /* components/skeleton.css ties the placeholder to --card-height,
        260px at this width, while the real card now measures about

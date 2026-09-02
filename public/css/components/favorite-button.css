@@ -49,3 +49,19 @@
     }
 }
 
+
+/* --- Phone: two cards per row, so the heart has to give ground ---
+   40x40 covered about a fifth of the image on a half-width card once
+   the products and wishlist grids went two-up. 32px still clears the
+   24x24 minimum target size in WCAG 2.2.
+
+   Both the catalogue heart and the wishlist's .remove-fav carry this
+   class, so one rule sizes both and they cannot drift apart. --- */
+@media (max-width: 575px) {
+    .favorite-btn {
+        top: 5px;
+        right: 5px;
+        width: 32px;
+        height: 32px;
+    }
+}
