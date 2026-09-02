@@ -31,90 +31,113 @@ $adminInStoreMode = !empty($_SESSION['admin_in_store_mode']);
 </div>
 <?php endif; ?>
 
-<nav class="navbar custom-navbar navbar-expand-lg" id="mainNavbar">
+<?php
+// ⚠️ No hamburger, at any width — deliberately, and it is the reason several classes
+// below look unusual.
+//
+// The navbar used to be navbar-expand-lg, so every link and every button vanished into a
+// collapsed panel below 992px: on a phone the store showed a shop icon and a hamburger and
+// nothing else. What a visitor needs most on a small screen — the cart, the wishlist, the
+// account — was the first thing hidden.
+//
+// So the collapse and its toggler are gone and .navbar's own flex-wrap does the work: the
+// brand and the action buttons hold the first row, and below 576px the links drop to a
+// second row. What shrinks instead of disappearing is the wording — Products becomes Shop,
+// the brand becomes the icon alone, the buttons lose their labels — through paired spans
+// with Bootstrap's display utilities.
+//
+// The spans are how a label changes without a second class attribute on the <a>: the
+// anchor keeps the single class it already had (with its active-state ternary), and the
+// two spans are new elements. tests/Unit/DuplicateAttributeTest.php fails the build for a
+// tag carrying the same attribute twice, and that is the rule it protects.
+//
+// .store-navbar is the scoping hook for layout/navbar.css. The admin navbar carries the
+// same id="mainNavbar" AND the same .custom-navbar, and admin pages load store.css before
+// admin.css — so a rule keyed on either of those reaches the admin panel. This class does
+// not exist there.
+?>
+<nav class="navbar custom-navbar store-navbar" id="mainNavbar">
     <div class="container">
         <?php // Using URLROOT for clean links ?>
-        <a class="navbar-brand fw-bold" href="<?= URLROOT ?>">🏪 Cairo Store</a>
+        <a class="navbar-brand fw-bold" href="<?= URLROOT ?>">🏪 <span class="d-none d-sm-inline">Cairo Store</span></a>
 
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse"
-            data-bs-target="#navbarNav" aria-controls="navbarNav"
-            aria-expanded="false" aria-label="Toggle navigation">
-            <span class="navbar-toggler-icon"></span>
-        </button>
+        <ul class="navbar-nav navbar-links">
+            <li class="nav-item">
+                <?php // The controller passes $data['activePage'] to mark the active page ?>
+                <a class="nav-link <?= (isset($data['activePage']) && $data['activePage'] == 'home') ? 'active fw-bold' : '' ?>" href="<?= URLROOT ?>">Home</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link <?= (isset($data['activePage']) && $data['activePage'] == 'products') ? 'active fw-bold' : '' ?>" href="<?= URLROOT ?>/products"><span class="d-none d-sm-inline">Products</span><span class="d-sm-none">Shop</span></a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link <?= (isset($data['activePage']) && $data['activePage'] == 'about') ? 'active fw-bold' : '' ?>" href="<?= URLROOT ?>/about"><span class="d-none d-sm-inline">About Us</span><span class="d-sm-none">About</span></a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link <?= (isset($data['activePage']) && $data['activePage'] == 'contact') ? 'active fw-bold' : '' ?>" href="<?= URLROOT ?>/contact"><span class="d-none d-sm-inline">Contact Us</span><span class="d-sm-none">Contact</span></a>
+            </li>
+        </ul>
 
-        <div class="collapse navbar-collapse" id="navbarNav">
-            <ul class="navbar-nav mx-auto">
-                <li class="nav-item">
-                    <?php // The controller passes $data['activePage'] to mark the active page ?>
-                    <a class="nav-link <?= (isset($data['activePage']) && $data['activePage'] == 'home') ? 'active fw-bold' : '' ?>" href="<?= URLROOT ?>">Home</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link <?= (isset($data['activePage']) && $data['activePage'] == 'products') ? 'active fw-bold' : '' ?>" href="<?= URLROOT ?>/products">Products</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link <?= (isset($data['activePage']) && $data['activePage'] == 'about') ? 'active fw-bold' : '' ?>" href="<?= URLROOT ?>/about">About Us</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link <?= (isset($data['activePage']) && $data['activePage'] == 'contact') ? 'active fw-bold' : '' ?>" href="<?= URLROOT ?>/contact">Contact Us</a>
-                </li>
+        <div class="d-flex gap-2 align-items-center navbar-actions">
+            <?php // Wishlist — available to everyone ?>
+            <a href="<?= URLROOT ?>/wishlist"
+               class="btn btn-outline-danger position-relative" aria-label="Wishlist">
+                ❤️ <span id="wishlist-count" class="counter-badge" aria-live="polite">0</span>
+            </a>
 
-                <?php // For a signed-out visitor, show the Log In button ?>
-                <?php if (!isset($data['userLoggedIn']) || !$data['userLoggedIn']): ?>
-                    <li class="nav-item">
-                        <a class="nav-link fw-semibold" href="#"
-                           data-bs-toggle="modal" data-bs-target="#loginModal">Log In</a>
-                    </li>
-                <?php endif; ?>
-            </ul>
+            <?php // The notification bell — shown only to a signed-in user ?>
+            <?php if (isset($data['userLoggedIn']) && $data['userLoggedIn']): ?>
+            <button id="notifBell" class="btn btn-outline-light position-relative"
+                    aria-label="Notifications" title="Notifications" type="button">
+                🔔 <span id="notifBadge" class="counter-badge u-badge-dot d-none" aria-live="polite">0</span>
+            </button>
+            <?php endif; ?>
 
-            <div class="d-flex gap-2 align-items-center">
-                <?php // Wishlist — available to everyone ?>
-                <a href="<?= URLROOT ?>/wishlist"
-                   class="btn btn-outline-danger position-relative" aria-label="Wishlist">
-                    ❤️ <span id="wishlist-count" class="counter-badge" aria-live="polite">0</span>
-                </a>
+            <?php // Cart — shown only to a signed-in user ?>
+            <?php if (isset($data['userLoggedIn']) && $data['userLoggedIn']): ?>
+            <button type="button"
+                class="btn btn-outline-warning position-relative"
+                data-bs-toggle="offcanvas" data-bs-target="#cartSidebar"
+                aria-controls="cartSidebar" aria-label="Shopping cart">
+                🛒 <span id="cart-count" class="counter-badge" aria-live="polite">0</span>
+            </button>
+            <?php endif; ?>
 
-                <?php // The notification bell — shown only to a signed-in user ?>
-                <?php if (isset($data['userLoggedIn']) && $data['userLoggedIn']): ?>
-                <button id="notifBell" class="btn btn-outline-light position-relative"
-                        aria-label="Notifications" title="Notifications" type="button">
-                    🔔 <span id="notifBadge" class="counter-badge u-badge-dot d-none" aria-live="polite">0</span>
+            <?php // Theme Toggle ?>
+            <button id="theme-toggle" class="btn btn-outline-light"
+                    aria-label="Toggle theme" title="Toggle Theme">🌙</button>
+
+            <?php
+            // Log In sits with the account actions rather than among the four page links.
+            // It opens a modal — it is not a page — and on a phone the links row is for
+            // places you can go.
+            ?>
+            <?php if (!isset($data['userLoggedIn']) || !$data['userLoggedIn']): ?>
+            <button type="button" class="btn btn-outline-light" aria-label="Log in"
+                    data-bs-toggle="modal" data-bs-target="#loginModal">🔑 <span class="d-none d-lg-inline">Log In</span></button>
+            <?php endif; ?>
+
+            <?php // The user dropdown — shown only to a signed-in user ?>
+            <?php if (isset($data['userLoggedIn']) && $data['userLoggedIn']): ?>
+            <div class="dropdown">
+                <?php
+                // aria-label because the name is hidden below 992px and the accessible name
+                // would otherwise be a bare emoji.
+                ?>
+                <button class="btn btn-outline-light dropdown-toggle" type="button"
+                    data-bs-toggle="dropdown" aria-expanded="false" aria-label="Account menu">
+                    <?php // The user's name arrives ready from the controller ?>
+                    👤 <span class="d-none d-lg-inline"><?= htmlspecialchars($data['userName']) ?></span>
                 </button>
-                <?php endif; ?>
-
-                <?php // Cart — shown only to a signed-in user ?>
-                <?php if (isset($data['userLoggedIn']) && $data['userLoggedIn']): ?>
-                <button type="button"
-                    class="btn btn-outline-warning position-relative"
-                    data-bs-toggle="offcanvas" data-bs-target="#cartSidebar"
-                    aria-controls="cartSidebar" aria-label="Shopping cart">
-                    🛒 <span id="cart-count" class="counter-badge" aria-live="polite">0</span>
-                </button>
-                <?php endif; ?>
-
-                <?php // Theme Toggle ?>
-                <button id="theme-toggle" class="btn btn-outline-light"
-                        aria-label="Toggle theme" title="Toggle Theme">🌙</button>
-
-                <?php // The user dropdown — shown only to a signed-in user ?>
-                <?php if (isset($data['userLoggedIn']) && $data['userLoggedIn']): ?>
-                <div class="dropdown">
-                    <button class="btn btn-outline-light dropdown-toggle" type="button"
-                        data-bs-toggle="dropdown" aria-expanded="false">
-                        <?php // The user's name arrives ready from the controller ?>
-                        👤 <?= htmlspecialchars($data['userName']) ?>
-                    </button>
-                    <ul class="dropdown-menu dropdown-menu-end u-surface-card">
-                        <li><a class="dropdown-item u-text" href="<?= URLROOT ?>/user/info">👤 My Info</a></li>
-                        <li><a class="dropdown-item u-text" href="<?= URLROOT ?>/contact">💬 Contact Us</a></li>
-                        <li><hr class="dropdown-divider u-border-section"></li>
-                        <?php // logoutUser() is a JavaScript function defined in the static JS files ?>
-                        <li><a class="dropdown-item text-danger" href="#"
-                               data-action="logout-user">🚪 Log Out</a></li>
-                    </ul>
-                </div>
-                <?php endif; ?>
+                <ul class="dropdown-menu dropdown-menu-end u-surface-card">
+                    <li><a class="dropdown-item u-text" href="<?= URLROOT ?>/user/info">👤 My Info</a></li>
+                    <li><a class="dropdown-item u-text" href="<?= URLROOT ?>/contact">💬 Contact Us</a></li>
+                    <li><hr class="dropdown-divider u-border-section"></li>
+                    <?php // logoutUser() is a JavaScript function defined in the static JS files ?>
+                    <li><a class="dropdown-item text-danger" href="#"
+                           data-action="logout-user">🚪 Log Out</a></li>
+                </ul>
             </div>
+            <?php endif; ?>
         </div>
     </div>
 </nav>

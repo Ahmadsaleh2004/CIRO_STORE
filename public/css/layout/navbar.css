@@ -49,38 +49,158 @@
     border-color: var(--accent) !important;
 }
 
-/* --- Responsive ------------------------------------------- */
+/* ==================================================
+   Responsive — the always-visible store navbar
+   ==================================================
+   Scoped on .store-navbar, NOT on #mainNavbar or .custom-navbar.
+   The admin navbar (app/views/admin/inc/navbar.php) carries BOTH of
+   those, and admin pages load store.css before admin.css — so a rule
+   written here on either selector lands on the admin panel too, and
+   only loses where admin/layout/navbar.css happens to have written a
+   counterpart. .store-navbar exists on the store nav alone.
+
+   There is no hamburger at any width. The nav shrinks instead:
+
+     >=992px   full labels · brand words · the account name
+     576-991   full labels · brand words · no account name, no caret
+     <=575     short labels (Shop/About/Contact) · 🏪 alone ·
+               icon-only actions · the links drop to a second row
+
+   The old blocks here (767 / 768 / 414 / 320) were written for exactly
+   this layout — tightening the gaps of the action strip and trimming a
+   long account name — but the strip lived inside .navbar-collapse, so
+   they only ever applied while the hamburger panel was open. They are
+   replaced rather than kept: the wrapping and the ellipsis were both
+   symptoms of a strip with nowhere to go, and it now has a row.
+   ================================================== */
+
+/* navbar-expand-* used to supply these. The class is gone, so they are
+   stated rather than left to .navbar-nav's defaults — which are a
+   COLUMN, and nav links with no horizontal padding at all.
+
+   The padding is not cosmetic: without it the four links render as
+   "HomeProductsAbout UsContact Us", one run of text with no gaps,
+   because .navbar-nav .nav-link zeroes padding-left/right and only the
+   expand class puts it back. That is what it looked like on a 1280px
+   desktop the first time this was measured. */
+.store-navbar .navbar-links {
+    flex-direction: row;
+    align-items: center;
+    margin-inline: auto;
+}
+
+.store-navbar .nav-link {
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+}
+
+@media (max-width: 991px) {
+    .store-navbar .nav-link {
+        font-size: 0.9rem;
+        padding-left: 0.5rem;
+        padding-right: 0.5rem;
+    }
+    /* The caret costs 12px next to a 👤 that already says "menu". */
+    .store-navbar .navbar-actions .dropdown-toggle::after {
+        display: none;
+    }
+}
+
 @media (max-width: 767px) {
-    .navbar-brand { font-size: 1rem !important; }
+    .store-navbar .navbar-brand {
+        font-size: 1rem;
+    }
 }
 
-@media (max-width: 768px) {
-    /* Right-hand icon strip may wrap instead of overflowing */
-    #mainNavbar .d-flex.gap-2.align-items-center {
+@media (max-width: 575px) {
+    /* Two rows: brand and actions on the first, the four links on the
+       second. .navbar is already flex-wrap:wrap; the links claim a full
+       basis and `order` puts them underneath. */
+    .store-navbar > .container {
         flex-wrap: wrap;
-        gap: 6px !important;
+        row-gap: 4px;
+        padding-left: 8px;
+        padding-right: 8px;
     }
-}
+    .store-navbar .navbar-links {
+        order: 3;
+        flex: 0 0 100%;
+        justify-content: space-between;
+        margin-inline: 0;
+    }
+    .store-navbar .nav-link {
+        font-size: 0.78rem;
+        padding: 4px 6px;
+    }
 
-@media (max-width: 414px) {
-    #mainNavbar .d-flex.gap-2.align-items-center {
+    /* Icon-only actions. width and height rather than padding, so all
+       of them are the same square whatever glyph they carry.
+
+       ⚠️ The `:not(#theme-toggle)` is copied from base/utilities.css
+       deliberately, and it is about specificity, not about the theme
+       toggle. That file's touch floor reads `.btn:not(#theme-toggle)`,
+       and :not() contributes the specificity of its ARGUMENT — so an id
+       inside it makes the whole selector (1,1,0), which a plain
+       three-class selector cannot reach. Measured before this: ❤️ and
+       🔑 came out 40px tall while 🌙, excluded from the floor, came out
+       34px — three buttons in a row at two heights.
+
+       Matching the shape brings this to (1,3,0) and it wins without an
+       !important, leaving the 40px floor untouched for every other
+       button on the page. 34px still clears the 24px minimum target
+       size in WCAG 2.2.
+
+       #theme-toggle is sized 38x38 by an id in components/buttons.css,
+       so it takes an id here too. */
+    .store-navbar .navbar-actions {
         gap: 4px !important;
+        flex-wrap: nowrap;
     }
-    /* Trim long account names in the navbar dropdown trigger */
-    .custom-navbar .dropdown .btn {
-        max-width: 130px;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
+    .store-navbar .navbar-actions .btn:not(#theme-toggle),
+    .store-navbar #theme-toggle {
+        width: 34px;
+        height: 34px;
+        min-height: 34px;
+        padding: 0;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .store-navbar .navbar-actions .btn:not(#theme-toggle) {
+        font-size: 0.95rem;
+    }
+    .store-navbar #theme-toggle {
+        font-size: 15px;
+    }
+    .store-navbar .counter-badge {
+        top: -4px;
+        right: -4px;
+        font-size: 8px;
     }
 }
 
 @media (max-width: 320px) {
-    #mainNavbar .d-flex.gap-2.align-items-center {
-        flex-wrap: wrap;
-        gap: 3px !important;
-        max-width: 100%;
+    .store-navbar .nav-link {
+        font-size: 0.72rem;
+        padding: 4px 3px;
     }
+    .store-navbar .navbar-actions {
+        gap: 3px !important;
+    }
+    .store-navbar .navbar-actions .btn:not(#theme-toggle),
+    .store-navbar #theme-toggle {
+        width: 31px;
+        height: 31px;
+        min-height: 31px;
+    }
+}
+
+/* ⚠️ Not a store rule. .custom-navbar reaches the ADMIN navbar, whose
+   brand carries a yellow ADMIN badge (admin/inc/navbar.php) — the store
+   brand has no badge at all. It stays here, unscoped, because moving it
+   into the admin sheet is a change to the admin panel, and that is a
+   separate pass. Whoever runs that pass should take it with them. */
+@media (max-width: 320px) {
     .custom-navbar .navbar-brand .badge {
         display: none;
     }
