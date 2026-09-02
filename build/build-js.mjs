@@ -64,6 +64,12 @@ const BUNDLES = {
         // colour comes from the database so it cannot become a class, and a style= cannot
         // remain once 'unsafe-inline' is removed from style-src.
         'store/variant-swatches.js',
+        // Re-deals the home slider's images on a phone. It is in the bundle rather than
+        // injected on the home page alone because the home page is the LCP page: one more
+        // <script> tag there costs a request on the very page that must paint fastest,
+        // while a kilobyte inside a bundle every page already caches costs nothing. It
+        // returns immediately when #slider-inner is absent.
+        'store/slider-chunk.js',
         'features/cart.js',
         'features/products-catalog.js',
         'features/auth.js',

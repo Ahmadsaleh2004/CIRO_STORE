@@ -106,6 +106,12 @@ function renderSlider(homeSliders) {
             </div>
         </div>`;
     }).join('');
+
+    // This markup is the server's grouping, so the phone re-deal in
+    // js/store/slider-chunk.js has to be told to read it again — it captured the previous
+    // arrangement once and would otherwise keep re-applying a grouping that no longer
+    // exists.
+    if (typeof window.sliderChunkRefresh === 'function') window.sliderChunkRefresh();
 }
 window.renderSlider = renderSlider;
 

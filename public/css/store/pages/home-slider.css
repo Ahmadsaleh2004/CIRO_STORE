@@ -179,22 +179,31 @@
    ratio of about 1:5, a column of slivers. At 320px it was 52px. The
    item COUNT has to come down before any height is worth choosing.
 
-   Hiding the surplus items in CSS rather than in the view keeps
-   app/views/home.php and renderSlider() in products-catalog.js
-   structurally identical — the one invariant both files are documented
-   to preserve — and the same slide still opens correctly on a laptop.
+   ⚠️ `:not([data-chunked])` — the hiding here is only for the moment
+   BEFORE js/store/slider-chunk.js runs. That file re-deals the images
+   into more slides (a slide of five becomes 3 + 2) and marks each row
+   it built with data-chunked, after which every child shows: nothing
+   is hidden from a phone visitor, it is spread over another swipe.
+
+   The hiding still earns its place, though. Without it the first paint
+   would show six slivers and then jump to three the moment the deferred
+   bundle executes — a shift in the page's largest contentful element.
+   With it the count is right from the first frame and the script only
+   rehouses what was already invisible.
+
+   The counts here and the ones in slider-chunk.js must agree: three per
+   slide on a phone, two at the 320px floor.
 
    These blocks come after the two above deliberately: they are the
    later rule at equal specificity, which is how they beat the 320px
    height and the 1.1rem title. */
 @media (max-width: 767px) {
     .slide-items-row { height: 240px; }
-    .slide-items-row > *:nth-child(n+4) { display: none; }
+    .slide-items-row:not([data-chunked]) > *:nth-child(n+4) { display: none; }
 }
 
 @media (max-width: 575px) {
     .slide-items-row { height: 200px; gap: 1px; }
-    .slide-items-row > *:nth-child(n+3) { display: none; }
 
     /* compact-count hides its captions until :hover, and a phone has no
        hover — measured opacity was 0 on every slide on every phone, so
@@ -210,7 +219,7 @@
 
 @media (max-width: 320px) {
     .slide-items-row { height: 170px; }
-    .slide-items-row > *:nth-child(n+2) { display: none; }
+    .slide-items-row:not([data-chunked]) > *:nth-child(n+3) { display: none; }
 }
 
 /* ═══════════════════════════════════════════════════════════════════

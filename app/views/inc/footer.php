@@ -136,6 +136,7 @@ $csrfToken = generateCsrfToken();
         'js/core/flash-toast.js',
         'js/core/theme.js',
         'js/core/modal-input-colors.js',
+        'js/store/slider-chunk.js',
         'js/features/cart.js',
         'js/features/products-catalog.js',
         'js/features/auth.js',
