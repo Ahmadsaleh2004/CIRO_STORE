@@ -114,7 +114,7 @@ A single flat row, with exactly the same structure as users/index.php. Putting t
                     <td class="u-meta-80">
                         <?= htmlspecialchars(date('M j, Y H:i', strtotime($o['created_at']))) ?>
                     </td>
-                    <td class="text-center" data-action="stop-propagation">
+                    <td class="text-center admin-actions-cell" data-action="stop-propagation">
                         <?php if (in_array($o['status'], ['completed', 'cancelled'], true)): ?>
                         <button type="button" class="btn btn-sm btn-outline-danger delete-order-btn"
                                 data-oid="<?= (int)$o['order_id'] ?>"

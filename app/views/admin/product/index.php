@@ -327,7 +327,7 @@ $activeCount = (int)(bool)$priceSort + (int)(bool)$stockSort + (int)(bool)$dateS
                     </td>
 
                     <?php // Actions ?>
-                    <td>
+                    <td class="admin-actions-cell">
                         <a href="<?= URLROOT ?>/admin/products/edit?id=<?= (int)$p['id'] ?>"
                            class="btn btn-sm btn-outline-primary me-1"
                            title="Edit product">✏️</a>

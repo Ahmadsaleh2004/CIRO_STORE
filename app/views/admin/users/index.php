@@ -102,7 +102,7 @@ $totalPages = max(1, (int)ceil($total / $perPage));
                         <?= htmlspecialchars(date('d M Y', strtotime($u['created_at']))) ?>
                     </td>
                     <?php // data-action="stop-propagation" is required — it stops user-row from firing ?>
-                    <td class="text-center">
+                    <td class="text-center admin-actions-cell">
                         <div class="d-flex gap-1 justify-content-center" data-action="stop-propagation">
                             <button type="button" class="btn btn-sm btn-outline-info"
                                     data-action="notify-modal" data-notify-type="user"

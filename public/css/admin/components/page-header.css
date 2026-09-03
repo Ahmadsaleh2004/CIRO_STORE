@@ -28,12 +28,10 @@
     .admin-page-header h1 { font-size: 1.25rem; }
 }
 
-@media (max-width: 576px) {
-    .admin-page-header .btn {
-        width: 100%;
-        text-align: center;
-    }
-}
+/* The <=576px block that used to stand here gave every header button
+   width: 100%, so Manage Admins opened with three full-width bars stacked
+   under the title — about 120px of chrome before the first row of data. See
+   the section at the foot of this file, which puts them back on one line. */
 
 @media (max-width: 414px) {
     .admin-page-header h1 { font-size: 1.1rem; }
@@ -46,4 +44,47 @@
 
 @media (max-width: 320px) {
     .admin-page-header h1 { font-size: 0.95rem; }
+}
+
+/* ==================================================
+   The action row on a phone
+   ==================================================
+   Manage Admins carries three buttons here, Products and Users two, Orders
+   one. Stacked full width they cost roughly 120px before any data, on the
+   four screens where the data is the point.
+
+   One row instead, the buttons sharing it equally. The labels are NOT
+   shortened to make them fit — "Broadcast to Admins" stays "Broadcast to
+   Admins" — they wrap to a second line inside their own button instead.
+   Three buttons two lines tall is around 50px; the same three stacked at full
+   width is 120px, and truncating the words to buy a single line would cost
+   more than it saves.
+
+   Appended rather than merged into the blocks above, which are the original
+   cascade order and marked do-not-reorder.
+   ================================================== */
+@media (max-width: 575px) {
+    .admin-page-header > div {
+        display: flex;
+        flex-wrap: nowrap;
+        align-items: stretch;
+        width: 100%;
+        gap: 8px;
+    }
+
+    .admin-page-header .btn {
+        flex: 1 1 0;
+        width: auto;
+
+        /* Without this a flex item refuses to go below its content width, and
+           a long label pushes the row wider than the screen instead of
+           wrapping inside its own button. */
+        min-width: 0;
+        margin-top: 0;
+        padding: 6px 8px;
+        font-size: 0.78rem;
+        line-height: 1.25;
+        text-align: center;
+        white-space: normal;
+    }
 }

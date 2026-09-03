@@ -73,6 +73,18 @@ use App\Models\AdminModel;
                             <?= htmlspecialchars($adm['role']) ?>
                         </span>
                     </td>
+                    <?php /*
+The nine permissions used to print as one comma-joined sentence, and a
+                     fully-privileged admin made that the longest cell in the table by a wide
+                     margin — "Admins, Products, Users, Dashboard, Support, Content, Checkout,
+                     Orders, Branding". It set the width of a column the table then had to
+                     carry on every screen, and on a phone it was most of the horizontal
+                     scroll.
+
+                     Same nine names, as separate chips. On a phone the chips are replaced by
+                     the count — the names are still in the title attribute, and the ✏️ button
+                     one column over is where they are actually read and changed.
+*/ ?>
                     <td class="u-fs-75">
                         <?php
                         $permMap = [
@@ -90,10 +102,19 @@ use App\Models\AdminModel;
                         foreach ($permMap as $key => $label) {
                             if (!empty($adm[$key])) $active[] = $label;
                         }
-                        echo $active
-                            ? '<span class="u-accent">' . implode(', ', $active) . '</span>'
-                            : '<span class="u-muted">—</span>';
                         ?>
+                        <?php if ($active): ?>
+                        <span class="perm-chips" title="<?= htmlspecialchars(implode(', ', $active)) ?>">
+                            <?php foreach ($active as $label): ?>
+                            <span class="perm-chip"><?= htmlspecialchars($label) ?></span>
+                            <?php endforeach; ?>
+                        </span>
+                        <span class="perm-count u-accent"
+                              title="<?= htmlspecialchars(implode(', ', $active)) ?>"><?=
+                            count($active) ?> / <?= count($permMap) ?></span>
+                        <?php else: ?>
+                        <span class="u-muted">—</span>
+                        <?php endif; ?>
                     </td>
                     <td class="u-muted u-fs-80">
                         <?= htmlspecialchars(date('M j, Y', strtotime($adm['created_at']))) ?>
@@ -121,7 +142,7 @@ use App\Models\AdminModel;
                      `if (e.target.closest('button, a, form, input, [data-action]')) return;`
                      The attribute stays here because that guard reads it among other things.
 */ ?>
-                    <td data-action="stop-propagation">
+                    <td class="admin-actions-cell" data-action="stop-propagation">
                         <?php if (AdminModel::canManageTarget($adminRole, $adm['role'])): ?>
                         <button class="btn btn-sm btn-outline-primary me-1"
                                 data-action="perm-modal"

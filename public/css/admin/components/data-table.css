@@ -34,11 +34,29 @@
 }
 
 @media (max-width: 768px) {
-    /* Cells wrap instead of forcing the table wider than the screen */
+    /* Cells wrap instead of forcing the table wider than the screen. */
     .admin-table td,
     .admin-table th {
         white-space: normal !important;
-        word-break: break-word;
+    }
+
+    /* A body cell may break inside a word, because some of them hold one long
+       unbreakable token — an email address, a URL — that no amount of column
+       width will accommodate. `anywhere` rather than break-all: it breaks only
+       where it has to, and it counts toward the cell's minimum width, which is
+       what lets the table shrink to the screen at all.
+
+       A heading may not. These are short labels with spaces in them, and the
+       shared rule they used to sit under turned EMAIL into "EM AIL" and LAST
+       MODIFIED into "LAS T MO DIF IED" the moment the table narrowed enough to
+       fit. Wrapping between the words is right; wrapping inside them is not. */
+    .admin-table td {
+        overflow-wrap: anywhere;
+    }
+
+    .admin-table th {
+        overflow-wrap: normal;
+        word-break: normal;
     }
 }
 
@@ -68,4 +86,31 @@
 .clickable-row,
 .user-row {
     cursor: pointer;
+}
+
+/* ==================================================
+   The actions column
+   ==================================================
+   Once the tables stopped forcing themselves wider than the screen, the
+   actions column became the narrowest place the row controls had ever been
+   asked to sit, and they stacked: three buttons one above another turned a
+   two-line row into a 166px one, measured on Manage Admins at 375px.
+
+   Keeping them on one line makes the column wider, and the table with it —
+   but the table already scrolls inside .table-responsive, and horizontal
+   scroll in a container is cheap where vertical scroll through 166px rows is
+   not. The trade buys roughly three times as many rows on screen.
+
+   The labels are untouched: "🗑️ Delete" still says Delete. Shortening the
+   words would have saved less than this does.
+   ================================================== */
+/* `.admin-table td` is a class and a type, so a bare `.admin-actions-cell`
+   loses to the white-space: normal !important above no matter what it shouts.
+   The element selector is here to outrank it, not for decoration. */
+.admin-table td.admin-actions-cell {
+    white-space: nowrap !important;
+}
+
+.admin-table td.admin-actions-cell .btn {
+    vertical-align: middle;
 }

@@ -37,3 +37,51 @@
         padding: 8px 10px;
     }
 }
+
+/* ==================================================
+   The Perms column on the admins list
+   ==================================================
+   Nine permission names joined by commas made this the widest cell in the
+   table, and the width of a column every other screen then had to carry. The
+   names are the same; only the shape changed.
+
+   Chips wrap inside the cell instead of pushing it wider. Below 768px they
+   give way to a "5 / 9" count — the full list stays in the title attribute,
+   and the ✏️ button in the next column is where permissions are actually read
+   and changed, so the list here was never the working copy.
+   ================================================== */
+.perm-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    max-width: 260px;
+}
+
+.perm-chip {
+    display: inline-block;
+    padding: 1px 6px;
+    border: 1px solid var(--section-border);
+    border-radius: 999px;
+    font-size: 0.72rem;
+    line-height: 1.5;
+    white-space: nowrap;
+    color: var(--accent-text);
+    background-color: rgba(99, 102, 241, 0.07);
+}
+
+/* The count is the phone form of the same cell; one of the two is always
+   hidden, never both and never neither. */
+.perm-count {
+    display: none;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+@media (max-width: 767px) {
+    .perm-chips {
+        display: none;
+    }
+    .perm-count {
+        display: inline;
+    }
+}
