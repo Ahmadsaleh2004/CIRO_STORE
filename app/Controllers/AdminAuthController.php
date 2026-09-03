@@ -167,7 +167,22 @@ class AdminAuthController extends Controller
             $captchaResponse = $_POST['h-captcha-response'] ?? '';
             if (!$this->verifyCaptcha($captchaResponse)) {
                 rotateCsrfToken();
-                $this->respond(false, 'Captcha verification failed. Please try again.');
+
+                // ⚠️ show_captcha belongs here, and its absence closed the door entirely.
+                //
+                // The widget is not on the page when it loads; js/admin/admin-auth.js
+                // fetches and renders it only when a response says show_captcha. The
+                // wrong-password branch further down sends that flag — this one did not.
+                //
+                // So an administrator returning to the page with a recent failure on
+                // record submitted, the server demanded a captcha token nobody had, and
+                // the answer came back "Captcha verification failed" with NO WIDGET to
+                // solve. Every further attempt repeated it. The only way out was to wait
+                // for the window to expire.
+                $this->respond(false, 'Captcha verification failed. Please try again.', [
+                    'show_captcha'    => true,
+                    'failed_attempts' => $failedAttempts,
+                ]);
             }
         }
 

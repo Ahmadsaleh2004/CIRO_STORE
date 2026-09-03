@@ -38,24 +38,59 @@ class AdminModel extends Model
         }
     }
 
-    // ════════════════════════════════════════════════════════
-    // The count of failed attempts within the time window
-    // ════════════════════════════════════════════════════════
+    /**
+     * Failed attempts for one address inside the window — counted from the last
+     * SUCCESSFUL sign-in, not from the start of the window.
+     *
+     * ⚠️ That clause is the whole point, and its absence was a real fault. The count
+     * used to include every failure in the last thirty minutes even when the owner had
+     * signed in successfully in between. So an administrator who mistyped once, then
+     * signed in, then signed out and came back, was asked for a captcha — as somebody
+     * suspicious — minutes after proving they held the password.
+     *
+     * The project already states the principle elsewhere, in AdminSessionOpener: "the
+     * sign-in completed, so there is no sense in its owner paying for their failed
+     * attempts next time". That was written about the throttle buckets and never applied
+     * to this counter.
+     *
+     * Counted rather than deleted: the failed rows stay exactly where they are, because
+     * they are the audit trail. Only the arithmetic changes.
+     */
     public static function getFailedAttempts(string $email): int
     {
         try {
             $db   = self::db();
-            $stmt = $db->prepare(
-                "SELECT COUNT(*) FROM admin_login_attempts
-                 WHERE email = ? AND success = 0
-                 AND attempted_at >= DATE_SUB(NOW(), INTERVAL ? MINUTE)"
-            );
-            $stmt->execute([strtolower(trim($email)), self::WINDOW_MINUTES]);
+            $stmt = $db->prepare(self::failuresSinceLastSuccessSql());
+            $stmt->execute([
+                strtolower(trim($email)),
+                strtolower(trim($email)),
+                self::WINDOW_MINUTES,
+            ]);
             return (int)$stmt->fetchColumn();
         } catch (Exception $e) {
             error_log("AdminModel::getFailedAttempts Error: " . $e->getMessage());
             return 0;
         }
+    }
+
+    /**
+     * One query behind both the captcha threshold and the lockout, so the two can never
+     * disagree about what "a recent failure" means.
+     *
+     * The placeholders are, in order: the address (for the failures), the address again
+     * (for the last success), and the window in minutes.
+     */
+    private static function failuresSinceLastSuccessSql(): string
+    {
+        return "SELECT COUNT(*) FROM admin_login_attempts
+                WHERE email = ?
+                  AND success = 0
+                  AND attempted_at > COALESCE(
+                      (SELECT MAX(attempted_at) FROM admin_login_attempts AS ok
+                        WHERE ok.email = ? AND ok.success = 1),
+                      '1000-01-01 00:00:00'
+                  )
+                  AND attempted_at >= DATE_SUB(NOW(), INTERVAL ? MINUTE)";
     }
 
     // ════════════════════════════════════════════════════════
@@ -83,12 +118,15 @@ class AdminModel extends Model
     {
         try {
             $db   = self::db();
-            $stmt = $db->prepare(
-                "SELECT COUNT(*) FROM admin_login_attempts
-                 WHERE email = ? AND success = 0
-                 AND attempted_at >= DATE_SUB(NOW(), INTERVAL ? MINUTE)"
-            );
-            $stmt->execute([strtolower(trim($email)), self::LOCKOUT_MINUTES]);
+            // The same "since the last success" rule as the captcha counter, through the
+            // same query — a lockout that outlived a successful sign-in would shut the
+            // owner out of their own panel for half an hour after they had just used it.
+            $stmt = $db->prepare(self::failuresSinceLastSuccessSql());
+            $stmt->execute([
+                strtolower(trim($email)),
+                strtolower(trim($email)),
+                self::LOCKOUT_MINUTES,
+            ]);
             return (int)$stmt->fetchColumn() >= self::MAX_FAILED_ATTEMPTS;
         } catch (Exception $e) {
             error_log("AdminModel::isRateLimited Error: " . $e->getMessage());
