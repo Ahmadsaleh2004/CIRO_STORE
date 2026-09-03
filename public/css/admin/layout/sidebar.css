@@ -1,0 +1,168 @@
+/* ==================================================
+   admin/layout/sidebar.css — #adminSidebar, the offcanvas the hamburger opens
+   below 1200px, and the action group that stays on the bar beside it.
+   ==================================================
+   The panel is Bootstrap's offcanvas, so the sliding, the backdrop and the
+   focus trap are not written here. What is written here is the surface: the
+   project's own tokens over Bootstrap's defaults, so the panel matches
+   #adminNotifSidebar — which sits on the same screen, opens from the same
+   edge, and would look like a different product otherwise.
+   ================================================== */
+
+/* components/cart-sidebar.css claims `.offcanvas.offcanvas-end` for every
+   offcanvas on the site, and below 575px it does so with `width: 100%
+   !important`. That is right for a cart — the cart IS the destination, and it
+   fills the screen. It is wrong for a menu: a panel with no backdrop showing
+   beside it reads as a page you have navigated to rather than something laid
+   over the page, and the way back stops being obvious.
+
+   So this rule matches that selector's specificity and carries !important
+   too, winning on load order (admin.css is imported after store.css). The
+   alternative was to narrow the cart's rules to #cartSidebar, which is the
+   tidier fix and touches the store front — off limits here. Measured at
+   375px: 322px of panel and 53px of backdrop. */
+.offcanvas.admin-sidebar {
+    width: 300px !important;
+    max-width: 86vw !important;
+    background-color: var(--card-bg);
+    color: var(--text-color);
+    border-left: 1px solid var(--section-border);
+    box-shadow: -4px 0 16px var(--shadow-color);
+}
+
+.admin-sidebar .offcanvas-header {
+    padding: 16px;
+    background-color: var(--bg-color);
+    border-bottom: 1px solid var(--section-border);
+}
+
+.admin-sidebar .offcanvas-title {
+    font-size: 1rem;
+    color: var(--text-color);
+}
+
+/* Bootstrap draws the close glyph as a black SVG mask, invisible on the dark
+   card. The filter is Bootstrap's own dark-mode treatment, applied by theme
+   rather than by its data-bs-theme attribute, which this panel does not set. */
+body.dark-mode .admin-sidebar .btn-close {
+    filter: invert(1) grayscale(100%) brightness(200%);
+}
+
+.admin-sidebar .offcanvas-body {
+    display: flex;
+    flex-direction: column;
+    padding: 8px 0 0;
+}
+
+.admin-sidebar-nav {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    flex: 1;
+}
+
+.admin-sidebar-nav li {
+    margin: 0;
+}
+
+/* One rule for the links, the Store-mode submit button and the three at the
+   foot, so a button and an anchor are the same object to the eye and to the
+   thumb. 44px minimum is the touch target; the rest is the row. */
+.admin-sidebar-link {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    width: 100%;
+    min-height: 44px;
+    padding: 10px 16px;
+    font-size: 0.95rem;
+    font-weight: 500;
+    text-align: left;
+    text-decoration: none;
+    color: var(--text-color);
+    background: none;
+    border: none;
+    border-bottom: 1px solid var(--section-border);
+    transition: background-color var(--dur-fast) var(--ease-standard);
+}
+
+.admin-sidebar-link:hover,
+.admin-sidebar-link:focus-visible {
+    background-color: rgba(99, 102, 241, 0.08);
+    color: var(--accent-text);
+}
+
+.admin-sidebar-link.text-danger:hover,
+.admin-sidebar-link.text-danger:focus-visible {
+    background-color: rgba(220, 38, 38, 0.08);
+    color: #dc2626;
+}
+
+/* The Support and Orders counts. .counter-badge positions itself absolutely
+   in the navbar; in a flex row it is an ordinary item at the end. */
+.admin-sidebar-count {
+    position: static;
+    flex: 0 0 auto;
+}
+
+.admin-sidebar-foot {
+    border-top: 2px solid var(--section-border);
+    margin-top: 8px;
+}
+
+.admin-sidebar-foot .admin-sidebar-link:last-child {
+    border-bottom: none;
+}
+
+/* ==================================================
+   The action group on the bar
+   ==================================================
+   Four controls at 375px: theme, bell, the admin's name and the hamburger.
+   The name is the only elastic one, so it is the only one allowed to shrink —
+   the other three are fixed-size targets and wrapping them onto a second row
+   is what the old layout did.
+   ================================================== */
+.admin-nav-actions {
+    flex-wrap: nowrap;
+    min-width: 0;
+}
+
+.admin-nav-actions > .btn,
+.admin-nav-actions > .navbar-toggler {
+    flex: 0 0 auto;
+}
+
+.admin-nav-me {
+    display: inline-flex;
+    align-items: center;
+    min-width: 0;
+    max-width: 40vw;
+}
+
+.admin-nav-me-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+@media (max-width: 575px) {
+    .admin-nav-actions {
+        gap: 6px !important;
+    }
+    .admin-nav-me {
+        max-width: 34vw;
+    }
+}
+
+/* At the narrowest widths the name is dropped rather than squeezed to two
+   letters and an ellipsis. The crown and the role badge still say whose
+   account this is, and the target still leads to My Info. */
+@media (max-width: 375px) {
+    .admin-nav-actions {
+        gap: 4px !important;
+    }
+    .admin-nav-me-name {
+        display: none;
+    }
+}

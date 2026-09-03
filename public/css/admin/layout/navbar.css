@@ -10,56 +10,43 @@
    Order below is the original cascade order across the two files
    this was assembled from. Do not reorder.
    ================================================== */
-@media (max-width: 1024px) {
-    #mainNavbar .d-flex.gap-2.align-items-center { gap: 4px !important; }
-    .custom-navbar .dropdown .btn {
-        max-width: 130px;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-    }
-}
+/* Three blocks of `.dropdown .btn` truncation used to run at 1024, 768 and 576
+   — clamping the admin's name so the menu button would fit a narrowing bar.
+   The dropdown is now d-none below 1200px and .admin-nav-me carries the name
+   instead, so every one of those widths was styling a hidden element. The
+   truncation itself did not disappear: it is .admin-nav-me-name in
+   admin/layout/sidebar.css, which ellipsises the name and then drops it
+   entirely at 375px.
 
-@media (max-width: 991px) {
-    /* Collapse the nav links into a vertical stack */
-    #mainNavbar .navbar-nav {
-        flex-direction: column !important;
-        padding: 0.5rem 0 !important;
-        width: 100%;
-    }
-    #mainNavbar .navbar-nav .nav-item {
-        width: 100%;
-    }
-    #mainNavbar .navbar-nav .nav-link {
-        padding: 0.5rem 1rem !important;
-        border-bottom: 1px solid var(--section-border);
-    }
-}
+   The <=1024px gap override went with them for the same reason — the action
+   group is sized by .admin-nav-actions now, and an id-plus-three-classes
+   selector here would have outranked it at every width below 1024. */
+
+/* The <=991px block that used to stand here stacked #mainNavbar .navbar-nav
+   into a vertical list for the open collapse. Nothing targets that collapse
+   any more — below 1200px the links are in #adminSidebar and the collapse
+   never opens — so the rules could only ever have applied to an element at
+   display: none. Their job now belongs to .admin-sidebar-link in
+   admin/layout/sidebar.css. */
 
 @media (max-width: 768px) {
     #mainNavbar .navbar-brand { font-size: .95rem; }
-    #mainNavbar .dropdown .btn {
-        max-width: 140px;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-    }
 }
 
 @media (max-width: 576px) {
     #mainNavbar .btn { font-size: .8rem; padding: 4px 8px; }
-    #mainNavbar .dropdown .btn { max-width: 110px; font-size: .78rem; }
     #mainNavbar .navbar-toggler { padding: 2px 6px; font-size: 1rem; }
     #mainNavbar .navbar-brand { font-size: .85rem; }
     #mainNavbar .navbar-brand .badge { display: none; }
     .custom-navbar .navbar-brand .badge { display: none; }
 }
 
-@media (max-width: 400px) {
-    #mainNavbar .container-fluid { flex-wrap: wrap; }
-    #mainNavbar .navbar-collapse { flex-basis: 100%; }
-    #mainNavbar .d-flex.gap-2 { flex-wrap: wrap; justify-content: flex-end; gap: 4px !important; }
-}
+/* The <=400px block here let the bar wrap onto a second row and let the action
+   group wrap within it. Both were relief valves for a row carrying a brand, a
+   collapse and four controls at once. The action group is now sized by
+   .admin-nav-actions in admin/layout/sidebar.css, which drops the admin's name
+   at 375px instead of wrapping — a wrapped bar doubles the height of the one
+   element that is fixed to the top of every admin screen. */
 
 @media (max-width: 320px) {
     #mainNavbar .navbar-brand { font-size: 0.8rem !important; }

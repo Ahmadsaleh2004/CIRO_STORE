@@ -19,10 +19,16 @@
 // The token is sent and verified on the server, since the sign-out CSRF fix. An expired
 // token means the admin stays signed in and is redirected to /admin/home — a visible
 // failure rather than a silent one, so no automatic retry is needed here.
-// Called from HTML rather than from JavaScript: app/views/admin/inc/navbar.php:120
-// carries onclick="logoutAdmin()". And ESLint does not see the views, so it reads this as
-// a function with no caller. The exception is local rather than in the global config, so
-// the check keeps working on every other function in the project.
+// Called from HTML rather than from JavaScript, though not the way this comment used to
+// say: there is no onclick anywhere. app/views/admin/inc/navbar.php marks its sign-out
+// controls `data-action="logout-admin"`, and the delegated handler in
+// js/core/inline-actions.js calls this function by name. There are two such controls now —
+// the desktop dropdown item and the one at the foot of #adminSidebar — and delegation is
+// why adding the second needed no JavaScript at all.
+//
+// ESLint does not see the views, so it reads this as a function with no caller. The
+// exception is local rather than in the global config, so the check keeps working on every
+// other function in the project.
 // eslint-disable-next-line no-unused-vars
 function logoutAdmin() {
     // nosemgrep: cairo-bare-fetch-post
