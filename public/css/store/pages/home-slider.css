@@ -27,6 +27,16 @@
                 z-index 0s;
 }
 
+/* <picture> wraps the image so a WebP source can be offered. It must not become a box
+   of its own: .slide-item-img is sized at 100% of .slide-item, and an inline <picture>
+   between them would leave the image with no definite height to resolve against.
+   display:contents removes the wrapper from layout entirely and leaves the <img> a direct
+   child as far as the box tree is concerned. */
+.slide-item picture,
+.slide-item-link picture {
+    display: contents;
+}
+
 .slide-item-img {
     width: 100%;
     height: 100%;

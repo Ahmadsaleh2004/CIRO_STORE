@@ -52,11 +52,32 @@ $homeSliders = $data['homeSliders'] ?? [];
                             <a href="<?= htmlspecialchars($item['link_url'], ENT_QUOTES) ?>" class="slide-item-link">
                             <?php endif; ?>
                                 <div class="slide-item">
+                                    <?php
+                                    // ⚠️ WebP, through <picture> — and the difference is not marginal.
+                                    //
+                                    // The product cards have used <picture> for a long time; the slider
+                                    // never did, so the largest image on the site was the one served
+                                    // raw. Measured on this install: ipad.jpg is 3.3 MB and ipad.webp,
+                                    // sitting beside it on disk, is 63 KB. airpods pro.jpg is 1.8 MB
+                                    // against 24 KB. Seven slides came to roughly 7 MB where 200 KB
+                                    // would do — on the page whose largest contentful paint this is,
+                                    // and on the phone that has to wait for it.
+                                    //
+                                    // getWebpPath returns a path only when the .webp actually exists on
+                                    // disk, so a slide whose image has no twin falls through to the
+                                    // <img> below untouched.
+                                    $itemWebp = getWebpPath($item['image_path'] ?? '');
+                                    ?>
+                                    <picture>
+                                        <?php if ($itemWebp): ?>
+                                        <source srcset="<?= htmlspecialchars($itemWebp, ENT_QUOTES) ?>" type="image/webp">
+                                        <?php endif; ?>
                                     <?php // alt prefers the title: the title identifies the image, the description explains it ?>
                                     <img src="<?= htmlspecialchars($img, ENT_QUOTES) ?>"
                                          alt="<?= htmlspecialchars($title !== '' ? $title : $desc, ENT_QUOTES) ?>"
                                          class="slide-item-img"
                                          <?= $eager ? 'fetchpriority="high" decoding="async"' : 'loading="lazy"' ?>>
+                                    </picture>
                                     <?php if ($title !== '' || $desc !== ''): ?>
                                     <div class="slide-item-caption">
                                         <?php if ($title !== ''): ?>
@@ -153,5 +174,15 @@ $homeSliders = $data['homeSliders'] ?? [];
 ?>
 <?= pageData([
     'dbProducts'    => $data['productsJS']  ?? [],
-    'dbHomeSliders' => $data['homeSliders'] ?? [],
+    // Each item gains `webp`: the path of its WebP twin, or null when there is none.
+    // renderSlider cannot work this out for itself — deriving ".webp" in the browser and
+    // hoping produces a <source> pointing at a 404, and a chosen source that fails does
+    // not fall back to the <img>; it shows nothing at all.
+    'dbHomeSliders' => array_map(static function (array $slide): array {
+        $slide['items'] = array_map(static function (array $item): array {
+            $item['webp'] = getWebpPath($item['image_path'] ?? '');
+            return $item;
+        }, $slide['items'] ?? []);
+        return $slide;
+    }, $data['homeSliders'] ?? []),
 ]) ?>

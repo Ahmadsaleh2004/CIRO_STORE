@@ -82,8 +82,16 @@ function renderSlider(homeSliders) {
             const title = item.title || '';
             const desc  = item.description || '';
 
-            const img = `<img src="${item.image_path}" alt="${escHtml(title || desc)}"
-                              class="slide-item-img" loading="lazy">`;
+            // The same <picture> the server prints, for the same reason: the slider's
+            // JPEGs run to megabytes and their WebP twins to tens of kilobytes. `webp`
+            // arrives in the page-data island because only the server can tell whether
+            // the file exists; when it is null the <source> is omitted and the <img>
+            // stands alone, exactly as before.
+            const source = item.webp
+                ? `<source srcset="${escHtml(item.webp)}" type="image/webp">`
+                : '';
+            const img = `<picture>${source}<img src="${item.image_path}" alt="${escHtml(title || desc)}"
+                              class="slide-item-img" loading="lazy"></picture>`;
 
             const caption = (title || desc)
                 ? `<div class="slide-item-caption">`
