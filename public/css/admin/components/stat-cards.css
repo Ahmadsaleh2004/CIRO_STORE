@@ -64,11 +64,78 @@
 
 @media (max-width: 320px) {
     .stat-card,
-    .row .col-6 {
+    .row .col-6:not(.stat-col) {
         flex: 0 0 100% !important;
         max-width: 100% !important;
     }
     .stat-card .stat-value { font-size: 1.1rem; }
     .stat-card .stat-icon  { font-size: 1.2rem; }
     .stat-card .stat-label { font-size: 0.65rem; }
+}
+
+/* ==================================================
+   Three to a row
+   ==================================================
+   The dashboard's six tiles used to run two to a row on a tablet and one to a
+   row below 414px, which turned six numbers into six full-width bands and a
+   page you scrolled to read a summary. Three across puts all six in two rows
+   at every width from 991px down, and the whole set stays on screen at once —
+   which is the only thing a KPI strip is for.
+
+   Deliberately at the FOOT of this file. The blocks above are the original
+   cascade order, non-monotonic and marked do-not-reorder, and one of them
+   (<=1024) sets a LARGER value than the phone blocks below it. Appending
+   rather than threading through that order is what makes these the last word
+   at the widths they claim.
+
+   The sizes below are measured against the narrowest real tile. At 320px the
+   container leaves 307px, three gutters take their share, and the card's own
+   content box is about 86px wide — so 1.4rem for "$1,234.56" was never going
+   to fit, and no fixed size fits both 86px and the 119px the same rule has to
+   cover at 375px. The clamp is that range, floor to ceiling. */
+@media (max-width: 991px) {
+    .row .stat-col {
+        flex: 0 0 33.333%;
+        max-width: 33.333%;
+    }
+
+    /* Three narrow tiles side by side means one label wraps to two lines and
+       its neighbours do not — "Pending Orders" at 320px is the one that does.
+       The columns are already equal height (a Bootstrap row stretches them);
+       it is the card inside that has to fill its column, or the row ends on
+       three different baselines. */
+    .stat-col .stat-card {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        height: 100%;
+    }
+}
+
+@media (max-width: 575px) {
+    .stat-col .stat-card {
+        padding: 12px 6px;
+    }
+    .stat-col .stat-icon {
+        font-size: 1.3rem;
+        margin-bottom: 4px;
+    }
+    .stat-col .stat-value {
+        /* Nowrap, not wrapping: a money figure broken across two lines reads
+           as two numbers. It shrinks instead. */
+        font-size: clamp(0.7rem, 3.4vw, 1.15rem);
+        white-space: nowrap;
+    }
+    .stat-col .stat-label {
+        font-size: 0.58rem;
+        letter-spacing: 0;
+        line-height: 1.25;
+        margin-top: 4px;
+    }
+}
+
+@media (max-width: 375px) {
+    .stat-col .stat-card {
+        padding: 10px 4px;
+    }
 }

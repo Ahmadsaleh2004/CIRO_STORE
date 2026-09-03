@@ -13,42 +13,42 @@
 
 <?php // ── Stats ──────────────────────────────────────────────── ?>
 <div class="row g-3 mb-4">
-    <div class="col-6 col-lg-3">
+    <div class="col-6 col-lg-3 stat-col">
         <div class="stat-card">
             <span class="stat-icon">💰</span>
             <div class="stat-value">$<?= number_format($todaySales, 2) ?></div>
             <div class="stat-label">Today's Sales</div>
         </div>
     </div>
-    <div class="col-6 col-lg-3">
+    <div class="col-6 col-lg-3 stat-col">
         <div class="stat-card <?= $pendingOrders > 0 ? 'u-alert-amber' : '' ?>">
             <span class="stat-icon">📦</span>
             <div class="stat-value <?= $pendingOrders > 0 ? 'u-alert-amber-text' : '' ?>"><?= $pendingOrders ?></div>
             <div class="stat-label">Pending Orders</div>
         </div>
     </div>
-    <div class="col-6 col-lg-3">
+    <div class="col-6 col-lg-3 stat-col">
         <div class="stat-card <?= $newMessages > 0 ? 'u-alert-indigo' : '' ?>">
             <span class="stat-icon">💬</span>
             <div class="stat-value <?= $newMessages > 0 ? 'u-alert-indigo-text' : '' ?>"><?= $newMessages ?></div>
             <div class="stat-label">New Messages</div>
         </div>
     </div>
-    <div class="col-6 col-lg-3">
+    <div class="col-6 col-lg-3 stat-col">
         <div class="stat-card">
             <span class="stat-icon">👤</span>
             <div class="stat-value"><?= $newUsersWeek ?></div>
             <div class="stat-label">New Users (7d)</div>
         </div>
     </div>
-    <div class="col-6 col-lg-3">
+    <div class="col-6 col-lg-3 stat-col">
         <div class="stat-card">
             <span class="stat-icon">⚠️</span>
             <div class="stat-value u-danger"><?= $totalStrikes ?></div>
             <div class="stat-label">Strikes (7d)</div>
         </div>
     </div>
-    <div class="col-6 col-lg-3">
+    <div class="col-6 col-lg-3 stat-col">
         <div class="stat-card">
             <span class="stat-icon">📈</span>
             <div class="stat-value">$<?= number_format($monthToDateSales, 2) ?></div>

@@ -29,9 +29,12 @@ body {
 }
 
 @media (max-width: 991px) {
-    /* Stat/summary cards: 2 per row on tablet */
-    .row .col-md-3,
-    .row .col-lg-3 {
+    /* Summary cards: 2 per row on tablet.
+       .stat-col is the dashboard's six tiles, which go three to a row instead
+       — see the "Three to a row" section at the foot of
+       admin/components/stat-cards.css. */
+    .row .col-md-3:not(.stat-col),
+    .row .col-lg-3:not(.stat-col) {
         flex: 0 0 50%;
         max-width: 50%;
     }
@@ -44,8 +47,11 @@ body {
         max-width: 100%;
         overflow-x: hidden;
     }
-    /* Admin forms stack their column pairs */
-    body.admin-layout .row.g-3 > [class*="col-"] {
+    /* Admin forms stack their column pairs.
+       [class*="col-"] is every grid child on the page, which is why the
+       dashboard tiles have to be named out of it explicitly — a form field
+       pair wants the full width here, a KPI tile does not. */
+    body.admin-layout .row.g-3 > [class*="col-"]:not(.stat-col) {
         flex: 0 0 100% !important;
         max-width: 100% !important;
     }
@@ -56,7 +62,7 @@ body {
 }
 
 @media (max-width: 576px) {
-    .row.g-3 > [class*="col-"] {
+    .row.g-3 > [class*="col-"]:not(.stat-col) {
         flex: 0 0 100% !important;
         max-width: 100% !important;
     }
@@ -67,9 +73,13 @@ body {
 }
 
 @media (max-width: 414px) {
-    .row .col-md-3,
-    .row .col-lg-3,
-    .row .col-sm-6 {
+    /* One per row this narrow — except the dashboard tiles, which are sized to
+       stay three across all the way down. The exclusion is here rather than an
+       !important further along, because this rule is already !important and a
+       shouting match between two files is not a cascade anyone can read. */
+    .row .col-md-3:not(.stat-col),
+    .row .col-lg-3:not(.stat-col),
+    .row .col-sm-6:not(.stat-col) {
         flex: 0 0 100% !important;
         max-width: 100% !important;
     }
@@ -83,10 +93,10 @@ body {
 }
 
 @media (max-width: 320px) {
-    .row .col-md-3,
-    .row .col-lg-3,
-    .row .col-sm-6,
-    .row .col-6 {
+    .row .col-md-3:not(.stat-col),
+    .row .col-lg-3:not(.stat-col),
+    .row .col-sm-6:not(.stat-col),
+    .row .col-6:not(.stat-col) {
         flex: 0 0 100% !important;
         max-width: 100% !important;
     }
