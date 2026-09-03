@@ -10,17 +10,14 @@
    ================================================== */
 
 /* components/cart-sidebar.css claims `.offcanvas.offcanvas-end` for every
-   offcanvas on the site, and below 575px it does so with `width: 100%
-   !important`. That is right for a cart — the cart IS the destination, and it
-   fills the screen. It is wrong for a menu: a panel with no backdrop showing
-   beside it reads as a page you have navigated to rather than something laid
-   over the page, and the way back stops being obvious.
+   offcanvas on the site and sets its phone width with !important. This rule
+   matches that selector's specificity and carries !important too, winning on
+   load order (admin.css is imported after store.css).
 
-   So this rule matches that selector's specificity and carries !important
-   too, winning on load order (admin.css is imported after store.css). The
-   alternative was to narrow the cart's rules to #cartSidebar, which is the
-   tidier fix and touches the store front — off limits here. Measured at
-   375px: 322px of panel and 53px of backdrop. */
+   The two now agree in spirit — both are drawers over the page with a strip
+   of backdrop beside them — and differ only in how much room their contents
+   need: the cart carries product rows and takes 340px, a menu of nine links
+   takes 300. Measured at 375px: 300px of panel and 75px of backdrop. */
 .offcanvas.admin-sidebar {
     width: 300px !important;
     max-width: 86vw !important;
@@ -151,21 +148,52 @@ body.dark-mode .admin-sidebar .btn-close {
     white-space: nowrap;
 }
 
-@media (max-width: 575px) {
-    .admin-nav-actions {
-        gap: 6px !important;
+/* ── The row must not wrap ────────────────────────────────────
+   Bootstrap gives .navbar > .container-fluid flex-wrap: wrap, which is right
+   for a bar whose collapse drops onto a second line. This one has no such
+   collapse below 1200px: it carries a brand and four controls and nothing
+   else, and a second line only ever means the brand sitting on top of the
+   buttons — measured at 414px, where the bar was 86px tall in two rows
+   because the admin's name was showing and pushed the total past the screen.
+
+   Nothing here is allowed to force a wrap, so everything elastic is given
+   min-width: 0 and told to ellipsise instead. Both the brand and the name
+   shrink; the three icon buttons are fixed targets and never do. */
+@media (max-width: 1199px) {
+    #mainNavbar .container-fluid {
+        flex-wrap: nowrap;
     }
-    .admin-nav-me {
-        max-width: 34vw;
+
+    #mainNavbar .navbar-brand {
+        flex: 0 1 auto;
+        min-width: 0;
+        overflow: hidden;
+        white-space: nowrap;
+        text-overflow: ellipsis;
     }
 }
 
-/* At the narrowest widths the name is dropped rather than squeezed to two
-   letters and an ellipsis. The crown and the role badge still say whose
-   account this is, and the target still leads to My Info. */
-@media (max-width: 375px) {
+@media (max-width: 575px) {
+    .admin-nav-actions {
+        gap: 6px !important;
+        margin-left: 8px;
+    }
+    .admin-nav-me {
+        max-width: 32vw;
+    }
+}
+
+/* Below 400px the name is dropped rather than squeezed to two letters and an
+   ellipsis, which is not a name. The crown and the role badge still say whose
+   account it is, and the target still leads to My Info.
+
+   400 and not 375: a 390px iPhone and a 412px Android are the common cases,
+   and at 375 the cut-off left both of them showing a name too narrow to read
+   while it still crowded the bar. */
+@media (max-width: 400px) {
     .admin-nav-actions {
         gap: 4px !important;
+        margin-left: 4px;
     }
     .admin-nav-me-name {
         display: none;

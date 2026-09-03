@@ -182,9 +182,19 @@
     }
 }
 
+/* A panel, not a page. These were width: 100% on a phone, which covers the
+   screen completely: nothing of what you were reading is left, and the only
+   way back is a close button you have to find. Both panels already build a
+   .notif-backdrop and close on a tap anywhere in it — full width made that
+   backdrop zero pixels wide, so the gesture existed with nothing to aim at.
+
+   320px capped at 86vw leaves about 53px of dimmed page beside the panel at
+   375px, and about 45px at 320px. That strip is what says "this is laid over
+   the page, tap outside to dismiss". */
 @media (max-width: 576px) {
     #notifSidebar,
     #adminNotifSidebar {
-        width: 100% !important;
+        width: 320px !important;
+        max-width: 86vw !important;
     }
 }

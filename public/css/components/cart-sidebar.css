@@ -59,16 +59,18 @@
     #cartSidebar { max-width: 360px; }
     .offcanvas.offcanvas-end { max-width: 340px; }
 }
+/* Same reasoning as the notification panels in components/notifications.css:
+   a phone used to get the full screen width here, which reads as a page you
+   navigated to rather than a drawer over the one you were on, and leaves
+   Bootstrap's backdrop — the thing you tap to dismiss — zero pixels wide.
+
+   The cart is given a little more than the other drawers (340 against 320)
+   because its rows carry a thumbnail, a name, a quantity stepper and a price
+   on one line. At 375px that is 330px of panel and 45px of backdrop. */
 @media (max-width: 575px) {
-    #cartSidebar { max-width: 100vw !important; }
+    #cartSidebar,
     .offcanvas.offcanvas-end {
-        width: 100% !important;
-        max-width: 100% !important;
-    }
-}
-@media (max-width: 320px) {
-    .offcanvas.offcanvas-end {
-        width: 100vw !important;
-        max-width: 100vw !important;
+        width: 340px !important;
+        max-width: 88vw !important;
     }
 }
