@@ -77,7 +77,12 @@
     white-space: nowrap;
 }
 
-@media (max-width: 767px) {
+/* 991px, not 767px, which is where this was first drawn. Measured on a 768px
+   tablet: the Perms column gets about 55px of a nine-column table, so nine
+   chips wrap to nine lines and the row grows to 246px — worse than the
+   sentence they replaced, and worse than the phone. Chips need a wide table
+   or they are not chips. Below 992px the count does the job instead. */
+@media (max-width: 991px) {
     .perm-chips {
         display: none;
     }

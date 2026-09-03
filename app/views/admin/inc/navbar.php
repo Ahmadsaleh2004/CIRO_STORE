@@ -42,13 +42,13 @@ $adminNavLinks = require __DIR__ . '/_nav-links.php';
                     <form method="POST" action="<?= htmlspecialchars($link['href']) ?>" class="d-inline m-0 p-0">
                         <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf) ?>">
                         <button type="submit" class="nav-link btn btn-link p-0 u-bare-button"
-                                title="Browse the store as a visitor"><?= $link['label'] ?></button>
+                                title="Browse the store as a visitor"><?= htmlspecialchars($link['label']) ?></button>
                     </form>
                     <?php else: ?>
-                    <a class="nav-link <?= $link['class'] ?>" href="<?= htmlspecialchars($link['href']) ?>">
-                        <?= $link['label'] ?>
+                    <a class="nav-link <?= htmlspecialchars($link['class']) ?>" href="<?= htmlspecialchars($link['href']) ?>">
+                        <?= htmlspecialchars($link['label']) ?>
                         <?php if ($link['badge'] > 0): ?>
-                        <span class="counter-badge u-badge-corner-out"><?= $link['badge'] ?></span>
+                        <span class="counter-badge u-badge-corner-out"><?= (int) $link['badge'] ?></span>
                         <?php endif; ?>
                     </a>
                     <?php endif; ?>
@@ -127,13 +127,13 @@ The sidebar the hamburger opens. Bootstrap's offcanvas, the same component the s
                 <form method="POST" action="<?= htmlspecialchars($link['href']) ?>" class="m-0 p-0">
                     <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf) ?>">
                     <button type="submit" class="admin-sidebar-link u-bare-button"
-                            title="Browse the store as a visitor"><?= $link['label'] ?></button>
+                            title="Browse the store as a visitor"><?= htmlspecialchars($link['label']) ?></button>
                 </form>
                 <?php else: ?>
-                <a class="admin-sidebar-link <?= $link['class'] ?>" href="<?= htmlspecialchars($link['href']) ?>">
-                    <span><?= $link['label'] ?></span>
+                <a class="admin-sidebar-link <?= htmlspecialchars($link['class']) ?>" href="<?= htmlspecialchars($link['href']) ?>">
+                    <span><?= htmlspecialchars($link['label']) ?></span>
                     <?php if ($link['badge'] > 0): ?>
-                    <span class="counter-badge admin-sidebar-count"><?= $link['badge'] ?></span>
+                    <span class="counter-badge admin-sidebar-count"><?= (int) $link['badge'] ?></span>
                     <?php endif; ?>
                 </a>
                 <?php endif; ?>

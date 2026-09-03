@@ -126,6 +126,11 @@ body.dark-mode .admin-sidebar .btn-close {
 .admin-nav-actions {
     flex-wrap: nowrap;
     min-width: 0;
+
+    /* At 1280px with the Support and Orders counts showing, the link list ends
+       at exactly the pixel this group starts. Nothing overlaps, but nothing
+       separates them either. */
+    margin-left: 12px;
 }
 
 .admin-nav-actions > .btn,

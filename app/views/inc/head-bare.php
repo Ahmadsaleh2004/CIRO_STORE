@@ -58,7 +58,7 @@ $bareSwal      = $bareSwal      ?? false;
 <?php endif; ?>
 <?php // Fingerprinted for the same reason pageCss is — see assetStamp in assets_helper.php ?>
 <?php foreach ($bareCss as $bareCssFile): ?>
-    <link rel="stylesheet" href="<?= URLROOT ?>/<?= ltrim($bareCssFile, '/') ?><?= assetStamp($bareCssFile) ?>">
+    <link rel="stylesheet" href="<?= URLROOT ?>/<?= ltrim($bareCssFile, '/') ?><?= htmlspecialchars(assetStamp($bareCssFile)) ?>">
 <?php endforeach; ?>
     <?= $bareHead ?? '' ?>
 </head>
