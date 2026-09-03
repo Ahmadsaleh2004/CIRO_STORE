@@ -45,7 +45,7 @@ class AdminBrandingController extends AdminController
             'sliders'   => BrandingModel::getFullSliderData(),
             'flashMsg'  => $flashMsg,
             'flashErr'  => $flashErr,
-            'extraHead' => '<link rel="stylesheet" href="' . URLROOT . '/css/admin/pages/branding.css">',
+            'extraHead' => pageCss('admin/pages/branding.css'),
         ]);
     }
 

@@ -247,24 +247,44 @@ function vendorCss(string $key): string
         . ' crossorigin="anonymous">' . "\n";
 }
 
-function jsTag(string $path, bool $defer = true): string
+/**
+ * The `?v=` cache-busting suffix for an asset served straight out of public/.
+ *
+ * The files in public/css/dist and public/js/dist carry their fingerprint in the NAME, so
+ * they need nothing from here. Everything else — a page's own stylesheet, a script tag —
+ * is served under a fixed URL, and without a suffix the browser is free to keep whatever
+ * copy it already has. It does exactly that: a stale product-details.css was holding the
+ * phone rules out of the page long after the file on disk had them.
+ *
+ * The stamp is the first ten hex characters of the file's SHA-256: the same content always
+ * produces the same URL, so a deploy that does not touch a file does not throw its cached
+ * copy away either.
+ *
+ * @param string $relative Path under public/, with or without a leading slash.
+ */
+function assetStamp(string $relative): string
 {
     static $stamps = [];
 
-    $relative = ltrim($path, '/');
+    $relative = ltrim($relative, '/');
 
     if (!isset($stamps[$relative])) {
         $disk = ROOTPATH . '/public/' . $relative;
         // A missing file is no reason to stop the page: the tag is printed without a
         // fingerprint and a 404 shows in the console — a clearer diagnosis than a blank page.
         $stamps[$relative] = is_file($disk)
-            ? substr(hash_file('sha256', $disk), 0, 10)
+            ? '?v=' . substr(hash_file('sha256', $disk), 0, 10)
             : '';
     }
 
-    $suffix = $stamps[$relative] !== '' ? '?v=' . $stamps[$relative] : '';
+    return $stamps[$relative];
+}
 
-    return '<script src="' . URLROOT . '/' . $relative . $suffix . '"'
+function jsTag(string $path, bool $defer = true): string
+{
+    $relative = ltrim($path, '/');
+
+    return '<script src="' . URLROOT . '/' . $relative . assetStamp($relative) . '"'
         . ($defer ? ' defer' : '') . '></script>' . "
 ";
 }
@@ -405,12 +425,19 @@ function pageData(array $data): string
 /**
  * A <link> tag for a single page's own CSS file (called from the controllers through
  * extraHead).
+ *
+ * Paths are relative to public/css — pageCss('store/pages/home.css'). Each one is
+ * fingerprinted by assetStamp, for the reason described there: these sheets are the only
+ * assets in the project served under an unchanging URL, and an edit to one used not to
+ * reach a browser that had already seen it.
  */
 function pageCss(string ...$paths): string
 {
     $out = '';
     foreach ($paths as $p) {
-        $out .= '<link rel="stylesheet" href="' . URLROOT . '/css/' . ltrim($p, '/') . '">' . "\n";
+        $relative = 'css/' . ltrim($p, '/');
+        $out .= '<link rel="stylesheet" href="' . URLROOT . '/' . $relative
+            . assetStamp($relative) . '">' . "\n";
     }
     return $out;
 }

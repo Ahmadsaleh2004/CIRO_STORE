@@ -52,12 +52,12 @@ class CheckoutController extends Controller
             'desc'        => 'Complete your order at Cairo Store.',
             'activePage'  => '',
             'robots'      => 'noindex, nofollow',
-            'extraHead'   => '<link rel="stylesheet" href="' . URLROOT . '/css/store/pages/checkout.css">',
+            'extraHead'   => pageCss('store/pages/checkout.css'),
             // The page logic now lives in an external file. There used to be a
             // <script> line here injecting window.CHECKOUT_IDEMPOTENCY_KEY — no longer
             // needed: the key reaches the view as a variable and is printed into
             // data-checkout-idempotency.
-            'extraScripts' => '<script src="' . URLROOT . '/js/features/checkout.js" defer></script>',
+            'extraScripts' => jsTag('js/features/checkout.js'),
             'addresses'   => $addresses,
             'csrf'        => $csrf,
             'idempotencyKey' => $idempotencyKey,
@@ -357,7 +357,7 @@ class CheckoutController extends Controller
             'desc'        => 'Your order has been placed successfully.',
             'activePage'  => '',
             'robots'      => 'noindex, nofollow',
-            'extraHead'   => '<link rel="stylesheet" href="' . URLROOT . '/css/store/pages/confirmation.css">',
+            'extraHead'   => pageCss('store/pages/confirmation.css'),
             'orderId'     => $orderId,
             'userLoggedIn' => true,
             'userName'    => $_SESSION['user_name'] ?? '',

@@ -37,11 +37,14 @@ class AdminMyInfoController extends AdminController
 
         $this->adminView('my-info', [
             'pageTitle'    => 'My Info',
-            'extraHead'    => '<link rel="stylesheet" href="' . URLROOT . '/css/store/pages/my-info.css">',
+            'extraHead'    => pageCss('store/pages/my-info.css'),
             // This page's own file — the admin footer already loads thirteen scripts on
             // every page, and there is no reason to add a fourteenth that only this one
             // needs.
-            'extraScripts' => '<script src="' . URLROOT . '/js/admin/my-info.js"></script>',
+            //
+            // Without defer, as it always was: extraScripts is printed after the admin
+            // bundle, and this file expects the bundle's globals to be there already.
+            'extraScripts' => jsTag('js/admin/my-info.js', false),
             'profile'      => $admin,
         ]);
     }

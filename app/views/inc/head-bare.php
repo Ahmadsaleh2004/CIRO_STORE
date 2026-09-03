@@ -56,8 +56,9 @@ $bareSwal      = $bareSwal      ?? false;
 <?php if ($bareSwal): ?>
 <?= vendorCss('sweetalert2-css') ?>
 <?php endif; ?>
+<?php // Fingerprinted for the same reason pageCss is — see assetStamp in assets_helper.php ?>
 <?php foreach ($bareCss as $bareCssFile): ?>
-    <link rel="stylesheet" href="<?= URLROOT ?>/<?= ltrim($bareCssFile, '/') ?>">
+    <link rel="stylesheet" href="<?= URLROOT ?>/<?= ltrim($bareCssFile, '/') ?><?= assetStamp($bareCssFile) ?>">
 <?php endforeach; ?>
     <?= $bareHead ?? '' ?>
 </head>

@@ -75,8 +75,8 @@ class ProductController extends Controller
             'csrf'         => $csrf,
             'isAdminProd'  => isAdmin(),
             'msg'          => $_GET['msg'] ?? '',
-            'extraHead'    => '<link rel="stylesheet" href="' . URLROOT . '/css/store/pages/products.css">',
-            'extraScripts' => '<script src="' . URLROOT . '/js/features/notify-stock.js" defer></script>',
+            'extraHead'    => pageCss('store/pages/products.css'),
+            'extraScripts' => jsTag('js/features/notify-stock.js'),
             'userLoggedIn' => isUserLoggedIn(),
             'userName'     => $_SESSION['user_name'] ?? '',
             'notifiedProductIds' => $notifiedProductIds,
@@ -210,10 +210,10 @@ class ProductController extends Controller
             'title'           => $p['name'] ?? 'Product Details',
             'desc'            => substr($p['description'] ?? '', 0, 155),
             'pageImage'       => $imgSrc,
-            'extraHead'       => '
-<meta property="og:type" content="product">
-<link rel="stylesheet" href="' . URLROOT . '/css/store/pages/product-details.css">',
-            'extraScripts'    => '<script src="' . URLROOT . '/js/features/product-details.js" defer></script><script src="' . URLROOT . '/js/features/notify-stock.js" defer></script>',
+            'extraHead'       => '<meta property="og:type" content="product">' . "\n"
+                                 . pageCss('store/pages/product-details.css'),
+            'extraScripts'    => jsTag('js/features/product-details.js')
+                                 . jsTag('js/features/notify-stock.js'),
             'activePage'      => 'products',
             'p'               => $p,
             'variants'        => $variants,

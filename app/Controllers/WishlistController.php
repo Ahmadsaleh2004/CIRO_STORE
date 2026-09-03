@@ -31,7 +31,7 @@ class WishlistController extends Controller
             'title'         => 'My Wishlist',
             'desc'          => 'Your saved products at Cairo Store.',
             'activePage'    => 'wishlist',
-            'extraHead'     => '<link rel="stylesheet" href="' . URLROOT . '/css/store/pages/wishlist.css">',
+            'extraHead'     => pageCss('store/pages/wishlist.css'),
             // No extraScripts: the store footer already loads js/features/wishlist.js on
             // every page. Loading it here too emitted two tags for the same file, so it
             // ran twice (266 lines parsed twice, and the DOMContentLoaded handler firing

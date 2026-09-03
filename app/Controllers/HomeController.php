@@ -106,8 +106,7 @@ class HomeController extends Controller
         $this->view('home', [
             'title'        => 'Home',
             'desc'         => 'Cairo Store — Best Electronics Store with Premium Products and Fast Delivery',
-            'extraHead'    => '<link rel="stylesheet" href="' . URLROOT . '/css/store/pages/home.css">
-                               <link rel="stylesheet" href="' . URLROOT . '/css/store/pages/home-slider.css">',
+            'extraHead'    => pageCss('store/pages/home.css', 'store/pages/home-slider.css'),
             'productsJS'   => $productsJS,
             'homeSliders'  => $homeSliders,
             'categories'   => CategoryModel::getAllOrdered(),
