@@ -258,3 +258,128 @@
         font-size: 0.75rem;
     }
 }
+
+/* ==================================================
+   The catalogue toolbar
+   ==================================================
+   Search, one filter button and Reset, on a single row. What stood here was a
+   four-column Bootstrap grid that stacked on a phone: the search field, the
+   sort select, the price slider and a full-width Reset each took a line of
+   their own, about 400px of controls above the first product.
+
+   Everything except the search and the reset now lives inside the dropdown
+   panel, which is where four independent controls can be given room without
+   spending the page's first screen on them.
+   ================================================== */
+.catalog-toolbar {
+    flex-wrap: nowrap;
+}
+
+/* The search is the only elastic item; the button and Reset are their own
+   width. min-width: 0 because a flex item will not shrink below its content
+   otherwise, and the placeholder is long. */
+#search-wrapper {
+    position: relative;
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.catalog-toolbar .dropdown,
+.catalog-toolbar #reset {
+    flex: 0 0 auto;
+}
+
+/* The autocomplete list had no styling of any kind — it was a bare <ul>, so
+   when it filled it pushed the whole grid down the page instead of hanging
+   over it. It is a dropdown now: out of flow, the width of the field it
+   belongs to, and scrolling past five suggestions rather than growing. */
+#autocomplete-list {
+    position: absolute;
+    top: calc(100% + 2px);
+    left: 0;
+    right: 0;
+    z-index: 1000;
+    display: none;
+    max-height: 240px;
+    overflow-y: auto;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    background-color: var(--card-bg);
+    border: 1px solid var(--section-border);
+    border-radius: var(--card-radius);
+    box-shadow: 0 6px 18px var(--shadow-color);
+}
+
+#autocomplete-list li {
+    padding: 8px 12px;
+    font-size: 0.9rem;
+    color: var(--text-color);
+    cursor: pointer;
+    border-bottom: 1px solid var(--section-border);
+}
+
+#autocomplete-list li:last-child {
+    border-bottom: none;
+}
+
+#autocomplete-list li:hover {
+    background-color: rgba(99, 102, 241, 0.08);
+    color: var(--accent-text);
+}
+
+/* ── The panel ────────────────────────────────────────────── */
+.catalog-filter-panel {
+    min-width: 270px;
+    max-height: 70vh;
+    overflow-y: auto;
+}
+
+/* The single-choice groups. These are radios wearing Bootstrap's .btn-check
+   clothes rather than styled <div>s: the browser keeps the one-of-many
+   behaviour, the keyboard works, and reset only has to check the "None" one. */
+.catalog-btn-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.catalog-btn-group .btn {
+    padding: 3px 10px;
+    font-size: 0.8rem;
+}
+
+@media (max-width: 575px) {
+    /* The panel is anchored to the TOOLBAR, not to the button.
+       Anchored to the button it cannot fit: the button sits at x=168 on a
+       375px screen, so a 270px panel hangs off the right edge whichever way
+       it is aligned, and no width that still holds four groups of controls
+       will fit in the 207px to the right of it.
+
+       Making .dropdown static hands the panel's containing block to
+       .catalog-toolbar, which is full width — so left/right 0 spans the
+       screen and `top: 100%` puts it directly under the whole row. The
+       button carries data-bs-display="static" so Popper writes no transform
+       to fight this. */
+    .catalog-toolbar {
+        position: relative;
+        gap: 6px !important;
+    }
+
+    .catalog-toolbar .dropdown {
+        position: static;
+    }
+
+    .catalog-filter-panel {
+        left: 0;
+        right: 0;
+        width: auto;
+        min-width: 0;
+        max-width: none;
+    }
+
+    .catalog-toolbar #reset,
+    .catalog-toolbar .dropdown-toggle {
+        white-space: nowrap;
+    }
+}

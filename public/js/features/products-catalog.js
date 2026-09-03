@@ -328,66 +328,102 @@ document.addEventListener('DOMContentLoaded', () => {
 // ── Filters & Autocomplete (pages/products.php) ──────────────
 document.addEventListener('DOMContentLoaded', () => {
     const searchEl = document.getElementById('search');
-    const sortEl   = document.getElementById('sort');
+    const panel    = document.getElementById('catalogFilterPanel');
     const slider   = document.getElementById('priceRange');
     const sliderLbl= document.getElementById('priceRangeVal');
     const resetBtn = document.getElementById('reset');
     const countEl  = document.getElementById('results-count');
+    const badgeEl  = document.getElementById('catalogFilterCount');
     const items    = document.querySelectorAll('.product-item');
 
-    if (!searchEl && !sortEl && !items.length) return;
+    if (!searchEl && !panel && !items.length) return;
+
+    // The four controls used to be four optgroups of ONE <select>, which meant
+    // one value and therefore one answer: picking a category cancelled the
+    // sort, picking a sort cancelled the category. They are separate inputs
+    // now and each is read on its own, so they combine.
+    const radioValue = name => panel?.querySelector(`input[name="${name}"]:checked`)?.value || '';
+    const checkedCats = () =>
+        [...(panel?.querySelectorAll('.catalog-cat:checked') || [])].map(c => c.value);
+
+    // The price bands, as the lower and upper bound each one means. Kept as
+    // data rather than as a chain of ifs, because that chain is what the old
+    // code was and every band there repeated the same shape.
+    const PRICE_BANDS = {
+        u100: [0, 100],
+        u300: [0, 300],
+        u500: [0, 500],
+        o500: [500, Infinity],
+    };
 
     function applyFilters() {
-        const q        = searchEl?.value.toLowerCase().trim() || '';
-        const sort     = sortEl?.value || '';
-        const maxPrice = parseInt(slider?.value || 9999);
+        const q         = searchEl?.value.toLowerCase().trim() || '';
+        const nameSort  = radioValue('nameSort');
+        const priceSort = radioValue('priceSort');
+        const band      = PRICE_BANDS[radioValue('priceBand')] || null;
+        const cats      = checkedCats();
+        const maxPrice  = parseInt(slider?.value || 9999);
         if (sliderLbl) sliderLbl.textContent = '≤$' + maxPrice;
 
         const visible = [];
         items.forEach(item => {
+            const price = parseFloat(item.dataset.price);
             let show = true;
-            if (q      && !item.dataset.name.includes(q))      show = false;
-            if (parseFloat(item.dataset.price) > maxPrice)     show = false;
-            if (sort.startsWith('cat-')) {
-                const cat = sort.replace('cat-', '');
-                if (!item.dataset.cats.includes(cat))          show = false;
-            }
-            if (sort === 'price-u100' && parseFloat(item.dataset.price) >= 100) show = false;
-            if (sort === 'price-u300' && parseFloat(item.dataset.price) >= 300) show = false;
-            if (sort === 'price-u500' && parseFloat(item.dataset.price) >= 500) show = false;
-            if (sort === 'price-o500' && parseFloat(item.dataset.price) <  500) show = false;
+
+            if (q && !item.dataset.name.includes(q))            show = false;
+            if (price > maxPrice)                               show = false;
+            if (band && (price < band[0] || price >= band[1]))  show = false;
+
+            // Any match, not every match: ticking phones and accessories asks
+            // for both shelves, not for the products that are somehow on both.
+            if (cats.length && !cats.some(c => item.dataset.cats.includes(c))) show = false;
+
             item.style.display = show ? '' : 'none';
             if (show) visible.push(item);
         });
 
+        // Price leads and name breaks its ties. A list has one order, so two
+        // sorts have to be ranked rather than fought over — and this ranking
+        // is the one that makes "cheapest first, A to Z within a price" work.
         const container = document.getElementById('products-container');
-        if (container) {
-            if (sort === 'az' || sort === 'za') {
-                visible.sort((a,b) => sort==='az'
-                    ? a.dataset.name.localeCompare(b.dataset.name)
-                    : b.dataset.name.localeCompare(a.dataset.name));
-                visible.forEach(el => container.appendChild(el));
-            }
-            if (sort === 'low' || sort === 'high') {
-                visible.sort((a,b) => sort==='low'
-                    ? parseFloat(a.dataset.price)-parseFloat(b.dataset.price)
-                    : parseFloat(b.dataset.price)-parseFloat(a.dataset.price));
-                visible.forEach(el => container.appendChild(el));
-            }
+        if (container && (nameSort || priceSort)) {
+            visible.sort((a, b) => {
+                if (priceSort) {
+                    const d = parseFloat(a.dataset.price) - parseFloat(b.dataset.price);
+                    if (d !== 0) return priceSort === 'low' ? d : -d;
+                }
+                if (nameSort) {
+                    const d = a.dataset.name.localeCompare(b.dataset.name);
+                    return nameSort === 'az' ? d : -d;
+                }
+                return 0;
+            });
+            visible.forEach(el => container.appendChild(el));
         }
+
+        if (badgeEl) {
+            const active = (nameSort ? 1 : 0) + (priceSort ? 1 : 0)
+                         + (radioValue('priceBand') ? 1 : 0) + cats.length
+                         + (maxPrice < parseInt(slider?.max || 2000) ? 1 : 0);
+            badgeEl.textContent = active;
+            badgeEl.classList.toggle('d-none', active === 0);
+        }
+
         if (countEl) countEl.textContent = `Showing ${visible.length} of ${items.length} products`;
         if (typeof window.initScrollReveal==='function') window.initScrollReveal();
     }
 
     searchEl?.addEventListener('input',  applyFilters);
-    sortEl?.addEventListener('change',   applyFilters);
     slider?.addEventListener('input',    applyFilters);
+    // One listener on the panel rather than one per input: the categories are
+    // rendered from the database, so their number is not known here.
+    panel?.addEventListener('change',    applyFilters);
     resetBtn?.addEventListener('click', () => {
         if (searchEl) searchEl.value = '';
-        if (sortEl)   sortEl.value   = '';
-        if (slider) { slider.value = 2000; if (sliderLbl) sliderLbl.textContent='≤$2000'; }
-        items.forEach(el => el.style.display = '');
-        if (countEl) countEl.textContent = `Showing ${items.length} products`;
+        panel?.querySelectorAll('input[type="radio"][value=""]').forEach(r => { r.checked = true; });
+        panel?.querySelectorAll('.catalog-cat').forEach(c => { c.checked = false; });
+        if (slider) { slider.value = slider.max; }
+        applyFilters();
     });
 
     if (countEl && items.length) countEl.textContent = `Showing ${items.length} products`;
@@ -418,9 +454,13 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ── URL ?cat= filter ─────────────────────────────────────
+    // The home page's category buttons link here with ?cat=<name>. It used to
+    // select an <option value="cat-…">; the same link now ticks a checkbox, so
+    // the visitor can add a second category to the one they arrived on instead
+    // of replacing it.
     const cat = new URLSearchParams(window.location.search).get('cat');
-    if (cat && sortEl) {
-        const opt = sortEl.querySelector(`option[value="cat-${cat}"]`);
-        if (opt) { sortEl.value = `cat-${cat}`; applyFilters(); }
+    if (cat && panel) {
+        const box = panel.querySelector(`.catalog-cat[value="${CSS.escape(cat.toLowerCase())}"]`);
+        if (box) { box.checked = true; applyFilters(); }
     }
 });
