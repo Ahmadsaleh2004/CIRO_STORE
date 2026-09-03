@@ -172,6 +172,22 @@
         const el = event.target.closest ? event.target.closest('[data-action]') : null;
         if (!el) return;
 
+        // A <select> is opened by clicking it. That click is not a command — the command
+        // is the `change` that may or may not follow, once a value has actually been
+        // picked.
+        //
+        // Without this line the two listeners below both fired on a <select>, and the
+        // click one fired FIRST, before any choice existed. On Manage Orders that meant
+        // tapping the status filter called filterStatus() with the value already
+        // selected, which navigates: the list appeared to open and then shut itself,
+        // because the page had reloaded underneath it. Nothing was ever wrong on that
+        // page — the fault was here, and it would have reached any <select> that
+        // declared an action.
+        //
+        // Checked on `el` rather than on event.target so that a <select> nested inside
+        // an element that legitimately acts on click keeps working.
+        if (event.type === 'click' && el.tagName === 'SELECT') return;
+
         const action = el.getAttribute('data-action');
         const handler = handlers[action];
 
