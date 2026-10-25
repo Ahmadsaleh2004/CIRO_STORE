@@ -218,7 +218,13 @@ function registerMonitoringHandlers(): void
         // ⚠️ No delegating to the previous handler. See the comment above: that
         // handler is Sentry's, and delegating to it both duplicates the event and
         // cancels the error page.
-        \App\Core\ErrorPage::serverError($e->getMessage(), 500);
+        //
+        // An unreachable database is a 503, not a 500 — the service is temporarily
+        // unavailable, which is what the page says and what Retry-After tells crawlers.
+        // Database's constructor used to render this itself; it throws now so that
+        // /health can catch it (see App\Core\DatabaseUnavailable).
+        $status = $e instanceof \App\Core\DatabaseUnavailable ? 503 : 500;
+        \App\Core\ErrorPage::serverError($e->getMessage(), $status);
     });
 
     register_shutdown_function(static function () use ($alreadyReported): void {

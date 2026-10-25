@@ -23,3 +23,4 @@ define('DB_NAME', 'analysis_only');
 define('DB_USER', 'analysis_only');
 define('DB_PASS', '');
 define('DB_CHARSET', 'utf8mb4');
+define('DB_SSL_CA', '');

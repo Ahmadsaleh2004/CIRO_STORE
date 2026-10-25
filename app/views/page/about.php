@@ -21,12 +21,15 @@
 
     <!-- Stats Bar -->
     <div class="row g-3 mb-5 text-center">
+        <?php // null when the database was unreachable — the tile is left out rather than showing 0+ ?>
+        <?php if ($productsCount !== null): ?>
         <div class="col-6 col-md-3">
             <div class="card p-3">
                 <div class="about-stat-value"><?= (int)$productsCount ?>+</div>
                 <small class="about-stat-label">Products</small>
             </div>
         </div>
+        <?php endif; ?>
         <div class="col-6 col-md-3">
             <div class="card p-3">
                 <div class="about-stat-value"><?= (int)$employees ?>+</div>

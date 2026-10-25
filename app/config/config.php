@@ -114,6 +114,11 @@ define('DB_USER', env('DB_USERNAME', 'root'));
 define('DB_PASS', $_ENV['DB_PASSWORD'] ?? '');  // ← not env(): an empty password is a valid value here
 define('DB_CHARSET', env('DB_CHARSET', 'utf8mb4'));
 
+// The path to the database provider's CA certificate. Empty locally, where MySQL listens on
+// 127.0.0.1 without TLS. On the live server it points at a Render secret file, because the
+// provider refuses unencrypted connections — see Database::sslOptions().
+define('DB_SSL_CA', env('DB_SSL_CA', ''));
+
 // ==========================================
 // 6. Session hardening
 // ==========================================

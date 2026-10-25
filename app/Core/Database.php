@@ -65,6 +65,10 @@ class Database
             PDO::ATTR_TIMEOUT            => 5,
         ];
 
+        // Encryption to the database, when the deployment asks for it. Locally DB_SSL_CA is
+        // empty and this adds nothing; on the live server it carries the provider's CA.
+        $options += self::sslOptions(DB_SSL_CA);
+
         try {
             $this->connection = new PDO($dsn, DB_USER, DB_PASS, $options);
         } catch (PDOException $e) {
@@ -78,8 +82,58 @@ class Database
             //
             // 503 rather than 500: a downed database means the service is temporarily
             // unavailable.
-            ErrorPage::serverError('Database connection failed: ' . $e->getMessage(), 503);
+            //
+            // Thrown rather than rendered here. This line used to call
+            // ErrorPage::serverError() itself, which ends the request — so the try/catch in
+            // HealthController could never run and /health answered an outage with an HTML
+            // page instead of {"status":"fail"}. The global handler in
+            // app/config/monitoring.php now renders the same 503 for any caller that does
+            // not catch it, and DatabaseUnavailable explains why it extends \Error: the
+            // models' catch (Exception) blocks must not swallow it.
+            throw new DatabaseUnavailable('Database connection failed: ' . $e->getMessage(), 0, $e);
         }
+    }
+
+    /**
+     * The PDO options for an encrypted, verified connection — or none, when $caPath is empty.
+     *
+     * Aiven, where the live database runs, refuses unencrypted connections outright
+     * (require_secure_transport). The CA is passed so the server's certificate is CHECKED,
+     * not merely accepted: encryption without verification stops a passive eavesdropper but
+     * hands the password to anyone able to answer in the server's place.
+     *
+     * ⚠️ The constants are looked up by name because PHP renamed them. 8.4 introduced
+     * Pdo\Mysql::ATTR_SSL_CA and 8.5 deprecates the old PDO::MYSQL_ATTR_SSL_CA — while the
+     * project still supports 8.2, where only the old one exists. The deployed image runs
+     * 8.5 and CI tests 8.2, so naming either constant directly breaks one of them.
+     *
+     * @return array<int, mixed>
+     * @throws DatabaseUnavailable When the path is set but the file cannot be read — a
+     *                             misconfigured secret file would otherwise surface as a
+     *                             cryptic TLS handshake error from the driver.
+     */
+    public static function sslOptions(string $caPath): array
+    {
+        if ($caPath === '') {
+            return [];
+        }
+
+        if (!is_readable($caPath)) {
+            throw new DatabaseUnavailable("DB_SSL_CA is set to {$caPath}, which is not a readable file");
+        }
+
+        return [
+            self::mysqlAttribute('ATTR_SSL_CA')                 => $caPath,
+            self::mysqlAttribute('ATTR_SSL_VERIFY_SERVER_CERT') => true,
+        ];
+    }
+
+    /** The driver attribute under its 8.4+ name when it exists, else under the old one. */
+    private static function mysqlAttribute(string $name): int
+    {
+        $modern = 'Pdo\Mysql::' . $name;
+
+        return (int) (defined($modern) ? constant($modern) : constant('PDO::MYSQL_' . $name));
     }
 
     private function __clone()

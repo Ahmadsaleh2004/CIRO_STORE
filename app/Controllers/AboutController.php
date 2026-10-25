@@ -3,6 +3,7 @@
 namespace App\Controllers;
 
 use App\Core\Controller;
+use App\Core\DatabaseUnavailable;
 use App\Models\AboutModel;
 use App\Models\ProductModel;
 use OpenApi\Attributes as OA;
@@ -29,8 +30,17 @@ class AboutController extends Controller
         // The store's static details live in AboutModel
         $storeInfo = $model->getStoreInfo();
 
-        // Visible product count, read from the database
-        $productsCount = ProductModel::countVisible();
+        // Visible product count, read from the database.
+        //
+        // The only thing on this page that needs the database — so when the database is
+        // unreachable the page renders without the number instead of answering 503 for the
+        // sake of one statistic. The view leaves the tile out when the count is null.
+        try {
+            $productsCount = ProductModel::countVisible();
+        } catch (DatabaseUnavailable $e) {
+            error_log('[Cairo Store] about: product count skipped — ' . $e->getMessage());
+            $productsCount = null;
+        }
 
         $this->view('page/about', [
             'title'         => 'About Us',
