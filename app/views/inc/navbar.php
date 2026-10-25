@@ -24,9 +24,9 @@ $adminInStoreMode = !empty($_SESSION['admin_in_store_mode']);
 <?php if ($adminInStoreMode): ?>
 <?php // The store-mode bar — shown to an admin only while browsing the store as a visitor ?>
 <div class="container-fluid store-mode-bar">
-    <span>👑 You are browsing the store as a guest</span>
+    <span><?= icon('award') ?> You are browsing the store as a guest</span>
     <a href="<?= URLROOT ?>/admin/store-mode/reauth" class="store-mode-return">
-        🔐 Return to Admin Panel
+        <?= icon('shield-lock') ?> Return to Admin Panel
     </a>
 </div>
 <?php endif; ?>
@@ -64,7 +64,7 @@ $adminInStoreMode = !empty($_SESSION['admin_in_store_mode']);
 <nav class="navbar custom-navbar store-navbar" id="mainNavbar">
     <div class="container">
         <?php // Using URLROOT for clean links ?>
-        <a class="navbar-brand fw-bold" href="<?= URLROOT ?>">🏪 <span class="d-none d-sm-inline">Cairo Store</span></a>
+        <a class="navbar-brand fw-bold" href="<?= URLROOT ?>"><?= icon('shop') ?> <span class="d-none d-sm-inline">Cairo Store</span></a>
 
         <ul class="navbar-nav navbar-links">
             <li class="nav-item">
@@ -86,14 +86,14 @@ $adminInStoreMode = !empty($_SESSION['admin_in_store_mode']);
             <?php // Wishlist — available to everyone ?>
             <a href="<?= URLROOT ?>/wishlist"
                class="btn btn-outline-danger position-relative" aria-label="Wishlist">
-                ❤️ <span id="wishlist-count" class="counter-badge" aria-live="polite">0</span>
+                <?= icon('heart-fill', 'icon-love') ?> <span id="wishlist-count" class="counter-badge" aria-live="polite">0</span>
             </a>
 
             <?php // The notification bell — shown only to a signed-in user ?>
             <?php if (isset($data['userLoggedIn']) && $data['userLoggedIn']): ?>
             <button id="notifBell" class="btn btn-outline-light position-relative"
                     aria-label="Notifications" title="Notifications" type="button">
-                🔔 <span id="notifBadge" class="counter-badge u-badge-dot d-none" aria-live="polite">0</span>
+                <?= icon('bell') ?> <span id="notifBadge" class="counter-badge u-badge-dot d-none" aria-live="polite">0</span>
             </button>
             <?php endif; ?>
 
@@ -103,13 +103,13 @@ $adminInStoreMode = !empty($_SESSION['admin_in_store_mode']);
                 class="btn btn-outline-warning position-relative"
                 data-bs-toggle="offcanvas" data-bs-target="#cartSidebar"
                 aria-controls="cartSidebar" aria-label="Shopping cart">
-                🛒 <span id="cart-count" class="counter-badge" aria-live="polite">0</span>
+                <?= icon('cart') ?> <span id="cart-count" class="counter-badge" aria-live="polite">0</span>
             </button>
             <?php endif; ?>
 
             <?php // Theme Toggle ?>
             <button id="theme-toggle" class="btn btn-outline-light"
-                    aria-label="Toggle theme" title="Toggle Theme">🌙</button>
+                    aria-label="Toggle theme" title="Toggle Theme"><?= icon('moon') ?></button>
 
             <?php
             // Log In sits with the account actions rather than among the four page links.
@@ -122,7 +122,7 @@ $adminInStoreMode = !empty($_SESSION['admin_in_store_mode']);
             ?>
             <?php if (!isset($data['userLoggedIn']) || !$data['userLoggedIn']): ?>
             <button type="button" class="btn btn-outline-light navbar-account" aria-label="Log in"
-                    data-bs-toggle="modal" data-bs-target="#loginModal">👤 <span class="d-none d-lg-inline">Log In</span></button>
+                    data-bs-toggle="modal" data-bs-target="#loginModal"><?= icon('person') ?> <span class="d-none d-lg-inline">Log In</span></button>
             <?php endif; ?>
 
             <?php // The user dropdown — shown only to a signed-in user ?>
@@ -142,15 +142,15 @@ $adminInStoreMode = !empty($_SESSION['admin_in_store_mode']);
                 ?>
                 <button class="btn btn-outline-light dropdown-toggle navbar-account" type="button"
                     data-bs-toggle="dropdown" aria-expanded="false" aria-label="Account menu">
-                    👤 <span class="d-none d-lg-inline"><?= htmlspecialchars($fullName) ?></span><span class="d-lg-none"><?= htmlspecialchars($firstName) ?></span>
+                    <?= icon('person') ?> <span class="d-none d-lg-inline"><?= htmlspecialchars($fullName) ?></span><span class="d-lg-none"><?= htmlspecialchars($firstName) ?></span>
                 </button>
                 <ul class="dropdown-menu dropdown-menu-end u-surface-card">
-                    <li><a class="dropdown-item u-text" href="<?= URLROOT ?>/user/info">👤 My Info</a></li>
-                    <li><a class="dropdown-item u-text" href="<?= URLROOT ?>/contact">💬 Contact Us</a></li>
+                    <li><a class="dropdown-item u-text" href="<?= URLROOT ?>/user/info"><?= icon('person') ?> My Info</a></li>
+                    <li><a class="dropdown-item u-text" href="<?= URLROOT ?>/contact"><?= icon('chat-dots') ?> Contact Us</a></li>
                     <li><hr class="dropdown-divider u-border-section"></li>
                     <?php // logoutUser() is a JavaScript function defined in the static JS files ?>
                     <li><a class="dropdown-item text-danger" href="#"
-                           data-action="logout-user">🚪 Log Out</a></li>
+                           data-action="logout-user"><?= icon('box-arrow-right') ?> Log Out</a></li>
                 </ul>
             </div>
             <?php endif; ?>

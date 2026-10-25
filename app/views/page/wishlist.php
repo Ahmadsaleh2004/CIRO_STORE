@@ -9,7 +9,7 @@
 <section class="container py-5">
 
     <nav class="store-breadcrumb mb-4">
-        <a href="<?= URLROOT ?>">🏠 Home</a>
+        <a href="<?= URLROOT ?>"><?= icon('house') ?> Home</a>
         <span class="sep">/</span>
         <span class="current">My Wishlist</span>
     </nav>

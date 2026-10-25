@@ -9,7 +9,7 @@
 <section class="container py-5">
 
     <nav class="store-breadcrumb mb-4">
-        <a href="<?= URLROOT ?>">🏠 Home</a>
+        <a href="<?= URLROOT ?>"><?= icon('house') ?> Home</a>
         <span class="sep">/</span>
         <span class="current">About Us</span>
     </nav>
@@ -53,25 +53,25 @@
     <div class="row g-4">
         <div class="col-lg-6">
             <div class="card p-4 h-100">
-                <h2 class="h3 mb-3">🏪 Who We Are</h2>
+                <h2 class="h3 mb-3"><?= icon('shop') ?> Who We Are</h2>
                 <p>Cairo Store is a modern electronics store specialized in smartphones, laptops, gaming devices and smart accessories.</p>
                 <p class="mb-0">We aim to provide high quality products with excellent customer service and affordable prices.</p>
             </div>
         </div>
         <div class="col-lg-6">
             <div class="card p-4 h-100">
-                <h2 class="h3 mb-3">📋 Company Information</h2>
-                <p>📅 <strong>Founded:</strong> <?= (int)$founded ?></p>
-                <p>📍 <strong>Location:</strong> <?= htmlspecialchars($location) ?></p>
-                <p>👥 <strong>Employees:</strong> <?= (int)$employees ?>+</p>
-                <p>📞 <strong>Phone:</strong> <?= htmlspecialchars($phone) ?></p>
-                <p class="mb-0">🕒 <strong>Hours:</strong> <?= htmlspecialchars($workingHours) ?></p>
+                <h2 class="h3 mb-3"><?= icon('clipboard') ?> Company Information</h2>
+                <p><?= icon('calendar') ?> <strong>Founded:</strong> <?= (int)$founded ?></p>
+                <p><?= icon('geo-alt') ?> <strong>Location:</strong> <?= htmlspecialchars($location) ?></p>
+                <p><?= icon('people') ?> <strong>Employees:</strong> <?= (int)$employees ?>+</p>
+                <p><?= icon('telephone') ?> <strong>Phone:</strong> <?= htmlspecialchars($phone) ?></p>
+                <p class="mb-0"><?= icon('clock') ?> <strong>Hours:</strong> <?= htmlspecialchars($workingHours) ?></p>
             </div>
         </div>
     </div>
 
     <div class="card mt-4 p-4">
-        <h2 class="h3 mb-3">🎯 Our Mission</h2>
+        <h2 class="h3 mb-3"><?= icon('bullseye') ?> Our Mission</h2>
         <p class="mb-0">To become one of the leading online electronics stores in the Middle East by delivering quality products and outstanding shopping experiences to every customer.</p>
     </div>
 

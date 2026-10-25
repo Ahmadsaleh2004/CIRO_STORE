@@ -338,9 +338,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!btnEl) return;
         const inList = isInWishlist(buildWishlistProduct());
         if (btnEl.id === 'wishBtn2') {
-            btnEl.innerHTML = inList ? '❤️ Added to Wishlist' : '🤍 Add to Wishlist';
+            btnEl.innerHTML = inList ? window.icon('heart-fill', 'icon-love') + ' Added to Wishlist' : window.icon('heart') + ' Add to Wishlist';
         } else {
-            btnEl.innerHTML = inList ? '❤️' : '🤍';
+            btnEl.innerHTML = inList ? window.icon('heart-fill', 'icon-love') : window.icon('heart');
         }
     }
 

@@ -17,5 +17,5 @@ $endpoint     = $orderContext === 'admin'
         data-order-id="<?= (int)$orderId ?>"
         data-context="<?= $orderContext ?>"
         data-endpoint="<?= $endpoint ?>">
-    🗑️ <?= $orderContext === 'admin' ? 'Delete Order' : 'Cancel Order' ?>
+    <?= icon('trash') ?> <?= $orderContext === 'admin' ? 'Delete Order' : 'Cancel Order' ?>
 </button>

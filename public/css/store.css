@@ -72,6 +72,7 @@
 @import url("components/skeleton.css");
 @import url("components/back-to-top.css");
 @import url("components/notifications.css");
+@import url("components/icons.css");
 
 /* ── 5. Animations ─────────────────────────────────
    reduced-motion.css MUST be last in this file: it switches off

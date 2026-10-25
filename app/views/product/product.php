@@ -11,7 +11,7 @@ $pageDescription = 'Browse all products at Cairo Store.';
 <section class="container py-5">
 
     <nav class="store-breadcrumb mb-3">
-        <a href="<?= URLROOT ?>">🏠 Home</a>
+        <a href="<?= URLROOT ?>"><?= icon('house') ?> Home</a>
         <span class="sep">/</span>
         <span class="current">Products</span>
     </nav>
@@ -61,7 +61,7 @@ $pageDescription = 'Browse all products at Cairo Store.';
                             toolbar instead. See .catalog-filter-panel in products.css. */ ?>
                     data-bs-display="static"
                     aria-expanded="false">
-                🔀 Sort &amp; Filter
+                <?= icon('sliders') ?> Sort &amp; Filter
                 <span class="badge bg-primary ms-1 d-none" id="catalogFilterCount">0</span>
             </button>
 
@@ -73,7 +73,7 @@ $pageDescription = 'Browse all products at Cairo Store.';
             <div class="dropdown-menu dropdown-menu-end p-3 catalog-filter-panel" id="catalogFilterPanel">
 
                 <?php // Name — one order at a time, so radios wearing button clothes ?>
-                <p class="fw-bold small mb-1">🔤 By Name</p>
+                <p class="fw-bold small mb-1"><?= icon('sort-alpha-down') ?> By Name</p>
                 <div class="catalog-btn-group mb-3">
                     <input type="radio" class="btn-check" name="nameSort" id="nameSortNone" value="" checked>
                     <label class="btn btn-sm btn-outline-secondary" for="nameSortNone">None</label>
@@ -84,7 +84,7 @@ $pageDescription = 'Browse all products at Cairo Store.';
                 </div>
 
                 <?php // Price — same shape. When both are set, price leads and name breaks ties. ?>
-                <p class="fw-bold small mb-1">💰 By Price</p>
+                <p class="fw-bold small mb-1"><?= icon('currency-dollar') ?> By Price</p>
                 <div class="catalog-btn-group mb-3">
                     <input type="radio" class="btn-check" name="priceSort" id="priceSortNone" value="" checked>
                     <label class="btn btn-sm btn-outline-secondary" for="priceSortNone">None</label>
@@ -97,20 +97,19 @@ $pageDescription = 'Browse all products at Cairo Store.';
                 <hr class="filter-divider">
 
                 <?php // Categories — checkboxes, any match, straight from the database ?>
-                <p class="fw-bold small mb-1">🏷️ Categories <span class="text-muted fw-normal">(any match)</span></p>
+                <p class="fw-bold small mb-1"><?= icon('tag') ?> Categories <span class="text-muted fw-normal">(any match)</span></p>
                 <div class="mb-3">
                     <?php
                     foreach ($categories as $cat):
                         $catValue = strtolower($cat['name']);
-                        $emoji    = categoryEmoji($cat['name']);
+                        $catIcon  = categoryIcon($cat['name']);
                     ?>
                     <div class="form-check">
                         <input class="form-check-input catalog-cat" type="checkbox"
                                value="<?= htmlspecialchars($catValue) ?>"
                                id="catalogCat_<?= htmlspecialchars($catValue) ?>">
                         <label class="form-check-label small" for="catalogCat_<?= htmlspecialchars($catValue) ?>">
-                            <?php // @escaping-safe: categoryEmoji returns a symbol from an internal map ?>
-                            <?= $emoji ?> <?= htmlspecialchars(ucfirst($cat['name'])) ?>
+                            <?= icon($catIcon) ?> <?= htmlspecialchars(ucfirst($cat['name'])) ?>
                         </label>
                     </div>
                     <?php endforeach; ?>
@@ -119,7 +118,7 @@ $pageDescription = 'Browse all products at Cairo Store.';
                 <hr class="filter-divider">
 
                 <?php // Price band and the slider — both narrow the range, and they compose ?>
-                <p class="fw-bold small mb-1">💵 Price Range</p>
+                <p class="fw-bold small mb-1"><?= icon('cash') ?> Price Range</p>
                 <div class="catalog-btn-group mb-2">
                     <input type="radio" class="btn-check" name="priceBand" id="priceBandNone" value="" checked>
                     <label class="btn btn-sm btn-outline-secondary" for="priceBandNone">Any</label>
@@ -192,7 +191,7 @@ $pageDescription = 'Browse all products at Cairo Store.';
                         'price'      => $finalPrice,
                         'image_path' => $imgSrc ? fixImagePath($display['image_path'] ?? $p['image_path']) : fixImagePath($p['image_path']),
                         'image'      => fixImagePath($display['image_path'] ?? $p['image_path']),
-                    ])) ?>'>🤍</button>
+                    ])) ?>'><?= icon('heart') ?></button>
                 <?php endif; ?>
 
                 <a href="<?= URLROOT ?>/product?id=<?= (int)$p['id'] ?>" class="product-link">
@@ -251,14 +250,14 @@ $pageDescription = 'Browse all products at Cairo Store.';
                                     data-variant-id="<?= (int)$variantId ?>"
                                     data-price="<?= $finalPrice ?>"
                                     data-stock="<?= $stock ?>">
-                            🛒 Add to Cart
+                            <?= icon('cart') ?> Add to Cart
                         </button>
                         <?php else: ?>
                         <button class="btn btn-success w-100 btn-disabled-faded"
                                 disabled
                                 data-bs-toggle="modal" data-bs-target="#loginModal"
                                 data-action="self-enable">
-                            🛒 Add to Cart
+                            <?= icon('cart') ?> Add to Cart
                         </button>
                         <?php endif; ?>
                         <?php else: ?>
@@ -269,13 +268,13 @@ $pageDescription = 'Browse all products at Cairo Store.';
                             <button type="submit"
                                     class="btn w-100 js-notify-btn <?= $alreadyNotified ? 'btn-success' : 'btn-outline-warning' ?>"
                                     <?= $alreadyNotified ? 'disabled' : '' ?>>
-                                <?= $alreadyNotified ? "✅ We'll notify you!" : '🔔 Notify Me' ?>
+                                <?php if ($alreadyNotified): ?><?= icon('check-circle') ?> We'll notify you!<?php else: ?><?= icon('bell') ?> Notify Me<?php endif; ?>
                             </button>
                         </form>
                         <?php else: ?>
                         <button class="btn btn-outline-warning w-100"
                             data-bs-toggle="modal" data-bs-target="#loginModal">
-                            🔔 Notify Me (Login)
+                            <?= icon('bell') ?> Notify Me (Login)
                         </button>
                         <?php endif; ?>
                         <?php endif; ?>

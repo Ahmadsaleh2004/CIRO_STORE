@@ -10,11 +10,11 @@
     <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content u-policy-panel">
             <div class="modal-header u-border-bottom">
-                <h5 class="modal-title">🔒 Privacy Policy</h5>
+                <h5 class="modal-title"><?= icon('lock') ?> Privacy Policy</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body u-scroll-60vh">
-                <h3>🔒 Privacy Policy</h3>
+                <h3><?= icon('lock') ?> Privacy Policy</h3>
                 <hr class="u-border-section">
 
                 <h5>1. Information We Collect</h5>
@@ -44,7 +44,7 @@
                 <button type="button" class="btn btn-success"
                     data-action="switch-modal"
                     data-modal-target="registerModal"
-                    data-modal-after="accept-privacy">✅ I Agree</button>
+                    data-modal-after="accept-privacy"><?= icon('check-circle') ?> I Agree</button>
             </div>
         </div>
     </div>

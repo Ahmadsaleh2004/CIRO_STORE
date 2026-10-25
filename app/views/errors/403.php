@@ -27,7 +27,7 @@ require APPROOT . '/views/inc/head-bare.php';
 ?>
 
 <main class="container py-5 text-center u-minh-70vh">
-    <p class="display-1 mb-2" aria-hidden="true">🔒</p>
+    <p class="display-1 mb-2" aria-hidden="true"><?= icon('lock', 'icon-hero') ?></p>
     <h1 class="h3 mb-3">Access denied</h1>
     <p class="text-muted mb-4">
         You do not have permission to view this page.

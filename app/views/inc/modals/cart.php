@@ -8,7 +8,7 @@
 <?php // ══ Cart Sidebar ════════════════════════════════════════ ?>
 <div class="offcanvas offcanvas-end" id="cartSidebar" tabindex="-1" aria-labelledby="cartSidebarLabel">
     <div class="offcanvas-header border-bottom">
-        <h5 class="offcanvas-title fw-bold" id="cartSidebarLabel">🛒 Your Shopping Cart</h5>
+        <h5 class="offcanvas-title fw-bold" id="cartSidebarLabel"><?= icon('cart') ?> Your Shopping Cart</h5>
         <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
     </div>
     <div class="offcanvas-body">

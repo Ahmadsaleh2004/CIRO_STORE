@@ -12,7 +12,7 @@
         <div class="modal-content">
             <div class="modal-header modal-header-login">
                 <div>
-                    <span class="modal-icon">🔐</span>
+                    <span class="modal-icon"><?= icon('shield-lock') ?></span>
                     <h5 class="modal-title">Welcome Back</h5>
                     <small class="u-on-dark u-fs-80">Sign in to your account</small>
                 </div>
@@ -36,7 +36,7 @@
                                    placeholder=" " required autocomplete="current-password">
                             <span class="input-group-text u-clickable"
                                   data-action="toggle-password" data-input="loginPass" data-eye="eyeLogin"
-                                  id="eyeLogin">👁️</span>
+                                  id="eyeLogin"><?= icon('eye') ?></span>
                         </div>
                         <label>Password</label>
                     </div>

@@ -86,7 +86,7 @@ function isSafeExpr(string $e): bool
     // ⚠️ What goes in here must be a tag generator the project builds from values it owns
     // — not a function that passes external input through.
     $htmlEmitters = 'themeBootScript|cssBundle|pageCss|jsBundle|jsTag'
-                  . '|vendorJs|vendorCss|pageData';
+                  . '|vendorJs|vendorCss|pageData|icon';
     if (preg_match('/^(' . $htmlEmitters . ')\(/', $e)) {
         return true;
     }

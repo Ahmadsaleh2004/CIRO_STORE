@@ -6,9 +6,10 @@
     "license": "MIT",
     "type": "module",
     "scripts": {
-        "build": "npm run build:css && npm run build:js",
+        "build": "npm run build:css && npm run build:js && npm run build:icons",
         "build:css": "node build/build-css.mjs",
         "build:js": "node build/build-js.mjs",
+        "build:icons": "node build/build-icons.mjs",
         "lint": "npm run lint:js && npm run lint:css",
         "lint:js": "eslint public/js --max-warnings 0",
         "lint:css": "stylelint \"public/css/**/*.css\"",
@@ -20,6 +21,7 @@
     },
     "devDependencies": {
         "bootstrap": "5.3.3",
+        "bootstrap-icons": "1.13.1",
         "esbuild": "^0.28.2",
         "eslint": "^9.16.0",
         "globals": "^17.11.0",

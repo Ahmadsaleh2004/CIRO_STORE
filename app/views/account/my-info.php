@@ -10,13 +10,13 @@
 <main id="main-content" class="container py-5">
 
     <nav class="store-breadcrumb mb-4">
-        <a href="<?= URLROOT ?>">🏠 Home</a>
+        <a href="<?= URLROOT ?>"><?= icon('house') ?> Home</a>
         <span class="sep">/</span>
         <span class="current">My Account</span>
     </nav>
 
     <div class="d-flex align-items-center gap-3 mb-4">
-        <div class="u-fs-xxl">👤</div>
+        <div class="u-fs-xxl"><?= icon('person', 'icon-hero') ?></div>
         <div>
             <h1 class="fw-bold mb-0"><?= htmlspecialchars($user['full_name'] ?? '') ?></h1>
             <p class="text-muted mb-0"><?= htmlspecialchars($user['email'] ?? '') ?></p>
@@ -27,17 +27,17 @@
     <ul class="nav nav-tabs mb-4" id="myInfoTabs" role="tablist">
         <li class="nav-item">
             <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-profile" type="button">
-                👤 My Info
+                <?= icon('person') ?> My Info
             </button>
         </li>
         <li class="nav-item">
             <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-orders" type="button">
-                📦 My Orders <span class="badge bg-secondary"><?= count($orders ?? []) ?></span>
+                <?= icon('box-seam') ?> My Orders <span class="badge bg-secondary"><?= count($orders ?? []) ?></span>
             </button>
         </li>
         <li class="nav-item">
             <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-addresses" type="button">
-                📍 Addresses <span class="badge bg-secondary"><?= count($addresses ?? []) ?></span>
+                <?= icon('geo-alt') ?> Addresses <span class="badge bg-secondary"><?= count($addresses ?? []) ?></span>
             </button>
         </li>
     </ul>
@@ -47,7 +47,7 @@
         <?php // ── The "my info" tab ─────────────────────────── ?>
         <div class="tab-pane fade show active" id="tab-profile">
             <div class="card p-4 u-mw-550">
-                <h4 class="mb-4">✏️ Edit Profile</h4>
+                <h4 class="mb-4"><?= icon('pencil') ?> Edit Profile</h4>
                 <form id="profileForm" novalidate>
                     <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf) ?>">
                     <div class="float-group">
@@ -98,7 +98,7 @@
                                placeholder=" " autocomplete="new-password" minlength="8" maxlength="128">
                         <label>New Password <small class="text-muted">(leave blank to keep current)</small></label>
                         <button type="button" class="btn btn-sm btn-link toggle-password-btn u-pin-top-left" data-target="newPassword"
-                                tabindex="-1" aria-label="Show password">👁</button>
+                                tabindex="-1" aria-label="Show password"><?= icon('eye') ?></button>
                     </div>
                     
                     <?php // Current Password — always required to save ?>
@@ -107,11 +107,11 @@
                                placeholder=" " required autocomplete="current-password" maxlength="128">
                         <label>Current Password <span class="text-danger">*</span> <small class="text-muted">(required to save any change)</small></label>
                         <button type="button" class="btn btn-sm btn-link toggle-password-btn u-pin-top-left" data-target="currentPassword"
-                                tabindex="-1" aria-label="Show password">👁</button>
+                                tabindex="-1" aria-label="Show password"><?= icon('eye') ?></button>
                     </div>
                     
                     <div id="profileMsg" class="alert py-2 small d-none"></div>
-                    <button type="submit" class="btn btn-success w-100">💾 Save Changes</button>
+                    <button type="submit" class="btn btn-success w-100"><?= icon('floppy') ?> Save Changes</button>
                 </form>
             </div>
         </div>
@@ -120,7 +120,7 @@
         <div class="tab-pane fade" id="tab-orders">
             <?php if (empty($orders)): ?>
                 <div class="text-center py-5">
-                    <div class="u-fs-xxl">📦</div>
+                    <div class="u-fs-xxl"><?= icon('box-seam', 'icon-hero') ?></div>
                     <p class="text-muted mt-2">No orders yet.</p>
                     <a href="<?= URLROOT ?>/products" class="btn btn-warning">Start Shopping</a>
                 </div>
@@ -192,12 +192,12 @@
                             <?= htmlspecialchars($addr['country'] ?? '') ?>
                         </p>
                         <?php if ($addr['phone_number']): ?>
-                        <p class="mb-2 small text-muted">📞 <?= htmlspecialchars($addr['phone_number']) ?></p>
+                        <p class="mb-2 small text-muted"><?= icon('telephone') ?> <?= htmlspecialchars($addr['phone_number']) ?></p>
                         <?php endif; ?>
                         <button class="btn btn-sm btn-outline-danger delete-addr-btn"
                                 data-address-id="<?= (int)$addr['id'] ?>"
                                 data-csrf="<?= htmlspecialchars($csrf) ?>">
-                            🗑️ Delete
+                            <?= icon('trash') ?> Delete
                         </button>
                     </div>
                 </div>
@@ -207,7 +207,7 @@
 
             <?php // Add a new address ?>
             <div class="card p-4 u-mw-600">
-                <h5 class="mb-3">➕ Add New Address</h5>
+                <h5 class="mb-3"><?= icon('plus-lg') ?> Add New Address</h5>
                 <form id="addAddrForm" novalidate>
                     <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf) ?>">
                     <div class="row g-2">
@@ -248,7 +248,7 @@
                         <label for="addrIsDefault" class="small">Set as default</label>
                     </div>
                     <div id="addrMsg" class="alert py-2 small d-none"></div>
-                    <button type="submit" class="btn btn-outline-success">💾 Save Address</button>
+                    <button type="submit" class="btn btn-outline-success"><?= icon('floppy') ?> Save Address</button>
                 </form>
             </div>
         </div>

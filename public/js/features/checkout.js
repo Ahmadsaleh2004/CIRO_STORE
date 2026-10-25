@@ -249,7 +249,7 @@
         const btn = document.getElementById('placeOrderBtn');
         if (!btn) return;
         btn.disabled    = false;
-        btn.textContent = '✅ Place Order';
+        btn.innerHTML = window.icon('check-circle') + ' Place Order';
     }
 
     // ── Placing the order ───────────────────────────────────────

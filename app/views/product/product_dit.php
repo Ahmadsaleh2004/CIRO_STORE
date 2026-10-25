@@ -19,7 +19,7 @@ usort($sortedByStock, fn($a, $b) => (int)$a['stock_quantity'] <=> (int)$b['stock
 
     <?php // ── Breadcrumb ── ?>
     <nav class="store-breadcrumb mb-4">
-        <a href="<?= URLROOT ?>">🏠 Home</a>
+        <a href="<?= URLROOT ?>"><?= icon('house') ?> Home</a>
         <span class="sep">/</span>
         <a href="<?= URLROOT ?>/products">Products</a>
         <span class="sep">/</span>
@@ -114,7 +114,7 @@ usort($sortedByStock, fn($a, $b) => (int)$a['stock_quantity'] <=> (int)$b['stock
                         <div>
                             <strong><?= htmlspecialchars($v['color_name']) ?></strong>
                             <?php if ($isLowStockFlag): ?>
-                            <span class="badge bg-danger ms-2">⚡ Almost sold out</span>
+                            <span class="badge bg-danger ms-2"><?= icon('lightning-fill') ?> Almost sold out</span>
                             <?php endif; ?>
                             <?php if ((int)$v['stock_quantity'] <= 0): ?>
                             <span class="badge bg-secondary ms-2">Out of stock</span>
@@ -142,19 +142,19 @@ usort($sortedByStock, fn($a, $b) => (int)$a['stock_quantity'] <=> (int)$b['stock
                 <div class="row g-2">
                     <?php if (!empty($p['manufacturer'])): ?>
                     <div class="col-sm-6">
-                        <span class="spec-label">🏷️ Brand:</span>
+                        <span class="spec-label"><?= icon('tag') ?> Brand:</span>
                         <span class="spec-value"> <?= htmlspecialchars($p['manufacturer']) ?></span>
                     </div>
                     <?php endif; ?>
                     <?php if (!empty($p['country_of_origin'])): ?>
                     <div class="col-sm-6">
-                        <span class="spec-label">🌍 Origin:</span>
+                        <span class="spec-label"><?= icon('globe') ?> Origin:</span>
                         <span class="spec-value"> <?= htmlspecialchars($p['country_of_origin']) ?></span>
                     </div>
                     <?php endif; ?>
                     <?php if (!empty($p['date_added'])): ?>
                     <div class="col-sm-12 mt-1">
-                        <span class="spec-label">📅 Date Added:</span>
+                        <span class="spec-label"><?= icon('calendar') ?> Date Added:</span>
                         <span class="spec-value"> <?= date('d M Y', strtotime($p['date_added'])) ?></span>
                     </div>
                     <?php endif; ?>
@@ -191,41 +191,41 @@ Stock badge — the same getStockBadge() the product list uses, plus the
                 <p id="qtyRemainingHint" class="small u-muted mb-3 d-none" aria-live="polite"></p>
                 <div class="d-flex gap-2">
                     <?php if ($userLoggedIn && empty($_SESSION['admin_in_store_mode'] ?? false)): ?>
-                    <button id="addCartBtn" class="btn btn-success btn-lg px-5" <?= $stock <= 0 ? 'disabled' : '' ?>>🛒 Add To Cart</button>
+                    <button id="addCartBtn" class="btn btn-success btn-lg px-5" <?= $stock <= 0 ? 'disabled' : '' ?>><?= icon('cart') ?> Add To Cart</button>
                     <?php else: ?>
                     <button id="addCartBtn"
                             class="btn btn-success btn-lg px-5 btn-disabled-faded"
                             disabled
                             data-bs-toggle="modal" data-bs-target="#loginModal"
                             data-action="self-enable">
-                        🛒 Add To Cart
+                        <?= icon('cart') ?> Add To Cart
                     </button>
                     <?php endif; ?>
-                    <button id="wishBtn" class="btn btn-outline-danger btn-lg">🤍</button>
+                    <button id="wishBtn" class="btn btn-outline-danger btn-lg"><?= icon('heart') ?></button>
                 </div>
             </div>
 
             <?php // ── Notify Me block ── ?>
             <div id="notifyBlock" class="<?= $stock > 0 ? 'd-none' : '' ?>">
                 <?php if ($alreadyRequested): ?>
-                <div class="alert alert-success py-2">✅ We'll notify you when this product is back in stock!</div>
+                <div class="alert alert-success py-2"><?= icon('check-circle') ?> We'll notify you when this product is back in stock!</div>
                 <?php elseif ($userLoggedIn && empty($_SESSION['admin_in_store_mode'] ?? false)): ?>
                 <form class="js-notify-form" data-product-id="<?= (int)$p['id'] ?>">
                     <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf) ?>">
                     <button type="submit"
                             class="btn btn-lg w-100 js-notify-btn <?= $alreadyRequested ? 'btn-success' : 'btn-outline-warning' ?>"
                             <?= $alreadyRequested ? 'disabled' : '' ?>>
-                        <?= $alreadyRequested ? "✅ We'll notify you!" : '🔔 Notify Me When Available' ?>
+                        <?php if ($alreadyRequested): ?><?= icon('check-circle') ?> We'll notify you!<?php else: ?><?= icon('bell') ?> Notify Me When Available<?php endif; ?>
                     </button>
                 </form>
                 <?php else: ?>
                 <button class="btn btn-outline-warning btn-lg"
                         data-bs-toggle="modal" data-bs-target="#loginModal">
-                    🔔 Notify Me (Login Required)
+                    <?= icon('bell') ?> Notify Me (Login Required)
                 </button>
                 <?php endif; ?>
                 <div id="wishBtnStandalone" class="mt-2 <?= $stock <= 0 ? '' : 'd-none' ?>">
-                    <button id="wishBtn2" class="btn btn-outline-danger">🤍 Add to Wishlist</button>
+                    <button id="wishBtn2" class="btn btn-outline-danger"><?= icon('heart') ?> Add to Wishlist</button>
                 </div>
             </div>
 
@@ -235,11 +235,11 @@ Stock badge — the same getStockBadge() the product list uses, plus the
     <hr class="my-5">
 
     <?php // ── Reviews ────────────────────────────────────── ?>
-    <h2 class="section-title">⭐ Reviews & Ratings</h2>
+    <h2 class="section-title"><?= icon('star-fill') ?> Reviews & Ratings</h2>
 
     <?php if ($userLoggedIn && empty($_SESSION['admin_in_store_mode'] ?? false)): ?>
     <div class="card p-4 mb-4">
-        <h5 class="mb-3"><?= $myReview ? '✏️ Edit Your Review' : '+ Add Your Review' ?></h5>
+        <h5 class="mb-3"><?php if ($myReview): ?><?= icon('pencil') ?> Edit Your Review<?php else: ?>+ Add Your Review<?php endif; ?></h5>
         <?php
         $toastMessage = $reviewMsg ?? '';
         $toastType    = 'success';

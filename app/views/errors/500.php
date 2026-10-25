@@ -28,7 +28,7 @@ require APPROOT . '/views/inc/head-bare.php';
 ?>
 
 <main class="container py-5 text-center u-minh-70vh">
-    <p class="display-1 mb-2" aria-hidden="true">🛠️</p>
+    <p class="display-1 mb-2" aria-hidden="true"><?= icon('tools', 'icon-hero') ?></p>
     <h1 class="h3 mb-3">Service temporarily unavailable</h1>
     <p class="text-muted mb-4">
         We are having a brief technical problem. Please try again in a moment.

@@ -26,7 +26,7 @@ require APPROOT . '/views/inc/head-bare.php';
 
 <div class="reset-card">
     <div class="reset-header">
-        <span class="reset-icon"><?= $isAdmin ? '🔐' : '🔑' ?></span>
+        <span class="reset-icon"><?= icon($isAdmin ? 'shield-lock' : 'key') ?></span>
         <h1>Reset Password</h1>
         <?php // @escaping-safe: SITENAME is a project constant ?>
         <p><?= $isAdmin ? SITENAME . ' Admin Panel' : SITENAME ?></p>

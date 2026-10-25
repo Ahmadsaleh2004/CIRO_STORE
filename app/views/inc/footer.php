@@ -22,7 +22,7 @@ $csrfToken = generateCsrfToken();
             // the links held would stay empty.
             ?>
             <div class="col-lg-6 mb-4">
-                <h4 class="fw-bold mb-2">🏪 Cairo Store</h4>
+                <h4 class="fw-bold mb-2"><?= icon('shop') ?> Cairo Store</h4>
                 <p class="small u-footer-text">
                     <?= htmlspecialchars($footerText ?? 'Premium electronics store offering smartphones, laptops, gaming devices and smart accessories.') ?>
                 </p>
@@ -101,8 +101,9 @@ $csrfToken = generateCsrfToken();
     <?php endif; ?>
 
 
-    <?php // Where js/core/ui.js fetches SweetAlert from on the first dialog — see swalAssets ?>
-    <?= pageData(['__swalAssets' => swalAssets()]) ?>
+    <?php // Where js/core/ui.js fetches SweetAlert from on the first dialog — see swalAssets —
+         // and the icon sprite the cards built in the browser draw from (window.icon) ?>
+    <?= pageData(['__swalAssets' => swalAssets(), '__iconSprite' => iconSprite()]) ?>
 
     <?php // ══ Scripts ═════════════════════════════════════════════ ?>
     <?php // ⚠️ First and without defer: it copies the page's data island onto window, and

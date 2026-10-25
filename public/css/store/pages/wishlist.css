@@ -2,10 +2,17 @@
    css/pages/wishlist.css — the wishlist page's styles
    ================================================== */
 
-#wishlist-container .product-card {
-    --slide-y: 16px;
-    --slide-scale: 0.97;
-    animation: fadeSlideIn var(--dur-slow) var(--ease-decelerate) both;
+/* The container is empty in the HTML and filled by js/features/wishlist.js after the first
+   paint, so the footer was painted straight under the title and then pushed down — a 0.27
+   layout shift in Lighthouse. This holds the height of the empty-wishlist message (381px on
+   a phone, 368px on a desktop), so an empty wishlist does not move at all and a row of
+   cards moves the footer by the difference only.
+
+   The cards no longer fade in (fadeSlideIn, from opacity 0): they are the whole first
+   screen and hold its largest image, and since the cards are drawn from localStorage and
+   then redrawn when the stock arrives, the fade played twice. */
+#wishlist-container {
+    min-height: 23rem;
 }
 
 /* Two cards per row on a phone, matching the products grid. The card

@@ -115,12 +115,11 @@ $homeSliders = $data['homeSliders'] ?? [];
         <?php
         // The buttons come dynamically from CategoryModel::getAllOrdered() — the core ones first
         foreach ($categories as $cat):
-            $emoji = categoryEmoji($cat['name']);
+            $catIcon = categoryIcon($cat['name']);
         ?>
         <a href="<?= URLROOT ?>/products?cat=<?= urlencode($cat['name']) ?>"
            class="btn btn-outline-dark px-4 py-2">
-            <?php // @escaping-safe: categoryEmoji returns a symbol from an internal map ?>
-            <?= $emoji ?> <?= htmlspecialchars(ucfirst($cat['name'])) ?>
+            <?= icon($catIcon) ?> <?= htmlspecialchars(ucfirst($cat['name'])) ?>
         </a>
         <?php endforeach; ?>
     </div>

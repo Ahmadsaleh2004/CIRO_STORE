@@ -1,0 +1,28 @@
+/* ==================================================
+   components/icons.css — the interface icons from public/images/icons.svg.
+   ==================================================
+   icon() in assets_helper.php and window.icon in js/core/utils.js print
+   <svg class="icon"><use href="icons.svg#i-name"></use></svg>. Sized in em so an icon
+   follows the text it sits beside, as the emoji it replaced did — a heading gets a larger
+   icon than a badge without either saying so. */
+
+.icon {
+    display: inline-block;
+    width: 1em;
+    height: 1em;
+    vertical-align: -0.125em;
+    fill: currentcolor;
+    flex-shrink: 0;
+}
+
+/* The filled heart is red in either theme: it marks "saved", which is what ❤️ said. */
+.icon-love {
+    color: #e0245e;
+}
+
+/* The large single icon on the empty states, the error pages and the confirmation. */
+.icon-hero {
+    width: 1em;
+    height: 1em;
+    vertical-align: middle;
+}

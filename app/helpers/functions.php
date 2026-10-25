@@ -130,22 +130,25 @@ function getAdminUnreadCounters(): array
     return ['orders' => $newOrders, 'messages' => $newMessages];
 }
 /**
- * An emoji per product category, with a fallback for any new category.
+ * An icon per product category — a name for icon() — with a fallback for any new category.
  *
  * The map used to be written out in views/home.php and views/product/product.php. The
  * map alone is what was duplicated — the markup around it differs entirely between the
- * two pages (<a class="btn"> links on the home page against <option> inside a <select>
- * on the products page), which is why this is a function rather than a partial: a shared
+ * two pages (<a class="btn"> links on the home page against checkbox labels on the
+ * products page), which is why this is a function rather than a partial: a shared
  * partial would have forced two markups with nothing in common into one template.
+ *
+ * It returned emoji until they were replaced by the icon sprite — see
+ * build/build-icons.mjs for why. Every name here must be listed in ICONS there.
  */
-function categoryEmoji(string $category): string
+function categoryIcon(string $category): string
 {
     return match ($category) {
-        'phone'       => '📱',
-        'computer'    => '💻',
-        'accessories' => '🎧',
-        'gaming'      => '🎮',
-        default       => '🏷️',
+        'phone'       => 'phone',
+        'computer'    => 'laptop',
+        'accessories' => 'headphones',
+        'gaming'      => 'controller',
+        default       => 'tag',
     };
 }
 

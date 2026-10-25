@@ -183,10 +183,10 @@ async function renderWishlist() {
     if (!wishlist.length) {
         container.innerHTML = `
         <div class="col-12 text-center py-5 fade-in-up">
-            <div class="u-fs-5r">💔</div>
+            <div class="u-fs-5r">${window.icon('heartbreak', 'icon-hero')}</div>
             <h3 class="mt-3 fw-bold u-text">Your Wishlist is Empty</h3>
             <p class="mt-2 u-placeholder">Save your favorite products and come back anytime.</p>
-            <a href="${window.BASE_URL}/products" class="btn btn-success mt-3 px-4 py-2">🛍️ Browse Products</a>
+            <a href="${window.BASE_URL}/products" class="btn btn-success mt-3 px-4 py-2">${window.icon('bag')} Browse Products</a>
         </div>`;
         return;
     }
@@ -272,13 +272,13 @@ function drawWishlist(pending) {
                             <input type="number" value="1" class="form-control quantity-input u-w-60" disabled tabindex="-1">
                             <button type="button" class="btn btn-outline-secondary btn-sm" disabled>+</button>
                         </div>
-                        <button class="btn btn-success w-100 btn-disabled-faded" disabled>🛒 ${isUser ? 'Add to Cart' : 'Add To Cart'}</button>
+                        <button class="btn btn-success w-100 btn-disabled-faded" disabled>${window.icon('cart')} ${isUser ? 'Add to Cart' : 'Add To Cart'}</button>
                         ` : null;
 
         return `
         <div class="col-lg-4 col-md-6 mb-4">
             <div class="card product-card h-100 shadow border-0 position-relative">
-                <button class="favorite-btn remove-fav" data-id="${p.id}" aria-label="Remove from wishlist">❤️</button>
+                <button class="favorite-btn remove-fav" data-id="${p.id}" aria-label="Remove from wishlist">${window.icon('heart-fill', 'icon-love')}</button>
                 <a href="${window.BASE_URL}/product?id=${p.id}" class="text-decoration-none">
                     ${window.buildProductPicture(imgSrc, name, 'card-img-top product-image')}
                 </a>
@@ -306,11 +306,11 @@ function drawWishlist(pending) {
                         <p class="small u-muted text-center mb-2 d-none"
                            data-wl-hint="${p.id}" aria-live="polite"></p>
                         ${isUser ? `
-                        <button class="btn btn-success w-100 add-to-cart-wl" data-id="${p.id}">🛒 Add to Cart</button>
+                        <button class="btn btn-success w-100 add-to-cart-wl" data-id="${p.id}">${window.icon('cart')} Add to Cart</button>
                         ` : `
                         <button class="btn btn-success w-100 btn-disabled-faded" disabled
                                 data-bs-toggle="modal" data-bs-target="#loginModal"
-                                data-action="self-enable">🛒 Add To Cart</button>
+                                data-action="self-enable">${window.icon('cart')} Add To Cart</button>
                         `}
                         ` : `
                         ${isUser ? `
@@ -318,11 +318,11 @@ function drawWishlist(pending) {
                             <input type="hidden" name="csrf_token" value="${csrf}">
                             <button type="submit"
                                     class="btn w-100 js-notify-btn ${alreadyNotified ? 'btn-success' : 'btn-outline-warning'}"
-                                    ${alreadyNotified ? 'disabled' : ''}>${alreadyNotified ? "✅ We'll notify you!" : '🔔 Notify Me When Available'}</button>
+                                    ${alreadyNotified ? 'disabled' : ''}>${alreadyNotified ? window.icon('check-circle') + " We'll notify you!" : window.icon('bell') + ' Notify Me When Available'}</button>
                         </form>
                         ` : `
                         <button class="btn btn-outline-warning w-100"
-                                data-bs-toggle="modal" data-bs-target="#loginModal">🔔 Notify Me (Login Required)</button>
+                                data-bs-toggle="modal" data-bs-target="#loginModal">${window.icon('bell')} Notify Me (Login Required)</button>
                         `}
                         `}
                     </div>

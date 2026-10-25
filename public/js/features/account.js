@@ -112,7 +112,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const modal = document.getElementById('addressModal');
         if (!modal) return;
 
-        modal.querySelector('.modal-title').textContent = '✏️ Edit Address';
+        modal.querySelector('.modal-title').innerHTML = window.icon('pencil') + ' Edit Address';
         document.getElementById('addrIdInput').value    = id;
         document.getElementById('addrLabel').value      = label;
         document.getElementById('addrFull').value       = fullAddress;
@@ -132,7 +132,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const addrModalEl = document.getElementById('addressModal');
     if (addrModalEl) {
         addrModalEl.addEventListener('hidden.bs.modal', () => {
-            addrModalEl.querySelector('.modal-title').textContent = '➕ Add New Address';
+            addrModalEl.querySelector('.modal-title').innerHTML = window.icon('plus-lg') + ' Add New Address';
             document.getElementById('addrIdInput').value = '';
             document.getElementById('addressForm')?.reset();
             if (typeof updateButtonState === 'function') {
@@ -148,7 +148,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!target) return;
             const isHidden = target.type === 'password';
             target.type = isHidden ? 'text' : 'password';
-            btn.textContent = isHidden ? '🙈' : '👁';
+            btn.innerHTML = window.icon(isHidden ? 'eye-slash' : 'eye');
         });
     });
 });

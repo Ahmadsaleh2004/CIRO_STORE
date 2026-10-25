@@ -26,7 +26,7 @@ document.addEventListener('submit', async (e) => {
         });
 
         if (data.success) {
-            btn.textContent = "✅ We'll notify you!";
+            btn.innerHTML = window.icon('check-circle') + " We'll notify you!";
             btn.classList.remove('btn-outline-warning');
             btn.classList.add('btn-success');
             if (typeof showToast === 'function') showToast('We will notify you once this is back in stock.', 'success');

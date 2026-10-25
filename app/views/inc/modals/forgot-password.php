@@ -11,7 +11,7 @@
         <div class="modal-content">
             <div class="modal-header modal-header-forgot">
                 <div>
-                    <span class="modal-icon">🔑</span>
+                    <span class="modal-icon"><?= icon('key') ?></span>
                     <h5 class="modal-title">Reset Password</h5>
                     <small class="u-on-dark u-fs-80">We'll send you a reset link</small>
                 </div>

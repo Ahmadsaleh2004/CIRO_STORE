@@ -298,6 +298,41 @@ function vendorIntegrity(array $asset): string
 }
 
 /**
+ * The URL of the interface icon sprite, fingerprinted by content.
+ *
+ * Also handed to JavaScript as window.__iconSprite (see footer.php), so the cards built in
+ * the browser reference the same file — see window.icon in js/core/utils.js.
+ */
+function iconSprite(): string
+{
+    return URLROOT . '/images/icons.svg' . assetStamp('images/icons.svg');
+}
+
+/**
+ * An interface icon from the sprite build/build-icons.mjs produces — in place of the emoji
+ * the store used to draw its icons with. See that script for the measurement: the first
+ * emoji on a page loads the colour-emoji font inside the first layout.
+ *
+ * Decorative by design (`aria-hidden`): every icon sits beside a text label or inside a
+ * control that carries its own aria-label, as the emoji did. It takes the text colour.
+ *
+ * @param string $name  A symbol in the sprite — Bootstrap Icons' name, listed in ICONS there
+ * @param string $class Extra classes, e.g. 'icon-love' for the filled red heart
+ * @throws \InvalidArgumentException On a malformed name — a programming error.
+ */
+function icon(string $name, string $class = ''): string
+{
+    if (preg_match('/^[a-z0-9-]+$/', $name) !== 1) {
+        throw new \InvalidArgumentException("Malformed icon name [{$name}].");
+    }
+
+    return '<svg class="icon' . ($class !== '' ? ' ' . htmlspecialchars($class, ENT_QUOTES) : '') . '"'
+        . ' aria-hidden="true" focusable="false">'
+        . '<use href="' . htmlspecialchars(iconSprite(), ENT_QUOTES) . '#i-' . $name . '"></use>'
+        . '</svg>';
+}
+
+/**
  * SweetAlert2's two files, for js/core/ui.js to load on the first Swal.fire.
  *
  * The pair travels together on purpose: the bare build of the script injects no styles

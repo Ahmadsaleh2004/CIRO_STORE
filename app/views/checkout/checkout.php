@@ -12,7 +12,7 @@
       data-checkout-csrf="<?= htmlspecialchars($csrf) ?>"
       data-checkout-idempotency="<?= htmlspecialchars($idempotencyKey) ?>"
       data-checkout-addresses='<?= htmlspecialchars(json_encode(array_values($addresses ?? []), JSON_UNESCAPED_UNICODE), ENT_QUOTES) ?>'>
-    <h1 class="text-center fw-bold mb-4">🛒 Checkout</h1>
+    <h1 class="text-center fw-bold mb-4"><?= icon('cart') ?> Checkout</h1>
 
     <?php // Step Bar ?>
     <div class="step-bar">
@@ -27,7 +27,7 @@
         <?php // ── Step 1: Address ──────────────────────── ?>
         <div class="checkout-step active" id="step-1">
         <div class="card p-4">
-            <h4 class="mb-4">📍 Delivery Address</h4>
+            <h4 class="mb-4"><?= icon('geo-alt') ?> Delivery Address</h4>
 
             <?php if (!empty($addresses)): ?>
             <div class="row g-2 mb-3">
@@ -88,7 +88,7 @@
                     <label for="newAddrDefault" class="small">Set as default</label>
                 </div>
                 <button type="button" class="btn btn-outline-success btn-sm" id="saveNewAddrBtn">
-                    ➕ Save Address
+                    <?= icon('plus-lg') ?> Save Address
                 </button>
             </div>
 
@@ -101,15 +101,15 @@
         <?php // ── Step 2: Payment ──────────────────────── ?>
         <div class="checkout-step" id="step-2">
         <div class="card p-4">
-            <h4 class="mb-4">💳 Payment Method</h4>
+            <h4 class="mb-4"><?= icon('credit-card') ?> Payment Method</h4>
             <div class="d-flex flex-column gap-3">
                 <label class="addr-label d-flex align-items-center gap-3 cursor-pointer">
                     <input type="radio" name="payment_method" value="cash_on_delivery" checked class="addr-radio">
-                    <span>💵 Cash on Delivery</span>
+                    <span><?= icon('cash') ?> Cash on Delivery</span>
                 </label>
                 <label class="addr-label d-flex align-items-center gap-3 cursor-pointer u-inert">
                     <input type="radio" name="payment_method" value="credit_card" disabled class="addr-radio">
-                    <span>💳 Credit/Debit Card <small class="text-muted">(Coming Soon)</small></span>
+                    <span><?= icon('credit-card') ?> Credit/Debit Card <small class="text-muted">(Coming Soon)</small></span>
                 </label>
             </div>
             <div class="d-flex justify-content-between mt-4">
@@ -122,29 +122,29 @@
         <?php // ── Step 3: Review ───────────────────────── ?>
         <div class="checkout-step" id="step-3">
         <div class="card p-4">
-            <h4 class="mb-3">📋 Order Summary</h4>
+            <h4 class="mb-3"><?= icon('clipboard') ?> Order Summary</h4>
             <ul id="reviewCartList" class="list-unstyled mb-3"></ul>
             <div class="d-flex justify-content-between fw-bold border-top pt-3">
                 <span>Total:</span>
                 <span id="reviewTotal">$0.00</span>
             </div>
             <div class="mt-3 p-3 rounded u-surface-card">
-                <strong>📍 Delivery Address</strong>
+                <strong><?= icon('geo-alt') ?> Delivery Address</strong>
                 <p id="reviewAddress" class="mb-0 small mt-1">—</p>
             </div>
             <div class="mt-2 p-3 rounded u-surface-card">
-                <strong>💵 Payment:</strong> <span id="reviewPayment">Cash on Delivery</span>
+                <strong><?= icon('cash') ?> Payment:</strong> <span id="reviewPayment">Cash on Delivery</span>
             </div>
-            <p class="small text-muted mt-2">📜 <?= htmlspecialchars($returnPolicy ?? '') ?></p>
+            <p class="small text-muted mt-2"><?= icon('file-text') ?> <?= htmlspecialchars($returnPolicy ?? '') ?></p>
             <div class="trust-badges">
-                <span class="trust-badge">🔒 Secure Checkout</span>
-                <span class="trust-badge">🚚 Fast Delivery</span>
+                <span class="trust-badge"><?= icon('lock') ?> Secure Checkout</span>
+                <span class="trust-badge"><?= icon('truck') ?> Fast Delivery</span>
                 <span class="trust-badge">↩️ Easy Returns</span>
             </div>
             <div class="d-flex justify-content-between mt-4">
                 <button class="btn btn-outline-secondary" id="backToStep2Btn">← Back</button>
                 <button class="btn btn-warning fw-bold px-5" id="placeOrderBtn">
-                    ✅ Place Order
+                    <?= icon('check-circle') ?> Place Order
                 </button>
             </div>
         </div>

@@ -25,7 +25,7 @@ function applySavedTheme() {
     const themeToggle = document.getElementById("theme-toggle");
 
     setTheme(isDark);
-    if (themeToggle) themeToggle.innerHTML = isDark ? "☀️" : "🌙";
+    if (themeToggle) themeToggle.innerHTML = window.icon(isDark ? 'sun' : 'moon');
 }
 window.applySavedTheme = applySavedTheme;
 
@@ -34,14 +34,14 @@ function initializeTheme() {
 
     if (!themeToggle) return;
 
-    themeToggle.innerHTML = document.body.classList.contains("dark-mode") ? "☀️" : "🌙";
+    themeToggle.innerHTML = window.icon(document.body.classList.contains("dark-mode") ? 'sun' : 'moon');
 
     themeToggle.onclick = () => {
         const goingDark = !document.body.classList.contains("dark-mode");
 
         setTheme(goingDark);
         localStorage.setItem("theme", goingDark ? "dark" : "light");
-        themeToggle.innerHTML = goingDark ? "☀️" : "🌙";
+        themeToggle.innerHTML = window.icon(goingDark ? 'sun' : 'moon');
     };
 }
 window.initializeTheme = initializeTheme;

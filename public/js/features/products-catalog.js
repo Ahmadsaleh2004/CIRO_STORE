@@ -11,12 +11,12 @@ window.toggleWishlist = (id, btnElement, productData = null) => {
 
     if (index > -1) {
         wishlist.splice(index, 1);
-        if (btnElement) btnElement.innerHTML = '🤍';
+        if (btnElement) btnElement.innerHTML = window.icon('heart');
     } else {
         if (productData) {
             wishlist.push(productData);
         }
-        if (btnElement) btnElement.innerHTML = '❤️';
+        if (btnElement) btnElement.innerHTML = window.icon('heart-fill', 'icon-love');
     }
     localStorage.setItem('wishlist', JSON.stringify(wishlist));
     if (typeof updateCounters === 'function') updateCounters();
@@ -128,10 +128,10 @@ window.renderSlider = renderSlider;
  */
 function renderHomeSections(allProducts) {
     const tagConfig = {
-        'best-seller': { label: '⭐ Best Seller', cls: 'hpc-tag-best'    },
-        'new':         { label: '🆕 New',          cls: 'hpc-tag-new'     },
-        'limited':     { label: '🔥 Limited',       cls: 'hpc-tag-limited' },
-        'regular':     { label: '🏷️ Sale',          cls: 'hpc-tag-regular' },
+        'best-seller': { icon: 'star-fill',      label: 'Best Seller', cls: 'hpc-tag-best'    },
+        'new':         { icon: 'stars',          label: 'New',         cls: 'hpc-tag-new'     },
+        'limited':     { icon: 'fire',           label: 'Limited',     cls: 'hpc-tag-limited' },
+        'regular':     { icon: 'tag',            label: 'Sale',        cls: 'hpc-tag-regular' },
     };
 
     const buildCarousel = (trackId, list) => {
@@ -148,7 +148,7 @@ function renderHomeSections(allProducts) {
             return `
             <div class="carousel-item-wrap reveal">
                 <a href="${window.BASE_URL}/product?id=${p.id}" class="home-product-card">
-                    ${tag.label ? `<span class="hpc-tag ${tag.cls}">${tag.label}</span>` : ''}
+                    ${tag.label ? `<span class="hpc-tag ${tag.cls}">${window.icon(tag.icon)} ${tag.label}</span>` : ''}
                     ${window.buildProductPicture(imgSrc, escHtml(p.name), 'hpc-img')}
                     <div class="hpc-body">
                         <div class="hpc-name">${escHtml(p.name)}</div>
@@ -324,7 +324,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         const wl = JSON.parse(localStorage.getItem('wishlist') || '[]');
-        if (wl.some(i => sameId(i.id, p.id))) btn.innerHTML = '❤️';
+        if (wl.some(i => sameId(i.id, p.id))) btn.innerHTML = window.icon('heart-fill', 'icon-love');
         btn.addEventListener('click', () => window.toggleWishlist(p.id, btn, p));
     });
 });

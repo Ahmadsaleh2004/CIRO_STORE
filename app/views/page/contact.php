@@ -10,7 +10,7 @@ $showLoginAlert = !$userLoggedIn;
 <section class="container py-5">
 
     <nav class="store-breadcrumb mb-4">
-        <a href="<?= URLROOT ?>">🏠 Home</a>
+        <a href="<?= URLROOT ?>"><?= icon('house') ?> Home</a>
         <span class="sep">/</span>
         <span class="current">Contact Us</span>
     </nav>
@@ -24,22 +24,22 @@ $showLoginAlert = !$userLoggedIn;
         <?php // Contact Info ?>
         <div class="col-lg-5">
             <div class="card p-4 h-100">
-                <h2 class="h3 mb-4">📬 Contact Information</h2>
-                <p>📍 Cairo, Egypt</p>
-                <p>📞 <?= htmlspecialchars($phone) ?></p>
-                <p>✉️ <?= htmlspecialchars($email) ?></p>
-                <p class="mb-0">🕒 <?= htmlspecialchars($workingHours) ?></p>
+                <h2 class="h3 mb-4"><?= icon('mailbox') ?> Contact Information</h2>
+                <p><?= icon('geo-alt') ?> Cairo, Egypt</p>
+                <p><?= icon('telephone') ?> <?= htmlspecialchars($phone) ?></p>
+                <p><?= icon('envelope') ?> <?= htmlspecialchars($email) ?></p>
+                <p class="mb-0"><?= icon('clock') ?> <?= htmlspecialchars($workingHours) ?></p>
             </div>
         </div>
 
         <?php // Contact Form ?>
         <div class="col-lg-7">
             <div class="card p-4">
-                <h2 class="h3 mb-4">💌 Send Message</h2>
+                <h2 class="h3 mb-4"><?= icon('envelope-heart') ?> Send Message</h2>
 
                 <?php if ($showLoginAlert): ?>
                     <div class="alert alert-warning mb-4">
-                        <strong>🔒 Please <a href="#" data-bs-toggle="modal" data-bs-target="#loginModal">log in</a> to send us a message.</strong>
+                        <strong><?= icon('lock') ?> Please <a href="#" data-bs-toggle="modal" data-bs-target="#loginModal">log in</a> to send us a message.</strong>
                     </div>
                 <?php endif; ?>
 

@@ -12,7 +12,7 @@
         <div class="modal-content">
             <div class="modal-header modal-header-register">
                 <div>
-                    <span class="modal-icon">✨</span>
+                    <span class="modal-icon"><?= icon('stars') ?></span>
                     <h5 class="modal-title">Create Account</h5>
                     <small class="u-on-dark u-fs-80">Join Cairo Store today</small>
                 </div>
@@ -49,7 +49,7 @@
                                            placeholder=" " required autocomplete="new-password">
                                     <span class="input-group-text u-clickable"
                                           data-action="toggle-both-passwords" data-eye="eyeReg"
-                                          id="eyeReg">👁️</span>
+                                          id="eyeReg"><?= icon('eye') ?></span>
                                 </div>
                                 <label>Password</label>
                             </div>

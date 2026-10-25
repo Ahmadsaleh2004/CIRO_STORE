@@ -18,6 +18,22 @@ window.escHtml = escHtml;
 window.escapeHtml = escHtml; // For complete backward compatibility
 
 /**
+ * icon — an interface icon from the sprite, as markup for innerHTML.
+ *
+ * The browser-side twin of icon() in assets_helper.php: the same <svg><use>, the same
+ * classes, and the sprite's URL from window.__iconSprite, which the footer prints — so a card
+ * built here and one printed by PHP reference one cached file. See build/build-icons.mjs for
+ * why the store draws its icons this way instead of with emoji.
+ */
+function icon(name, cls = '') {
+    if (!/^[a-z0-9-]+$/.test(name)) return '';
+    const sprite = escHtml(window.__iconSprite || '');
+    return `<svg class="icon${cls ? ' ' + escHtml(cls) : ''}" aria-hidden="true" focusable="false">`
+        + `<use href="${sprite}#i-${name}"></use></svg>`;
+}
+window.icon = icon;
+
+/**
  * imagePathOrEmpty — a guard against null and undefined for an image path, nothing more.
  *
  * ⚠️ **This function fixes no path at all.** It used to be called fixImagePath, a name

@@ -340,7 +340,7 @@ window.togglePassword = function (inputId, iconId) {
     const icon  = document.getElementById(iconId);
     if (!input || !icon) return;
     input.type     = input.type === 'password' ? 'text' : 'password';
-    icon.innerText = input.type === 'password' ? '👁️' : '🙈';
+    icon.innerHTML = window.icon(input.type === 'password' ? 'eye' : 'eye-slash');
 };
 
 window.toggleBothPasswords = function (iconId) {
@@ -350,7 +350,7 @@ window.toggleBothPasswords = function (iconId) {
     if (!p1 || !p2 || !icon) return;
     const show = p1.type === 'password';
     p1.type = p2.type = show ? 'text' : 'password';
-    icon.innerText    = show ? '🙈' : '👁️';
+    icon.innerHTML    = window.icon(show ? 'eye-slash' : 'eye');
 };
 
 // ── validateSignUp (legacy — kept for safety) ─────────────────
