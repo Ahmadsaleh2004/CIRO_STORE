@@ -1,5 +1,7 @@
 {
-  "store": "js/dist/store.c76d32c0864b.js",
-  "admin": "js/dist/admin.b8f632491875.js",
-  "store-auth": "js/dist/store-auth.5c92d57dc1c4.js"
+  "store": "js/dist/store.4ae161f3b5d1.js",
+  "admin": "js/dist/admin.e6b2cad9d94f.js",
+  "store-auth": "js/dist/store-auth.5c92d57dc1c4.js",
+  "bootstrap": "js/dist/bootstrap.073254afbfc0.js",
+  "swal": "js/dist/swal.520341374aa1.js"
 }

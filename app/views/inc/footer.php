@@ -101,6 +101,9 @@ $csrfToken = generateCsrfToken();
     <?php endif; ?>
 
 
+    <?php // Where js/core/ui.js fetches SweetAlert from on the first dialog — see swalAssets ?>
+    <?= pageData(['__swalAssets' => swalAssets()]) ?>
+
     <?php // ══ Scripts ═════════════════════════════════════════════ ?>
     <?php // ⚠️ First and without defer: it copies the page's data island onto window, and
          // everything below reads from it. Moving it later breaks every page passing data. ?>
@@ -115,12 +118,18 @@ $csrfToken = generateCsrfToken();
      * JavaScript on the checkout page — in exchange for nothing.
      *
      * The URLs and integrity hashes live in VENDOR_ASSETS, inside assets_helper.php.
-     * bootstrap without defer, deliberately: that is the existing behaviour, and some
-     * pages create modals as soon as they load.
+     *
+     * Bootstrap is deferred, and first among the deferred tags. It used to load without
+     * defer because some pages create modals as soon as they load — but every one of those
+     * pages does it from a deferred file below this line, and deferred scripts run in
+     * document order, so Bootstrap still runs before all of them. What defer removes is the
+     * parser stopping at this tag for 79 KB on a phone.
+     *
+     * SweetAlert has no tag here: js/core/ui.js loads it on the first Swal.fire, so the
+     * pages that never open a dialog neither download nor evaluate it.
      */
     ?>
-    <?= vendorJs('bootstrap-js', false) ?>
-    <?= vendorJs('sweetalert2') ?>
+    <?= vendorJs('bootstrap-js') ?>
 
     <?php // Core JS ?>
     <?php

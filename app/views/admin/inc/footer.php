@@ -10,9 +10,10 @@
      // everything below reads from it. Moving it later breaks every page passing data. ?>
 <?= jsTag('js/core/page-data.js', false) ?>
 
-<?php // jQuery was removed — unused. The URLs and integrity hashes live in assets_helper.php ?>
-<?= vendorJs('bootstrap-js', false) ?>
-<?= vendorJs('sweetalert2', false) ?>
+<?php // jQuery was removed — unused. The URLs and integrity hashes live in assets_helper.php.
+     // Bootstrap is deferred and first among the deferred tags, so it still runs before every
+     // file that uses it; SweetAlert loads on the first dialog — see js/core/ui.js. ?>
+<?= vendorJs('bootstrap-js') ?>
 <?php
 // One bundle in place of twenty-one tags. The list is the fallback for when nothing is
 // built, and its order is the contract — see jsBundle in assets_helper.php.

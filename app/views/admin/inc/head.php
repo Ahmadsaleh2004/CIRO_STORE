@@ -6,8 +6,8 @@
     <title><?= htmlspecialchars($pageTitle ?? 'Admin') ?> | Cairo Store Admin</title>
     <meta name="robots" content="noindex,nofollow">
 <?= themeBootScript() ?>
+<?php // SweetAlert2's stylesheet arrives with its script on the first dialog — see js/core/ui.js ?>
 <?= vendorCss('bootstrap-css') ?>
-<?= vendorCss('sweetalert2-css') ?>
     <?php /*
 store.css first (the admin panel reuses the store's entire layer),
          then admin.css on top of it. See public/css/admin.css for the order.
@@ -16,5 +16,5 @@ store.css first (the admin panel reuses the store's entire layer),
     <?= $extraHead ?? '' ?>
 </head>
 <body class="page-transitioning admin-layout">
-<?= pageData(['URLROOT' => URLROOT]) ?>
+<?= pageData(['URLROOT' => URLROOT, '__swalAssets' => swalAssets()]) ?>
 <a href="#main-content" class="skip-nav">Skip to main content</a>

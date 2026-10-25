@@ -107,6 +107,23 @@ const BUNDLES = {
     'store-auth': ['features/notifications.js'],
 };
 
+/**
+ * Third-party scripts, served from our own origin rather than from cdn.jsdelivr.net — see
+ * VENDOR in build-css.mjs for the measurement, and for why each is its own file instead of
+ * a prefix of the store bundle.
+ *
+ * Copied byte for byte, less the sourceMappingURL comment: they are minified by their
+ * authors, and running esbuild over them again would only make the shipped bytes differ
+ * from the published release for no gain.
+ *
+ * `swal` is not in any page's tags. js/core/ui.js loads it on the first Swal.fire, so the
+ * 49 KB are neither downloaded nor evaluated on the pages that never open a dialog.
+ */
+const VENDOR = {
+    bootstrap: 'bootstrap/dist/js/bootstrap.bundle.min.js',
+    swal: 'sweetalert2/dist/sweetalert2.min.js',
+};
+
 function fail(message) {
     process.stderr.write(`\n  ✗ ${message}\n\n`);
     process.exit(1);
@@ -182,6 +199,25 @@ for (const [name, files] of Object.entries(BUNDLES)) {
         `  ✓ ${name.padEnd(11)} ${String(files.length).padStart(2)} files · ` +
             `${(before / 1024).toFixed(1)} KB → ${(after / 1024).toFixed(1)} KB ` +
             `(${Math.round((1 - after / before) * 100)}% smaller)\n`
+    );
+}
+
+for (const [name, relative] of Object.entries(VENDOR)) {
+    const path = join(root, 'node_modules', relative);
+    if (!existsSync(path)) {
+        fail(`Missing node_modules/${relative} — run npm ci.`);
+    }
+
+    const code = readFileSync(path, 'utf8').replace(/\n?\/\/# sourceMappingURL=\S+\s*$/, '\n');
+
+    const hash = createHash('sha256').update(code).digest('hex').slice(0, 12);
+    const fileName = `${name}.${hash}.js`;
+
+    writeFileSync(join(distDir, fileName), code);
+    manifest[name] = `js/dist/${fileName}`;
+
+    process.stdout.write(
+        `  ✓ ${name.padEnd(11)} ${(Buffer.byteLength(code) / 1024).toFixed(1)} KB, copied\n`
     );
 }
 

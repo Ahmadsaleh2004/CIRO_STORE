@@ -36,15 +36,12 @@ Setting the theme before the first paint — it prevents the white flash and let
          Bootstrap's components read dark mode. See assets_helper.php.
 */ ?>
 <?= themeBootScript() ?>
-    <?php // The external and internal CSS links ?>
-    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
-<?= vendorCss('bootstrap-css') ?>
     <?php /*
-SweetAlert2's styles — an external stylesheet, not injected from JavaScript.
-         Included alongside vendorJs('sweetalert2') in the footer, and never separated
-         from it. See assets_helper.php for why.
+Bootstrap, from our own origin once built — see VENDOR_ASSETS in assets_helper.php.
+         SweetAlert2's stylesheet is not here: js/core/ui.js inserts it straight after this
+         tag on the first dialog, together with the script.
 */ ?>
-<?= vendorCss('sweetalert2-css') ?>
+<?= vendorCss('bootstrap-css') ?>
 
     <?php /*
 The store bundle — one @import file gathering base/vendor/layout/components/

@@ -49,6 +49,26 @@ const distDir = join(cssRoot, 'dist');
 
 const BUNDLES = ['store', 'admin'];
 
+/**
+ * Third-party stylesheets, served from our own origin rather than from cdn.jsdelivr.net.
+ *
+ * Measured on a phone profile, the CDN cost a DNS lookup, a TCP connect and a TLS handshake
+ * on a 175 ms round trip before the first byte of Bootstrap — and Bootstrap blocks the first
+ * paint, so every one of those round trips was spent on a white screen.
+ *
+ * Each is its own file rather than a prefix of the store bundle: the bundle's fingerprint
+ * changes with every edit to our CSS, and folding 230 KB of Bootstrap into it would have the
+ * visitor download Bootstrap again each time — for a file that changes once a year.
+ *
+ * The file is copied byte for byte (it is already minified by its authors), less the
+ * sourceMappingURL comment, whose .map is not shipped. The version is pinned in
+ * package.json with `-E`, the same version the CDN tags carried.
+ */
+const VENDOR = {
+  bootstrap: 'bootstrap/dist/css/bootstrap.min.css',
+  swal: 'sweetalert2/dist/sweetalert2.min.css',
+};
+
 /** Reads the @import order from an entry file — in order, unsorted and undeduplicated. */
 function readImports(entryPath) {
   const source = readFileSync(entryPath, 'utf8');
@@ -166,6 +186,30 @@ for (const bundle of BUNDLES) {
     `  ✓ ${bundle.padEnd(6)} ${String(imports.length).padStart(2)} files · ` +
       `${(before / 1024).toFixed(1)} KB → ${(after / 1024).toFixed(1)} KB ` +
       `(${Math.round((1 - after / before) * 100)}% smaller) → ${name}\n`
+  );
+}
+
+for (const [name, relative] of Object.entries(VENDOR)) {
+  const path = join(root, 'node_modules', relative);
+  if (!existsSync(path)) {
+    fail(`Missing node_modules/${relative} — run npm ci.`);
+  }
+
+  const code = readFileSync(path, 'utf8').replace(/\/\*#\s*sourceMappingURL=[^*]*\*\/\s*$/, '');
+
+  const relativeUrl = findRelativeUrl(code);
+  if (relativeUrl !== null) {
+    fail(`A relative path inside url() in ${relative}: ${relativeUrl} — it will break in dist/.`);
+  }
+
+  const hash = createHash('sha256').update(code).digest('hex').slice(0, 12);
+  const fileName = `${name}.${hash}.css`;
+
+  writeFileSync(join(distDir, fileName), code);
+  manifest[name] = `css/dist/${fileName}`;
+
+  process.stdout.write(
+    `  ✓ ${name.padEnd(9)} ${(Buffer.byteLength(code) / 1024).toFixed(1)} KB, copied → ${fileName}\n`
   );
 }
 

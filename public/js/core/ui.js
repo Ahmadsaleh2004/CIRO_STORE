@@ -340,8 +340,27 @@ document.addEventListener('submit', (e) => {
 });
 
 // ══════════════════════════════════════════════════════════════
-// A fallback for SweetAlert2 when it does not load
+// SweetAlert2 — loaded on the first dialog, with a fallback when it cannot be
 // ══════════════════════════════════════════════════════════════
+//
+// ── Loaded on first use ──────────────────────────────────────
+//
+// SweetAlert used to be two tags on every page: a stylesheet in <head> that held the first
+// paint, and 49 KB of script evaluated on load — on pages that never open a dialog, which is
+// most visits to the catalogue. Now `window.Swal` starts as a stand-in whose `fire` loads
+// both files once (their URLs come from the __swalAssets island — see swalAssets() in
+// assets_helper.php), waits for both, and forwards the call.
+//
+// Nothing that calls it changes: every caller already treats fire() as asynchronous
+// (`await Swal.fire(...)` or `.then`), and the library's own script replaces the stand-in
+// on window when it runs, so `Swal.showValidationMessage` inside a preConfirm reaches the
+// real one.
+//
+// The download starts at the first pointerdown or keydown rather than at the first fire:
+// most dialogs answer a click, and starting on the press hides most of the wait behind the
+// rest of the click.
+//
+// ── The fallback ─────────────────────────────────────────────
 //
 // More than forty places in the project call `Swal.fire` directly, and many of them
 // **await its answer** before doing anything:
@@ -349,10 +368,9 @@ document.addEventListener('submit', (e) => {
 //     const result = await Swal.fire({ ... });
 //     if (!result.isConfirmed) return;
 //
-// So if `Swal` is missing — a wrong SRI hash, a blocked CDN, or a network outage — a
-// ReferenceError is thrown inside an async function, becoming a rejected promise nobody
-// catches. The result is a button that looks **broken for no reason**: no dialog, no
-// message, no visible error, and the user's click goes nowhere.
+// So if SweetAlert never arrives — a blocked file, a CSP mistake, or a network outage — and
+// nothing answers in its place, the click goes nowhere: no dialog, no message, no visible
+// error.
 //
 // And this is not hypothetical: the "Take It" button in the orders panel looked broken
 // for exactly this reason, and the diagnosis went off toward a race condition in the
@@ -362,19 +380,15 @@ document.addEventListener('submit', (e) => {
 // and returns an object shaped like a SweetAlert result
 // ({ isConfirmed, isDismissed, value }) so the awaiting code passes through unchanged. The
 // goal is that nothing ever goes silent, not that it looks good.
-(function installSwalFallback() {
-    function ensure() {
-        if (typeof window.Swal !== 'undefined') return;
+(function installSwal() {
+    // A page that loads SweetAlert with its own tag (admin/login) keeps it.
+    if (typeof window.Swal !== 'undefined') return;
 
-        console.error(
-            '[ui] SweetAlert2 did not load — check the SRI hash in assets_helper.php '
-            + 'and the CSP in public/.htaccess. A fallback is running instead.'
-        );
-
+    function fallback() {
         const text = (o) => [o && o.title, o && o.text].filter(Boolean).join('\n\n')
             || 'Are you sure?';
 
-        window.Swal = {
+        return {
             fire(options) {
                 const opts = typeof options === 'string'
                     ? { title: options, text: arguments[1] }
@@ -382,7 +396,7 @@ document.addEventListener('submit', (e) => {
 
                 // A toast with no confirm button is a notification, not a question — it does
                 // not stop the user with an alert, and it does not log a line per appearance:
-                // the setup message above was said once and that is enough.
+                // the setup message was said once and that is enough.
                 if (opts.toast || opts.showConfirmButton === false) {
                     return Promise.resolve({ isConfirmed: true, isDismissed: false, value: true });
                 }
@@ -402,11 +416,84 @@ document.addEventListener('submit', (e) => {
         };
     }
 
-    // After the full load rather than at DOMContentLoaded: the SweetAlert tag carries
-    // `defer` in the store footer, so it may not have executed yet.
-    if (document.readyState === 'complete') {
-        ensure();
-    } else {
-        window.addEventListener('load', ensure);
+    function loaded(el) {
+        return new Promise((resolve, reject) => {
+            el.addEventListener('load', resolve, { once: true });
+            el.addEventListener('error', () => {
+                reject(new Error('could not load ' + (el.href || el.src)));
+            }, { once: true });
+        });
     }
+
+    let loading = null;
+
+    function load() {
+        if (loading) return loading;
+
+        loading = (async () => {
+            const assets = window.__swalAssets;
+            if (!assets || !assets.js || !assets.css) {
+                throw new Error('this page has no __swalAssets island');
+            }
+
+            const link = document.createElement('link');
+            link.rel = 'stylesheet';
+            link.href = assets.css.url;
+
+            const script = document.createElement('script');
+            script.src = assets.js.url;
+
+            // The CDN copy, when nothing is built, keeps the integrity check its tag had.
+            [[link, assets.css], [script, assets.js]].forEach(([el, asset]) => {
+                if (asset.sri) {
+                    el.integrity = asset.sri;
+                    el.crossOrigin = 'anonymous';
+                }
+            });
+
+            const both = Promise.all([loaded(link), loaded(script)]);
+
+            // Straight after Bootstrap, where the static tag used to be — not at the end of
+            // <head>: micro-interactions.css and reduced-motion.css override .swal2 rules at
+            // the same specificity, and a sheet placed after them would win.
+            const bootstrap = document.querySelector('link[data-vendor="bootstrap-css"]');
+            if (bootstrap) bootstrap.after(link);
+            else document.head.prepend(link);
+            document.head.appendChild(script);
+
+            // Both, not the script alone: the bare build injects no styles, so a dialog
+            // opened before its sheet applies appears as bare text at the foot of the page.
+            await both;
+
+            if (typeof window.Sweetalert2 === 'undefined') {
+                throw new Error('the script ran but defined no Sweetalert2');
+            }
+            return window.Sweetalert2;
+        })().catch((err) => {
+            console.error(
+                '[ui] SweetAlert2 did not load (' + err.message + ') — check swalAssets() in '
+                + 'assets_helper.php and the CSP in public/.htaccess. A fallback is running instead.'
+            );
+            window.Swal = fallback();
+            return window.Swal;
+        });
+
+        return loading;
+    }
+
+    window.Swal = {
+        fire(...args) {
+            return load().then((swal) => swal.fire(...args));
+        },
+        showValidationMessage(msg) {
+            return load().then((swal) => swal.showValidationMessage(msg));
+        },
+        close() {
+            if (loading) loading.then((swal) => swal.close());
+        },
+    };
+
+    const warm = () => { load(); };
+    document.addEventListener('pointerdown', warm, { once: true, passive: true, capture: true });
+    document.addEventListener('keydown', warm, { once: true, capture: true });
 })();

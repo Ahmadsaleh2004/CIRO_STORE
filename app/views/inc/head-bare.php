@@ -51,7 +51,6 @@ $bareSwal      = $bareSwal      ?? false;
 <?php if ($bareThemeBoot): ?>
 <?= themeBootScript() ?>
 <?php endif; ?>
-    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <?= vendorCss('bootstrap-css') ?>
 <?php if ($bareSwal): ?>
 <?= vendorCss('sweetalert2-css') ?>

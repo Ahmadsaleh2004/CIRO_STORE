@@ -1,4 +1,6 @@
 {
   "store": "css/dist/store.94de07897213.css",
-  "admin": "css/dist/admin.d5fd8ffa24e9.css"
+  "admin": "css/dist/admin.d5fd8ffa24e9.css",
+  "bootstrap": "css/dist/bootstrap.26db49828d67.css",
+  "swal": "css/dist/swal.a1173e56fd47.css"
 }

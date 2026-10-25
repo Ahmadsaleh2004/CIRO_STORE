@@ -158,16 +158,26 @@ function cssBundle(string $bundle = 'store'): string
  * page, just a missing library and modals that do not open. Always change the two
  * together.
  *
- * @var array<string, array{url: string, sri: string}>
+ * ── `local`: the same file, from our own origin ─────────────
+ *
+ * `local` names the file's entry in the dist manifest. When the build has run, the tag
+ * points there instead of at the CDN — the same release, copied out of node_modules by
+ * build/build-css.mjs and build-js.mjs (see VENDOR there for the measurement behind it).
+ * The CDN URL stays as the fallback for a checkout with nothing built, so the url, the sri
+ * and the version in package.json still move together on an upgrade.
+ *
+ * @var array<string, array{url: string, sri: string, local?: string}>
  */
 const VENDOR_ASSETS = [
     'bootstrap-css' => [
-        'url' => 'https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css',
-        'sri' => 'sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH',
+        'url'   => 'https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css',
+        'sri'   => 'sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH',
+        'local' => 'bootstrap',
     ],
     'bootstrap-js' => [
-        'url' => 'https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js',
-        'sri' => 'sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz',
+        'url'   => 'https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js',
+        'sri'   => 'sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz',
+        'local' => 'bootstrap',
     ],
 
     // ⚠️ It used to be `sweetalert2@11` — an open range pulling in whatever 11.x is
@@ -191,12 +201,14 @@ const VENDOR_ASSETS = [
     // an external stylesheet that `style-src` permits. **The two are always included
     // together** — either without the other reproduces the same fault.
     'sweetalert2' => [
-        'url' => 'https://cdn.jsdelivr.net/npm/sweetalert2@11.26.25/dist/sweetalert2.min.js',
-        'sri' => 'sha384-hW8ZCQHtRH+nVOAkHZ4amZvYsAtKn1ZOvMV6dNag1Rb1thWmLZMBKTRxFV0cOxiK',
+        'url'   => 'https://cdn.jsdelivr.net/npm/sweetalert2@11.26.25/dist/sweetalert2.min.js',
+        'sri'   => 'sha384-hW8ZCQHtRH+nVOAkHZ4amZvYsAtKn1ZOvMV6dNag1Rb1thWmLZMBKTRxFV0cOxiK',
+        'local' => 'swal',
     ],
     'sweetalert2-css' => [
-        'url' => 'https://cdn.jsdelivr.net/npm/sweetalert2@11.26.25/dist/sweetalert2.min.css',
-        'sri' => 'sha384-dCW5imOdApH6OwpFau8cZNKjqVbJYnCA5q+8YsMYP3XwXKsV6Jfz1u6MZLnXaBsS',
+        'url'   => 'https://cdn.jsdelivr.net/npm/sweetalert2@11.26.25/dist/sweetalert2.min.css',
+        'sri'   => 'sha384-dCW5imOdApH6OwpFau8cZNKjqVbJYnCA5q+8YsMYP3XwXKsV6Jfz1u6MZLnXaBsS',
+        'local' => 'swal',
     ],
 
     // Chart.js — the admin dashboard alone.
@@ -212,39 +224,91 @@ const VENDOR_ASSETS = [
 ];
 
 /**
- * A <script> tag for an external library, with its integrity hash.
- *
- * `crossorigin="anonymous"` is required, not decoration: without it the browser does
- * not read the cross-origin response, so it cannot verify the hash at all — and
- * `integrity` becomes a line with no effect.
+ * A <script> tag for a third-party library — our own copy, or the CDN with its integrity
+ * hash (see vendorAsset).
  *
  * @throws \InvalidArgumentException On an unknown key — a programming error rather than
  *         a runtime condition, and failing loudly beats a silently incomplete tag.
  */
 function vendorJs(string $key, bool $defer = true): string
 {
-    $asset = VENDOR_ASSETS[$key] ?? null;
-    if ($asset === null) {
-        throw new \InvalidArgumentException("Unknown vendor asset [{$key}].");
-    }
+    $asset = vendorAsset($key);
 
     return '<script src="' . $asset['url'] . '"'
-        . ' integrity="' . $asset['sri'] . '"'
-        . ' crossorigin="anonymous"'
+        . vendorIntegrity($asset)
         . ($defer ? ' defer' : '') . '></script>' . "\n";
 }
 
-/** A <link> tag for an external stylesheet, with its integrity hash. */
+/**
+ * A <link> tag for a third-party stylesheet.
+ *
+ * `data-vendor` is what js/core/ui.js anchors to when it loads SweetAlert's stylesheet on
+ * the first dialog: the new sheet goes straight after Bootstrap, where the static tag used
+ * to be, and not at the end of <head> — micro-interactions.css and reduced-motion.css
+ * override .swal2 rules at the same specificity, and a sheet appended after them would win.
+ */
 function vendorCss(string $key): string
+{
+    $asset = vendorAsset($key);
+
+    return '<link rel="stylesheet" href="' . $asset['url'] . '"'
+        . vendorIntegrity($asset)
+        . ' data-vendor="' . $key . '">' . "\n";
+}
+
+/**
+ * Where a third-party file is served from: our own fingerprinted copy when the build has
+ * run, the CDN with its integrity hash when it has not.
+ *
+ * `sri` is null for the local copy. The hash exists to stop a third party changing what we
+ * execute; a file we serve ourselves is covered by the same trust as the rest of the code,
+ * and its fingerprinted name already pins its content.
+ *
+ * @return array{url: string, sri: ?string}
+ * @throws \InvalidArgumentException On an unknown key.
+ */
+function vendorAsset(string $key): array
 {
     $asset = VENDOR_ASSETS[$key] ?? null;
     if ($asset === null) {
         throw new \InvalidArgumentException("Unknown vendor asset [{$key}].");
     }
 
-    return '<link rel="stylesheet" href="' . $asset['url'] . '"'
-        . ' integrity="' . $asset['sri'] . '"'
-        . ' crossorigin="anonymous">' . "\n";
+    $manifest = str_ends_with($asset['url'], '.css') ? cssManifest() : jsManifest();
+    $local    = isset($asset['local']) ? ($manifest[$asset['local']] ?? null) : null;
+
+    return $local !== null
+        ? ['url' => URLROOT . '/' . $local, 'sri' => null]
+        : ['url' => $asset['url'], 'sri' => $asset['sri']];
+}
+
+/**
+ * The integrity attributes for a CDN file, nothing for our own copy.
+ *
+ * `crossorigin="anonymous"` is required alongside `integrity`, not decoration: without it
+ * the browser does not read the cross-origin response, so it cannot verify the hash at all.
+ *
+ * @param array{url: string, sri: ?string} $asset
+ */
+function vendorIntegrity(array $asset): string
+{
+    return $asset['sri'] === null
+        ? ''
+        : ' integrity="' . $asset['sri'] . '" crossorigin="anonymous"';
+}
+
+/**
+ * SweetAlert2's two files, for js/core/ui.js to load on the first Swal.fire.
+ *
+ * The pair travels together on purpose: the bare build of the script injects no styles
+ * (see 'sweetalert2' in VENDOR_ASSETS), so the loader waits for both before it opens a
+ * dialog — the script alone would show the dialog as bare text.
+ *
+ * @return array{js: array{url: string, sri: ?string}, css: array{url: string, sri: ?string}}
+ */
+function swalAssets(): array
+{
+    return ['js' => vendorAsset('sweetalert2'), 'css' => vendorAsset('sweetalert2-css')];
 }
 
 /**
