@@ -74,7 +74,10 @@
         "readme:check": "php scripts/sync-readme-stats.php --check",
         "docs:check": "@php scripts/docs-check.php",
         "test:coverage:gate": "@php scripts/coverage-gate.php",
-        "security:scan": "pre-commit run semgrep --hook-stage pre-push --all-files"
+        "security:scan": [
+            "Composer\\Config::disableProcessTimeout",
+            "pre-commit run semgrep --hook-stage pre-push --all-files"
+        ]
     },
     "require": {
         "php": ">=8.2",

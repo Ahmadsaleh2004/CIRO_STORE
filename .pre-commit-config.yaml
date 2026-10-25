@@ -112,6 +112,14 @@ repos:
       # Docker's Linux VM, so the gate is still enforced, at the same version, on the same
       # rule sets. The cost is that Docker has to be running when you push.
       #
+      # And it is slower, measured: **6 min 22 s** with the image already pulled, against
+      # ~141 s natively — the container reads the Windows checkout through Docker's shared
+      # mount, file by file. That outran Composer's default 300-second process timeout, so
+      # `composer check` reported "exceeded the timeout" on a scan that was passing. The
+      # `security:scan` script in composer.json therefore disables the timeout for itself
+      # alone: a gate cut off part-way says nothing, and the other scripts keep the limit.
+      # The first run also pulls the 1.44 GB image.
+      #
       # `--entrypoint semgrep` is stated rather than assumed, so the command does not depend
       # on whatever ENTRYPOINT a future tag of the image declares.
       - id: semgrep
