@@ -138,8 +138,15 @@ class CartController extends Controller
 
         $userId = (int) $_SESSION['user_id'];
 
+        $items = CartModel::getForUser($userId);
+        if ($items === null) {
+            // A failed read, not an empty cart — say so, and send no `items`, so the
+            // browser keeps the mirror it has instead of showing an empty cart.
+            $this->respond(false, 'The cart could not be loaded. Please try again.');
+        }
+
         $this->respond(true, 'OK', [
-            'items' => CartModel::getForUser($userId),
+            'items' => $items,
             'count' => CartModel::countItems($userId),
         ]);
     }
@@ -287,8 +294,17 @@ class CartController extends Controller
      */
     private function respondWithCart(int $userId, string $message): never
     {
+        $items = CartModel::getForUser($userId);
+
+        // The write itself succeeded, so the answer is still success. Only the re-read
+        // failed: send no `items`, and the browser keeps its mirror until the next load
+        // rather than replacing it with an empty cart.
+        if ($items === null) {
+            $this->respond(true, $message);
+        }
+
         $this->respond(true, $message, [
-            'items' => CartModel::getForUser($userId),
+            'items' => $items,
             'count' => CartModel::countItems($userId),
         ]);
     }

@@ -33,17 +33,29 @@ document.addEventListener('DOMContentLoaded', async () => {
 // badge on every card is visual noise), so the second argument stays false.
 
 // [FIX] The path was updated from /handlers/product_stock_handler.php to the new route
+/**
+ * Fetches live stock and visibility for the given ids into liveStockData.
+ *
+ * Returns whether the server actually answered. That boolean is what renderWishlist relies on
+ * before it deletes anything — see the comment there.
+ *
+ * `res.ok` is checked before parsing: during an outage, or while Render is waking the
+ * container, this endpoint answers a 503 HTML page, and parsing it as JSON throws.
+ */
 async function fetchLiveStock(ids) {
     try {
         const params = new URLSearchParams();
         ids.forEach(id => params.append('ids[]', id));
         const res = await fetch(window.BASE_URL + '/handlers/product_stock_handler.php?' + params.toString());
+        if (!res.ok) return false;
+
         const data = await res.json();
-        if (data.success) {
-            liveStockData = { ...liveStockData, ...data.products };
-        }
+        if (!data.success) return false;
+
+        liveStockData = { ...liveStockData, ...data.products };
+        return true;
     } catch {
-        // fail silently
+        return false;
     }
 }
 
@@ -186,14 +198,24 @@ async function renderWishlist() {
     const missingIds = validWishlistIds
         .filter(id => !(String(id) in liveStockData));
 
-    if (missingIds.length > 0) {
-        await fetchLiveStock(missingIds);
-    }
+    const serverAnswered = missingIds.length === 0 || await fetchLiveStock(missingIds);
 
-    // Auto-remove products that are no longer visible (hidden by an admin) from the wishlist
+    // Auto-remove products the server says are gone: hidden by an admin, or deleted.
+    //
+    // ⚠️ "The server says" is the whole rule, and it used to be missing. The filter kept an
+    // item only when live data existed for it — so when the stock request FAILED, no item had
+    // live data, every item was dropped, and the empty list was written back to localStorage.
+    // A database outage, or a single 503 while Render woke the container, permanently erased
+    // the wishlist of every visitor who opened this page. The wishlist lives only in the
+    // browser, so there was nothing to restore it from.
+    //
+    // Now an item is removed only on evidence: the server answered and marked it hidden, or
+    // the server answered and did not return it at all. With no answer, every item stays and
+    // is drawn from what localStorage already holds.
     const stillVisibleWishlist = wishlist.filter(p => {
         const live = liveStockData[String(parseInt(p.id, 10))];
-        return live && live.is_visible !== 0; // keep only if we have live data AND it's visible
+        if (live) return live.is_visible !== 0;
+        return !serverAnswered;
     });
     if (stillVisibleWishlist.length !== wishlist.length) {
         wishlist = stillVisibleWishlist;

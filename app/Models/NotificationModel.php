@@ -13,9 +13,12 @@ class NotificationModel extends Model
     /**
      * Fetch the user's notification list.
      *
-     * @return list<array<string, mixed>>
+     * Null when the query failed, not an empty list: an empty list makes the bell read
+     * "No notifications" and the badge 0, which is a false statement during an outage.
+     *
+     * @return list<array<string, mixed>>|null
      */
-    public static function getList(int $userId, int $limit = 30): array
+    public static function getList(int $userId, int $limit = 30): ?array
     {
         try {
             $db   = self::db();
@@ -30,14 +33,15 @@ class NotificationModel extends Model
             return $stmt->fetchAll();
         } catch (Exception $e) {
             error_log("NotificationModel::getList Error: " . $e->getMessage());
-            return [];
+            return null;
         }
     }
 
     /**
-     * The unread notification count.
+     * The unread notification count — null when the query failed, for the same reason as
+     * getList: 0 is a real answer, and it set the badge to zero during an outage.
      */
-    public static function countUnread(int $userId): int
+    public static function countUnread(int $userId): ?int
     {
         try {
             $db   = self::db();
@@ -47,7 +51,8 @@ class NotificationModel extends Model
             $stmt->execute([$userId]);
             return (int)$stmt->fetchColumn();
         } catch (Exception $e) {
-            return 0;
+            error_log("NotificationModel::countUnread Error: " . $e->getMessage());
+            return null;
         }
     }
 

@@ -56,9 +56,15 @@ class CartModel extends Model
      * `is_visible = 1` in the join: a product hidden after being added disappears from
      * the cart, rather than reaching checkout and being refused there.
      *
-     * @return list<array<string, mixed>>
+     * Null when the query failed — deliberately not an empty list. An empty list is a real
+     * answer ("this cart has nothing in it"), and the browser rightly copies it over its
+     * mirror. Returning one for a failure told every open tab its cart was empty because
+     * the database hiccuped. Callers omit `items` from the response on null, and cart.js
+     * keeps its mirror whenever `items` is not an array.
+     *
+     * @return list<array<string, mixed>>|null
      */
-    public static function getForUser(int $userId): array
+    public static function getForUser(int $userId): ?array
     {
         try {
             $stmt = self::db()->prepare("
@@ -91,7 +97,7 @@ class CartModel extends Model
         } catch (Exception $e) {
             error_log('CartModel::getForUser Error: ' . $e->getMessage());
             reportException($e);
-            return [];
+            return null;
         }
     }
 
@@ -273,14 +279,35 @@ class CartModel extends Model
     }
 
     /** Empties the user's cart — called after an order succeeds. */
-    public static function clear(int $userId): bool
+    /**
+     * Removes the given variants from a user's cart — the ones an order has just bought.
+     *
+     * ⚠️ This replaced clear(), which deleted the whole cart after every order, and that was
+     * a real loss rather than a tidy-up. The order is built from the browser's mirror of the
+     * cart, not from this table, so the two can differ: a line added from a second tab or
+     * another device after the checkout page loaded is in cart_items but not in the order.
+     * Emptying the table deleted it without it ever being bought.
+     *
+     * Removing what was ordered, and only that, leaves those lines where the customer put
+     * them. One statement, so the number of variants costs no extra round trips.
+     *
+     * @param list<int> $variantIds
+     */
+    public static function removeVariants(int $userId, array $variantIds): bool
     {
+        $variantIds = array_values(array_unique(array_filter(array_map('intval', $variantIds), static fn (int $id): bool => $id > 0)));
+        if ($variantIds === []) {
+            return true;
+        }
+
+        $placeholders = implode(',', array_fill(0, count($variantIds), '?'));
+
         try {
             return self::db()
-                ->prepare('DELETE FROM cart_items WHERE user_id = ?')
-                ->execute([$userId]);
+                ->prepare("DELETE FROM cart_items WHERE user_id = ? AND variant_id IN ({$placeholders})")
+                ->execute([$userId, ...$variantIds]);
         } catch (Exception $e) {
-            error_log('CartModel::clear Error: ' . $e->getMessage());
+            error_log('CartModel::removeVariants Error: ' . $e->getMessage());
             return false;
         }
     }

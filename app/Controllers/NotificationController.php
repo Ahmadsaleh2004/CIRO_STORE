@@ -69,6 +69,12 @@ class NotificationController extends Controller
         $items       = NotificationModel::getList($userId);
         $unreadCount = NotificationModel::countUnread($userId);
 
+        // A failed read is reported as one — notifications.js keeps the list it already
+        // shows on success:false, instead of replacing it with "No notifications".
+        if ($items === null || $unreadCount === null) {
+            $this->respond(false, 'Notifications could not be loaded.');
+        }
+
         $this->respond(true, 'OK', [
             'notifications' => $items,
             'unread_count'  => $unreadCount,
@@ -120,9 +126,7 @@ class NotificationController extends Controller
         }
 
         NotificationModel::markRead($notifId, $userId);
-        $this->respond(true, 'Marked as read.', [
-            'unread_count' => NotificationModel::countUnread($userId),
-        ]);
+        $this->respond(true, 'Marked as read.', self::unreadCountField($userId));
     }
 
     // ════════════════════════════════════════════════════════
@@ -199,9 +203,23 @@ class NotificationController extends Controller
         }
 
         NotificationModel::dismiss($notifId, $userId);
-        $this->respond(true, 'Dismissed.', [
-            'unread_count' => NotificationModel::countUnread($userId),
-        ]);
+        $this->respond(true, 'Dismissed.', self::unreadCountField($userId));
+    }
+
+    /**
+     * `unread_count` for a response, or nothing when the count could not be read.
+     *
+     * Omitted rather than sent as null or 0: notifications.js uses the server's number when
+     * the key is present and counts its own list when it is absent. A 0 from a failed
+     * query set the badge to zero; leaving the key out lets the page fall back correctly.
+     *
+     * @return array{unread_count?: int}
+     */
+    private static function unreadCountField(int $userId): array
+    {
+        $count = NotificationModel::countUnread($userId);
+
+        return $count === null ? [] : ['unread_count' => $count];
     }
 
     // ════════════════════════════════════════════════════════

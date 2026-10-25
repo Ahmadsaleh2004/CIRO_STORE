@@ -236,21 +236,30 @@ class CheckoutController extends Controller
         // (a changed price, exhausted stock) leaves the customer with neither a cart
         // nor an order.
         //
-        // ⚠️ Nor is it emptied on the repeated idempotency path — and that is
-        // deliberate: a duplicate click returns the same order, whose cart was already
-        // emptied the first time. Emptying here has no second effect, which is exactly
-        // right.
-        CartModel::clear($userId);
+        // ⚠️ Only the variants that were ordered, and never on the repeated path.
+        //
+        // This used to empty the whole cart, every time. Two faults hid in that one call:
+        //
+        //   · The order is built from the browser's mirror of the cart, so a line added
+        //     from a second tab after the checkout page loaded was deleted without being
+        //     bought.
+        //   · A repeated submission — a double click, or a Back navigation that resubmits
+        //     the same idempotency key — returns the ORIGINAL order with `duplicate` set.
+        //     The comment here claimed that path was skipped; the code never looked at the
+        //     flag, so it emptied whatever the customer had added since, and sent a second
+        //     "order placed" notification for an order placed once.
+        if (empty($result['duplicate'])) {
+            CartModel::removeVariants($userId, array_column($cleanItems, 'variant_id'));
 
-        // Notify the user
-        NotificationModel::insert(
-            $userId,
-            '✅ Order Placed Successfully',
-            "Your order #{$orderId} has been placed and is being processed.",
-            null,
-            'order',
-            $orderId
-        );
+            NotificationModel::insert(
+                $userId,
+                '✅ Order Placed Successfully',
+                "Your order #{$orderId} has been placed and is being processed.",
+                null,
+                'order',
+                $orderId
+            );
+        }
 
         $this->respond(true, 'Order placed successfully!', [
             'order_id' => $orderId,

@@ -186,7 +186,7 @@ final class CartModelTest extends DatabaseTestCase
         $this->assertSame([], CartModel::getForUser($stranger));
     }
 
-    public function testClearEmptiesOnlyThatUsersCart(): void
+    public function testRemovingOrderedVariantsTouchesOnlyThatUsersCart(): void
     {
         $first  = $this->makeUser();
         $second = $this->makeUser();
@@ -195,10 +195,42 @@ final class CartModelTest extends DatabaseTestCase
         CartModel::add($first, $productId, $variantId, 1);
         CartModel::add($second, $productId, $variantId, 2);
 
-        CartModel::clear($first);
+        CartModel::removeVariants($first, [$variantId]);
 
         $this->assertSame([], CartModel::getForUser($first));
         $this->assertCount(1, CartModel::getForUser($second));
+    }
+
+    /**
+     * The fault this method exists to prevent: the order is built from the browser's
+     * mirror, so a line added from another tab is in the cart but not in the order —
+     * and emptying the whole cart deleted it without it ever being bought.
+     */
+    public function testALineThatWasNotOrderedSurvivesTheOrder(): void
+    {
+        $userId = $this->makeUser();
+        [$orderedProduct, $orderedVariant] = $this->makeProduct();
+        [$laterProduct, $laterVariant]     = $this->makeProduct();
+
+        CartModel::add($userId, $orderedProduct, $orderedVariant, 1);
+        CartModel::add($userId, $laterProduct, $laterVariant, 3); // added in another tab
+
+        CartModel::removeVariants($userId, [$orderedVariant]);
+
+        $left = CartModel::getForUser($userId);
+        $this->assertCount(1, $left);
+        $this->assertSame($laterVariant, $left[0]['variant_id']);
+        $this->assertSame(3, $left[0]['quantity']);
+    }
+
+    public function testAnEmptyListRemovesNothing(): void
+    {
+        $userId = $this->makeUser();
+        [$productId, $variantId] = $this->makeProduct();
+        CartModel::add($userId, $productId, $variantId, 2);
+
+        $this->assertTrue(CartModel::removeVariants($userId, []));
+        $this->assertCount(1, CartModel::getForUser($userId));
     }
 
     // ════════════════════════════════════════════════════════
