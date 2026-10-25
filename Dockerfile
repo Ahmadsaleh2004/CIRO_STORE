@@ -10,8 +10,25 @@
 # Moving those to nginx means rewriting them in another language and keeping two copies in
 # step — exactly the kind of divergence this project eliminates at every phase. The apache
 # image runs the very file that works today.
+#
+# The patch version is pinned, not left to a floating tag. 8.5.12 carries the fix for
+# CVE-2026-109618 and CVE-2026-109619 — two unauthenticated remote code execution flaws in
+# PHP itself, where a request that runs out of memory leaves internal state the next request
+# still trusts. Under mod_php, which is what this image runs, the attack lands before any
+# application code does, so none of the CSRF, session or RBAC work in this project stands
+# between an attacker and the interpreter. No php.ini setting mitigates it; only the patch.
+#
+# 8.3.36 carried the same fix. The move to 8.5 is for the support window, not the CVEs: 8.3
+# left active support at the end of 2025 and receives security fixes only until the end of
+# 2027, while 8.5 gets bug fixes until the end of 2027 and security fixes until the end of
+# 2029. The application still runs on 8.2 — composer.json keeps that floor, and CI tests both
+# ends of it.
+#
+# A floating tag would have been enough had the image always been rebuilt, but a rebuild that
+# restores an older layer from cache would silently reintroduce the hole. The pin makes the
+# running version a fact in the file, and Dependabot still raises the next bump as a PR.
 
-FROM php:8.3-apache
+FROM php:8.5.12-apache
 
 # ── The PHP extensions ───────────────────────────────────────
 # pdo_mysql is the only one needing installation; mbstring and json are built into the
@@ -23,8 +40,8 @@ RUN docker-php-ext-install pdo_mysql \
 #
 # ⚠️ `unzip` is not a convenience — without it this image cannot be built at all, and it
 # never could be. `composer install --prefer-dist` fetches every package as a zip archive
-# and needs either PHP's zip extension or an unzip binary to open it. php:8.3-apache ships
-# neither, so the build died on the first package:
+# and needs either PHP's zip extension or an unzip binary to open it. The official php apache
+# images ship neither, so the build died on the first package:
 #
 #     Failed to download dasprid/enum from dist:
 #     The zip extension and unzip/7z commands are both missing, skipping.

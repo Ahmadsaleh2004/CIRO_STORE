@@ -106,9 +106,12 @@ updates:
 
   # ── The container image ────────────────────────────────────
   #
-  # The Dockerfile pins php:8.3-apache. The tag moves with PHP's patches, but the move to
-  # 8.4 is a decision that should be seen in a PR rather than happening silently on the next
-  # image rebuild.
+  # The Dockerfile pins php:8.5.12-apache, down to the patch. It used to pin the floating
+  # 8.3-apache tag and let PHP's patches arrive on the next rebuild, until CVE-2026-109618
+  # and CVE-2026-109619 showed what that costs: a rebuild serving an older cached layer puts
+  # a remote code execution hole back without a line of the repository changing. Each patch
+  # now has to be raised here, in a PR — and so does the next minor version, which changes
+  # what the code is allowed to call and belongs in a PR that CI has tested.
   - package-ecosystem: docker
     directory: /
     schedule:

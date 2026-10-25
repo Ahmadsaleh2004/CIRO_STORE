@@ -29,7 +29,6 @@ final class RouterTest extends TestCase
     private function findRoute(Router $router, string $method, string $path): ?Route
     {
         $match = new \ReflectionMethod(Router::class, 'matchPath');
-        $match->setAccessible(true);
 
         foreach ($router->getRoutes() as $route) {
             $params = [];
@@ -116,7 +115,6 @@ final class RouterTest extends TestCase
         });
 
         $normalize = new \ReflectionMethod(Router::class, 'normalizePath');
-        $normalize->setAccessible(true);
 
         // dispatch ends execution, so the normalisation and the matching are examined
         // together in its place.
@@ -175,7 +173,6 @@ final class RouterTest extends TestCase
         });
 
         $match = new \ReflectionMethod(Router::class, 'matchPath');
-        $match->setAccessible(true);
 
         $params = [];
         $ok = $match->invokeArgs($r, ['/product/{id}', '/product/42', &$params]);
@@ -266,7 +263,6 @@ final class RouterTest extends TestCase
         })->middleware('totally-made-up');
 
         $run = new \ReflectionMethod(Router::class, 'runMiddleware');
-        $run->setAccessible(true);
 
         // Failing loudly is deliberate: a misspelled guard means an unprotected route, and
         // ignoring it silently is the worst thing that can be done here.

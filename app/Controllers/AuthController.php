@@ -805,7 +805,6 @@ class AuthController extends Controller
         if ($response === false) {
             throw new \Exception('cURL error: ' . curl_error($ch));
         }
-        curl_close($ch);
         return $response;
     }
 
@@ -820,7 +819,6 @@ class AuthController extends Controller
         if ($response === false) {
             throw new \Exception('cURL error: ' . curl_error($ch));
         }
-        curl_close($ch);
         return $response;
     }
 }

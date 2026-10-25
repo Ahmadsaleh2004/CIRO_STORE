@@ -111,7 +111,6 @@ function fetch(string $url, int $timeout): array
     $code = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
     $type = (string)curl_getinfo($ch, CURLINFO_CONTENT_TYPE);
     $err  = curl_error($ch);
-    curl_close($ch);
 
     return [
         'body'  => $body === false ? '' : $body,
@@ -224,7 +223,6 @@ function checkSecurityHeaders(string $base, int $timeout): array
     $raw        = curl_exec($ch);
     $headerSize = (int) curl_getinfo($ch, CURLINFO_HEADER_SIZE);
     $err        = curl_error($ch);
-    curl_close($ch);
 
     if ($raw === false || $err !== '') {
         return ['curl: ' . ($err !== '' ? $err : 'no response')];

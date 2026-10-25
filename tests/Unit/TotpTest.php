@@ -24,7 +24,6 @@ final class TotpTest extends TestCase
     private function generateCodeAt(string $secret, int $timeSlice): string
     {
         $m = new ReflectionMethod(Totp::class, 'generateCode');
-        $m->setAccessible(true);
         return $m->invoke(null, $secret, $timeSlice);
     }
 

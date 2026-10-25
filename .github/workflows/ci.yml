@@ -75,7 +75,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        php: ['8.2', '8.3']
+        # Both ends of what the code promises: 8.2 is the floor composer.json allows, and
+        # 8.5 is what the Dockerfile runs in production. A version in between that passes
+        # here is not a guarantee, but a break at either end is a break someone will hit.
+        php: ['8.2', '8.5']
 
     services:
       mysql:
@@ -221,7 +224,7 @@ jobs:
       # from `source` in phpunit.xml: excluding it would print a much prettier number for
       # exactly the same untested code.
       - name: The coverage gate
-        if: matrix.php == '8.3'
+        if: matrix.php == '8.5'
         run: |
           PCT=$(php -r '
             $x = simplexml_load_file("coverage.xml");
@@ -243,7 +246,7 @@ jobs:
       # nosemgrep: yaml.github-actions.security.github-actions-mutable-action-tag.github-actions-mutable-action-tag
       - uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.3'
+          php-version: '8.5'
           extensions: pdo_mysql, mbstring, curl, json
           coverage: none
 
@@ -292,7 +295,7 @@ jobs:
       # nosemgrep: yaml.github-actions.security.github-actions-mutable-action-tag.github-actions-mutable-action-tag
       - uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.3'
+          php-version: '8.5'
           coverage: none
 
       - name: Install the dependencies
@@ -447,7 +450,7 @@ jobs:
       # nosemgrep: yaml.github-actions.security.github-actions-mutable-action-tag.github-actions-mutable-action-tag
       - uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.3'
+          php-version: '8.5'
           extensions: pdo_mysql, mbstring, curl, json
           coverage: none
 

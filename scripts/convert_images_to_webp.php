@@ -88,7 +88,6 @@ foreach ($files as $srcPath) {
         imagefilledrectangle($resized, 0, 0, $newW, $newH, $transparent);
 
         imagecopyresampled($resized, $img, 0, 0, 0, 0, $newW, $newH, $origW, $origH);
-        imagedestroy($img);
         $img  = $resized;
         $resizeNote = " → resized {$origW}×{$origH} to {$newW}×{$newH}";
     } else {
@@ -97,7 +96,6 @@ foreach ($files as $srcPath) {
 
     // Export the WebP
     $ok = imagewebp($img, $destPath, $quality);
-    imagedestroy($img);
 
     if (!$ok) {
         $errors++;
