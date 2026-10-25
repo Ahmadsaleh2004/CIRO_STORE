@@ -92,15 +92,32 @@ repos:
       # the project — the same commit can pass today and fail tomorrow with nothing in the
       # repository having moved.
       #
-      # `language: python` rather than `system` for the same reason: `system` runs whichever
-      # semgrep happens to be on PATH (1.174.0 on the machine this was written on, against
-      # 1.145.0 in CI), while pre-commit builds its own virtualenv from the pin below. The
-      # version is stated once, here, and ci.yml installs that same version.
+      # Not `language: system` either, for the same reason: `system` runs whichever semgrep
+      # happens to be on PATH (1.174.0 on the machine this was written on, against 1.145.0
+      # in CI). The version is stated once, in the image tag below, and ci.yml installs that
+      # same version.
+      #
+      # ── Why a Docker image and not `language: python` ────
+      #
+      # It was `language: python` with `additional_dependencies: ['semgrep==1.145.0']`, and
+      # on the development machine that stopped working without a line of the project
+      # changing: Windows Smart App Control blocked the `semgrep-core.exe` that the pip wheel
+      # ships, because the binary is unsigned (Code Integrity events 3033/3077). The gate
+      # did not fail — it could not run, which made `composer check` red for every commit
+      # and stopped every `git push` at this hook.
+      #
+      # The three ways out were to turn Smart App Control off (irreversible without
+      # reinstalling Windows), to bypass the hook (which defeats it), or to run the very
+      # same scanner somewhere the policy does not reach. The official image runs inside
+      # Docker's Linux VM, so the gate is still enforced, at the same version, on the same
+      # rule sets. The cost is that Docker has to be running when you push.
+      #
+      # `--entrypoint semgrep` is stated rather than assumed, so the command does not depend
+      # on whatever ENTRYPOINT a future tag of the image declares.
       - id: semgrep
         name: semgrep — code vulnerabilities across the whole repository
-        entry: semgrep --config p/php --config .semgrep/ --error .
-        language: python
-        additional_dependencies: ['semgrep==1.145.0']
+        language: docker_image
+        entry: --entrypoint semgrep semgrep/semgrep:1.145.0 --config p/php --config .semgrep/ --error .
         pass_filenames: false
         stages: [pre-push]
 
