@@ -181,7 +181,16 @@ function initScrollReveal() {
         });
     }, { threshold: 0.08 });
 
+    // While the page is still loading, what is already in the viewport is shown as it is: the
+    // fade is for content scrolled to, and on the first screen it only held the largest paint
+    // back. Content rendered later (a filter, a wishlist refresh) still fades in.
+    const loading = document.readyState !== 'complete';
+
     document.querySelectorAll(".reveal:not(.visible)").forEach(el => {
+        if (loading && el.getBoundingClientRect().top < window.innerHeight) {
+            el.classList.add('reveal-instant', 'visible');
+            return;
+        }
         observer.observe(el);
     });
 }

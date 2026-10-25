@@ -48,7 +48,7 @@ usort($sortedByStock, fn($a, $b) => (int)$a['stock_quantity'] <=> (int)$b['stock
                     // visit, whether switching colours works at all.
                     ?>
                     <source id="productMainSource" srcset="<?= htmlspecialchars((string) $mainWebp) ?>" type="image/webp">
-                    <img src="<?= htmlspecialchars($imgSrc) ?>" alt="<?= htmlspecialchars($p['name']) ?>" id="productMainImg" class="product-detail-main-img">
+                    <img src="<?= htmlspecialchars($imgSrc) ?>" alt="<?= htmlspecialchars($p['name']) ?>" id="productMainImg" class="product-detail-main-img" fetchpriority="high" decoding="async">
                 </picture>
             </div>
         </div>

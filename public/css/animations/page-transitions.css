@@ -6,10 +6,13 @@
    Page Transition — Professional Slide + Blur
    ================================================== */
 
-/* Enter animation — the new page arrives from below */
+/* Enter animation — the new page arrives from below.
+   Movement only, no fade: an opacity of 0 on <main> at the first frame meant the browser had
+   painted nothing worth counting, so the first and largest paints of every page waited for
+   the animation on top of everything else. Sliding 12px reads the same and paints at once. */
 @keyframes pageEnter {
-    0%   { opacity: 0; transform: translateY(12px); }
-    100% { opacity: 1; transform: translateY(0); }
+    0%   { transform: translateY(12px); }
+    100% { transform: translateY(0); }
 }
 
 main[role="main"] {

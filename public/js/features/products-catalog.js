@@ -138,6 +138,10 @@ function renderHomeSections(allProducts) {
         const track = document.getElementById(trackId);
         if (!track) return;
 
+        // home.css holds a card's height for the track until it is filled; a section with
+        // nothing to show gives that space back rather than leaving a blank band.
+        track.classList.toggle('is-empty', list.length === 0);
+
         track.innerHTML = list.map(p => {
             const imgSrc = imagePathOrEmpty(p.image || p.image_path || '');
             const tag    = tagConfig[p.tag] || { label: '', cls: '' };

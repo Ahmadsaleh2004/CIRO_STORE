@@ -147,7 +147,7 @@ $pageDescription = 'Browse all products at Cairo Store.';
     <?php // ── Products Grid ──────────────────────────────── ?>
     <div class="row" id="products-container">
 
-        <?php foreach ($products as $p):
+        <?php foreach ($products as $index => $p):
             $display   = $p['_display'];
             $price     = (float)$display['price'];
             $discount  = (float)($display['discount_percentage'] ?? 0);
@@ -160,7 +160,8 @@ $pageDescription = 'Browse all products at Cairo Store.';
             $tag       = productTag($p);
             $cats      = strtolower($p['categories'] ?? '');
         ?>
-        <div class="col-lg-4 col-md-6 mb-4 product-item reveal"
+        <?php // No .reveal on the first row — it is on screen at load and holds the LCP image; see products.css ?>
+        <div class="col-lg-4 col-md-6 mb-4 product-item<?= $index < 3 ? '' : ' reveal' ?>"
              data-name="<?= htmlspecialchars(strtolower($p['name'])) ?>"
              data-price="<?= $finalPrice ?>"
              data-cats="<?= htmlspecialchars($cats) ?>"
@@ -200,10 +201,17 @@ $pageDescription = 'Browse all products at Cairo Store.';
                         <?php if ($webpSrc): ?>
                         <source srcset="<?= htmlspecialchars($webpSrc) ?>" type="image/webp">
                         <?php endif; ?>
+                        <?php
+                        // The first card's image is the page's largest paint on a phone, and
+                        // loading="lazy" made the browser wait for layout before even asking for
+                        // it. The first two load at once and the first at high priority — the
+                        // same pattern as the home slider (home.php).
+                        ?>
                         <img src="<?= htmlspecialchars($imgSrc) ?>"
                              class="card-img-top product-image"
                              alt="<?= htmlspecialchars($p['name']) ?>"
-                             loading="lazy">
+                             <?= $index < 2 ? 'decoding="async"' : 'loading="lazy"' ?>
+                             <?= $index === 0 ? 'fetchpriority="high"' : '' ?>>
                     </picture>
                 </a>
 

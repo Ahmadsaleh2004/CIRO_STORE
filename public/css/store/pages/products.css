@@ -29,6 +29,12 @@
 #products-container .product-card:nth-child(8) { animation-delay: var(--dur-base); }
 #products-container .product-card:nth-child(9) { animation-delay: var(--dur-slow); }
 
+/* The first row has no entrance: it is the first thing on screen and holds the page's largest
+   image, which waited at opacity 0 for the delay and the fade. product.php leaves .reveal off
+   the same three columns. Three is the row on a desktop; on a phone it covers the first
+   card, which is the one that matters there. */
+#products-container .product-item:nth-child(-n+3) .product-card { animation: none; }
+
 /* ── Inline Style Class Replacements ─────────────── */
 .price-range-val { white-space: nowrap; color: var(--accent); }
 .results-count-text { color: var(--muted-text); font-size: .85rem; }

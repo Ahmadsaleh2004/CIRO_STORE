@@ -39,6 +39,11 @@
 .reveal:nth-child(3) { transition-delay: var(--dur-fast); }
 .reveal:nth-child(4) { transition-delay: var(--dur-base); }
 
+/* Already on screen while the page loads: shown as it is, not faded in. initScrollReveal
+   adds this — the reveal is for content scrolled to, and on content the visitor is already
+   looking at it only held the largest paint back by the length of the transition. */
+.reveal.reveal-instant { transition: none; }
+
 
 /* ── Cart bounce global definition ── */
 @keyframes cartBounce {

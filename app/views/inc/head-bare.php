@@ -57,7 +57,17 @@ $bareSwal      = $bareSwal      ?? false;
 <?php endif; ?>
 <?php // Fingerprinted for the same reason pageCss is — see assetStamp in assets_helper.php ?>
 <?php foreach ($bareCss as $bareCssFile): ?>
+<?php if (ltrim($bareCssFile, '/') === 'css/store.css'): ?>
+<?php
+// The store's entry file is nothing but 36 @imports, which the browser discovers one level at
+// a time — and the error pages are what every visitor sees during an outage, the moment the
+// site is slowest. cssBundle serves the built bundle in a single request (and the same chain
+// when nothing is built), exactly as the full layout does.
+?>
+<?= cssBundle('store') ?>
+<?php else: ?>
     <link rel="stylesheet" href="<?= URLROOT ?>/<?= ltrim($bareCssFile, '/') ?><?= htmlspecialchars(assetStamp($bareCssFile)) ?>">
+<?php endif; ?>
 <?php endforeach; ?>
     <?= $bareHead ?? '' ?>
 </head>

@@ -84,6 +84,33 @@ describe('wishlist.js — pruning', () => {
         expect(document.querySelectorAll('#wishlist-container .remove-fav')).toHaveLength(3);
     });
 
+    it('draws the cards before the stock request returns, with nothing yet clickable', async () => {
+        let answer;
+        globalThis.fetch = vi.fn(() => new Promise((resolve) => { answer = resolve; }));
+
+        const rendering = window.renderWishlist();
+
+        // The request is still in flight: the cards are already there, from localStorage.
+        const cards = document.querySelectorAll('#wishlist-container .product-card');
+        expect(cards).toHaveLength(3);
+        expect(document.querySelectorAll('#wishlist-container .add-to-cart-wl')).toHaveLength(0);
+        expect(cards[0].querySelector('button.btn-success').disabled).toBe(true);
+
+        // No claim the server has not made yet: no "Out of Stock" from a missing stock, and
+        // not the price saved with the item, which may be stale.
+        expect(cards[0].textContent).not.toContain('Out of Stock');
+        expect(cards[0].textContent).not.toContain('$199.00');
+
+        answer({
+            ok: true,
+            status: 200,
+            json: async () => ({ success: true, products: { 1: live(1), 2: live(2), 3: live(3) } }),
+        });
+        await rendering;
+
+        expect(document.querySelectorAll('#wishlist-container [data-wl-qty-input]')).toHaveLength(3);
+    });
+
     it('removes an item the server marks hidden', async () => {
         globalThis.fetch = respond(200, {
             success: true,

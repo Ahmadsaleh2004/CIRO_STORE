@@ -198,6 +198,13 @@ async function renderWishlist() {
     const missingIds = validWishlistIds
         .filter(id => !(String(id) in liveStockData));
 
+    // Draw what localStorage already holds before asking the server anything. The page used
+    // to show skeletons until the stock request returned — a database round trip from
+    // Render, and the whole wait for a cold container — while everything a card shows
+    // except its stock was already in the browser. The cards come back below with their
+    // stock once the server answers.
+    if (missingIds.length > 0) drawWishlist(true);
+
     const serverAnswered = missingIds.length === 0 || await fetchLiveStock(missingIds);
 
     // Auto-remove products the server says are gone: hidden by an admin, or deleted.
@@ -222,6 +229,20 @@ async function renderWishlist() {
         localStorage.setItem('wishlist', JSON.stringify(wishlist));
     }
 
+    drawWishlist(false);
+}
+
+/**
+ * Renders the cards from `wishlist` and `liveStockData`, and wires their controls.
+ *
+ * With `pending`, a card whose stock has not arrived yet shows the in-stock layout with every
+ * control disabled: it holds the space the quantity box takes, so the card does not jump when
+ * the stock lands, and it offers nothing that would have to be refused a moment later.
+ */
+function drawWishlist(pending) {
+    const container = document.getElementById('wishlist-container');
+    if (!container) return;
+
     const isUser = REGULAR_USER_FLAG.value;
     const csrf = window.__csrfTokenForWishlist || '';
 
@@ -233,12 +254,26 @@ async function renderWishlist() {
         const stock  = live ? live.stock_quantity : null;
         const currentPrice = live ? (live.discount_percentage > 0 ? live.price_after_discount : live.price) : Number(p.price || 0);
 
-        const badge = stockBadge(stock);
+        // While the stock is on its way, a card shows no badge and no price: stockBadge reads
+        // a missing stock as 0 ("Out of Stock"), and the price saved with the item can be
+        // stale — a figure that changes in front of the visitor a second later is worse than
+        // an empty line for that second. The line keeps its height so nothing moves.
+        const awaiting = pending && !live;
+        const badge = awaiting ? null : stockBadge(stock);
         const inStock = stock > 0;
         // The "notify me" state comes from the server (WishlistController::stock) — it keeps
         // this page consistent with product.php and product_dit.php for the same user and
         // product.
         const alreadyNotified = !!(live && live.already_notified);
+
+        const actions = awaiting ? `
+                        <div class="quantity-box mb-3 d-flex justify-content-center gap-2" aria-hidden="true">
+                            <button type="button" class="btn btn-outline-secondary btn-sm" disabled>−</button>
+                            <input type="number" value="1" class="form-control quantity-input u-w-60" disabled tabindex="-1">
+                            <button type="button" class="btn btn-outline-secondary btn-sm" disabled>+</button>
+                        </div>
+                        <button class="btn btn-success w-100 btn-disabled-faded" disabled>🛒 ${isUser ? 'Add to Cart' : 'Add To Cart'}</button>
+                        ` : null;
 
         return `
         <div class="col-lg-4 col-md-6 mb-4">
@@ -249,14 +284,14 @@ async function renderWishlist() {
                 </a>
                 <div class="card-body d-flex flex-column justify-content-between">
                     <div class="mb-3">
-                        ${badge ? `<span class="badge ${badge.class}">${badge.label}</span>` : ''}
+                        ${badge ? `<span class="badge ${badge.class}">${badge.label}</span>` : awaiting ? '<span class="badge invisible">&nbsp;</span>' : ''}
                         <h5 class="fw-bold mt-1">${name}</h5>
                         <div class="price-box">
-                            <span class="new-price fs-5 fw-bold">$${currentPrice.toFixed(2)}</span>
+                            <span class="new-price fs-5 fw-bold">${awaiting ? '&nbsp;' : `$${currentPrice.toFixed(2)}`}</span>
                         </div>
                     </div>
                     <div>
-                        ${inStock ? `
+                        ${actions !== null ? actions : inStock ? `
                         <div class="quantity-box mb-3 d-flex justify-content-center gap-2">
                             <button type="button" class="btn btn-outline-secondary btn-sm"
                                     data-wl-qty="${p.id}" data-wl-delta="-1">−</button>

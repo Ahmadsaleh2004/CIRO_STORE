@@ -58,7 +58,15 @@
     padding: 8px 4px 16px;
     -ms-overflow-style: none;
     scrollbar-width: none;
+    /* products-catalog.js fills the track after the deferred bundle runs, so until then it
+       was empty and everything below it — the next two sections and the footer — sat higher
+       and then jumped. One card plus the padding above is exactly what a filled track
+       measures (344px at --card-height 320px, 284px at 260px), so the space is held from
+       the first paint at every breakpoint that redefines the token. */
+    min-height: calc(var(--card-height) + 24px);
 }
+
+.section-carousel-track.is-empty { min-height: 0; }
 
 .section-carousel-track::-webkit-scrollbar { display: none; }
 
