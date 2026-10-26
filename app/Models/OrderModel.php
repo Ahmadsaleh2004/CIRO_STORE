@@ -1244,6 +1244,31 @@ class OrderModel extends Model
     }
 
     /**
+     * The total of every order this admin took and completed — all of them.
+     *
+     * The admin details page used to add up the rows of getOrdersHandledByAdmin, which stops
+     * at the newest 50. So past fifty completed orders the "Total completed profit" fell short
+     * of the truth, and grew more wrong with every order. The sum is the database's now.
+     * Completed orders currently taken by this admin are exactly the ones that page counted:
+     * an auto-released order is not taken by them any more.
+     */
+    public static function completedTotalForAdmin(int $adminId): float
+    {
+        try {
+            $stmt = self::db()->prepare(
+                "SELECT COALESCE(SUM(total_amount), 0) FROM orders
+                 WHERE taken_by_admin_id = ? AND status = 'completed'"
+            );
+            $stmt->execute([$adminId]);
+
+            return (float) $stmt->fetchColumn();
+        } catch (Exception $e) {
+            error_log('OrderModel::completedTotalForAdmin Error: ' . $e->getMessage());
+            return 0.0;
+        }
+    }
+
+    /**
      * The orders a given admin handled — newest first. It covers:
      *   (a) orders whose current taken_by_admin_id = $adminId (as before);
      *   (b) earlier orders that expired and were released automatically while this admin

@@ -15,6 +15,8 @@
 # The directory and its .htaccess are kept, not the backups themselves
 /storage/backups/*
 !/storage/backups/.htaccess
+# A copy of the database's settings row (SettingsModel::cached) — rebuilt on demand
+/storage/cache/
 
 
 # ── Miscellaneous ──────────────────────────────────────

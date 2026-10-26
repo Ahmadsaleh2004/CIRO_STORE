@@ -92,11 +92,21 @@ class NotificationModel extends Model
     }
 
     /**
-     * Dismiss a notification — it leaves the list by way of setting is_read.
+     * Dismiss a notification — delete it, as the endpoint's own documentation says.
+     *
+     * It used to call markRead. And the list is every notification, read or not, so the one
+     * the user had just removed came back on the next poll — the × appeared to work, then the
+     * notification returned within a minute. Scoped to its owner like every other write here.
      */
     public static function dismiss(int $notifId, int $userId): bool
     {
-        return self::markRead($notifId, $userId);
+        try {
+            $stmt = self::db()->prepare('DELETE FROM notifications WHERE id = ? AND user_id = ?');
+            return $stmt->execute([$notifId, $userId]);
+        } catch (Exception $e) {
+            error_log('NotificationModel::dismiss Error: ' . $e->getMessage());
+            return false;
+        }
     }
 
     /**

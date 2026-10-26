@@ -88,12 +88,10 @@ class BrandingModel extends Model
         try {
             $db = self::db();
 
-            $sliders = $db->query("SELECT id FROM home_sliders ORDER BY sort_order ASC, id ASC")
-                           ->fetchAll(PDO::FETCH_ASSOC);
-            if (!$sliders) {
-                return [];
-            }
-
+            // One query, not two. The first used to fetch the sliders' ids for their order
+            // alone, and the second their items; joining home_sliders here gives the same
+            // order in the same round trip — and drops an item whose slider no longer exists,
+            // as iterating the first list did.
             $stmt = $db->query("
                 SELECT
                     si.slider_id,
@@ -116,8 +114,9 @@ class BrandingModel extends Model
                          ELSE si.manual_description
                     END AS description
                 FROM home_slider_items si
+                JOIN home_sliders hs ON hs.id = si.slider_id
                 LEFT JOIN products p ON p.id = si.product_id
-                ORDER BY si.slider_id ASC, si.sort_order ASC, si.id ASC
+                ORDER BY hs.sort_order ASC, hs.id ASC, si.sort_order ASC, si.id ASC
             ");
             $items = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
@@ -135,12 +134,10 @@ class BrandingModel extends Model
                 ];
             }
 
+            // $bySlider was filled in the sliders' own order, so its keys are that order
             $result = [];
-            foreach ($sliders as $s) {
-                $sid = (int)$s['id'];
-                if (!empty($bySlider[$sid])) {
-                    $result[] = ['id' => $sid, 'items' => $bySlider[$sid]];
-                }
+            foreach ($bySlider as $sid => $sliderItems) {
+                $result[] = ['id' => $sid, 'items' => $sliderItems];
             }
             return $result;
         } catch (Exception $e) {

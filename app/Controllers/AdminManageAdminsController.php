@@ -440,12 +440,11 @@ class AdminManageAdminsController extends AdminController
             exit;
         }
 
-        // Orders this admin handled (orderRows) plus revenue totalled over completed orders only
+        // Orders this admin handled (the newest 50, for the table) and the revenue of every
+        // completed one — summed by the database, not from the 50 rows (see
+        // OrderModel::completedTotalForAdmin)
         $orderRows   = OrderModel::getOrdersHandledByAdmin((int)$target['id']);
-        $profitTotal = array_sum(array_map(
-            fn($o) => (float)$o['total_amount'],
-            array_filter($orderRows, fn($o) => $o['status'] === 'completed' && empty($o['was_auto_released']))
-        ));
+        $profitTotal = OrderModel::completedTotalForAdmin((int)$target['id']);
 
         // Further order actions that orderRows does not surface (problem reports, CSV exports)
         $orderAuditRows = array_filter(

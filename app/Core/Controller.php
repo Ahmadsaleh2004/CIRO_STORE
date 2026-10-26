@@ -82,6 +82,22 @@ abstract class Controller
             }
         }
 
+        // The footer's text and social links, from the settings an admin edits.
+        //
+        // footer.php has always printed $footerText, $fbUrl, $igUrl and $snapUrl — and
+        // nothing ever set them, so the links were `#` and the default text showed whatever
+        // the admin saved. A value left empty keeps the footer's own default. Read through
+        // SettingsModel::cached(), so the footer costs no database round trip.
+        if ($__layout === 'store') {
+            $__settings = \App\Models\SettingsModel::cached();
+            $data += array_filter([
+                'footerText' => $__settings['footer_text'] ?? null,
+                'fbUrl'      => $__settings['facebook_url'] ?? null,
+                'igUrl'      => $__settings['instagram_url'] ?? null,
+                'snapUrl'    => $__settings['snapchat_url'] ?? null,
+            ], static fn ($v): bool => is_string($v) && trim($v) !== '');
+        }
+
         // Extract the variables out of $data so the view can print them directly
         extract($data);
 
