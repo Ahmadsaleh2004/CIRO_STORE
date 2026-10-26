@@ -35,6 +35,32 @@ class HomeController extends Controller
         // 1. Fetch every visible product from the model
         $products = ProductModel::findVisible();
 
+        // 1b. Each card shows the variant the products page and the details page show.
+        //
+        // The home page used to read price, discount, stock and image off the product row,
+        // while /products and /product pick a variant with pickDisplayVariant. The two
+        // disagreed in plain sight: the iPhone 16's row carried its Black variant — $1014
+        // less 10%, $912.60, and out of stock — so the home page offered it at $912.60 and
+        // one click later the same product cost $764.15, the in-stock White at 15% off. And
+        // products.stock_quantity is never written by the admin panel (see
+        // ProductModel::findStockByIds), so the "Limited" tag was read from a stale column.
+        //
+        // One query for every product's variants (getVariantsForProducts), not one each.
+        $variantsByProduct = ProductModel::getVariantsForProducts(
+            array_map(static fn (array $p): int => (int) $p['id'], $products)
+        );
+        $visitorGender = getVisitorGender();
+        $products = array_map(static function (array $p) use ($variantsByProduct, $visitorGender): array {
+            $display = pickDisplayVariant($variantsByProduct[(int) $p['id']] ?? [], $visitorGender);
+            if ($display === null) {
+                return $p;
+            }
+            foreach (['price', 'discount_percentage', 'price_after_discount', 'stock_quantity', 'image_path'] as $field) {
+                $p[$field] = $display[$field] ?? $p[$field] ?? null;
+            }
+            return $p;
+        }, $products);
+
         // Guard against an empty or not-yet-connected database so the page still renders
         if (empty($products)) {
             $productsJS = [];
