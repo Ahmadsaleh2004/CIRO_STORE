@@ -374,26 +374,36 @@ class OrderModel extends Model
             ]);
             $orderId = (int)$db->lastInsertId();
 
-            $stmtItem = $db->prepare(
+            // Every line in one INSERT. It used to be one INSERT per line — each a round trip
+            // to the database inside the open transaction, holding the variants' row locks
+            // the whole time. Nothing reads these rows before the commit, so writing them
+            // before the stock is reserved rather than interleaved with it changes nothing:
+            // a refusal below rolls the whole order back either way.
+            $values = [];
+            foreach ($priced as $item) {
+                array_push(
+                    $values,
+                    $orderId,
+                    $item['product_id'],
+                    $item['variant_id'],
+                    $item['color_name'],
+                    $item['qty'],
+                    $item['unit_price']
+                );
+            }
+            $rows = implode(', ', array_fill(0, count($priced), '(?, ?, ?, ?, ?, ?)'));
+            $db->prepare(
                 "INSERT INTO order_items
                     (order_id, product_id, variant_id, color_name_snapshot, quantity, price_at_purchase)
-                 VALUES (?, ?, ?, ?, ?, ?)"
-            );
+                 VALUES {$rows}"
+            )->execute($values);
+
             $stmtStock = $db->prepare(
                 "UPDATE product_variants SET stock_quantity = stock_quantity - ?
                  WHERE id = ? AND stock_quantity >= ?"
             );
 
             foreach ($priced as $item) {
-                $stmtItem->execute([
-                    $orderId,
-                    $item['product_id'],
-                    $item['variant_id'],
-                    $item['color_name'],
-                    $item['qty'],
-                    $item['unit_price'],
-                ]);
-
                 // The `stock_quantity >= ?` condition stays even though the row is locked and
                 // was read above: the lock prevents another request changing it, not a bug in
                 // this method. And the condition is what makes the reservation atomic in
@@ -527,18 +537,35 @@ class OrderModel extends Model
             $stmt->execute([$userId]);
             $orders = $stmt->fetchAll();
 
-            // Fetch the items for each order
-            $stmtItems = $db->prepare(
+            if ($orders === []) {
+                return [];
+            }
+
+            // Every order's items in one query, grouped below. It used to be one query per
+            // order — a customer with fifty orders cost the "My Info" page fifty-one round
+            // trips to the database. The rows within an order come back in the order they
+            // were inserted (oi.id), as they did one order at a time.
+            $orderIds     = array_map(static fn (array $o): int => (int) $o['order_id'], $orders);
+            $placeholders = implode(',', array_fill(0, count($orderIds), '?'));
+            $stmtItems    = $db->prepare(
                 "SELECT oi.*, p.name AS product_name, pv.color_name, pv.image_path
                  FROM order_items oi
                  JOIN products p ON p.id = oi.product_id
                  LEFT JOIN product_variants pv ON pv.id = oi.variant_id
-                 WHERE oi.order_id = ?"
+                 WHERE oi.order_id IN ({$placeholders})
+                 ORDER BY oi.id"
             );
-            foreach ($orders as &$order) {
-                $stmtItems->execute([$order['order_id']]);
-                $order['items'] = $stmtItems->fetchAll();
+            $stmtItems->execute($orderIds);
+
+            $itemsByOrder = [];
+            foreach ($stmtItems->fetchAll() as $item) {
+                $itemsByOrder[(int) $item['order_id']][] = $item;
             }
+
+            foreach ($orders as &$order) {
+                $order['items'] = $itemsByOrder[(int) $order['order_id']] ?? [];
+            }
+            unset($order);
 
             return $orders;
         } catch (Exception $e) {

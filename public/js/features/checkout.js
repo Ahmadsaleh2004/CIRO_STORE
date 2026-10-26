@@ -310,12 +310,10 @@
                 // ⚠️ window.clearCart is not defined in any file — the guard here makes the
                 // call inert. Existing behaviour, moved across unchanged.
                 if (window.clearCart) window.clearCart();
-                Swal.fire({
-                    icon: 'success', title: '✅ Order Placed!',
-                    text: res.message, timer: 2000, showConfirmButton: false
-                }).then(() => {
-                    window.location.href = res.redirect || URLROOT;
-                });
+                // Straight to the confirmation page. A two-second "Order Placed!" dialog used
+                // to stand in front of it, saying what that page says the moment it loads —
+                // and the customer waited two seconds to be told it twice.
+                window.location.href = res.redirect || URLROOT;
             } else {
                 resetPlaceButton();
                 Swal.fire({ icon: 'error', title: 'Error', text: res.message });

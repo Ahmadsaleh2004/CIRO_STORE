@@ -134,6 +134,39 @@ final class OrderPricingTest extends DatabaseTestCase
         $this->assertSame(3, $this->variantStock($variantId));
     }
 
+    /**
+     * The lines are written in one INSERT, so each row must still carry its own line's
+     * product, variant, quantity and price — not a neighbour's — and every stock must move.
+     */
+    public function testEveryLineOfAMultiLineOrderIsWrittenAsItself(): void
+    {
+        $userId    = $this->makeUser();
+        $addressId = $this->makeAddress($userId);
+        [$p1, $v1] = $this->makeProductWithVariant(100.00, 10.00, 5);
+        [$p2, $v2] = $this->makeProductWithVariant(40.00, 0.00, 8);
+
+        $result = $this->place($userId, $addressId, [
+            ['product_id' => $p1, 'variant_id' => $v1, 'qty' => 2, 'shown_price' => 90.00],
+            ['product_id' => $p2, 'variant_id' => $v2, 'qty' => 3, 'shown_price' => 40.00],
+        ]);
+
+        $this->assertSame(OrderModel::PLACE_OK, $result['status']);
+
+        $stmt = $this->pdo->prepare(
+            'SELECT product_id, variant_id, quantity, price_at_purchase
+             FROM order_items WHERE order_id = ? ORDER BY variant_id'
+        );
+        $stmt->execute([$result['order_id']]);
+
+        $this->assertSame([
+            ['product_id' => $p1, 'variant_id' => $v1, 'quantity' => 2, 'price_at_purchase' => '90.00'],
+            ['product_id' => $p2, 'variant_id' => $v2, 'quantity' => 3, 'price_at_purchase' => '40.00'],
+        ], $stmt->fetchAll());
+
+        $this->assertSame(3, $this->variantStock($v1));
+        $this->assertSame(5, $this->variantStock($v2));
+    }
+
     // ════════════════════════════════════════════════════════
     // The hole itself
     // ════════════════════════════════════════════════════════
