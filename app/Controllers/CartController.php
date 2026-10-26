@@ -138,6 +138,11 @@ class CartController extends Controller
 
         $userId = (int) $_SESSION['user_id'];
 
+        // A read-only answer: release the session now. PHP holds a session's lock for the
+        // whole request, and this request is fired on every page load alongside
+        // /notifications/list — so each waited for the other's database work to finish.
+        session_write_close();
+
         $items = CartModel::getForUser($userId);
         if ($items === null) {
             // A failed read, not an empty cart — say so, and send no `items`, so the
@@ -147,7 +152,7 @@ class CartController extends Controller
 
         $this->respond(true, 'OK', [
             'items' => $items,
-            'count' => CartModel::countItems($userId),
+            'count' => CartModel::countOf($items),
         ]);
     }
 
@@ -305,7 +310,7 @@ class CartController extends Controller
 
         $this->respond(true, $message, [
             'items' => $items,
-            'count' => CartModel::countItems($userId),
+            'count' => CartModel::countOf($items),
         ]);
     }
 }

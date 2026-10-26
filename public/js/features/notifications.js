@@ -81,13 +81,38 @@
     }
 
     // Set on a 401 so the polling stops: an expired session does not recover through
-    // retrying, and carrying on means a refused request every thirty seconds, forever — all
-    // of it silent.
+    // retrying, and carrying on means a refused request every minute, forever — all of it
+    // silent.
     let pollTimer = null;
     let sessionExpired = false;
 
+    // ── How often, and when not at all ──────────────────────
+    //
+    // It used to be a fixed setInterval of thirty seconds, in every tab, visible or not and
+    // answered or not. A tab left open in the background kept the free Render instance from
+    // ever sleeping, and during an outage every open tab asked twice a minute for an answer
+    // that was not coming. Now:
+    //   · once a minute — a notification is not a chat message;
+    //   · not at all while the tab is hidden, and at once when it is shown again if a minute
+    //     has passed;
+    //   · after a failure, twice the previous wait, up to ten minutes — or the server's own
+    //     Retry-After when it sends one (the 503 page during an outage does).
+    const POLL_MS        = 60_000;
+    const MAX_BACKOFF_MS = 10 * 60_000;
+    let failures  = 0;
+    let lastFetch = 0;
+
+    function backoffDelay(res) {
+        const retryAfter = res ? Number(res.headers.get('Retry-After')) : NaN;
+        if (Number.isFinite(retryAfter) && retryAfter > 0) return retryAfter * 1000;
+        failures += 1;
+        return Math.min(POLL_MS * 2 ** failures, MAX_BACKOFF_MS);
+    }
+
+    /** Fetches the list, and returns how long to wait before the next one (null: stop). */
     async function fetchNotifications() {
-        if (sessionExpired) return;
+        if (sessionExpired) return null;
+        lastFetch = Date.now();
 
         try {
             const res  = await fetch(window.BASE_URL + '/notifications/list');
@@ -99,25 +124,52 @@
             // user believed they had no notifications while in fact they had been signed out.
             if (res.status === 401) {
                 sessionExpired = true;
-                if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+                if (pollTimer) { clearTimeout(pollTimer); pollTimer = null; }
                 setBadge(0);
                 if (typeof showToast === 'function') {
                     showToast('Your session has expired. Please log in again.', 'warning');
                 }
-                return;
+                return null;
             }
 
+            if (!res.ok) return backoffDelay(res);
+
             const data = await res.json();
-            if (!data.success) return;
+            if (!data.success) return backoffDelay(null);
 
             allNotifs = data.notifications || [];
             setBadge(data.unread_count || 0);
 
             renderSidebar();
+            failures = 0;
+            return POLL_MS;
         } catch (e) {
             console.warn('Notifications fetch error:', e);
+            return backoffDelay(null);
         }
     }
+
+    function schedule(delay) {
+        clearTimeout(pollTimer);
+        pollTimer = null;
+        if (delay === null || sessionExpired || document.hidden) return;
+        pollTimer = setTimeout(poll, delay);
+    }
+
+    async function poll() {
+        schedule(await fetchNotifications());
+    }
+
+    document.addEventListener('visibilitychange', () => {
+        if (document.hidden) {
+            clearTimeout(pollTimer);
+            pollTimer = null;
+            return;
+        }
+        const since = Date.now() - lastFetch;
+        if (since >= POLL_MS) poll();
+        else schedule(POLL_MS - since);
+    });
 
     function renderSidebar() {
         if (!cfg.sidebarList) return;
@@ -354,7 +406,6 @@
     }
     backdropEl.addEventListener('click', () => toggleSidebar(false));
 
-    fetchNotifications();
-    pollTimer = setInterval(fetchNotifications, 30_000);
+    poll();
 
 })();

@@ -296,7 +296,24 @@ final class CartModelTest extends DatabaseTestCase
         CartModel::add($userId, $p2, $v2, 4);
 
         // The badge says "how many units", not "how many colours".
-        $this->assertSame(7, CartModel::countItems($userId));
+        $this->assertSame(7, CartModel::countOf(CartModel::getForUser($userId) ?? []));
+    }
+
+    public function testTheCounterMatchesTheListWhenAProductIsHidden(): void
+    {
+        $userId = $this->makeUser();
+        [$p1, $v1] = $this->makeProduct();
+        [$p2, $v2] = $this->makeProduct();
+
+        CartModel::add($userId, $p1, $v1, 3);
+        CartModel::add($userId, $p2, $v2, 4);
+        $this->pdo->prepare('UPDATE products SET is_visible = 0 WHERE id = ?')->execute([$p2]);
+
+        // The list no longer shows the hidden product, and the badge no longer counts it —
+        // the old counting query summed every row in cart_items and said 7.
+        $items = CartModel::getForUser($userId) ?? [];
+        $this->assertCount(1, $items);
+        $this->assertSame(3, CartModel::countOf($items));
     }
     public function testAVariantFromAnotherProductIsRejected(): void
     {

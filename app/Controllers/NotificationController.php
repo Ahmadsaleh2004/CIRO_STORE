@@ -66,6 +66,12 @@ class NotificationController extends Controller
         $this->requireAuth();
 
         $userId      = (int)$_SESSION['user_id'];
+
+        // Read-only, and polled: release the session lock before the database work, so this
+        // request does not hold up /cart, fired by the same page load, or any other request
+        // from the same visitor. See CartController::index.
+        session_write_close();
+
         $items       = NotificationModel::getList($userId);
         $unreadCount = NotificationModel::countUnread($userId);
 

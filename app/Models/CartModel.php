@@ -313,24 +313,21 @@ class CartModel extends Model
     }
 
     /**
-     * The total number of items in the user's cart — for the counter badge.
+     * The number of items in a cart read by getForUser — for the counter badge.
      *
      * The sum of quantities, not the count of lines: the badge says "how many items",
      * not "how many colours".
+     *
+     * Counted from the lines already read rather than by a query of its own. That query
+     * (countItems, now gone) was a second round trip on every cart response, and it counted
+     * differently: every row in cart_items, while getForUser shows only visible products — so
+     * a product an admin hid stayed in the badge after it had left the cart's list.
+     *
+     * @param list<array{quantity: int}> $items
      */
-    public static function countItems(int $userId): int
+    public static function countOf(array $items): int
     {
-        try {
-            $stmt = self::db()->prepare(
-                'SELECT COALESCE(SUM(quantity), 0) FROM cart_items WHERE user_id = ?'
-            );
-            $stmt->execute([$userId]);
-
-            return (int) $stmt->fetchColumn();
-        } catch (Exception $e) {
-            error_log('CartModel::countItems Error: ' . $e->getMessage());
-            return 0;
-        }
+        return array_sum(array_map(static fn (array $item): int => (int) $item['quantity'], $items));
     }
 
     /**
