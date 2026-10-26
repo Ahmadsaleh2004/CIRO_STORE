@@ -88,6 +88,11 @@ ENV COMPOSER_ALLOW_SUPERUSER=1
 # the same case into a 503 the visitor can read. It cannot live in the application because
 # it is PHP_INI_SYSTEM — ini_set() on it is silently ignored.
 #
+# opcache.validate_timestamps = 0: OPcache is already loaded and on in this image (measured:
+# opcache.enable=1), but it still checks every included file's timestamp for a change. Here
+# the code is baked into the image and never changes while it runs — a new commit is a new
+# image — so the check finds nothing, ever. Not for XAMPP: there an edit must show at once.
+#
 # ⚠️ And this file concerns the Docker image alone. Anyone running the project on XAMPP
 # locally adds the same lines to php.ini by hand — otherwise they alone see `*args omitted*`
 # in their reports, and they alone keep the day-long database timeout.
@@ -100,6 +105,7 @@ RUN { \
       echo 'post_max_size = 10M'; \
       echo 'zend.exception_ignore_args = 0'; \
       echo 'mysqlnd.net_read_timeout = 30'; \
+      echo 'opcache.validate_timestamps = 0'; \
     } > /usr/local/etc/php/conf.d/cairo-store.ini
 
 # ── The web root is public/ alone ────────────────────────────

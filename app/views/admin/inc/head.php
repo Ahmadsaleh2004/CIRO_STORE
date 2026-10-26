@@ -6,6 +6,7 @@
     <title><?= htmlspecialchars($pageTitle ?? 'Admin') ?> | Cairo Store Admin</title>
     <meta name="robots" content="noindex,nofollow">
 <?= themeBootScript() ?>
+<link rel="icon" href="<?= URLROOT ?>/favicon.svg" type="image/svg+xml">
 <?php // SweetAlert2's stylesheet arrives with its script on the first dialog — see js/core/ui.js ?>
 <?= vendorCss('bootstrap-css') ?>
     <?php /*

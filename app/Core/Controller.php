@@ -62,6 +62,24 @@ abstract class Controller
         // session name.
         if ($__layout === 'store') {
             touchUserActivity();
+
+            // A store page for somebody signed in to nothing may be kept by the browser.
+            //
+            // PHP's session sends `Cache-Control: no-store` with every page, and no-store is
+            // exactly what keeps a page out of the back/forward cache — so "Back" reloaded
+            // the previous page from the server, every time, for every visitor. For a guest
+            // there is nothing private on the page: `private, no-cache` lets the browser
+            // restore it instantly on Back, while any ordinary visit still asks the server.
+            //
+            // A signed-in customer, or an admin browsing the store (the store-mode flag
+            // navbar.php reads), keeps no-store: their pages carry their name, their cart
+            // and their orders, and must not survive a sign-out on a shared computer through
+            // the Back button.
+            if (!headers_sent() && !isUser() && empty($_SESSION['admin_in_store_mode'])) {
+                header('Cache-Control: private, no-cache');
+                header_remove('Pragma');
+                header_remove('Expires');
+            }
         }
 
         // Extract the variables out of $data so the view can print them directly

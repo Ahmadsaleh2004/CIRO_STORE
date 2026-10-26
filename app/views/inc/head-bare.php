@@ -48,6 +48,7 @@ $bareSwal      = $bareSwal      ?? false;
     <meta name="robots" content="noindex, nofollow">
 
     <title><?= htmlspecialchars($bareTitle ?? SITENAME) ?></title>
+    <link rel="icon" href="<?= URLROOT ?>/favicon.svg" type="image/svg+xml">
 <?php if ($bareThemeBoot): ?>
 <?= themeBootScript() ?>
 <?php endif; ?>

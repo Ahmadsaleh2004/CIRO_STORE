@@ -36,6 +36,7 @@ Setting the theme before the first paint — it prevents the white flash and let
          Bootstrap's components read dark mode. See assets_helper.php.
 */ ?>
 <?= themeBootScript() ?>
+    <link rel="icon" href="<?= URLROOT ?>/favicon.svg" type="image/svg+xml">
     <?php /*
 Bootstrap, from our own origin once built — see VENDOR_ASSETS in assets_helper.php.
          SweetAlert2's stylesheet is not here: js/core/ui.js inserts it straight after this

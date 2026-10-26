@@ -6,8 +6,12 @@
 function fixImagePath(?string $path): string
 {
     // 1. An empty path
+    // It used to be /img/no-image.png, a file that never existed: the request 404'd and the
+    // card was rescued only afterwards by initImageFallbacks in js/core/ui.js. This file is
+    // that same placeholder (the same grey box and words), so nothing on screen changes —
+    // only the failed request is gone.
     if (empty(trim((string)$path))) {
-        return URLROOT . '/img/no-image.png';
+        return URLROOT . '/images/no-image.svg';
     }
 
     $path = trim($path);

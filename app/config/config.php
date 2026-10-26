@@ -78,7 +78,12 @@ initMonitoring();
 // repository does not own, so this stays the one place the application can
 // guarantee for itself.
 header_remove('X-Powered-By');
-if (is_dir(ROOTPATH . '/storage')) {
+// The file outside production only. In the Docker image php.ini already sends errors to
+// /dev/stderr, which is what Render shows in its logs — and this line used to override it
+// whenever storage/ existed, which in the image it always does. So every production error,
+// and every structured line App\Core\Log writes, went to a file inside the container: read
+// by nobody, and erased by the next deploy.
+if (APP_ENV !== 'production' && is_dir(ROOTPATH . '/storage')) {
     ini_set('error_log', ROOTPATH . '/storage/php-error.log');
 }
 

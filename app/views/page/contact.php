@@ -91,4 +91,5 @@ $showLoginAlert = !$userLoggedIn;
 </main>
 
 <?= pageData(['__userLoggedIn' => (bool) $userLoggedIn]) ?>
-<script src="<?= URLROOT ?>/js/features/contact.js" defer></script>
+<?php // Through jsTag for its ?v= fingerprint — a bare tag was the one script the year-long cache rule could not reach ?>
+<?= jsTag('js/features/contact.js') ?>

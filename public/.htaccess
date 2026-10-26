@@ -5,6 +5,13 @@
 # ── Route everything that is not a file or a directory to the router ──
 <IfModule mod_rewrite.c>
     RewriteEngine On
+
+    # Browsers ask for /favicon.ico on their own. There was none, so the request fell through
+    # to the router and the whole application ran to answer it with a 404 — 0.4 s of PHP on
+    # most visits. The pages name favicon.svg; this serves the same file to the ones that ask
+    # by the old name.
+    RewriteRule ^favicon\.ico$ favicon.svg [L]
+
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteCond %{REQUEST_FILENAME} !-d
     RewriteRule ^ index.php [QSA,L]
@@ -23,6 +30,30 @@
     <FilesMatch "\.[0-9a-f]{12}\.(css|js)$">
         Header set Cache-Control "public, max-age=31536000, immutable"
     </FilesMatch>
+
+    # Images: a month. Uploaded product and slider images get a new, unique file name
+    # (product_<time>_<random>.jpg), so a replaced image is a new URL and never a stale one.
+    # Without a Cache-Control the browser asked about every image on every visit — or, worse,
+    # kept it for however long its own heuristic decided.
+    <FilesMatch "\.(?:jpe?g|png|gif|webp|avif|svg|ico)$">
+        Header set Cache-Control "public, max-age=2592000"
+    </FilesMatch>
+
+    # The same year-long rule for the files assetStamp() fingerprints in the query string —
+    # a page's own stylesheet (pageCss), a page script (jsTag), the icon sprite:
+    # `?v=<10 hex>` is the first ten characters of the file's sha256, so a change in content
+    # is a change in URL, exactly as with the names in dist/. Checked against the query
+    # string alone: the same file requested without ?v= keeps the ordinary rules.
+    # <If> is merged after <FilesMatch>, so this wins over the month given to images above.
+    <If "%{QUERY_STRING} =~ /^v=[0-9a-f]{10}$/">
+        Header set Cache-Control "public, max-age=31536000, immutable"
+    </If>
+
+    # A compressed response gets its ETag suffixed with "-gzip" by mod_deflate, and the
+    # browser sends that suffixed value back in If-None-Match — which then never matches the
+    # file's own ETag, so the server answered 200 with the whole file every time instead of
+    # a 304. Stripping the suffix from the request lets the comparison succeed.
+    RequestHeader edit "If-None-Match" "^\"(.*)-gzip\"$" "\"$1\""
 </IfModule>
 
 # ── Security headers ─────────────────────────────────────────
