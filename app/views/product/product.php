@@ -107,7 +107,8 @@ $pageDescription = 'Browse all products at Cairo Store.';
                     <div class="form-check">
                         <input class="form-check-input catalog-cat" type="checkbox"
                                value="<?= htmlspecialchars($catValue) ?>"
-                               id="catalogCat_<?= htmlspecialchars($catValue) ?>">
+                               id="catalogCat_<?= htmlspecialchars($catValue) ?>"
+                               <?= in_array($catValue, $selectedCats ?? [], true) ? 'checked' : '' ?>>
                         <label class="form-check-label small" for="catalogCat_<?= htmlspecialchars($catValue) ?>">
                             <?= icon($catIcon) ?> <?= htmlspecialchars(ucfirst($cat['name'])) ?>
                         </label>

@@ -26,13 +26,18 @@ class ProductModel extends Model
     }
 
     /**
-     * The count of all visible products (for pagination).
+     * The count of all visible products (for pagination), optionally of the given categories.
+     *
+     * @param list<string> $categoryNames See categoryFilter
      */
-    public static function countVisible(): int
+    public static function countVisible(array $categoryNames = []): int
     {
         try {
-            $db = self::db();
-            $stmt = $db->query("SELECT COUNT(*) FROM products WHERE is_visible = 1 OR is_visible IS NULL");
+            [$catSql, $catParams] = self::categoryFilter($categoryNames);
+            $stmt = self::db()->prepare(
+                "SELECT COUNT(*) FROM products p WHERE (p.is_visible = 1 OR p.is_visible IS NULL){$catSql}"
+            );
+            $stmt->execute($catParams);
             return (int)$stmt->fetchColumn();
         } catch (Exception $e) {
             error_log("ProductModel::countVisible Error: " . $e->getMessage());
@@ -48,30 +53,64 @@ class ProductModel extends Model
      * rows and total). The name suggests otherwise — and the comment here was first
      * written by analogy with them, so it was false until a runtime audit caught it.
      *
+     * @param  list<string> $categoryNames See categoryFilter
      * @return list<array<string, mixed>>
      */
-    public static function findVisiblePaginated(int $limit, int $offset): array
+    public static function findVisiblePaginated(int $limit, int $offset, array $categoryNames = []): array
     {
         try {
-            $db = self::db();
-            $stmt = $db->prepare("
+            [$catSql, $catParams] = self::categoryFilter($categoryNames);
+            $stmt = self::db()->prepare("
                 SELECT p.*, GROUP_CONCAT(DISTINCT c.name ORDER BY c.name) AS categories
                 FROM products p
                 LEFT JOIN product_category_pivot pcp ON pcp.product_id = p.id
                 LEFT JOIN categories c ON c.id = pcp.category_id
-                WHERE (p.is_visible = 1 OR p.is_visible IS NULL)
+                WHERE (p.is_visible = 1 OR p.is_visible IS NULL){$catSql}
                 GROUP BY p.id
                 ORDER BY p.date_added DESC, p.id DESC
                 LIMIT ? OFFSET ?
             ");
-            $stmt->bindValue(1, $limit, PDO::PARAM_INT);
-            $stmt->bindValue(2, $offset, PDO::PARAM_INT);
-            $stmt->execute();
+            self::executeTyped($stmt, array_merge($catParams, [$limit, $offset]));
             return $stmt->fetchAll();
         } catch (Exception $e) {
             error_log("ProductModel::findVisiblePaginated Error: " . $e->getMessage());
             return [];
         }
+    }
+
+    /**
+     * The WHERE fragment that keeps products in any of the given categories (by name,
+     * case-insensitively), and its parameters. Empty when no category is asked for.
+     *
+     * /products?cat=… used to be filtered in the browser, over the nine cards of the page
+     * being shown — so "Phone" from the home page listed the phones that happened to be on
+     * page 1 and dropped the rest. It is filtered here, before the LIMIT, so the count and
+     * the pages are of the category itself.
+     *
+     * An EXISTS rather than a filter on the join above: that join also feeds the
+     * GROUP_CONCAT of every category a card shows, which must stay complete.
+     *
+     * @param  list<string> $categoryNames
+     * @return array{0: string, 1: list<string>}
+     */
+    private static function categoryFilter(array $categoryNames): array
+    {
+        $names = array_values(array_unique(array_map(
+            static fn (string $n): string => strtolower(trim($n)),
+            $categoryNames
+        )));
+        if ($names === []) {
+            return ['', []];
+        }
+
+        $placeholders = implode(',', array_fill(0, count($names), '?'));
+
+        return [
+            " AND EXISTS (SELECT 1 FROM product_category_pivot fp
+                          JOIN categories fc ON fc.id = fp.category_id
+                          WHERE fp.product_id = p.id AND LOWER(fc.name) IN ({$placeholders}))",
+            $names,
+        ];
     }
 
     /**
@@ -112,6 +151,45 @@ class ProductModel extends Model
     }
 
     /**
+     * The variants of several products in one query, keyed by product id.
+     *
+     * /products used to call getVariants once per card — nine queries on a full page, each
+     * a round trip from Render to the database, run one after another before the first byte
+     * of the page was sent. This is the same rows in one round trip, in the order getVariants
+     * returns them (by id), so pickDisplayVariant chooses exactly what it chose before.
+     *
+     * A product with no variants has no key; the caller treats that as getVariants' [].
+     *
+     * @param  list<int> $productIds
+     * @return array<int, list<array<string, mixed>>>
+     */
+    public static function getVariantsForProducts(array $productIds): array
+    {
+        $ids = array_values(array_unique(array_filter(array_map('intval', $productIds), fn (int $id): bool => $id > 0)));
+        if ($ids === []) {
+            return [];
+        }
+
+        try {
+            $placeholders = implode(',', array_fill(0, count($ids), '?'));
+            $stmt = self::db()->prepare(
+                "SELECT * FROM product_variants WHERE product_id IN ({$placeholders}) ORDER BY id"
+            );
+            $stmt->execute($ids);
+
+            $byProduct = [];
+            foreach ($stmt->fetchAll() as $row) {
+                $byProduct[(int) $row['product_id']][] = $row;
+            }
+
+            return $byProduct;
+        } catch (Exception $e) {
+            error_log('ProductModel::getVariantsForProducts Error: ' . $e->getMessage());
+            return [];
+        }
+    }
+
+    /**
      * Fetch every review for a given product, along with the reviewers' names.
      *
      * @return list<array<string, mixed>>
@@ -136,26 +214,11 @@ class ProductModel extends Model
     }
 
     /**
-     * Fetch one user's review of a given product.
-     *
-     * @return array<string, mixed>|null
-     */
-    public static function getUserReview(int $productId, int $userId): ?array
-    {
-        try {
-            $db = self::db();
-            $stmt = $db->prepare("SELECT * FROM product_reviews WHERE product_id = ? AND user_id = ? LIMIT 1");
-            $stmt->execute([$productId, $userId]);
-            $result = $stmt->fetch();
-            return $result ?: null;
-        } catch (Exception $e) {
-            error_log("ProductModel::getUserReview Error: " . $e->getMessage());
-            return null;
-        }
-    }
-
-    /**
      * Fetch related products (by category, or by manufacturer).
+     *
+     * Visible products only. Both queries used to leave is_visible out, so a product an
+     * admin had hidden — withdrawn, or not ready — still appeared under "You May Also
+     * Like" and linked to a page the store no longer shows anywhere else.
      *
      * @return list<array<string, mixed>>
      */
@@ -171,7 +234,8 @@ class ProductModel extends Model
                 JOIN product_category_pivot pcp ON pcp.product_id = p.id
                 WHERE pcp.category_id IN (
                     SELECT category_id FROM product_category_pivot WHERE product_id = ?
-                ) AND p.id != ? 
+                ) AND p.id != ?
+                  AND (p.is_visible = 1 OR p.is_visible IS NULL)
                 LIMIT 4
             ");
             $stmt->execute([$productId, $productId]);
@@ -179,7 +243,7 @@ class ProductModel extends Model
 
             // 2. If none share a category, look for products from the same manufacturer
             if (empty($related) && !empty($manufacturer)) {
-                $stmt2 = $db->prepare("SELECT * FROM products WHERE manufacturer = ? AND id != ? LIMIT 4");
+                $stmt2 = $db->prepare("SELECT * FROM products WHERE manufacturer = ? AND id != ? AND (is_visible = 1 OR is_visible IS NULL) LIMIT 4");
                 $stmt2->execute([$manufacturer, $productId]);
                 $related = $stmt2->fetchAll();
             }

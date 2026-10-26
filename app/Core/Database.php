@@ -44,7 +44,21 @@ class Database
         $options = [
             PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
             PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-            PDO::ATTR_EMULATE_PREPARES   => false,
+            // Emulated: PDO writes the escaped values into the SQL and sends one query.
+            // With native prepares every prepare()+execute() was two round trips — PREPARE,
+            // then EXECUTE — and the database is a network hop away from Render, ~115–150 ms
+            // each, paid by every query on every page. /products alone ran 22 queries.
+            //
+            // What it costs to have this safely, checked before switching:
+            //   · escaping is done by the driver against the connection's charset, which the
+            //     DSN sets (utf8mb4) — the setting that makes emulation safe;
+            //   · results keep their native int/float types: PHP 8.1 made emulated prepares
+            //     return them as native prepares do, and the floor is 8.2;
+            //   · `LIMIT ?` breaks, because execute([...]) binds every value as a string and
+            //     `LIMIT '9'` is a syntax error. The twelve LIMIT/OFFSET queries bind theirs
+            //     as integers — Model::executeTyped, or bindValue(…, PDO::PARAM_INT).
+            //     tests/bootstrap.php connects the same way so the suite runs this mode.
+            PDO::ATTR_EMULATE_PREPARES   => true,
 
             // Without a connect timeout the request hangs for as long as PHP lets it.
             // That is not a theoretical risk — it happened here: a MariaDB whose startup

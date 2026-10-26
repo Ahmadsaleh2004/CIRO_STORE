@@ -27,14 +27,24 @@ class ProductController extends Controller
     )]
     public function index(): void
     {
+        // ?cat=phone or ?cat=phone,gaming — the home page's category buttons and the
+        // category boxes in the filter panel both send it. Only names that exist are kept,
+        // so an unknown one filters nothing rather than emptying the page.
+        $categories   = CategoryModel::getAllOrdered();
+        $knownCats    = array_map(static fn (array $c): string => strtolower((string) $c['name']), $categories);
+        $selectedCats = array_values(array_intersect(
+            array_map(static fn (string $c): string => strtolower(trim($c)), explode(',', (string) ($_GET['cat'] ?? ''))),
+            $knownCats
+        ));
+
         $perPage     = 9;
         $currentPage = max(1, (int)($_GET['page'] ?? 1));
-        $totalCount  = ProductModel::countVisible();
+        $totalCount  = ProductModel::countVisible($selectedCats);
         $totalPages  = max(1, (int)ceil($totalCount / $perPage));
         $currentPage = min($currentPage, $totalPages);
         $offset      = ($currentPage - 1) * $perPage;
 
-        $rows = ProductModel::findVisiblePaginated($perPage, $offset);
+        $rows = ProductModel::findVisiblePaginated($perPage, $offset, $selectedCats);
         $visitorGender = getVisitorGender();
 
         // Fetch notified product IDs for current user (if logged in)
@@ -42,8 +52,11 @@ class ProductController extends Controller
             ? StockNotificationModel::productIdsForUser(getCurrentUserId())
             : [];
 
-        $products = array_map(function (array $p) use ($visitorGender) {
-            $variants = ProductModel::getVariants((int)$p['id']);
+        // Every card's variants in one query rather than one query per card
+        $variantsByProduct = ProductModel::getVariantsForProducts(array_map(fn (array $p): int => (int) $p['id'], $rows));
+
+        $products = array_map(function (array $p) use ($visitorGender, $variantsByProduct) {
+            $variants = $variantsByProduct[(int)$p['id']] ?? [];
             $display  = !empty($variants)
                 ? pickDisplayVariant($variants, $visitorGender)
                 : null;
@@ -69,7 +82,8 @@ class ProductController extends Controller
             'desc'         => 'Browse all products at Cairo Store.',
             'activePage'   => 'products',
             'products'     => $products,
-            'categories'   => CategoryModel::getAllOrdered(),
+            'categories'   => $categories,
+            'selectedCats' => $selectedCats,
             'totalPages'   => $totalPages,
             'currentPage'  => $currentPage,
             'csrf'         => $csrf,
@@ -180,9 +194,17 @@ class ProductController extends Controller
         $reviews   = ProductModel::getReviews($pid);
         $avgRating = count($reviews) ? round(array_sum(array_column($reviews, 'rating')) / count($reviews), 1) : 0;
 
+        // The visitor's own review is among the reviews just read — every row carries its
+        // user_id — so it is picked from them rather than fetched again.
         $myReview = null;
         if (isUser()) {
-            $myReview = ProductModel::getUserReview($pid, getCurrentUserId());
+            $me = getCurrentUserId();
+            foreach ($reviews as $review) {
+                if ((int) $review['user_id'] === $me) {
+                    $myReview = $review;
+                    break;
+                }
+            }
         }
 
         // Related products
@@ -197,8 +219,16 @@ class ProductController extends Controller
         $imgSrc     = fixImagePath($selectedVariant['image_path'] ?? $p['image_path'] ?? '');
         $csrf       = generateCsrfToken();
 
-        // Check if current user already requested notification for this product
-        $alreadyRequested = isUser()
+        // Check if current user already requested notification for this product.
+        //
+        // Asked only when something is out of stock: the answer shapes the "Notify Me"
+        // block, which shows for the displayed variant at zero stock — or, through
+        // product-details.js, when the visitor switches to a colour that has none. With
+        // every variant in stock that block can never appear, and the query was a round
+        // trip for nothing.
+        $anyOutOfStock = $stock <= 0
+            || in_array(true, array_map(static fn (array $v): bool => (int) ($v['stock_quantity'] ?? 0) <= 0, $variants), true);
+        $alreadyRequested = isUser() && $anyOutOfStock
             && StockNotificationModel::exists($pid, getCurrentUserId());
 
         $pageTitle       = $p['name'] ?? 'Product Details';

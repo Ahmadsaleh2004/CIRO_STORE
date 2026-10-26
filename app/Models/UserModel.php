@@ -357,7 +357,7 @@ class UserModel extends Model
                 ORDER BY t.created_at DESC
                 LIMIT ? OFFSET ?
             ");
-            $rowsStmt->execute(array_merge($params, [$perPage, $offset]));
+            self::executeTyped($rowsStmt, array_merge($params, [$perPage, $offset]));
 
             return ['rows' => $rowsStmt->fetchAll(), 'total' => $total];
         } catch (Exception $e) {

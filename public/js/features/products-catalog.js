@@ -417,16 +417,32 @@ document.addEventListener('DOMContentLoaded', () => {
         if (typeof window.initScrollReveal==='function') window.initScrollReveal();
     }
 
+    // The categories are filtered by the server (ProductController::index, ?cat=), not
+    // here: the page holds nine cards, and filtering them in the browser listed only the
+    // matches that happened to be on the current page. So a category change reloads the
+    // list for the new set, from its first page. The other filters still act on the cards
+    // already shown.
+    const goToCategories = cats => {
+        const url = new URL(window.location.href);
+        url.searchParams.delete('page');
+        if (cats.length) url.searchParams.set('cat', cats.join(','));
+        else url.searchParams.delete('cat');
+        window.location.href = url.toString();
+    };
+
     searchEl?.addEventListener('input',  applyFilters);
     slider?.addEventListener('input',    applyFilters);
     // One listener on the panel rather than one per input: the categories are
     // rendered from the database, so their number is not known here.
-    panel?.addEventListener('change',    applyFilters);
+    panel?.addEventListener('change', e => {
+        if (e.target.classList.contains('catalog-cat')) { goToCategories(checkedCats()); return; }
+        applyFilters();
+    });
     resetBtn?.addEventListener('click', () => {
         if (searchEl) searchEl.value = '';
         panel?.querySelectorAll('input[type="radio"][value=""]').forEach(r => { r.checked = true; });
-        panel?.querySelectorAll('.catalog-cat').forEach(c => { c.checked = false; });
         if (slider) { slider.value = slider.max; }
+        if (new URLSearchParams(window.location.search).has('cat')) { goToCategories([]); return; }
         applyFilters();
     });
 
@@ -458,13 +474,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ── URL ?cat= filter ─────────────────────────────────────
-    // The home page's category buttons link here with ?cat=<name>. It used to
-    // select an <option value="cat-…">; the same link now ticks a checkbox, so
-    // the visitor can add a second category to the one they arrived on instead
-    // of replacing it.
-    const cat = new URLSearchParams(window.location.search).get('cat');
-    if (cat && panel) {
-        const box = panel.querySelector(`.catalog-cat[value="${CSS.escape(cat.toLowerCase())}"]`);
-        if (box) { box.checked = true; applyFilters(); }
-    }
+    // The home page's category buttons link here with ?cat=<name>. The server
+    // has already filtered the list and ticked the matching boxes (product.php);
+    // this only brings the filter badge's count in line with them.
+    if (checkedCats().length) applyFilters();
 });

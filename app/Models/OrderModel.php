@@ -797,7 +797,7 @@ class OrderModel extends Model
                    o.created_at DESC
                  LIMIT ? OFFSET ?"
             );
-            $stmt->execute(array_merge($params, [(int)$perPage, (int)$offset]));
+            self::executeTyped($stmt, array_merge($params, [(int)$perPage, (int)$offset]));
 
             return [
                 'orders'     => $stmt->fetchAll(),
@@ -1247,7 +1247,7 @@ class OrderModel extends Model
                  ORDER BY created_at DESC
                  LIMIT ?"
             );
-            $stmt->execute([$adminId, $adminId, $adminId, (int)$limit]);
+            self::executeTyped($stmt, [$adminId, $adminId, $adminId, (int)$limit]);
             return $stmt->fetchAll();
         } catch (Exception $e) {
             error_log("OrderModel::getOrdersHandledByAdmin Error: " . $e->getMessage());
