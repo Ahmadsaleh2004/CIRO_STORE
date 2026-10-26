@@ -132,8 +132,17 @@ class Database
             return [];
         }
 
+        // Two failures, two messages. "Not a readable file" used to cover both, and the first
+        // one seen on Render was a permissions problem, not a missing file — the message gave
+        // no way to tell them apart from the log alone.
+        if (!is_file($caPath)) {
+            throw new DatabaseUnavailable("DB_SSL_CA is set to {$caPath}, and there is no file there");
+        }
         if (!is_readable($caPath)) {
-            throw new DatabaseUnavailable("DB_SSL_CA is set to {$caPath}, which is not a readable file");
+            $user = function_exists('posix_geteuid') && function_exists('posix_getpwuid')
+                ? (posix_getpwuid(posix_geteuid())['name'] ?? 'this process')
+                : 'this process';
+            throw new DatabaseUnavailable("DB_SSL_CA is set to {$caPath}, which exists but {$user} cannot read it");
         }
 
         return [

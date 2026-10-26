@@ -80,7 +80,9 @@ final class DatabaseConnectionTest extends TestCase
         // A misconfigured secret file must say what is wrong, not fail later inside the
         // driver as an unexplained TLS handshake error.
         $this->expectException(DatabaseUnavailable::class);
-        $this->expectExceptionMessage('/no/such/ca.pem');
+        // Missing, as distinct from present-but-unreadable — the case Render's secret files
+        // actually produced, which the old single message could not tell apart.
+        $this->expectExceptionMessage('DB_SSL_CA is set to /no/such/ca.pem, and there is no file there');
 
         Database::sslOptions('/no/such/ca.pem');
     }

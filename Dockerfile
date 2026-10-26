@@ -36,6 +36,18 @@ FROM php:8.5.12-apache
 RUN docker-php-ext-install pdo_mysql \
  && a2enmod rewrite headers
 
+# ── Reading Render's secret files ────────────────────────────
+#
+# The database's CA certificate is a Render Secret File, mounted at /etc/secrets/ca.pem. And
+# Apache's workers run as www-data, which could not read it: the first deploy with
+# DB_SSL_CA set answered every request with a 503 and logged
+#     DB_SSL_CA is set to /etc/secrets/ca.pem, which is not a readable file
+# Render documents the cause and the cure for Docker services: secret files are readable by
+# group 1000, so the application's user joins that group (render.com/docs/docker-secrets).
+# The group may not exist in the base image, so it is created when it does not.
+RUN (getent group 1000 > /dev/null || groupadd --gid 1000 render-secrets) \
+ && usermod --append --groups 1000 www-data
+
 # ── unzip and curl ───────────────────────────────────────────
 #
 # ⚠️ `unzip` is not a convenience — without it this image cannot be built at all, and it
