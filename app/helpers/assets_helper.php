@@ -326,7 +326,8 @@ function icon(string $name, string $class = ''): string
         throw new \InvalidArgumentException("Malformed icon name [{$name}].");
     }
 
-    return '<svg class="icon' . ($class !== '' ? ' ' . htmlspecialchars($class, ENT_QUOTES) : '') . '"'
+    // icon-<name> is what components/icons.css colours each icon by, the way its emoji was
+    return '<svg class="icon icon-' . $name . ($class !== '' ? ' ' . htmlspecialchars($class, ENT_QUOTES) : '') . '"'
         . ' aria-hidden="true" focusable="false">'
         . '<use href="' . htmlspecialchars(iconSprite(), ENT_QUOTES) . '#i-' . $name . '"></use>'
         . '</svg>';

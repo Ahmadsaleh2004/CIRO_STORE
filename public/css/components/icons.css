@@ -2,9 +2,9 @@
    components/icons.css — the interface icons from public/images/icons.svg.
    ==================================================
    icon() in assets_helper.php and window.icon in js/core/utils.js print
-   <svg class="icon"><use href="icons.svg#i-name"></use></svg>. Sized in em so an icon
-   follows the text it sits beside, as the emoji it replaced did — a heading gets a larger
-   icon than a badge without either saying so. */
+   <svg class="icon icon-<name>"><use href="icons.svg#i-name"></use></svg>. Sized in em so
+   an icon follows the text it sits beside, as the emoji it replaced did — a heading gets a
+   larger icon than a badge without either saying so. */
 
 .icon {
     display: inline-block;
@@ -15,14 +15,91 @@
     flex-shrink: 0;
 }
 
-/* The filled heart is red in either theme: it marks "saved", which is what ❤️ said. */
-.icon-love {
-    color: #e0245e;
-}
-
 /* The large single icon on the empty states, the error pages and the confirmation. */
 .icon-hero {
     width: 1em;
     height: 1em;
     vertical-align: middle;
 }
+
+/* ── Colour, the way each emoji had it ───────────────
+   The store's icons were emoji, and emoji carry their own colours: a yellow moon, a gold
+   star, a red pin. The sprite replaced them for speed (see build/build-icons.mjs), and the
+   colours are kept here by name, so the store looks as it did with none of the font cost.
+   An icon not listed takes the colour of the text beside it — the outline heart (🤍) and
+   the eye in a password field, which were white and grey as emoji, do exactly that.
+
+   Mid-tone colours, chosen to read on the dark navbar, on light cards and in dark mode
+   alike. */
+
+/* reds and pinks */
+.icon-heart-fill,
+.icon-love,
+.icon-heartbreak { color: #e0245e; }
+
+.icon-geo-alt,
+.icon-calendar,
+.icon-bullseye,
+.icon-headphones { color: #ef4444; }
+
+.icon-shop,
+.icon-bag,
+.icon-envelope-heart { color: #ec4899; }
+
+/* oranges and golds */
+.icon-house,
+.icon-fire { color: #f97316; }
+
+.icon-sun,
+.icon-bell,
+.icon-pencil,
+.icon-tag,
+.icon-file-text { color: #f59e0b; }
+
+.icon-moon,
+.icon-stars,
+.icon-star-fill,
+.icon-lightning-fill { color: #facc15; }
+
+.icon-award,
+.icon-shield-lock,
+.icon-lock,
+.icon-key,
+.icon-currency-dollar,
+.icon-credit-card { color: #eab308; }
+
+.icon-box-seam,
+.icon-clipboard,
+.icon-box-arrow-right { color: #b45309; }
+
+/* greens */
+.icon-check-circle,
+.icon-cash { color: #22c55e; }
+
+.icon-telephone,
+.icon-plus-lg { color: #10b981; }
+
+/* blues and purples */
+.icon-chat-dots,
+.icon-sliders,
+.icon-sort-alpha-down,
+.icon-truck,
+.icon-mailbox { color: #3b82f6; }
+
+.icon-laptop,
+.icon-globe,
+.icon-clock,
+.icon-compass { color: #0ea5e9; }
+
+.icon-phone { color: #6366f1; }
+
+.icon-person,
+.icon-people,
+.icon-controller { color: #8b5cf6; }
+
+/* greys */
+.icon-cart,
+.icon-trash,
+.icon-floppy,
+.icon-envelope,
+.icon-tools { color: #94a3b8; }

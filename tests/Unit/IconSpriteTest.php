@@ -101,7 +101,7 @@ final class IconSpriteTest extends TestCase
     {
         $svg = icon('cart', 'icon-love');
 
-        $this->assertStringContainsString('class="icon icon-love"', $svg);
+        $this->assertStringContainsString('class="icon icon-cart icon-love"', $svg);
         $this->assertStringContainsString('aria-hidden="true"', $svg);
         $this->assertMatchesRegularExpression('#<use href="[^"]*/images/icons\.svg(\?v=[0-9a-f]{10})?\#i-cart">#', $svg);
     }

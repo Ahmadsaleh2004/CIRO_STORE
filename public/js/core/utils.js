@@ -28,7 +28,7 @@ window.escapeHtml = escHtml; // For complete backward compatibility
 function icon(name, cls = '') {
     if (!/^[a-z0-9-]+$/.test(name)) return '';
     const sprite = escHtml(window.__iconSprite || '');
-    return `<svg class="icon${cls ? ' ' + escHtml(cls) : ''}" aria-hidden="true" focusable="false">`
+    return `<svg class="icon icon-${name}${cls ? ' ' + escHtml(cls) : ''}" aria-hidden="true" focusable="false">`
         + `<use href="${sprite}#i-${name}"></use></svg>`;
 }
 window.icon = icon;
