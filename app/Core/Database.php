@@ -44,6 +44,9 @@ class Database
         $options = [
             PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
             PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+            // Every execute() binds integers as integers — see TypedStatement for the
+            // MySQL fault that made this necessary once prepares were emulated.
+            PDO::ATTR_STATEMENT_CLASS    => [TypedStatement::class],
             // Emulated: PDO writes the escaped values into the SQL and sends one query.
             // With native prepares every prepare()+execute() was two round trips — PREPARE,
             // then EXECUTE — and the database is a network hop away from Render, ~115–150 ms
@@ -54,10 +57,11 @@ class Database
             //     DSN sets (utf8mb4) — the setting that makes emulation safe;
             //   · results keep their native int/float types: PHP 8.1 made emulated prepares
             //     return them as native prepares do, and the floor is 8.2;
-            //   · `LIMIT ?` breaks, because execute([...]) binds every value as a string and
-            //     `LIMIT '9'` is a syntax error. The twelve LIMIT/OFFSET queries bind theirs
-            //     as integers — Model::executeTyped, or bindValue(…, PDO::PARAM_INT).
-            //     tests/bootstrap.php connects the same way so the suite runs this mode.
+            //   · PDO's own execute([...]) binds every value as a string, and that breaks
+            //     `LIMIT '9'` (a syntax error) and LEAST() (compared as text on MySQL, where
+            //     '10' < '3'). TypedStatement, set just above, binds integers as integers on
+            //     every statement. tests/bootstrap.php connects the same way, so the suite
+            //     runs this mode.
             PDO::ATTR_EMULATE_PREPARES   => true,
 
             // Without a connect timeout the request hangs for as long as PHP lets it.

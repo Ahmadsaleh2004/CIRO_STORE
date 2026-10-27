@@ -29,7 +29,7 @@ class NotificationModel extends Model
                  ORDER BY created_at DESC
                  LIMIT ?"
             );
-            self::executeTyped($stmt, [$userId, $limit]);
+            $stmt->execute([$userId, $limit]);
             return $stmt->fetchAll();
         } catch (Exception $e) {
             error_log("NotificationModel::getList Error: " . $e->getMessage());

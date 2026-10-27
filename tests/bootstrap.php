@@ -101,6 +101,9 @@ function prepareTestDatabase(): ?PDO
             // As in production (app/Core/Database.php), so a query that only works with
             // native prepares — an unbound `LIMIT ?` — fails here first.
             PDO::ATTR_EMULATE_PREPARES   => true,
+            // And the same statement class, which binds integers as integers — without it
+            // the suite would test a looser connection than the one the site runs on.
+            PDO::ATTR_STATEMENT_CLASS    => [\App\Core\TypedStatement::class],
         ]
     );
 

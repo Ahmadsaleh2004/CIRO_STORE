@@ -46,7 +46,7 @@
 declare(strict_types=1);
 
 $root   = dirname(__DIR__);
-$check  = in_array('--check', $argv, true);
+$check  = in_array('--check', $_SERVER['argv'] ?? [], true);
 $readme = $root . '/README.md';
 
 /** Counts the lines across a set of files. */

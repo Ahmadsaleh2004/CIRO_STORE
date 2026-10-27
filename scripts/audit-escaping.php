@@ -32,7 +32,7 @@ declare(strict_types=1);
 // usage documented at the top of this file requires writing the path before every flag —
 // a condition nobody states and nobody thinks of when they type the flag alone.
 $root = dirname(__DIR__) . '/app/views';
-foreach (array_slice($argv, 1) as $arg) {
+foreach (array_slice($_SERVER['argv'] ?? [], 1) as $arg) {
     if (!str_starts_with($arg, '--')) {
         $root = $arg;
         break;
@@ -230,8 +230,9 @@ foreach ($files as $file) {
 $counts = array_count_values(array_column($rows, 'kind'));
 ksort($counts);
 
-if (in_array('--list', $argv, true)) {
-    $want = $argv[array_search('--list', $argv, true) + 1] ?? 'NEEDS';
+if (in_array('--list', $_SERVER['argv'] ?? [], true)) {
+    $args = $_SERVER['argv'] ?? [];
+    $want = $args[array_search('--list', $args, true) + 1] ?? 'NEEDS';
     foreach ($rows as $r) {
         if ($r['kind'] !== $want) {
             continue;
@@ -272,7 +273,7 @@ const GATE_LIMITS = [
     'URL'   => 23,
 ];
 
-if (in_array('--gate', $argv, true)) {
+if (in_array('--gate', $_SERVER['argv'] ?? [], true)) {
     $failed = false;
 
     foreach (GATE_LIMITS as $kind => $limit) {

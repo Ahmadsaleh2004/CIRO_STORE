@@ -22,7 +22,7 @@
 declare(strict_types=1);
 
 $ROOT   = dirname(__DIR__);
-$asJson = in_array('--json', $argv, true);
+$asJson = in_array('--json', $_SERVER['argv'] ?? [], true);
 
 // ── Helpers ────────────────────────────────────────────────────────
 /**

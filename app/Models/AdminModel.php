@@ -735,7 +735,7 @@ class AdminModel extends Model
                 ORDER BY created_at DESC
                 LIMIT ?
             ");
-            self::executeTyped($stmt, [$adminId, $limit]);
+            $stmt->execute([$adminId, $limit]);
             return $stmt->fetchAll(\PDO::FETCH_ASSOC);
         } catch (Exception $e) {
             error_log('AdminModel::getAuditLogForAdmin Error: ' . $e->getMessage());
@@ -764,7 +764,7 @@ class AdminModel extends Model
                 ORDER BY created_at DESC
                 LIMIT ?
             ");
-            self::executeTyped($stmt, array_merge([$adminId], $targetTypes, [$limit]));
+            $stmt->execute(array_merge([$adminId], $targetTypes, [$limit]));
             return $stmt->fetchAll(\PDO::FETCH_ASSOC);
         } catch (Exception $e) {
             error_log('AdminModel::getAuditLogByTypes Error: ' . $e->getMessage());
@@ -801,7 +801,7 @@ class AdminModel extends Model
                 ORDER BY created_at DESC
                 LIMIT ?
             ");
-            self::executeTyped($stmt, $params);
+            $stmt->execute($params);
             return $stmt->fetchAll(\PDO::FETCH_ASSOC);
         } catch (Exception $e) {
             error_log('AdminModel::getAuditLogExcludingTypes Error: ' . $e->getMessage());
@@ -827,7 +827,7 @@ class AdminModel extends Model
                 ORDER BY al.created_at DESC
                 LIMIT ?
             ");
-            self::executeTyped($stmt, [$userId, $limit]);
+            $stmt->execute([$userId, $limit]);
             return $stmt->fetchAll(\PDO::FETCH_ASSOC);
         } catch (Exception $e) {
             error_log('AdminModel::getAuditLogForUser Error: ' . $e->getMessage());

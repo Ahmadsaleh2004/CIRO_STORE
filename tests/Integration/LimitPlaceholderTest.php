@@ -20,9 +20,9 @@ use Tests\Support\DatabaseTestCase;
  * ══════════════════════════════════════════════════════════════
  *
  * The connection emulates prepares, to halve the round trips to the database (see
- * app/Core/Database.php). Under emulation `execute([...])` sends every value as a string, and
- * `LIMIT '9'` is a syntax error — so each of these queries binds its limit and offset as
- * integers, through Model::executeTyped or bindValue(…, PDO::PARAM_INT).
+ * app/Core/Database.php). Under emulation PDO's own `execute([...])` sends every value as a
+ * string, and `LIMIT '9'` is a syntax error — so the connection's statements are
+ * App\Core\TypedStatement, which binds integers as integers on every execute().
  *
  * And a regression here would be silent. Every one of these methods catches its exception,
  * logs it and returns an empty list, so a test that only checks "no error" passes on a broken

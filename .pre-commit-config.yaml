@@ -94,8 +94,8 @@ repos:
       #
       # Not `language: system` either, for the same reason: `system` runs whichever semgrep
       # happens to be on PATH (1.174.0 on the machine this was written on, against 1.145.0
-      # in CI). The version is stated once, in the image tag below, and ci.yml installs that
-      # same version.
+      # in CI). The version is stated once, in the image tag below, and ci.yml runs that same
+      # image — so CI and this hook are one binary with one set of pinned dependencies.
       #
       # ── Why a Docker image and not `language: python` ────
       #

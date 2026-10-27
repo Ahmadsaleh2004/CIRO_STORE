@@ -70,7 +70,7 @@ class ProductModel extends Model
                 ORDER BY p.date_added DESC, p.id DESC
                 LIMIT ? OFFSET ?
             ");
-            self::executeTyped($stmt, array_merge($catParams, [$limit, $offset]));
+            $stmt->execute(array_merge($catParams, [$limit, $offset]));
             return $stmt->fetchAll();
         } catch (Exception $e) {
             error_log("ProductModel::findVisiblePaginated Error: " . $e->getMessage());

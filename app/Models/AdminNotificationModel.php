@@ -28,7 +28,7 @@ class AdminNotificationModel extends Model
                  ORDER BY created_at DESC, id DESC
                  LIMIT ?"
             );
-            self::executeTyped($stmt, [$adminId, $limit]);
+            $stmt->execute([$adminId, $limit]);
             return $stmt->fetchAll();
         } catch (Exception $e) {
             error_log("AdminNotificationModel::getList Error: " . $e->getMessage());

@@ -481,11 +481,18 @@ jobs:
           for i in $(seq 1 30); do mysqladmin ping -h 127.0.0.1 -u root --silent && break; sleep 2; done
           mysql -h 127.0.0.1 -u root ciro_db < tests/fixtures/schema.sql
 
+      # The router serves real files itself and sends the rest to index.php — what .htaccess
+      # does under Apache. With index.php as the router every stylesheet and script 404'd,
+      # so Lighthouse measured a page with no CSS (see build/php-server-router.php). The
+      # second check fails the job here, plainly, if that ever comes back.
       - name: Start the server
         run: |
-          php -S 127.0.0.1:8080 -t public public/index.php > /tmp/lh-server.log 2>&1 &
-          for i in $(seq 1 20); do curl -sf http://127.0.0.1:8080/ > /dev/null && exit 0; sleep 1; done
-          cat /tmp/lh-server.log; exit 1
+          php -S 127.0.0.1:8080 -t public build/php-server-router.php > /tmp/lh-server.log 2>&1 &
+          for i in $(seq 1 20); do curl -sf http://127.0.0.1:8080/ > /dev/null && break; sleep 1; done
+          curl -sf http://127.0.0.1:8080/ > /dev/null || { cat /tmp/lh-server.log; exit 1; }
+          CSS=$(curl -s http://127.0.0.1:8080/ | grep -oE 'css/dist/store\.[0-9a-f]+\.css' | head -1)
+          curl -sf -o /dev/null "http://127.0.0.1:8080/$CSS" \
+            || { echo "::error::The server does not serve static files ($CSS)"; exit 1; }
 
       - name: Lighthouse CI
         run: npx --yes @lhci/cli@0.14.x autorun
@@ -518,7 +525,7 @@ jobs:
       # What replaces it here is what the pre-commit hooks do — the same command, the same
       # rules and the same version. Which serves this file's principle stated above: "every
       # tool that runs in the pre-commit hooks runs here too". And it is one dependency
-      # fewer: a version-pinned pip package instead of a whole third-party action.
+      # fewer: a version-pinned image instead of a whole third-party action.
       #
       # ⚠️ That sentence used to say "literally what the pre-commit hooks do — the same
       # command and the same rules", and it was not true. The hook ran
@@ -536,10 +543,19 @@ jobs:
       #
       # `--error` is required: without it semgrep prints the findings and exits 0, so it
       # looks successful while reporting vulnerabilities.
+      # From the official image, as the pre-push hook runs it (.pre-commit-config.yaml): the
+      # same tag, so the same binary and the same pinned dependencies in both places.
+      #
+      # It was `pip install semgrep==1.145.0`, which pins semgrep and nothing under it. When
+      # ubuntu-latest moved to Ubuntu 26 and Python 3.14, pip resolved a newer pydantic than
+      # semgrep's own mcp dependency can import, and semgrep died before reading a file:
+      #     ImportError: cannot import name 'eval_type_backport' from 'pydantic._internal...'
+      # The scan stayed red with no finding behind it, a gate failing on its own install. The
+      # image carries its dependencies frozen with it, so the runner's Python is irrelevant.
       - name: semgrep — code vulnerabilities
         run: |
-          python -m pip install --disable-pip-version-check semgrep==1.145.0
-          semgrep --config p/php --config .semgrep/ --error .
+          docker run --rm -v "$PWD:/src" -w /src --entrypoint semgrep \
+            semgrep/semgrep:1.145.0 --config p/php --config .semgrep/ --error .
 
       - name: trivy — dependency vulnerabilities
         # ⚠️ Pinned to a commit digest rather than a tag. It was `@master` — a **live branch**

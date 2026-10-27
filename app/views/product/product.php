@@ -133,7 +133,9 @@ $pageDescription = 'Browse all products at Cairo Store.';
                     <label class="btn btn-sm btn-outline-secondary" for="priceBandO500">$500 &amp; Above</label>
                 </div>
                 <div class="d-flex align-items-center gap-2">
-                    <input type="range" id="priceRange" min="0" max="2000" value="2000" class="form-range">
+                    <?php // aria-label: the slider had no name at all, so a screen reader announced a bare number (Lighthouse "label") ?>
+                    <input type="range" id="priceRange" min="0" max="2000" value="2000" class="form-range"
+                           aria-label="Maximum price" aria-describedby="priceRangeVal">
                     <span id="priceRangeVal" class="small fw-bold price-range-val">≤$2000</span>
                 </div>
             </div>

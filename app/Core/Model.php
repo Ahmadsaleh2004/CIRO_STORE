@@ -50,29 +50,4 @@ abstract class Model
     {
         return Database::connect();
     }
-
-    /**
-     * Executes a prepared statement with its integers bound as integers.
-     *
-     * The connection emulates prepares (see Database::connect for the round trip that
-     * saves). Under emulation PDO writes each value into the SQL itself, and
-     * `$stmt->execute([...])` binds every value as a string — which is harmless in a
-     * WHERE, where MySQL compares '5' to 5, and a syntax error in `LIMIT '9'`. So a query
-     * with a LIMIT or OFFSET placeholder runs through here instead of execute().
-     *
-     * @param list<mixed> $params Positional values, in placeholder order
-     */
-    protected static function executeTyped(\PDOStatement $stmt, array $params): bool
-    {
-        foreach (array_values($params) as $i => $value) {
-            $type = match (true) {
-                is_int($value)  => PDO::PARAM_INT,
-                $value === null => PDO::PARAM_NULL,
-                default         => PDO::PARAM_STR,
-            };
-            $stmt->bindValue($i + 1, $value, $type);
-        }
-
-        return $stmt->execute();
-    }
 }
