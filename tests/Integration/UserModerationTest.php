@@ -86,6 +86,13 @@ final class UserModerationTest extends DatabaseTestCase
         return $result['order_id'];
     }
 
+    /**
+     * Reads the stock as it is now in the database — which the strikes below change.
+     *
+     * @phpstan-impure PHPStan 2.3 took two identical calls for the same answer and called the
+     *                 second assertSame(15, …) always true; it is the check that two strikes
+     *                 leave the reservation alone.
+     */
     private function variantStock(int $variantId): int
     {
         $stmt = $this->pdo->prepare('SELECT stock_quantity FROM product_variants WHERE id = ?');
